@@ -16,6 +16,8 @@ interface VerificationEmailRequest {
   displayName: string;
 }
 
+const MAX_VERIFICATION_EMAILS_PER_DAY = 3;
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -32,13 +34,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create Supabase client
+    // Create Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
+    
+    // Service role client for updating rate limit counters
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify user
     const token = authHeader.replace('Bearer ', '');
@@ -54,19 +60,72 @@ const handler = async (req: Request): Promise<Response> => {
     const userId = claims.user.id;
     const { email, displayName }: VerificationEmailRequest = await req.json();
 
+    // Check rate limiting
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('verification_email_count, verification_email_count_reset_at')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching profile for rate limit:", profileError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to check rate limit' }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const now = new Date();
+    const resetAt = profile?.verification_email_count_reset_at 
+      ? new Date(profile.verification_email_count_reset_at) 
+      : null;
+    
+    // Check if we need to reset the counter (new day)
+    let currentCount = profile?.verification_email_count || 0;
+    const isNewDay = !resetAt || 
+      (now.getTime() - resetAt.getTime()) > 24 * 60 * 60 * 1000;
+    
+    if (isNewDay) {
+      currentCount = 0;
+    }
+
+    // Check if limit exceeded
+    if (currentCount >= MAX_VERIFICATION_EMAILS_PER_DAY) {
+      const hoursUntilReset = resetAt 
+        ? Math.ceil((24 * 60 * 60 * 1000 - (now.getTime() - resetAt.getTime())) / (1000 * 60 * 60))
+        : 24;
+      
+      return new Response(
+        JSON.stringify({ 
+          error: `Limite atteinte (${MAX_VERIFICATION_EMAILS_PER_DAY} emails/jour). Réessayez dans ${hoursUntilReset}h.`,
+          rateLimited: true,
+          remainingEmails: 0
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Generate verification token
     const verificationToken = crypto.randomUUID();
     const baseUrl = req.headers.get('origin') || 'https://lovable.dev';
     const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
 
-    // Store token in database
-    const { error: updateError } = await supabase
+    // Update profile with token and increment counter using admin client
+    const updateData: Record<string, unknown> = {
+      email: email,
+      email_verification_token: verificationToken,
+      email_verification_sent_at: now.toISOString(),
+      verification_email_count: currentCount + 1,
+    };
+    
+    // Reset the counter date if it's a new day
+    if (isNewDay) {
+      updateData.verification_email_count_reset_at = now.toISOString();
+    }
+
+    const { error: updateError } = await supabaseAdmin
       .from('profiles')
-      .update({
-        email: email,
-        email_verification_token: verificationToken,
-        email_verification_sent_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('user_id', userId);
 
     if (updateError) {
@@ -134,7 +193,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true, emailResponse }), {
+    const remainingEmails = MAX_VERIFICATION_EMAILS_PER_DAY - (currentCount + 1);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      emailResponse,
+      remainingEmails 
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
