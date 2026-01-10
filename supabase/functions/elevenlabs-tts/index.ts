@@ -20,8 +20,8 @@ serve(async (req) => {
 
     console.log("Generating TTS for:", text);
 
-    // Using Brian - deep, powerful voice for impact
-    const selectedVoiceId = voiceId || "nPczCjzI2devNBz1zQrb";
+    // Using Daniel - very deep, powerful voice
+    const selectedVoiceId = voiceId || "onwK4e9ZLuTAKqWW03F9";
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}?output_format=mp3_44100_128`,
