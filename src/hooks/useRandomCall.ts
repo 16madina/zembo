@@ -9,8 +9,11 @@ export type CallStatus =
   | "searching" 
   | "matched" 
   | "in_call" 
-  | "deciding" 
-  | "result";
+  | "first_decision"  // At 1 minute mark
+  | "waiting_decision"
+  | "call_extended"   // After both chose to continue
+  | "result"
+  | "rejected";       // Other person said no
 
 interface RandomCallSession {
   id: string;
@@ -18,8 +21,8 @@ interface RandomCallSession {
   user2_id: string;
   started_at: string;
   ends_at: string;
-  user1_wants_match: boolean | null;
-  user2_wants_match: boolean | null;
+  user1_decision: string | null; // 'yes', 'no', 'continue'
+  user2_decision: string | null;
   status: string;
 }
 
@@ -28,12 +31,13 @@ interface UseRandomCallReturn {
   selectedPreference: string | null;
   session: RandomCallSession | null;
   timeRemaining: number;
-  matchResult: "matched" | "not_matched" | null;
+  matchResult: "matched" | "not_matched" | "rejected" | null;
   waitingForOther: boolean;
+  isExtendedCall: boolean;
   startSelecting: () => void;
   startSearch: (preference: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
-  submitDecision: (wantsMatch: boolean) => Promise<void>;
+  submitDecision: (decision: "yes" | "no" | "continue") => Promise<void>;
   reset: () => void;
 }
 
@@ -43,9 +47,11 @@ export const useRandomCall = (): UseRandomCallReturn => {
   const [selectedPreference, setSelectedPreference] = useState<string | null>(null);
   const [session, setSession] = useState<RandomCallSession | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(90);
-  const [matchResult, setMatchResult] = useState<"matched" | "not_matched" | null>(null);
+  const [matchResult, setMatchResult] = useState<"matched" | "not_matched" | "rejected" | null>(null);
   const [waitingForOther, setWaitingForOther] = useState(false);
   const [userGender, setUserGender] = useState<string | null>(null);
+  const [isExtendedCall, setIsExtendedCall] = useState(false);
+  const [hasAskedFirstDecision, setHasAskedFirstDecision] = useState(false);
   
   const channelRef = useRef<RealtimeChannel | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -60,7 +66,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
         .from("profiles")
         .select("gender")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       
       if (data?.gender) {
         setUserGender(data.gender);
@@ -88,13 +94,36 @@ export const useRandomCall = (): UseRandomCallReturn => {
           const updated = payload.new as RandomCallSession;
           setSession(updated);
           
-          if (updated.status === "completed") {
-            if (updated.user1_wants_match && updated.user2_wants_match) {
+          const isUser1 = updated.user1_id === user.id;
+          const myDecision = isUser1 ? updated.user1_decision : updated.user2_decision;
+          const theirDecision = isUser1 ? updated.user2_decision : updated.user1_decision;
+          
+          // Check if other person said no
+          if (theirDecision === "no") {
+            setMatchResult("rejected");
+            setStatus("rejected");
+            setWaitingForOther(false);
+            return;
+          }
+          
+          // Check if both have decided
+          if (updated.user1_decision && updated.user2_decision) {
+            if (updated.user1_decision === "yes" && updated.user2_decision === "yes") {
+              // Both said yes - match!
               setMatchResult("matched");
-            } else {
-              setMatchResult("not_matched");
+              setStatus("result");
+            } else if (updated.user1_decision === "continue" && updated.user2_decision === "continue") {
+              // Both want to continue - extend call
+              setIsExtendedCall(true);
+              setStatus("call_extended");
+            } else if (
+              (updated.user1_decision === "yes" && updated.user2_decision === "continue") ||
+              (updated.user1_decision === "continue" && updated.user2_decision === "yes")
+            ) {
+              // One yes, one continue - continue for now
+              setIsExtendedCall(true);
+              setStatus("call_extended");
             }
-            setStatus("result");
             setWaitingForOther(false);
           }
         }
@@ -110,7 +139,45 @@ export const useRandomCall = (): UseRandomCallReturn => {
 
   // Timer for call duration
   useEffect(() => {
-    if (status !== "in_call" || !session) return;
+    if ((status !== "in_call" && status !== "call_extended") || !session) return;
+
+    const endTime = new Date(session.ends_at).getTime();
+    const decisionTime = new Date(session.started_at).getTime() + 60000; // 1 minute mark
+    
+    timerRef.current = setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+      setTimeRemaining(remaining);
+      
+      // At 1 minute mark (30 seconds remaining), show first decision
+      if (!hasAskedFirstDecision && remaining <= 30 && remaining > 0 && status === "in_call") {
+        setHasAskedFirstDecision(true);
+        setStatus("first_decision");
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      }
+      
+      // Call ended at 0
+      if (remaining <= 0) {
+        setMatchResult("not_matched");
+        setStatus("result");
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      }
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [status, session, hasAskedFirstDecision]);
+
+  // Timer for extended call
+  useEffect(() => {
+    if (status !== "call_extended" || !session) return;
 
     const endTime = new Date(session.ends_at).getTime();
     
@@ -120,7 +187,9 @@ export const useRandomCall = (): UseRandomCallReturn => {
       setTimeRemaining(remaining);
       
       if (remaining <= 0) {
-        setStatus("deciding");
+        // Time's up - no more contact possible
+        setMatchResult("not_matched");
+        setStatus("result");
         if (timerRef.current) {
           clearInterval(timerRef.current);
         }
@@ -134,11 +203,17 @@ export const useRandomCall = (): UseRandomCallReturn => {
     };
   }, [status, session]);
 
+  const startSelecting = useCallback(() => {
+    setStatus("selecting");
+  }, []);
+
   const startSearch = useCallback(async (preference: string) => {
     if (!user || !userGender) return;
     
     setSelectedPreference(preference);
     setStatus("searching");
+    setHasAskedFirstDecision(false);
+    setIsExtendedCall(false);
     
     try {
       // Add to queue
@@ -163,7 +238,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
             .from("random_call_sessions")
             .select("*")
             .eq("id", sessionId)
-            .single();
+            .maybeSingle();
           
           if (sessionData) {
             setSession(sessionData as RandomCallSession);
@@ -237,27 +312,42 @@ export const useRandomCall = (): UseRandomCallReturn => {
     }
   }, [user]);
 
-  const submitDecision = useCallback(async (wantsMatch: boolean) => {
+  const submitDecision = useCallback(async (decision: "yes" | "no" | "continue") => {
     if (!session?.id || !user) return;
     
-    setWaitingForOther(true);
+    // If no, immediately show rejected status
+    if (decision === "no") {
+      setMatchResult("not_matched");
+      setStatus("result");
+    } else {
+      setWaitingForOther(true);
+      setStatus("waiting_decision");
+    }
     
     try {
       const { data } = await supabase.rpc("submit_random_call_decision", {
         p_session_id: session.id,
         p_user_id: user.id,
-        p_wants_match: wantsMatch,
+        p_decision: decision,
       });
       
-      const result = data as { matched?: boolean; completed?: boolean; waiting?: boolean; error?: string };
+      const result = data as { matched?: boolean; continued?: boolean; completed?: boolean; waiting?: boolean; rejected?: boolean; error?: string };
       
-      if (result.completed) {
+      if (result.rejected) {
+        setMatchResult("rejected");
+        setStatus("rejected");
+        setWaitingForOther(false);
+      } else if (result.completed) {
         if (result.matched) {
           setMatchResult("matched");
+          setStatus("result");
+        } else if (result.continued) {
+          setIsExtendedCall(true);
+          setStatus("call_extended");
         } else {
           setMatchResult("not_matched");
+          setStatus("result");
         }
-        setStatus("result");
         setWaitingForOther(false);
       }
       // If waiting, the realtime subscription will handle the update
@@ -267,10 +357,6 @@ export const useRandomCall = (): UseRandomCallReturn => {
       setWaitingForOther(false);
     }
   }, [session, user]);
-
-  const startSelecting = useCallback(() => {
-    setStatus("selecting");
-  }, []);
 
   const reset = useCallback(async () => {
     if (!user) return;
@@ -299,6 +385,8 @@ export const useRandomCall = (): UseRandomCallReturn => {
     setTimeRemaining(90);
     setMatchResult(null);
     setWaitingForOther(false);
+    setIsExtendedCall(false);
+    setHasAskedFirstDecision(false);
   }, [user]);
 
   // Cleanup on unmount
@@ -323,6 +411,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
     timeRemaining,
     matchResult,
     waitingForOther,
+    isExtendedCall,
     startSelecting,
     startSearch,
     cancelSearch,

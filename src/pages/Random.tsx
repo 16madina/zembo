@@ -7,8 +7,10 @@ import PreferenceSelector from "@/components/random-call/PreferenceSelector";
 import SearchingScreen from "@/components/random-call/SearchingScreen";
 import MatchFoundScreen from "@/components/random-call/MatchFoundScreen";
 import InCallScreen from "@/components/random-call/InCallScreen";
-import DecisionScreen from "@/components/random-call/DecisionScreen";
+import FirstDecisionScreen from "@/components/random-call/FirstDecisionScreen";
+import ExtendedCallScreen from "@/components/random-call/ExtendedCallScreen";
 import ResultScreen from "@/components/random-call/ResultScreen";
+import RejectedScreen from "@/components/random-call/RejectedScreen";
 
 const Random = () => {
   const {
@@ -43,13 +45,21 @@ const Random = () => {
       case "in_call":
         return <InCallScreen timeRemaining={timeRemaining} />;
       
-      case "deciding":
+      case "first_decision":
+      case "waiting_decision":
         return (
-          <DecisionScreen 
+          <FirstDecisionScreen 
             onDecide={submitDecision} 
             waitingForOther={waitingForOther}
+            timeRemaining={timeRemaining}
           />
         );
+      
+      case "call_extended":
+        return <ExtendedCallScreen timeRemaining={timeRemaining} />;
+      
+      case "rejected":
+        return <RejectedScreen onRetry={reset} />;
       
       case "result":
         return (
