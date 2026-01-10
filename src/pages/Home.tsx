@@ -81,10 +81,10 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col pb-24">
+    <div className="h-[100dvh] flex flex-col overflow-hidden pb-24">
       {/* Header */}
       <motion.header 
-        className="flex items-center justify-between px-4 py-3"
+        className="flex items-center justify-between px-4 py-2 flex-shrink-0"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
@@ -101,7 +101,7 @@ const Home = () => {
 
       {/* Navigation Tabs */}
       <motion.div 
-        className="flex justify-center gap-3 px-6 mb-6"
+        className="flex justify-center gap-3 px-6 mb-3 flex-shrink-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
@@ -110,7 +110,7 @@ const Home = () => {
           <motion.button
             key={tab}
             onClick={() => setActiveTab(tab as "discover" | "nearby")}
-            className={`relative px-6 py-2.5 rounded-full font-medium text-sm transition-colors duration-200 ${
+            className={`relative px-5 py-2 rounded-full font-medium text-sm transition-colors duration-200 ${
               activeTab === tab
                 ? "text-primary-foreground"
                 : "text-muted-foreground hover:text-secondary-foreground"
@@ -135,9 +135,9 @@ const Home = () => {
       </motion.div>
 
       {/* Card Stack */}
-      <div className="flex-1 px-4 max-w-md mx-auto w-full">
+      <div className="flex-1 px-4 max-w-md mx-auto w-full flex flex-col min-h-0">
         <motion.div 
-          className="relative h-[58vh] min-h-[420px]"
+          className="relative flex-1 min-h-0"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -156,7 +156,7 @@ const Home = () => {
 
         {/* Action Buttons */}
         <motion.div 
-          className="mt-6"
+          className="py-3 flex-shrink-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
