@@ -32,6 +32,9 @@ interface UserProfile {
   interests: string[] | null;
   gender: string | null;
   looking_for: string[] | null;
+  occupation: string | null;
+  education: string | null;
+  height: string | null;
 }
 
 interface ProfileInfoRowProps {
@@ -39,12 +42,6 @@ interface ProfileInfoRowProps {
   label: string;
   value?: string | null;
   onAdd?: () => void;
-}
-
-interface ProfileExtras {
-  occupation?: string;
-  education?: string;
-  height?: string;
 }
 
 const ProfileInfoRow = ({ icon, label, value, onAdd }: ProfileInfoRowProps) => (
@@ -70,7 +67,6 @@ const Profile = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editField, setEditField] = useState<"occupation" | "education" | "height">("occupation");
-  const [extras, setExtras] = useState<ProfileExtras>({});
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -131,8 +127,21 @@ const Profile = () => {
     setEditModalOpen(true);
   };
 
-  const handleExtrasUpdate = (field: string, value: string) => {
-    setExtras((prev) => ({ ...prev, [field]: value }));
+  const handleProfileFieldUpdate = async (field: string, value: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ [field]: value })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      
+      setProfile((prev) => prev ? { ...prev, [field]: value } : null);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    }
   };
 
   if (isLoading) {
@@ -272,20 +281,20 @@ const Profile = () => {
           <ProfileInfoRow
             icon={<Briefcase className="w-5 h-5" />}
             label="Profession"
-            value={extras.occupation}
+            value={profile?.occupation}
             onAdd={() => openEditModal("occupation")}
           />
           <ProfileInfoRow
             icon={<GraduationCap className="w-5 h-5" />}
             label="Études"
-            value={extras.education}
+            value={profile?.education}
             onAdd={() => openEditModal("education")}
           />
           <ProfileInfoRow icon={<MapPin className="w-5 h-5" />} label="Ville d'origine" value={location} />
           <ProfileInfoRow
             icon={<Ruler className="w-5 h-5" />}
             label="Taille"
-            value={extras.height}
+            value={profile?.height}
             onAdd={() => openEditModal("height")}
           />
         </div>
@@ -301,8 +310,8 @@ const Profile = () => {
           onClose={() => setEditModalOpen(false)}
           userId={user.id}
           field={editField}
-          currentValue={extras[editField]}
-          onUpdate={handleExtrasUpdate}
+          currentValue={profile?.[editField]}
+          onUpdate={handleProfileFieldUpdate}
         />
       )}
 

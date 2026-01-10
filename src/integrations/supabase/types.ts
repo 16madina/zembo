@@ -21,7 +21,9 @@ export type Database = {
           bio: string | null
           created_at: string
           display_name: string | null
+          education: string | null
           gender: string | null
+          height: string | null
           id: string
           interests: string[] | null
           is_online: boolean | null
@@ -29,6 +31,7 @@ export type Database = {
           last_seen: string | null
           location: string | null
           looking_for: string[] | null
+          occupation: string | null
           updated_at: string
           user_id: string
         }
@@ -38,7 +41,9 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name?: string | null
+          education?: string | null
           gender?: string | null
+          height?: string | null
           id?: string
           interests?: string[] | null
           is_online?: boolean | null
@@ -46,6 +51,7 @@ export type Database = {
           last_seen?: string | null
           location?: string | null
           looking_for?: string[] | null
+          occupation?: string | null
           updated_at?: string
           user_id: string
         }
@@ -55,7 +61,9 @@ export type Database = {
           bio?: string | null
           created_at?: string
           display_name?: string | null
+          education?: string | null
           gender?: string | null
+          height?: string | null
           id?: string
           interests?: string[] | null
           is_online?: boolean | null
@@ -63,6 +71,7 @@ export type Database = {
           last_seen?: string | null
           location?: string | null
           looking_for?: string[] | null
+          occupation?: string | null
           updated_at?: string
           user_id?: string
         }
