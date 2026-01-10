@@ -238,13 +238,30 @@ const Home = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Modifiez vos critères de recherche pour voir plus de profils
                 </p>
-                <motion.button
-                  onClick={() => setIsFilterOpen(true)}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
-                >
-                  Modifier les filtres
-                </motion.button>
+                <div className="flex gap-2">
+                  <motion.button
+                    onClick={() => {
+                      setFilters({
+                        ageMin: 18,
+                        ageMax: 50,
+                        distance: 50,
+                        genders: ["all"],
+                      });
+                      setCurrentIndex(0);
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-4 py-2 glass rounded-xl text-sm font-medium text-foreground"
+                  >
+                    Réinitialiser
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setIsFilterOpen(true)}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
+                  >
+                    Modifier
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
