@@ -6,7 +6,7 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   // Force new cache to avoid stale bundles (Leaflet named exports fix)
-  cacheDir: "node_modules/.vite_zembo_v4",
+  cacheDir: "node_modules/.vite_zembo_v5",
   optimizeDeps: {
     // Pre-bundle Leaflet so Vite can generate proper ESM wrappers
     include: ["leaflet"],
