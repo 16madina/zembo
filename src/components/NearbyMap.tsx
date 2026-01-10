@@ -85,7 +85,7 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
   }
 
   // Error state only if no fallback location available
-  if (!effectiveLat || !effectiveLng) {
+  if (effectiveLat === null || effectiveLng === null) {
     return (
       <div className="relative w-full h-full rounded-3xl overflow-hidden glass-strong flex flex-col items-center justify-center gap-4 p-6 text-center">
         <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">

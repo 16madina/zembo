@@ -5,12 +5,20 @@ import "leaflet/dist/leaflet.css";
 import { Profile } from "@/data/mockProfiles";
 
 // Fix for default marker icons in Leaflet with Vite
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
+// (Guarded to avoid issues in dev/HMR and double-initialization scenarios.)
+let leafletDefaultIconsConfigured = false;
+const configureLeafletDefaultIcons = () => {
+  if (leafletDefaultIconsConfigured) return;
+  leafletDefaultIconsConfigured = true;
+
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  });
+};
+configureLeafletDefaultIcons();
 
 interface LeafletMapProps {
   latitude: number;
@@ -73,11 +81,23 @@ const createProfileIcon = (photoUrl: string, isOnline: boolean, isVerified: bool
 // Map recenter component
 const RecenterMap = ({ lat, lng }: { lat: number; lng: number }) => {
   const map = useMap();
-  
+
   useEffect(() => {
-    map.setView([lat, lng], map.getZoom());
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    let cancelled = false;
+
+    map.whenReady(() => {
+      if (cancelled) return;
+      // Avoid animation to reduce jank and potential race conditions.
+      map.setView([lat, lng], map.getZoom(), { animate: false });
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [lat, lng, map]);
-  
+
   return null;
 };
 
