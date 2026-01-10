@@ -1,17 +1,31 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Users } from "lucide-react";
+import { Phone, Play } from "lucide-react";
 
 interface PreferenceSelectorProps {
   onSelect: (preference: string) => void;
+  onStartCall: () => void;
 }
 
-const preferences = [
-  { id: "homme", label: "Homme", emoji: "👨" },
-  { id: "femme", label: "Femme", emoji: "👩" },
-  { id: "tous", label: "Peu importe", icon: Users },
+const genderOptions = [
+  { id: "homme", label: "Je suis un Homme", emoji: "👨" },
+  { id: "femme", label: "Je suis une Femme", emoji: "👩" },
 ];
 
-const PreferenceSelector = ({ onSelect }: PreferenceSelectorProps) => {
+const PreferenceSelector = ({ onSelect, onStartCall }: PreferenceSelectorProps) => {
+  const [selectedGender, setSelectedGender] = useState<string | null>(null);
+
+  const handleGenderSelect = (gender: string) => {
+    setSelectedGender(gender);
+  };
+
+  const handleStartCall = () => {
+    if (selectedGender) {
+      onStartCall();
+      onSelect(selectedGender);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -20,32 +34,49 @@ const PreferenceSelector = ({ onSelect }: PreferenceSelectorProps) => {
       className="flex flex-col items-center gap-6 w-full max-w-sm"
     >
       <h2 className="text-xl font-semibold text-foreground">
-        Je veux parler avec...
+        Qui es-tu ?
       </h2>
       
-      <div className="grid grid-cols-1 gap-4 w-full">
-        {preferences.map((pref, index) => (
+      <div className="grid grid-cols-2 gap-4 w-full">
+        {genderOptions.map((option, index) => (
           <motion.button
-            key={pref.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            key={option.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            onClick={() => onSelect(pref.id)}
-            className="flex items-center gap-4 p-5 rounded-2xl glass hover:bg-primary/10 transition-all group"
+            onClick={() => handleGenderSelect(option.id)}
+            className={`flex flex-col items-center gap-3 p-6 rounded-2xl transition-all ${
+              selectedGender === option.id 
+                ? "bg-primary/20 border-2 border-primary" 
+                : "glass hover:bg-primary/10 border-2 border-transparent"
+            }`}
           >
-            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-              {pref.emoji ? (
-                <span>{pref.emoji}</span>
-              ) : pref.icon ? (
-                <pref.icon className="w-7 h-7 text-primary" />
-              ) : null}
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl transition-transform ${
+              selectedGender === option.id ? "scale-110" : ""
+            }`}>
+              <span>{option.emoji}</span>
             </div>
-            <span className="text-lg font-medium text-foreground">
-              {pref.label}
+            <span className="text-sm font-medium text-foreground">
+              {option.label}
             </span>
           </motion.button>
         ))}
       </div>
+
+      {selectedGender && (
+        <motion.button
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", damping: 15 }}
+          onClick={handleStartCall}
+          className="mt-4 px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          <Phone className="w-5 h-5 text-primary-foreground" />
+          <span className="text-primary-foreground">Lancer l'appel</span>
+        </motion.button>
+      )}
     </motion.div>
   );
 };
