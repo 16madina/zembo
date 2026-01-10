@@ -5,12 +5,11 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Bump cache dir to force Vite to re-optimize deps after react-leaflet downgrade.
-  // This prevents stale prebundled code (React 19 `use()` API) from being served.
-  cacheDir: "node_modules/.vite_zembo",
+  // Force new cache to avoid stale bundles
+  cacheDir: "node_modules/.vite_zembo_v2",
   optimizeDeps: {
-    // Avoid pre-bundling leaflet/react-leaflet to prevent context/React-version mismatches.
-    exclude: ["leaflet", "react-leaflet", "@react-leaflet/core"],
+    // Include leaflet libs to ensure proper bundling with React 18
+    include: ["leaflet", "react-leaflet", "@react-leaflet/core"],
   },
   server: {
     host: "::",

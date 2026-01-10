@@ -11,8 +11,8 @@ interface NearbyMapProps {
   userCountry?: string | null;
 }
 
-// Lazy load the map component
-const MapboxMap = lazy(() => import("./MapboxMap"));
+// Lazy load the map component to avoid SSR issues with Leaflet
+const LeafletMap = lazy(() => import("./LeafletMap"));
 
 // Generate random positions near user location
 const generateNearbyPositions = (
@@ -115,7 +115,7 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       }>
-        <MapboxMap
+        <LeafletMap
           latitude={effectiveLat}
           longitude={effectiveLng}
           profiles={[...onlineProfiles, ...offlineProfiles]}
