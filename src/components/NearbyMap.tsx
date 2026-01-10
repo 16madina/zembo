@@ -52,13 +52,13 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
   const fallbackLocation = userCountry ? getCoordinatesFromCountryName(userCountry) : null;
 
   // Determine actual position to use
-  const hasRealLocation = latitude && longitude && !error;
-  const effectiveLat = hasRealLocation ? latitude : fallbackLocation?.lat;
-  const effectiveLng = hasRealLocation ? longitude : fallbackLocation?.lng;
+  const hasRealLocation = latitude !== null && longitude !== null && !error;
+  const effectiveLat: number | null = hasRealLocation ? latitude : (fallbackLocation?.lat ?? null);
+  const effectiveLng: number | null = hasRealLocation ? longitude : (fallbackLocation?.lng ?? null);
 
   // Generate positions when location is available
   useEffect(() => {
-    if (effectiveLat && effectiveLng) {
+    if (effectiveLat !== null && effectiveLng !== null && Number.isFinite(effectiveLat) && Number.isFinite(effectiveLng)) {
       setProfilePositions(generateNearbyPositions(effectiveLat, effectiveLng, profiles));
       setUsingFallback(!hasRealLocation);
     }
