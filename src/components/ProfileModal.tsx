@@ -48,19 +48,19 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
   if (!profile) return null;
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    // Swipe down to close
-    if (info.offset.y > 80 && info.velocity.y > 0) {
+    // Swipe down to close - very easy threshold
+    if (info.offset.y > 50 || info.velocity.y > 300) {
       onClose();
     } 
     // Swipe up to show details
-    else if (info.offset.y < -60 || info.velocity.y < -500) {
+    else if (info.offset.y < -40 || info.velocity.y < -300) {
       setShowDetails(true);
     }
   };
 
   const handleDetailsDragEnd = (_: any, info: PanInfo) => {
-    // Swipe down to hide details
-    if (info.offset.y > 80 || info.velocity.y > 500) {
+    // Swipe down to hide details - very easy threshold
+    if (info.offset.y > 50 || info.velocity.y > 300) {
       setShowDetails(false);
     }
   };
@@ -111,10 +111,10 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.2}
+            dragConstraints={{ top: -50, bottom: 200 }}
+            dragElastic={0.4}
             onDragEnd={handleDragEnd}
             className="relative w-full max-w-lg h-[100dvh] overflow-hidden flex flex-col"
           >
