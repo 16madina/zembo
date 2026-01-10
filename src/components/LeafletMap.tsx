@@ -28,6 +28,7 @@ interface LeafletMapProps {
   onProfileSelect: (profile: Profile) => void;
   onRecenter: () => void;
   maxDistance?: number;
+  zoomLevel?: number;
 }
 
 // Calculate distance between two coordinates in km
@@ -100,8 +101,8 @@ const createProfileIcon = (photoUrl: string, isOnline: boolean, isVerified: bool
   });
 };
 
-// Map recenter component
-const RecenterMap = ({ lat, lng }: { lat: number; lng: number }) => {
+// Map controller component for zoom and recenter
+const MapController = ({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -111,14 +112,13 @@ const RecenterMap = ({ lat, lng }: { lat: number; lng: number }) => {
 
     map.whenReady(() => {
       if (cancelled) return;
-      // Avoid animation to reduce jank and potential race conditions.
-      map.setView([lat, lng], map.getZoom(), { animate: false });
+      map.setView([lat, lng], zoom, { animate: true, duration: 0.5 });
     });
 
     return () => {
       cancelled = true;
     };
-  }, [lat, lng, map]);
+  }, [lat, lng, zoom, map]);
 
   return null;
 };
@@ -129,7 +129,8 @@ const LeafletMap = ({
   profiles, 
   profilePositions, 
   onProfileSelect,
-  maxDistance = 100
+  maxDistance = 100,
+  zoomLevel = 14
 }: LeafletMapProps) => {
   // Filter profiles by distance
   const filteredProfiles = profiles.filter((profile) => {
@@ -141,7 +142,7 @@ const LeafletMap = ({
   return (
     <MapContainer
       center={[latitude, longitude]}
-      zoom={14}
+      zoom={zoomLevel}
       style={{ height: "100%", width: "100%" }}
       zoomControl={false}
       attributionControl={false}
@@ -153,8 +154,8 @@ const LeafletMap = ({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
 
-      {/* Recenter on user location */}
-      <RecenterMap lat={latitude} lng={longitude} />
+      {/* Map controller for zoom and recenter */}
+      <MapController lat={latitude} lng={longitude} zoom={zoomLevel} />
 
       {/* Distance circles */}
       <Circle
