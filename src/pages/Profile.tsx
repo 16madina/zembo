@@ -1,4 +1,5 @@
-import { Settings, Edit3, BadgeCheck, MapPin, Heart, Star, Image } from "lucide-react";
+import { motion } from "framer-motion";
+import { Settings, Edit3, BadgeCheck, MapPin, Heart, Star, Image, Camera } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 
@@ -18,32 +19,64 @@ const Profile = () => {
     interests: ["Voyage", "Musique", "Cuisine", "Sport", "Photo"]
   };
 
+  const statItems = [
+    { icon: Heart, value: user.stats.likes, label: "Likes reçus", color: "text-primary" },
+    { icon: Star, value: user.stats.superLikes, label: "Super Likes", color: "text-accent" },
+    { icon: Image, value: user.stats.photos, label: "Photos", color: "text-success" },
+  ];
+
   return (
-    <div className="min-h-screen pb-24">
-      <header className="flex items-center justify-between px-6 py-4">
+    <div className="min-h-screen pb-28">
+      <motion.header 
+        className="flex items-center justify-between px-6 py-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
         <div className="w-10" />
         <ZemboLogo />
-        <button className="p-2.5 bg-card/80 backdrop-blur-sm rounded-xl border border-border transition-colors hover:bg-secondary">
+        <motion.button 
+          className="p-2.5 glass rounded-xl tap-highlight"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
           <Settings className="w-5 h-5 text-muted-foreground" />
-        </button>
-      </header>
+        </motion.button>
+      </motion.header>
 
       {/* Profile Card */}
-      <div className="px-6 mb-6">
-        <div className="relative bg-card rounded-3xl overflow-hidden">
+      <motion.div 
+        className="px-6 mb-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="relative glass-strong rounded-3xl overflow-hidden">
           {/* Photo */}
-          <div className="relative aspect-square max-h-[300px]">
+          <div className="relative aspect-square max-h-[280px]">
             <img
               src={user.photo}
               alt={user.name}
               className="w-full h-full object-cover"
             />
-            <div className="absolute bottom-0 left-0 right-0 h-24 overlay-gradient" />
+            <div className="absolute bottom-0 left-0 right-0 h-28 overlay-gradient" />
+            
+            {/* Camera Button */}
+            <motion.button 
+              className="absolute top-4 right-4 p-3 glass rounded-full tap-highlight"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Camera className="w-5 h-5 text-foreground" />
+            </motion.button>
             
             {/* Edit Button */}
-            <button className="absolute bottom-4 right-4 p-3 btn-gold rounded-full transition-transform hover:scale-110">
+            <motion.button 
+              className="absolute bottom-4 right-4 p-3 btn-gold rounded-full"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
               <Edit3 className="w-5 h-5 text-primary-foreground" />
-            </button>
+            </motion.button>
           </div>
 
           {/* Info */}
@@ -62,47 +95,49 @@ const Profile = () => {
               <span>{user.location}</span>
             </div>
 
-            <p className="text-foreground/80">{user.bio}</p>
+            <p className="text-foreground/80 leading-relaxed">{user.bio}</p>
 
             {/* Interests */}
             <div className="flex flex-wrap gap-2">
-              {user.interests.map((interest) => (
-                <span
+              {user.interests.map((interest, index) => (
+                <motion.span
                   key={interest}
-                  className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded-full text-sm font-medium"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + index * 0.05 }}
+                  className="px-4 py-2 glass rounded-full text-sm font-medium text-secondary-foreground"
                 >
                   {interest}
-                </span>
+                </motion.span>
               ))}
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats */}
-      <div className="px-6 grid grid-cols-3 gap-4">
-        <div className="bg-card rounded-2xl p-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Heart className="w-5 h-5 text-primary" fill="currentColor" />
-          </div>
-          <p className="text-2xl font-bold text-foreground">{user.stats.likes}</p>
-          <p className="text-xs text-muted-foreground">Likes reçus</p>
-        </div>
-        <div className="bg-card rounded-2xl p-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Star className="w-5 h-5 text-accent" fill="currentColor" />
-          </div>
-          <p className="text-2xl font-bold text-foreground">{user.stats.superLikes}</p>
-          <p className="text-xs text-muted-foreground">Super Likes</p>
-        </div>
-        <div className="bg-card rounded-2xl p-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Image className="w-5 h-5 text-success" />
-          </div>
-          <p className="text-2xl font-bold text-foreground">{user.stats.photos}</p>
-          <p className="text-xs text-muted-foreground">Photos</p>
-        </div>
-      </div>
+      <motion.div 
+        className="px-6 grid grid-cols-3 gap-3"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        {statItems.map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 + index * 0.1 }}
+            className="glass rounded-2xl p-4 text-center"
+          >
+            <div className="flex items-center justify-center mb-2">
+              <stat.icon className={`w-5 h-5 ${stat.color}`} fill="currentColor" />
+            </div>
+            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+            <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+          </motion.div>
+        ))}
+      </motion.div>
 
       <BottomNavigation />
     </div>

@@ -46,9 +46,18 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-background/80 backdrop-blur-sm"
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[100] flex items-end justify-center"
           onClick={handleBackdropClick}
         >
+          {/* Backdrop */}
+          <motion.div 
+            className="absolute inset-0 bg-background/80 backdrop-blur-xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -58,24 +67,30 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={0.2}
             onDragEnd={handleDragEnd}
-            className="w-full max-w-lg h-[90vh] bg-card rounded-t-3xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-lg h-[92vh] glass-strong rounded-t-[2rem] overflow-hidden flex flex-col"
           >
             {/* Handle bar */}
-            <div className="flex justify-center py-3">
-              <div className="w-12 h-1.5 bg-muted rounded-full" />
+            <div className="flex justify-center py-3 flex-shrink-0">
+              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
             </div>
 
             {/* Close button */}
-            <button
+            <motion.button
               onClick={onClose}
-              className="absolute top-4 right-4 z-10 p-2 bg-background/50 backdrop-blur-sm rounded-full"
+              className="absolute top-4 right-4 z-20 p-2.5 glass rounded-full tap-highlight"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
-              <X className="w-5 h-5" />
-            </button>
+              <X className="w-5 h-5 text-foreground" />
+            </motion.button>
 
             {/* Photo gallery */}
             <div className="relative aspect-[3/4] flex-shrink-0">
-              <img
+              <motion.img
+                key={currentPhotoIndex}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
                 src={profile.photos[currentPhotoIndex]}
                 alt={profile.name}
                 className="w-full h-full object-cover"
@@ -83,31 +98,40 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
               
               {/* Photo navigation */}
               <div className="absolute inset-0 flex">
-                <div className="w-1/2 h-full" onClick={prevPhoto} />
-                <div className="w-1/2 h-full" onClick={nextPhoto} />
+                <div className="w-1/2 h-full cursor-pointer" onClick={prevPhoto} />
+                <div className="w-1/2 h-full cursor-pointer" onClick={nextPhoto} />
               </div>
 
               {/* Photo indicators */}
-              <div className="absolute top-4 left-4 right-4 flex gap-1">
+              <div className="absolute top-4 left-4 right-16 flex gap-1.5">
                 {profile.photos.map((_, index) => (
-                  <div
+                  <motion.div
                     key={index}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
+                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${
                       index === currentPhotoIndex 
                         ? "bg-foreground" 
                         : "bg-foreground/30"
                     }`}
+                    initial={false}
+                    animate={{
+                      scaleX: index === currentPhotoIndex ? 1 : 0.95,
+                    }}
                   />
                 ))}
               </div>
 
               {/* Gradient overlay */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 overlay-gradient" />
+              <div className="absolute bottom-0 left-0 right-0 h-40 overlay-gradient" />
             </div>
 
             {/* Profile info */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="flex items-center gap-3">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-hide">
+              <motion.div 
+                className="flex items-center gap-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
                 <h2 className="text-2xl font-bold">
                   {profile.name}, {profile.age}
                 </h2>
@@ -115,57 +139,93 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
                   <BadgeCheck className="w-6 h-6 text-primary" />
                 )}
                 {profile.isOnline && (
-                  <span className="flex items-center gap-1.5 text-sm text-success">
-                    <span className="w-2 h-2 bg-success rounded-full animate-pulse-glow" />
+                  <span className="flex items-center gap-1.5 text-sm text-success font-medium">
+                    <span className="relative">
+                      <span className="w-2 h-2 bg-success rounded-full block" />
+                      <span className="absolute inset-0 w-2 h-2 bg-success rounded-full animate-ping opacity-75" />
+                    </span>
                     En ligne
                   </span>
                 )}
-              </div>
+              </motion.div>
 
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <motion.div 
+                className="flex items-center gap-2 text-muted-foreground"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
                 <MapPin className="w-4 h-4" />
                 <span>{profile.location}</span>
-                <span className="text-primary font-medium">• {profile.distance}</span>
-              </div>
+                <span className="text-primary font-semibold">• {profile.distance}</span>
+              </motion.div>
 
-              <p className="text-foreground/90 leading-relaxed">{profile.bio}</p>
+              <motion.p 
+                className="text-foreground/90 leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                {profile.bio}
+              </motion.p>
 
               {/* Interests */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+              <motion.div 
+                className="space-y-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
                   Centres d'intérêt
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {profile.interests.map((interest) => (
-                    <span
+                  {profile.interests.map((interest, index) => (
+                    <motion.span
                       key={interest}
-                      className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded-full text-sm font-medium"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 + index * 0.05 }}
+                      className="px-4 py-2 glass rounded-full text-sm font-medium text-secondary-foreground"
                     >
                       {interest}
-                    </span>
+                    </motion.span>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center justify-center gap-6 p-6 border-t border-border">
-              <button
+            <motion.div 
+              className="flex items-center justify-center gap-5 p-6 border-t border-border/50 flex-shrink-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <motion.button
                 onClick={onSuperLike}
-                className="p-4 bg-accent/20 text-accent rounded-full glow-blue transition-transform hover:scale-110"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-4 glass rounded-full text-accent hover:glow-blue transition-shadow"
               >
                 <Star className="w-7 h-7" fill="currentColor" />
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 onClick={onLike}
-                className="p-5 btn-gold rounded-full transition-transform hover:scale-110"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-5 btn-gold rounded-full"
               >
                 <Heart className="w-8 h-8 text-primary-foreground" fill="currentColor" />
-              </button>
-              <button className="p-4 bg-success/20 text-success rounded-full transition-transform hover:scale-110">
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-4 glass rounded-full text-success hover:glow-green transition-shadow"
+              >
                 <MessageCircle className="w-7 h-7" />
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}

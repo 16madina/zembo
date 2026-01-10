@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { X, Star, Heart } from "lucide-react";
 
 interface ActionButtonsProps {
@@ -7,31 +8,47 @@ interface ActionButtonsProps {
 }
 
 const ActionButtons = ({ onPass, onSuperLike, onLike }: ActionButtonsProps) => {
+  const buttonVariants = {
+    tap: { scale: 0.9 },
+    hover: { scale: 1.1 },
+  };
+
   return (
-    <div className="flex items-center justify-center gap-6">
+    <div className="flex items-center justify-center gap-5">
       {/* Pass Button */}
-      <button
+      <motion.button
         onClick={onPass}
-        className="p-5 bg-card border border-border rounded-full text-destructive transition-all duration-200 hover:scale-110 hover:bg-destructive/10 glow-red hover:glow-red"
+        variants={buttonVariants}
+        whileHover="hover"
+        whileTap="tap"
+        className="relative p-5 glass rounded-full text-destructive transition-shadow hover:glow-red"
       >
-        <X className="w-8 h-8" strokeWidth={3} />
-      </button>
+        <div className="absolute inset-0 rounded-full bg-destructive/10" />
+        <X className="w-8 h-8 relative z-10" strokeWidth={3} />
+      </motion.button>
 
       {/* Super Like Button */}
-      <button
+      <motion.button
         onClick={onSuperLike}
-        className="p-4 bg-card border border-border rounded-full text-accent transition-all duration-200 hover:scale-110 hover:bg-accent/10 glow-blue hover:glow-blue"
+        variants={buttonVariants}
+        whileHover="hover"
+        whileTap="tap"
+        className="relative p-4 glass rounded-full text-accent transition-shadow hover:glow-blue"
       >
-        <Star className="w-6 h-6" fill="currentColor" />
-      </button>
+        <div className="absolute inset-0 rounded-full bg-accent/10" />
+        <Star className="w-6 h-6 relative z-10" fill="currentColor" />
+      </motion.button>
 
       {/* Like Button */}
-      <button
+      <motion.button
         onClick={onLike}
-        className="p-5 btn-gold rounded-full transition-all duration-200 hover:scale-110"
+        variants={buttonVariants}
+        whileHover="hover"
+        whileTap="tap"
+        className="relative p-5 btn-gold rounded-full animate-glow-pulse"
       >
-        <Heart className="w-8 h-8 text-primary-foreground" fill="currentColor" />
-      </button>
+        <Heart className="w-8 h-8 text-primary-foreground relative z-10" fill="currentColor" />
+      </motion.button>
     </div>
   );
 };
