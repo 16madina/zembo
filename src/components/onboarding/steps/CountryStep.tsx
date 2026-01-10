@@ -9,9 +9,10 @@ import type { OnboardingData } from "../OnboardingSteps";
 interface CountryStepProps {
   data: OnboardingData;
   updateData: (updates: Partial<OnboardingData>) => void;
+  onNext: () => void;
 }
 
-const CountryStep = ({ data, updateData }: CountryStepProps) => {
+const CountryStep = ({ data, updateData, onNext }: CountryStepProps) => {
   const [search, setSearch] = useState("");
 
   const filteredCountries = countries.filter((country) =>
@@ -24,6 +25,8 @@ const CountryStep = ({ data, updateData }: CountryStepProps) => {
       countryCode: country.code,
       dialCode: country.dialCode,
     });
+    // Auto-advance to next step after selection
+    setTimeout(() => onNext(), 300);
   };
 
   return (

@@ -15,10 +15,20 @@ import type { OnboardingData } from "../OnboardingSteps";
 interface BirthdayStepProps {
   data: OnboardingData;
   updateData: (updates: Partial<OnboardingData>) => void;
+  onNext: () => void;
 }
 
-const BirthdayStep = ({ data, updateData }: BirthdayStepProps) => {
+const BirthdayStep = ({ data, updateData, onNext }: BirthdayStepProps) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    updateData({ birthday: date || null });
+    setIsOpen(false);
+    // Auto-advance to next step after selection
+    if (date) {
+      setTimeout(() => onNext(), 300);
+    }
+  };
 
   // Calculate age from birthday
   const calculateAge = (birthday: Date) => {
@@ -64,10 +74,7 @@ const BirthdayStep = ({ data, updateData }: BirthdayStepProps) => {
           <Calendar
             mode="single"
             selected={data.birthday || undefined}
-            onSelect={(date) => {
-              updateData({ birthday: date || null });
-              setIsOpen(false);
-            }}
+            onSelect={handleDateSelect}
             disabled={(date) => date > maxDate || date < minDate}
             initialFocus
             className={cn("p-3 pointer-events-auto")}

@@ -110,15 +110,15 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
       case "name":
         return <NameStep data={data} updateData={updateData} />;
       case "country":
-        return <CountryStep data={data} updateData={updateData} />;
+        return <CountryStep data={data} updateData={updateData} onNext={handleNext} />;
       case "phone":
         return <PhoneStep data={data} updateData={updateData} />;
       case "email":
         return <EmailStep data={data} updateData={updateData} />;
       case "birthday":
-        return <BirthdayStep data={data} updateData={updateData} />;
+        return <BirthdayStep data={data} updateData={updateData} onNext={handleNext} />;
       case "gender":
-        return <GenderStep data={data} updateData={updateData} />;
+        return <GenderStep data={data} updateData={updateData} onNext={handleNext} />;
       case "lookingFor":
         return <LookingForStep data={data} updateData={updateData} />;
       case "interests":
