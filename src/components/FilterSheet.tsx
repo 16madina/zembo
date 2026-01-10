@@ -93,33 +93,33 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="bottom" 
-        className="rounded-t-3xl glass-strong border-t-0 px-4 pb-8 pt-2 max-h-[85vh] overflow-y-auto"
+        className="rounded-t-3xl glass-strong border-t-0 px-4 pb-6 pt-2"
       >
         {/* Drag handle */}
-        <div className="flex justify-center mb-4">
-          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
+        <div className="flex justify-center mb-3">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <SheetHeader className="mb-6">
+        <SheetHeader className="mb-4">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-xl font-bold">Filtres</SheetTitle>
+            <SheetTitle className="text-lg font-bold">Filtres</SheetTitle>
             <motion.button
               onClick={handleReset}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3 h-3" />
               Réinitialiser
             </motion.button>
           </div>
         </SheetHeader>
 
-        <div className="space-y-8">
+        <div className="space-y-5">
           {/* Age Range */}
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">Âge</span>
-              <span className="text-sm text-primary font-semibold">
+              <span className="text-xs font-medium text-foreground">Âge</span>
+              <span className="text-xs text-primary font-semibold">
                 {localFilters.ageMin} - {localFilters.ageMax} ans
               </span>
             </div>
@@ -131,17 +131,13 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
               step={1}
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>18 ans</span>
-              <span>70 ans</span>
-            </div>
           </div>
 
           {/* Distance */}
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">Distance maximale</span>
-              <span className="text-sm text-primary font-semibold">
+              <span className="text-xs font-medium text-foreground">Distance max</span>
+              <span className="text-xs text-primary font-semibold">
                 {localFilters.distance} km
               </span>
             </div>
@@ -153,16 +149,12 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
               step={1}
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>1 km</span>
-              <span>100 km</span>
-            </div>
           </div>
 
           {/* Gender Selection */}
-          <div className="space-y-4">
-            <span className="text-sm font-medium text-foreground">Je recherche</span>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-foreground">Je recherche</span>
+            <div className="flex flex-wrap gap-1.5">
               {genderOptions.map((gender) => {
                 const isSelected = localFilters.genders.includes(gender.id);
                 return (
@@ -170,7 +162,7 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
                     key={gender.id}
                     onClick={() => toggleGender(gender.id)}
                     whileTap={{ scale: 0.97 }}
-                    className={`relative flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                    className={`relative flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all duration-200 ${
                       isSelected
                         ? "text-primary-foreground"
                         : "text-foreground glass hover:bg-muted/50"
@@ -179,11 +171,11 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
                     {isSelected && (
                       <motion.div
                         layoutId="selectedGender"
-                        className="absolute inset-0 btn-gold rounded-xl"
+                        className="absolute inset-0 btn-gold rounded-lg"
                         transition={{ type: "spring", stiffness: 500, damping: 35 }}
                       />
                     )}
-                    <span className="relative z-10 text-lg">{gender.emoji}</span>
+                    <span className="relative z-10 text-sm">{gender.emoji}</span>
                     <span className="relative z-10">{gender.label}</span>
                   </motion.button>
                 );
@@ -193,10 +185,10 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
         </div>
 
         {/* Apply Button */}
-        <motion.div className="mt-8">
+        <motion.div className="mt-5">
           <Button
             onClick={handleApply}
-            className="w-full btn-gold py-6 text-base font-semibold rounded-2xl"
+            className="w-full btn-gold py-4 text-sm font-semibold rounded-xl"
           >
             Appliquer les filtres
           </Button>

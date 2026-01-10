@@ -31,7 +31,23 @@ const Home = () => {
     genders: ["all"],
   });
 
-  const currentProfile = profiles[currentIndex];
+  // Filter profiles based on criteria
+  const filteredProfiles = profiles.filter((profile) => {
+    // Age filter
+    if (profile.age < filters.ageMin || profile.age > filters.ageMax) {
+      return false;
+    }
+    
+    // Distance filter (extract number from "X km" string)
+    const distanceNum = parseInt(profile.distance.replace(/[^0-9]/g, ""), 10);
+    if (distanceNum > filters.distance) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  const currentProfile = filteredProfiles[currentIndex % filteredProfiles.length];
   const profilesWhoLikedUser = new Set(["1", "3", "5"]);
 
   const checkForMatch = (profileId: string) => {
@@ -50,7 +66,7 @@ const Home = () => {
       }
     }
 
-    if (currentIndex < profiles.length - 1) {
+    if (currentIndex < filteredProfiles.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
       setCurrentIndex(0);
@@ -153,7 +169,7 @@ const Home = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           {/* Background cards (stack effect) */}
-          {profiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
+          {filteredProfiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
             <motion.div
               key={profile.id}
               className="absolute w-full h-full rounded-3xl overflow-hidden"
