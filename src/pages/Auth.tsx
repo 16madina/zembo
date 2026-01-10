@@ -15,6 +15,54 @@ const Auth = () => {
   const [view, setView] = useState<AuthView>("welcome");
   const [loading, setLoading] = useState(false);
 
+  // Helper function to upload photos to storage
+  const uploadPhotos = async (userId: string, photos: string[]): Promise<string | null> => {
+    if (photos.length === 0) return null;
+
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        
+        // Convert base64 to blob
+        const base64Response = await fetch(photo);
+        const blob = await base64Response.blob();
+        
+        // Generate unique filename
+        const fileName = `${userId}/${Date.now()}-${i}.jpg`;
+        
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from("profile-photos")
+          .upload(fileName, blob, {
+            contentType: "image/jpeg",
+            upsert: true
+          });
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          continue;
+        }
+
+        // Get public URL
+        const { data: publicUrlData } = supabase.storage
+          .from("profile-photos")
+          .getPublicUrl(fileName);
+
+        if (publicUrlData) {
+          uploadedUrls.push(publicUrlData.publicUrl);
+        }
+      }
+
+      // Return the first photo as avatar
+      return uploadedUrls.length > 0 ? uploadedUrls[0] : null;
+    } catch (err) {
+      console.error("Error uploading photos:", err);
+      return null;
+    }
+  };
+
   const handleSignUpComplete = async (data: OnboardingData) => {
     setLoading(true);
     try {
@@ -42,6 +90,9 @@ const Auth = () => {
       // Update profile with additional data
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Upload photos to storage
+        const avatarUrl = await uploadPhotos(user.id, data.photos);
+
         await supabase.from("profiles").update({
           display_name: displayName,
           age: data.birthday ? calculateAge(data.birthday) : null,
@@ -49,6 +100,8 @@ const Auth = () => {
           looking_for: data.lookingFor,
           interests: data.interests,
           location: data.country,
+          avatar_url: avatarUrl,
+          is_verified: data.faceVerified || false,
         }).eq("user_id", user.id);
       }
 
