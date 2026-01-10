@@ -21,6 +21,10 @@ type LoadingState = {
 
 export const useSoundEffects = () => {
   const [isDrumrollPlaying, setIsDrumrollPlaying] = useState(false);
+
+  // Single source of truth for what the voice must say
+  const zemboTtsTextRef = useRef<string>("ZEMMBO");
+
   const audioUrlsRef = useRef<AudioUrls>({
     dice: null,
     drumroll: null,
@@ -32,6 +36,9 @@ export const useSoundEffects = () => {
     drumroll: false,
     zembo: false,
   });
+
+  // Track which exact text our cached zembo URL corresponds to
+  const zemboCachedTextRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadSfx = async (
@@ -72,7 +79,22 @@ export const useSoundEffects = () => {
     };
 
     const loadTts = async (text: string) => {
-      if (audioUrlsRef.current.zembo || loadingRef.current.zembo) return;
+      const normalized = text.trim();
+      const alreadyHaveExact =
+        !!audioUrlsRef.current.zembo && zemboCachedTextRef.current === normalized;
+
+      if (alreadyHaveExact || loadingRef.current.zembo) return;
+
+      // If we have a cached URL but for a different text, revoke it and regenerate
+      if (audioUrlsRef.current.zembo && zemboCachedTextRef.current !== normalized) {
+        try {
+          URL.revokeObjectURL(audioUrlsRef.current.zembo);
+        } catch {
+          // ignore
+        }
+        audioUrlsRef.current = { ...audioUrlsRef.current, zembo: null };
+        zemboCachedTextRef.current = null;
+      }
 
       loadingRef.current = { ...loadingRef.current, zembo: true };
 
@@ -86,17 +108,20 @@ export const useSoundEffects = () => {
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
               Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
-            body: JSON.stringify({ text }),
+            body: JSON.stringify({ text: normalized }),
           }
         );
 
         if (!response.ok) return;
 
         const audioBlob = await response.blob();
+        const url = URL.createObjectURL(audioBlob);
+
         audioUrlsRef.current = {
           ...audioUrlsRef.current,
-          zembo: URL.createObjectURL(audioBlob),
+          zembo: url,
         };
+        zemboCachedTextRef.current = normalized;
       } catch (error) {
         console.error("Error preloading Zembo voice:", error);
       } finally {
@@ -116,7 +141,7 @@ export const useSoundEffects = () => {
       3
     );
 
-    void loadTts("ZEMMBO");
+    void loadTts(zemboTtsTextRef.current);
   }, []);
 
   const playDiceSound = useCallback(async () => {
@@ -153,7 +178,7 @@ export const useSoundEffects = () => {
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
               Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
-            body: JSON.stringify({ text: "ZEMMBO" }),
+            body: JSON.stringify({ text: zemboTtsTextRef.current }),
           }
         );
 
