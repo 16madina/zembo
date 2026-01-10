@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
 import L from "leaflet";
-import "../../node_modules/leaflet/dist/leaflet.css";
+import "leaflet/dist/leaflet.css";
 import { Profile } from "@/data/mockProfiles";
 
 // Fix for default marker icons in Leaflet with Vite
