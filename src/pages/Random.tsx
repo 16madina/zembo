@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Shuffle, Zap } from "lucide-react";
+import { Phone } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useRandomCall } from "@/hooks/useRandomCall";
@@ -74,52 +74,111 @@ const Random = () => {
       default:
         return (
           <>
+            {/* Animated background circles */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="absolute rounded-full border border-primary/10"
+                  style={{
+                    width: `${200 + i * 100}px`,
+                    height: `${200 + i * 100}px`,
+                  }}
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    opacity: [0.3, 0.1, 0.3]
+                  }}
+                  transition={{ 
+                    duration: 4, 
+                    repeat: Infinity, 
+                    delay: i * 0.5,
+                    ease: "easeInOut"
+                  }}
+                />
+              ))}
+            </div>
+
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", damping: 15 }}
-              className="relative w-28 h-28 mb-8"
+              className="relative w-32 h-32 mb-8 z-10"
             >
-              <div className="absolute inset-0 rounded-full glass" />
+              {/* Outer glow ring */}
               <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 rounded-full border-2 border-dashed border-primary/30"
+                className="absolute inset-0 rounded-full border-2 border-primary/20"
+                animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.2, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
               />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Shuffle className="w-12 h-12 text-primary" />
+              
+              {/* Main circle with phone icon */}
+              <div className="absolute inset-0 rounded-full glass flex items-center justify-center">
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Phone className="w-12 h-12 text-primary" />
+                </motion.div>
               </div>
             </motion.div>
 
-            <motion.h1 
-              className="text-2xl font-bold text-foreground mb-3"
+            {/* Title with big Z */}
+            <motion.div 
+              className="text-center mb-2 z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              Rencontre Aléatoire
-            </motion.h1>
-            
-            <motion.p 
-              className="text-muted-foreground mb-10 max-w-xs leading-relaxed text-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              <h1 className="text-3xl font-bold text-foreground">
+                Bienvenue sur <span className="text-primary text-4xl">Z</span> Roulette
+              </h1>
+            </motion.div>
+
+            {/* Ghost mode badge */}
+            <motion.div
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6 z-10"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
             >
-              Lancez un appel vocal anonyme de 1min30 avec quelqu'un. Si vous vous plaisez, matchez et découvrez-vous !
+              <motion.div
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-2 h-2 rounded-full bg-primary"
+              />
+              <span className="text-sm text-primary font-medium">Mode Ghost activé</span>
+            </motion.div>
+            
+            <motion.p 
+              className="text-muted-foreground mb-4 max-w-xs leading-relaxed text-center z-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              Tu vas être connecté(e) avec une personne choisie par le hasard.
+            </motion.p>
+
+            <motion.p 
+              className="text-muted-foreground/70 mb-10 max-w-xs text-center text-sm z-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              Aucun profil. Aucune photo.<br />
+              <span className="text-foreground font-medium">Juste une voix.</span>
             </motion.p>
 
             <motion.button 
               onClick={startSelecting}
-              className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3"
+              className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
+              transition={{ delay: 0.6 }}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
-              <Zap className="w-5 h-5 text-primary-foreground" fill="currentColor" />
-              <span className="text-primary-foreground">Lancer une rencontre</span>
+              <Phone className="w-5 h-5 text-primary-foreground" />
+              <span className="text-primary-foreground">Lancer l'appel</span>
             </motion.button>
           </>
         );
