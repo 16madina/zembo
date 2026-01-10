@@ -94,6 +94,15 @@
 }
 
 @layer base {
+  :root {
+    /* Safe Area Insets */
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --keyboard-height: 0px;
+  }
+
   * {
     @apply border-border;
   }
@@ -107,7 +116,17 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--gradient-bg);
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
+    padding-top: var(--sat);
+    padding-right: var(--sar);
+    padding-bottom: var(--sab);
+    padding-left: var(--sal);
+  }
+
+  /* Keyboard open adjustments */
+  body.keyboard-open {
+    padding-bottom: var(--keyboard-height);
   }
 }
 
