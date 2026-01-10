@@ -13,6 +13,16 @@ import GenderAndPreferenceStep from "./steps/GenderAndPreferenceStep";
 import InterestsStep from "./steps/InterestsStep";
 import PhotosStep from "./steps/PhotosStep";
 
+// Background images
+import bgIdentity from "@/assets/onboarding/bg-identity.jpg";
+import bgCountry from "@/assets/onboarding/bg-country.jpg";
+import bgPhone from "@/assets/onboarding/bg-phone.jpg";
+import bgEmail from "@/assets/onboarding/bg-email.jpg";
+import bgBirthday from "@/assets/onboarding/bg-birthday.jpg";
+import bgGender from "@/assets/onboarding/bg-gender.jpg";
+import bgInterests from "@/assets/onboarding/bg-interests.jpg";
+import bgPhotos from "@/assets/onboarding/bg-photos.jpg";
+
 export interface OnboardingData {
   firstName: string;
   lastName: string;
@@ -35,14 +45,14 @@ interface OnboardingStepsProps {
 }
 
 const steps = [
-  { id: "name", title: "Votre identité" },
-  { id: "country", title: "Votre pays" },
-  { id: "phone", title: "Téléphone" },
-  { id: "email", title: "Email & mot de passe" },
-  { id: "birthday", title: "Votre âge" },
-  { id: "genderAndPreference", title: "Je suis & Je recherche" },
-  { id: "interests", title: "Centres d'intérêt" },
-  { id: "photos", title: "Vos photos" },
+  { id: "name", title: "Votre identité", bg: bgIdentity },
+  { id: "country", title: "Votre pays", bg: bgCountry },
+  { id: "phone", title: "Téléphone", bg: bgPhone },
+  { id: "email", title: "Email & mot de passe", bg: bgEmail },
+  { id: "birthday", title: "Votre âge", bg: bgBirthday },
+  { id: "genderAndPreference", title: "Je suis & Je recherche", bg: bgGender },
+  { id: "interests", title: "Centres d'intérêt", bg: bgInterests },
+  { id: "photos", title: "Vos photos", bg: bgPhotos },
 ];
 
 const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
@@ -132,67 +142,90 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-8">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={handleBack}
-          className="w-10 h-10 rounded-full glass flex items-center justify-center tap-highlight"
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* Background Image with Animation */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStep}
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.5 }}
+          className="absolute inset-0 z-0"
         >
-          <ArrowLeft className="w-5 h-5 text-foreground" />
-        </button>
-        <div className="flex-1">
-          <Progress value={progress} className="h-2" />
-        </div>
-        <span className="text-sm text-muted-foreground font-medium">
-          {currentStep + 1}/{steps.length}
-        </span>
-      </div>
+          <img
+            src={steps[currentStep].bg}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-background/40" />
+        </motion.div>
+      </AnimatePresence>
 
-      {/* Step Title */}
-      <motion.h1
-        key={currentStep}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="text-2xl font-bold text-foreground mb-6"
-      >
-        {steps[currentStep].title}
-      </motion.h1>
-
-      {/* Step Content */}
-      <div className="flex-1">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
+      {/* Content */}
+      <div className="relative z-10 flex-1 flex flex-col px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={handleBack}
+            className="w-10 h-10 rounded-full glass flex items-center justify-center tap-highlight"
           >
-            {renderStep()}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+            <ArrowLeft className="w-5 h-5 text-foreground" />
+          </button>
+          <div className="flex-1">
+            <Progress value={progress} className="h-2" />
+          </div>
+          <span className="text-sm text-muted-foreground font-medium">
+            {currentStep + 1}/{steps.length}
+          </span>
+        </div>
 
-      {/* Next Button */}
-      <div className="pt-6">
-        <Button
-          onClick={handleNext}
-          disabled={!isStepValid()}
-          className="w-full h-14 btn-gold rounded-2xl text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        {/* Step Title */}
+        <motion.h1
+          key={currentStep}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-2xl font-bold text-foreground mb-6"
         >
-          {currentStep === steps.length - 1 ? (
-            <>
-              Terminer
-              <Check className="w-5 h-5" />
-            </>
-          ) : (
-            <>
-              Suivant
-              <ArrowRight className="w-5 h-5" />
-            </>
-          )}
-        </Button>
+          {steps[currentStep].title}
+        </motion.h1>
+
+        {/* Step Content */}
+        <div className="flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderStep()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Next Button */}
+        <div className="pt-6">
+          <Button
+            onClick={handleNext}
+            disabled={!isStepValid()}
+            className="w-full h-14 btn-gold rounded-2xl text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {currentStep === steps.length - 1 ? (
+              <>
+                Terminer
+                <Check className="w-5 h-5" />
+              </>
+            ) : (
+              <>
+                Suivant
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
