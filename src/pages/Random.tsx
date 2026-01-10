@@ -30,7 +30,7 @@ const Random = () => {
     reset,
   } = useRandomCall();
   
-  const { playDiceSound, playZemboVoice } = useSoundEffects();
+  const { playDiceSound, playZemboVoice, isDrumrollPlaying } = useSoundEffects();
 
   const handleCommencer = () => {
     playDiceSound();
@@ -48,6 +48,7 @@ const Random = () => {
           <PreferenceSelector 
             onSelect={startSearch} 
             onStartCall={handleStartCall}
+            isShaking={isDrumrollPlaying}
           />
         );
       
