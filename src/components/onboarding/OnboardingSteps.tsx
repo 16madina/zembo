@@ -9,9 +9,9 @@ import CountryStep from "./steps/CountryStep";
 import PhoneStep from "./steps/PhoneStep";
 import EmailStep from "./steps/EmailStep";
 import BirthdayStep from "./steps/BirthdayStep";
-import GenderStep from "./steps/GenderStep";
-import LookingForStep from "./steps/LookingForStep";
+import GenderAndPreferenceStep from "./steps/GenderAndPreferenceStep";
 import InterestsStep from "./steps/InterestsStep";
+import PhotosStep from "./steps/PhotosStep";
 
 export interface OnboardingData {
   firstName: string;
@@ -26,6 +26,7 @@ export interface OnboardingData {
   gender: string;
   lookingFor: string[];
   interests: string[];
+  photos: string[];
 }
 
 interface OnboardingStepsProps {
@@ -39,9 +40,9 @@ const steps = [
   { id: "phone", title: "Téléphone" },
   { id: "email", title: "Email & mot de passe" },
   { id: "birthday", title: "Votre âge" },
-  { id: "gender", title: "Je suis" },
-  { id: "lookingFor", title: "Je recherche" },
+  { id: "genderAndPreference", title: "Je suis & Je recherche" },
   { id: "interests", title: "Centres d'intérêt" },
+  { id: "photos", title: "Vos photos" },
 ];
 
 const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
@@ -59,6 +60,7 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
     gender: "",
     lookingFor: [],
     interests: [],
+    photos: [],
   });
 
   const progress = ((currentStep + 1) / steps.length) * 100;
@@ -95,12 +97,12 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
         return data.email.includes("@") && data.password.length >= 6;
       case "birthday":
         return data.birthday !== null;
-      case "gender":
-        return data.gender.length > 0;
-      case "lookingFor":
-        return data.lookingFor.length > 0;
+      case "genderAndPreference":
+        return data.gender.length > 0 && data.lookingFor.length > 0;
       case "interests":
         return data.interests.length >= 3;
+      case "photos":
+        return data.photos.length >= 1;
       default:
         return false;
     }
@@ -118,12 +120,12 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
         return <EmailStep data={data} updateData={updateData} />;
       case "birthday":
         return <BirthdayStep data={data} updateData={updateData} onNext={handleNext} />;
-      case "gender":
-        return <GenderStep data={data} updateData={updateData} onNext={handleNext} />;
-      case "lookingFor":
-        return <LookingForStep data={data} updateData={updateData} />;
+      case "genderAndPreference":
+        return <GenderAndPreferenceStep data={data} updateData={updateData} />;
       case "interests":
         return <InterestsStep data={data} updateData={updateData} />;
+      case "photos":
+        return <PhotosStep data={data} updateData={updateData} />;
       default:
         return null;
     }
