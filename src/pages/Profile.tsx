@@ -16,13 +16,17 @@ import {
   Heart,
   Pencil,
   FileText,
+  Loader2,
+  Mail,
+  Send,
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 type EditFieldType = "occupation" | "education" | "height" | "gender" | "age" | "display_name" | "bio" | "interests";
 
@@ -40,6 +44,8 @@ interface UserProfile {
   occupation: string | null;
   education: string | null;
   height: string | null;
+  email: string | null;
+  email_verified: boolean | null;
 }
 
 interface ProfileInfoRowProps {
@@ -89,6 +95,7 @@ const Profile = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editField, setEditField] = useState<EditFieldType>("occupation");
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -163,6 +170,38 @@ const Profile = () => {
       setProfile((prev) => prev ? { ...prev, [field]: value } as UserProfile : null);
     } catch (error) {
       console.error("Error updating profile:", error);
+    }
+  };
+
+  const handleSendVerificationEmail = async () => {
+    if (!user || !user.email) {
+      toast.error("Email non disponible");
+      return;
+    }
+
+    setIsSendingVerification(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-verification-email", {
+        body: {
+          email: user.email,
+          displayName: profile?.display_name || user.email.split("@")[0],
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success("Email de vérification envoyé !");
+        // Update local state to show email was saved
+        setProfile((prev) => prev ? { ...prev, email: user.email } : null);
+      } else {
+        throw new Error(data.error || "Erreur lors de l'envoi");
+      }
+    } catch (error: any) {
+      console.error("Error sending verification email:", error);
+      toast.error(error.message || "Erreur lors de l'envoi de l'email");
+    } finally {
+      setIsSendingVerification(false);
     }
   };
 
@@ -269,15 +308,38 @@ const Profile = () => {
             <Pencil className="w-4 h-4 text-primary-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
 
-          {/* Verification badge */}
-          <div
-            className={`mt-2 flex items-center gap-2 px-4 py-2 rounded-full ${
-              isVerified ? "bg-success/20 text-success" : "bg-muted/50 text-muted-foreground"
-            }`}
-          >
-            {isVerified ? <ShieldCheck className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
-            <span className="text-sm font-medium">{isVerified ? "Vérifié" : "Non vérifié"}</span>
-          </div>
+          {/* Verification badge and button */}
+          {isVerified ? (
+            <div className="mt-2 flex items-center gap-2 px-4 py-2 rounded-full bg-success/20 text-success">
+              <ShieldCheck className="w-4 h-4" />
+              <span className="text-sm font-medium">Profil vérifié</span>
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 text-muted-foreground">
+                <ShieldOff className="w-4 h-4" />
+                <span className="text-sm font-medium">Non vérifié</span>
+              </div>
+              <Button
+                onClick={handleSendVerificationEmail}
+                disabled={isSendingVerification}
+                size="sm"
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+              >
+                {isSendingVerification ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Envoi...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Vérifier mon email
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </motion.div>
       </div>
 
