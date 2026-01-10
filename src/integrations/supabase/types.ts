@@ -22,6 +22,10 @@ export type Database = {
           created_at: string
           display_name: string | null
           education: string | null
+          email: string | null
+          email_verification_sent_at: string | null
+          email_verification_token: string | null
+          email_verified: boolean | null
           gender: string | null
           height: string | null
           id: string
@@ -42,6 +46,10 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           education?: string | null
+          email?: string | null
+          email_verification_sent_at?: string | null
+          email_verification_token?: string | null
+          email_verified?: boolean | null
           gender?: string | null
           height?: string | null
           id?: string
@@ -62,6 +70,10 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           education?: string | null
+          email?: string | null
+          email_verification_sent_at?: string | null
+          email_verification_token?: string | null
+          email_verified?: boolean | null
           gender?: string | null
           height?: string | null
           id?: string

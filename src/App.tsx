@@ -10,6 +10,7 @@ import Random from "./pages/Random";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
+import VerifyEmail from "./pages/VerifyEmail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+    <Route path="/verify-email" element={<VerifyEmail />} />
     <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
     <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
     <Route path="/random" element={<ProtectedRoute><Random /></ProtectedRoute>} />
