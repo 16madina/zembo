@@ -34,6 +34,7 @@ interface UseRandomCallReturn {
   matchResult: "matched" | "not_matched" | "rejected" | null;
   waitingForOther: boolean;
   isExtendedCall: boolean;
+  otherUserId: string | null;
   startSelecting: () => void;
   startSearch: (preference: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
@@ -404,6 +405,11 @@ export const useRandomCall = (): UseRandomCallReturn => {
     };
   }, []);
 
+  // Get the other user's ID from the session
+  const otherUserId = session && user 
+    ? (session.user1_id === user.id ? session.user2_id : session.user1_id)
+    : null;
+
   return {
     status,
     selectedPreference,
@@ -412,6 +418,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
     matchResult,
     waitingForOther,
     isExtendedCall,
+    otherUserId,
     startSelecting,
     startSearch,
     cancelSearch,
