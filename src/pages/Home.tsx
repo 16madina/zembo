@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SlidersHorizontal, SearchX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -9,16 +9,20 @@ import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 import NearbyMap from "@/components/NearbyMap";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 import { mockProfiles, Profile } from "@/data/mockProfiles";
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [profiles] = useState<Profile[]>(mockProfiles);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"discover" | "nearby">("discover");
+  const [userCountry, setUserCountry] = useState<string | null>(null);
   
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
@@ -31,6 +35,25 @@ const Home = () => {
     distance: 50,
     genders: ["all"],
   });
+
+  // Fetch user's country from profile
+  useEffect(() => {
+    const fetchUserCountry = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("location")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (data?.location) {
+        setUserCountry(data.location);
+      }
+    };
+    
+    fetchUserCountry();
+  }, [user]);
 
   // Filter profiles based on criteria
   const filteredProfiles = profiles.filter((profile) => {
@@ -282,6 +305,7 @@ const Home = () => {
             >
               <NearbyMap 
                 profiles={filteredProfiles} 
+                userCountry={userCountry}
                 onProfileClick={(profile) => {
                   setSelectedProfile(profile);
                   setIsModalOpen(true);
