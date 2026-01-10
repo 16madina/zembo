@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -50,33 +51,63 @@ const mockConversations: Conversation[] = [
   }
 ];
 
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, x: -20 },
+  show: { opacity: 1, x: 0 }
+};
+
 const Messages = () => {
   return (
-    <div className="min-h-screen pb-24">
-      <header className="flex items-center justify-center px-6 py-4">
+    <div className="min-h-screen pb-28">
+      <motion.header 
+        className="flex items-center justify-center px-6 py-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
         <ZemboLogo />
-      </header>
+      </motion.header>
 
-      <div className="px-6 mb-4">
+      <motion.div 
+        className="px-6 mb-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
         <h2 className="text-xl font-bold text-foreground">Messages</h2>
         <p className="text-sm text-muted-foreground">Vos conversations</p>
-      </div>
+      </motion.div>
 
       {mockConversations.length > 0 ? (
-        <div className="px-4 space-y-2">
+        <motion.div 
+          className="px-4 space-y-2"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
           {mockConversations.map((conv) => (
-            <div
+            <motion.div
               key={conv.id}
-              className="flex items-center gap-4 p-4 bg-card rounded-2xl cursor-pointer transition-colors hover:bg-secondary"
+              variants={item}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className="flex items-center gap-4 p-4 glass rounded-2xl cursor-pointer transition-colors"
             >
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <img
                   src={conv.user.photo}
                   alt={conv.user.name}
                   className="w-14 h-14 rounded-full object-cover"
                 />
                 {conv.user.isOnline && (
-                  <span className="absolute bottom-0 right-0 w-4 h-4 bg-success border-2 border-card rounded-full" />
+                  <span className="absolute bottom-0 right-0 w-4 h-4 bg-success border-[3px] border-card rounded-full" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -87,21 +118,29 @@ const Messages = () => {
                 <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
               </div>
               {conv.unread > 0 && (
-                <span className="w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground text-xs font-bold rounded-full">
+                <motion.span 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="w-6 h-6 flex items-center justify-center btn-gold text-primary-foreground text-xs font-bold rounded-full"
+                >
                   {conv.unread}
-                </span>
+                </motion.span>
               )}
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center mt-20">
-          <div className="w-20 h-20 mb-6 rounded-full bg-muted flex items-center justify-center">
+        <motion.div 
+          className="flex-1 flex flex-col items-center justify-center px-6 text-center mt-20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="w-20 h-20 mb-6 rounded-full glass flex items-center justify-center">
             <MessageCircle className="w-10 h-10 text-muted-foreground" />
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-2">Pas encore de messages</h3>
           <p className="text-muted-foreground">Vos conversations apparaîtront ici</p>
-        </div>
+        </motion.div>
       )}
 
       <BottomNavigation />

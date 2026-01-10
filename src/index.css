@@ -2,27 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
-    --background: 225 25% 8%;
+    --background: 225 30% 6%;
     --foreground: 0 0% 98%;
 
-    --card: 225 20% 12%;
+    --card: 225 25% 10%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 225 20% 10%;
+    --popover: 225 25% 8%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 43 74% 49%;
     --primary-foreground: 225 25% 8%;
 
-    --secondary: 225 30% 18%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 225 20% 14%;
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 225 20% 20%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 225 15% 18%;
+    --muted-foreground: 220 10% 55%;
 
     --accent: 210 100% 50%;
     --accent-foreground: 0 0% 98%;
@@ -30,26 +30,35 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 142 71% 45%;
+    --success: 152 69% 45%;
     --success-foreground: 0 0% 98%;
 
-    --border: 225 15% 20%;
-    --input: 225 15% 20%;
+    --border: 225 15% 18%;
+    --input: 225 15% 18%;
     --ring: 43 74% 49%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
 
+    /* Glassmorphism */
+    --glass-bg: hsla(225, 25%, 12%, 0.6);
+    --glass-border: hsla(0, 0%, 100%, 0.08);
+    --glass-highlight: hsla(0, 0%, 100%, 0.05);
+    
     /* Gradients */
-    --gradient-bg: linear-gradient(180deg, hsl(225 25% 8%) 0%, hsl(225 35% 12%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(225 20% 15%) 0%, hsl(225 25% 10%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(43 74% 49%) 0%, hsl(38 80% 55%) 50%, hsl(43 74% 49%) 100%);
-    --gradient-overlay: linear-gradient(180deg, transparent 0%, hsla(225, 25%, 8%, 0.8) 100%);
+    --gradient-bg: linear-gradient(165deg, hsl(225 30% 6%) 0%, hsl(230 35% 10%) 50%, hsl(225 30% 6%) 100%);
+    --gradient-card: linear-gradient(145deg, hsla(225, 20%, 15%, 0.8) 0%, hsla(225, 25%, 10%, 0.9) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(43 80% 52%) 0%, hsl(38 85% 58%) 50%, hsl(43 80% 52%) 100%);
+    --gradient-overlay: linear-gradient(180deg, transparent 0%, hsla(225, 30%, 6%, 0.95) 100%);
+    --gradient-shine: linear-gradient(135deg, hsla(0, 0%, 100%, 0.15) 0%, transparent 50%, hsla(0, 0%, 100%, 0.05) 100%);
 
     /* Shadows */
-    --shadow-card: 0 8px 32px hsla(0, 0%, 0%, 0.4);
-    --shadow-glow-gold: 0 0 20px hsla(43, 74%, 49%, 0.3);
-    --shadow-glow-blue: 0 0 20px hsla(210, 100%, 50%, 0.3);
-    --shadow-glow-red: 0 0 20px hsla(0, 72%, 51%, 0.3);
+    --shadow-card: 0 8px 32px hsla(0, 0%, 0%, 0.3), 0 0 0 1px hsla(0, 0%, 100%, 0.05);
+    --shadow-elevated: 0 20px 50px hsla(0, 0%, 0%, 0.5);
+    --shadow-glow-gold: 0 0 30px hsla(43, 74%, 49%, 0.4), 0 0 60px hsla(43, 74%, 49%, 0.2);
+    --shadow-glow-blue: 0 0 25px hsla(210, 100%, 50%, 0.35);
+    --shadow-glow-red: 0 0 25px hsla(0, 72%, 51%, 0.35);
+    --shadow-glow-green: 0 0 20px hsla(152, 69%, 45%, 0.4);
+    --shadow-inner: inset 0 1px 0 hsla(0, 0%, 100%, 0.1);
 
     --sidebar-background: 225 25% 8%;
     --sidebar-foreground: 0 0% 98%;
@@ -62,24 +71,24 @@
   }
 
   .dark {
-    --background: 225 25% 8%;
+    --background: 225 30% 6%;
     --foreground: 0 0% 98%;
-    --card: 225 20% 12%;
+    --card: 225 25% 10%;
     --card-foreground: 0 0% 98%;
-    --popover: 225 20% 10%;
+    --popover: 225 25% 8%;
     --popover-foreground: 0 0% 98%;
     --primary: 43 74% 49%;
     --primary-foreground: 225 25% 8%;
-    --secondary: 225 30% 18%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 225 20% 20%;
-    --muted-foreground: 220 10% 60%;
+    --secondary: 225 20% 14%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 225 15% 18%;
+    --muted-foreground: 220 10% 55%;
     --accent: 210 100% 50%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 225 15% 20%;
-    --input: 225 15% 20%;
+    --border: 225 15% 18%;
+    --input: 225 15% 18%;
     --ring: 43 74% 49%;
   }
 }
@@ -89,24 +98,69 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Poppins', sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--gradient-bg);
     min-height: 100vh;
+    overflow-x: hidden;
   }
 }
 
 @layer components {
-  .card-gradient {
-    background: var(--gradient-card);
+  /* Glassmorphism Card */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-inner);
   }
 
+  .glass-strong {
+    background: hsla(225, 25%, 12%, 0.85);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-inner), var(--shadow-card);
+  }
+
+  .card-gradient {
+    background: var(--gradient-card);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Gold Button */
   .btn-gold {
     background: var(--gradient-gold);
     box-shadow: var(--shadow-glow-gold);
+    position: relative;
+    overflow: hidden;
   }
 
+  .btn-gold::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-shine);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .btn-gold:hover::before {
+    opacity: 1;
+  }
+
+  .btn-gold:active {
+    transform: scale(0.97);
+  }
+
+  /* Text Gradient */
   .text-gradient-gold {
     background: var(--gradient-gold);
     -webkit-background-clip: text;
@@ -114,10 +168,12 @@
     background-clip: text;
   }
 
+  /* Overlay Gradient */
   .overlay-gradient {
     background: var(--gradient-overlay);
   }
 
+  /* Glow Effects */
   .glow-gold {
     box-shadow: var(--shadow-glow-gold);
   }
@@ -128,5 +184,60 @@
 
   .glow-red {
     box-shadow: var(--shadow-glow-red);
+  }
+
+  .glow-green {
+    box-shadow: var(--shadow-glow-green);
+  }
+
+  /* Floating Animation */
+  .float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* Pulse Ring */
+  .pulse-ring {
+    position: relative;
+  }
+
+  .pulse-ring::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    background: hsl(var(--success));
+    opacity: 0;
+    animation: pulse-ring 2s ease-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(1.3); opacity: 0; }
+  }
+
+  /* Native-like touch feedback */
+  .tap-highlight {
+    @apply transition-all duration-150 active:scale-95 active:opacity-80;
+  }
+
+  /* Smooth scroll */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
