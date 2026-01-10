@@ -42,7 +42,7 @@ interface UseRandomCallReturn {
   startSelecting: () => void;
   startSearch: (preference: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
-  submitDecision: (decision: "yes" | "no" | "continue") => Promise<void>;
+  submitDecision: (decision: "yes" | "no") => Promise<void>;
   reset: () => void;
 }
 
@@ -382,7 +382,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
     }
   }, [user]);
 
-  const submitDecision = useCallback(async (decision: "yes" | "no" | "continue") => {
+  const submitDecision = useCallback(async (decision: "yes" | "no") => {
     if (!user) return;
     
     // DEMO MODE: simulate the other person's response
@@ -396,20 +396,16 @@ export const useRandomCall = (): UseRandomCallReturn => {
         
         // Simulate the other person responding after 1-2 seconds
         setTimeout(() => {
-          // Demo: randomly decide if they match or continue (80% match, 20% continue)
-          const demoResponse = Math.random() > 0.2 ? "yes" : "continue";
+          // Demo: 80% chance the other person also says yes
+          const demoResponse = Math.random() > 0.2 ? "yes" : "no";
           
-          if (decision === "yes" && demoResponse === "yes") {
+          if (demoResponse === "yes") {
             setMatchResult("matched");
             setStatus("result");
-          } else if (decision === "continue" || demoResponse === "continue") {
-            // At least one wants to continue
-            setIsExtendedCall(true);
-            setTimeRemaining(30); // 30 more seconds
-            setStatus("call_extended");
           } else {
-            setMatchResult("matched");
-            setStatus("result");
+            // Other person said no
+            setMatchResult("rejected");
+            setStatus("rejected");
           }
           setWaitingForOther(false);
         }, 1500);
@@ -420,7 +416,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
     // Real mode
     if (!session?.id) return;
     
-    // If no, immediately show rejected status
+    // If no, immediately end and go to result
     if (decision === "no") {
       setMatchResult("not_matched");
       setStatus("result");
@@ -436,7 +432,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
         p_decision: decision,
       });
       
-      const result = data as { matched?: boolean; continued?: boolean; completed?: boolean; waiting?: boolean; rejected?: boolean; error?: string };
+      const result = data as { matched?: boolean; completed?: boolean; waiting?: boolean; rejected?: boolean; error?: string };
       
       if (result.rejected) {
         setMatchResult("rejected");
@@ -446,9 +442,6 @@ export const useRandomCall = (): UseRandomCallReturn => {
         if (result.matched) {
           setMatchResult("matched");
           setStatus("result");
-        } else if (result.continued) {
-          setIsExtendedCall(true);
-          setStatus("call_extended");
         } else {
           setMatchResult("not_matched");
           setStatus("result");
