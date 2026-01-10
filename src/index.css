@@ -220,6 +220,18 @@
     50% { transform: translateY(-10px); }
   }
 
+  /* Shake/Vibration Animation for suspense */
+  .shake-suspense {
+    animation: shake-suspense 0.15s ease-in-out infinite;
+  }
+
+  @keyframes shake-suspense {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    25% { transform: translateX(-3px) rotate(-0.5deg); }
+    50% { transform: translateX(3px) rotate(0.5deg); }
+    75% { transform: translateX(-2px) rotate(-0.3deg); }
+  }
+
   /* Pulse Ring */
   .pulse-ring {
     position: relative;

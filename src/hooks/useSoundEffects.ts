@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Avoid "Rendered more hooks than during the previous render" during Vite Fast Refresh
-// when this hook's internal hook count changes.
 if (import.meta.hot) {
   import.meta.hot.accept(() => {
     window.location.reload();
@@ -21,6 +20,7 @@ type LoadingState = {
 };
 
 export const useSoundEffects = () => {
+  const [isDrumrollPlaying, setIsDrumrollPlaying] = useState(false);
   const audioUrlsRef = useRef<AudioUrls>({
     dice: null,
     drumroll: null,
@@ -180,17 +180,21 @@ export const useSoundEffects = () => {
 
       const drumAudio = new Audio(drumUrl);
       drumAudio.volume = 0.75;
+      
+      setIsDrumrollPlaying(true);
 
       drumAudio.onended = () => {
+        setIsDrumrollPlaying(false);
         void playZemboNow();
       };
 
       await drumAudio.play();
     } catch (error) {
       console.error("Error playing drumroll:", error);
+      setIsDrumrollPlaying(false);
       await playZemboNow();
     }
   }, []);
 
-  return { playDiceSound, playZemboVoice };
+  return { playDiceSound, playZemboVoice, isDrumrollPlaying };
 };
