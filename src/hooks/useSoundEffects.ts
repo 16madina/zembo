@@ -133,25 +133,30 @@ export const useSoundEffects = () => {
       }
     };
 
-    void loadSfx(
-      "dice",
-      "Dice rolling and bouncing on wooden table, casino game sound effect",
-      2
-    );
+    // Sequential loading to avoid ElevenLabs 429 rate limit (max 4 concurrent requests)
+    const loadAllSequentially = async () => {
+      await loadSfx(
+        "dice",
+        "Dice rolling and bouncing on wooden table, casino game sound effect",
+        2
+      );
 
-    void loadSfx(
-      "drumroll",
-      "Intense dramatic drumroll building suspense, theatrical drum roll crescendo, epic anticipation",
-      3
-    );
+      await loadSfx(
+        "drumroll",
+        "Intense dramatic drumroll building suspense, theatrical drum roll crescendo, epic anticipation",
+        3
+      );
 
-    void loadSfx(
-      "reveal",
-      "Magical sparkle reveal sound, mystical unveiling shimmer, enchanting discovery chime",
-      2
-    );
+      await loadSfx(
+        "reveal",
+        "Magical sparkle reveal sound, mystical unveiling shimmer, enchanting discovery chime",
+        2
+      );
 
-    void loadTts(zemboTtsTextRef.current);
+      await loadTts(zemboTtsTextRef.current);
+    };
+
+    void loadAllSequentially();
   }, []);
 
   const playDiceSound = useCallback(async () => {
