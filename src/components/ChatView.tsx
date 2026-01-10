@@ -333,7 +333,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       </AnimatePresence>
 
       {/* Input */}
-      <div className="px-4 py-3 glass-strong border-t border-border/50 safe-area-bottom">
+      <div className="px-4 py-3 pb-20 glass-strong border-t border-border/50">
         <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
