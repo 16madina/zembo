@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle } from "lucide-react";
+import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { isNative, takePhoto } from "@/lib/capacitor";
+import { isNative } from "@/lib/capacitor";
+import { useFaceDetection, FaceDirection } from "@/hooks/useFaceDetection";
 
 interface FaceVerificationStepProps {
   onNext: () => void;
@@ -13,25 +14,116 @@ interface FaceVerificationStepProps {
 
 type VerificationStep = "intro" | "center" | "left" | "right" | "complete";
 
-const verificationSteps: { id: VerificationStep; instruction: string; subtext: string }[] = [
-  { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre" },
-  { id: "left", instruction: "Tournez la tête à gauche", subtext: "Lentement, jusqu'à ce que le cercle soit rempli" },
-  { id: "right", instruction: "Tournez la tête à droite", subtext: "Lentement, jusqu'à ce que le cercle soit rempli" },
+const verificationSteps: { id: VerificationStep; instruction: string; subtext: string; targetDirection: FaceDirection }[] = [
+  { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre", targetDirection: "center" },
+  { id: "left", instruction: "Tournez la tête à gauche", subtext: "Lentement, jusqu'à ce que le cercle soit rempli", targetDirection: "left" },
+  { id: "right", instruction: "Tournez la tête à droite", subtext: "Lentement, jusqu'à ce que le cercle soit rempli", targetDirection: "right" },
 ];
+
+const REQUIRED_HOLD_TIME = 1500; // ms to hold position
+const PROGRESS_UPDATE_INTERVAL = 50; // ms
 
 export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceVerificationStepProps) => {
   const [currentStep, setCurrentStep] = useState<VerificationStep>("intro");
   const [progress, setProgress] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<VerificationStep[]>([]);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isAILoading, setIsAILoading] = useState(false);
+  const [detectionStatus, setDetectionStatus] = useState<string>("");
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const holdStartTimeRef = useRef<number | null>(null);
+
+  const isVerificationActive = currentStep !== "intro" && currentStep !== "complete";
+  
+  const { isLoading: isFaceDetectionLoading, error: faceDetectionError, result: faceResult } = useFaceDetection({
+    videoRef,
+    enabled: isVerificationActive,
+    onDetection: (result) => {
+      if (!isVerificationActive) return;
+      
+      const currentStepConfig = verificationSteps.find(s => s.id === currentStep);
+      if (!currentStepConfig) return;
+
+      // Update status message
+      if (!result.isDetected) {
+        setDetectionStatus("Visage non détecté");
+        holdStartTimeRef.current = null;
+        setProgress(0);
+        return;
+      }
+
+      const isCorrectDirection = result.direction === currentStepConfig.targetDirection;
+      
+      if (isCorrectDirection) {
+        setDetectionStatus("Parfait ! Maintenez la position...");
+        
+        if (!holdStartTimeRef.current) {
+          holdStartTimeRef.current = Date.now();
+        }
+        
+        const holdDuration = Date.now() - holdStartTimeRef.current;
+        const newProgress = Math.min(100, (holdDuration / REQUIRED_HOLD_TIME) * 100);
+        setProgress(newProgress);
+        
+        if (holdDuration >= REQUIRED_HOLD_TIME) {
+          completeCurrentStep();
+        }
+      } else {
+        holdStartTimeRef.current = null;
+        setProgress(prev => Math.max(0, prev - 5)); // Slowly decrease progress
+        
+        // Provide guidance
+        if (currentStepConfig.targetDirection === "center") {
+          if (result.direction === "left") {
+            setDetectionStatus("Tournez légèrement vers la droite");
+          } else if (result.direction === "right") {
+            setDetectionStatus("Tournez légèrement vers la gauche");
+          }
+        } else if (currentStepConfig.targetDirection === "left") {
+          if (result.direction === "center") {
+            setDetectionStatus("Tournez plus vers la gauche");
+          } else if (result.direction === "right") {
+            setDetectionStatus("Tournez vers la gauche");
+          }
+        } else if (currentStepConfig.targetDirection === "right") {
+          if (result.direction === "center") {
+            setDetectionStatus("Tournez plus vers la droite");
+          } else if (result.direction === "left") {
+            setDetectionStatus("Tournez vers la droite");
+          }
+        }
+      }
+    },
+  });
+
+  const completeCurrentStep = useCallback(() => {
+    setCompletedSteps(prev => [...prev, currentStep as VerificationStep]);
+    holdStartTimeRef.current = null;
+    
+    setTimeout(() => {
+      if (currentStep === "center") {
+        setCurrentStep("left");
+        setProgress(0);
+        setDetectionStatus("");
+      } else if (currentStep === "left") {
+        setCurrentStep("right");
+        setProgress(0);
+        setDetectionStatus("");
+      } else if (currentStep === "right") {
+        setCurrentStep("complete");
+        stopCamera();
+        updateData({ faceVerified: true });
+      }
+    }, 300);
+  }, [currentStep, updateData]);
 
   const startCamera = useCallback(async () => {
     try {
       setCameraError(null);
+      setIsAILoading(true);
       
       if (isNative) {
         // For native, we'll use a different approach
@@ -74,60 +166,40 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     };
   }, [currentStep, startCamera, stopCamera]);
 
+  useEffect(() => {
+    if (!isFaceDetectionLoading && isVerificationActive) {
+      setIsAILoading(false);
+    }
+  }, [isFaceDetectionLoading, isVerificationActive]);
+
   const startVerification = () => {
     setCurrentStep("center");
     setProgress(0);
     setCompletedSteps([]);
+    setDetectionStatus("");
   };
-
-  const simulateVerification = useCallback(() => {
-    if (isVerifying) return;
-    
-    setIsVerifying(true);
-    setProgress(0);
-    
-    progressIntervalRef.current = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-          }
-          
-          // Move to next step
-          setTimeout(() => {
-            setCompletedSteps(prev => [...prev, currentStep as VerificationStep]);
-            setIsVerifying(false);
-            
-            if (currentStep === "center") {
-              setCurrentStep("left");
-              setProgress(0);
-            } else if (currentStep === "left") {
-              setCurrentStep("right");
-              setProgress(0);
-            } else if (currentStep === "right") {
-              setCurrentStep("complete");
-              stopCamera();
-              updateData({ faceVerified: true });
-            }
-          }, 500);
-          
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 50);
-  }, [currentStep, isVerifying, stopCamera, updateData]);
 
   const resetVerification = () => {
     stopCamera();
     setCurrentStep("intro");
     setProgress(0);
     setCompletedSteps([]);
-    setIsVerifying(false);
+    setDetectionStatus("");
+    holdStartTimeRef.current = null;
   };
 
   const currentStepIndex = verificationSteps.findIndex(s => s.id === currentStep);
   const currentInstruction = verificationSteps.find(s => s.id === currentStep);
+
+  // Determine ring color based on detection
+  const getRingColor = () => {
+    if (!faceResult.isDetected) return "hsl(var(--muted))";
+    const currentStepConfig = verificationSteps.find(s => s.id === currentStep);
+    if (currentStepConfig && faceResult.direction === currentStepConfig.targetDirection) {
+      return "hsl(var(--primary))";
+    }
+    return "hsl(var(--destructive) / 0.5)";
+  };
 
   return (
     <div className="min-h-full flex flex-col">
@@ -176,7 +248,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               transition={{ delay: 0.4 }}
               className="text-muted-foreground mb-8 max-w-xs"
             >
-              Pour votre sécurité et celle de notre communauté, nous allons vérifier votre identité par reconnaissance faciale.
+              Notre IA va vérifier votre identité par reconnaissance faciale en temps réel.
             </motion.p>
 
             {/* Steps Preview */}
@@ -233,20 +305,20 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                       animate={{
                         scale: step.id === currentStep ? 1.1 : 1,
                         backgroundColor: completedSteps.includes(step.id) 
-                          ? "hsl(var(--primary))" 
+                          ? "hsl(142.1 76.2% 36.3%)" 
                           : step.id === currentStep 
                             ? "hsl(var(--primary) / 0.5)" 
                             : "hsl(var(--muted))"
                       }}
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 rounded-full flex items-center justify-center"
                     >
                       {completedSteps.includes(step.id) && (
-                        <CheckCircle2 className="w-3 h-3 text-primary-foreground" />
+                        <CheckCircle2 className="w-3 h-3 text-white" />
                       )}
                     </motion.div>
                     {index < verificationSteps.length - 1 && (
-                      <div className={`w-8 h-0.5 mx-1 ${
-                        completedSteps.includes(step.id) ? "bg-primary" : "bg-muted"
+                      <div className={`w-8 h-0.5 mx-1 transition-colors ${
+                        completedSteps.includes(step.id) ? "bg-green-500" : "bg-muted"
                       }`} />
                     )}
                   </div>
@@ -275,7 +347,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke="hsl(var(--primary))"
+                    stroke={progress > 0 ? "hsl(var(--primary))" : getRingColor()}
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeDasharray={283}
@@ -288,19 +360,40 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
                 {/* Camera container */}
                 <div className="absolute inset-4 rounded-full overflow-hidden bg-black/50 backdrop-blur-sm">
-                  {cameraError ? (
+                  {cameraError || faceDetectionError ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-center p-4">
                       <AlertCircle className="w-8 h-8 text-destructive mb-2" />
-                      <p className="text-xs text-muted-foreground">{cameraError}</p>
+                      <p className="text-xs text-muted-foreground">{cameraError || faceDetectionError}</p>
                     </div>
                   ) : (
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover scale-x-[-1]"
-                    />
+                    <>
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover scale-x-[-1]"
+                      />
+                      {/* Loading overlay */}
+                      {(isAILoading || isFaceDetectionLoading) && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <div className="text-center">
+                            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
+                            <p className="text-xs text-white">Chargement de l'IA...</p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Face detection indicator */}
+                      {!isFaceDetectionLoading && faceResult.isDetected && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-1 rounded-full bg-green-500/80 backdrop-blur-sm"
+                        >
+                          <p className="text-[10px] text-white font-medium">Visage détecté</p>
+                        </motion.div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -351,33 +444,25 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                 <h3 className="text-xl font-semibold text-foreground mb-2">
                   {currentInstruction?.instruction}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-2">
                   {currentInstruction?.subtext}
                 </p>
-              </motion.div>
-
-              {/* Action button */}
-              <div className="mt-8 w-full max-w-xs">
-                {!isVerifying ? (
-                  <Button
-                    onClick={simulateVerification}
-                    className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80"
-                    disabled={!!cameraError}
+                {/* Real-time feedback */}
+                {detectionStatus && !isFaceDetectionLoading && (
+                  <motion.p
+                    key={detectionStatus}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`text-sm font-medium ${
+                      detectionStatus.includes("Parfait") ? "text-green-500" : 
+                      detectionStatus.includes("non détecté") ? "text-destructive" : 
+                      "text-primary"
+                    }`}
                   >
-                    Capturer
-                  </Button>
-                ) : (
-                  <div className="text-center">
-                    <motion.div
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="text-primary font-medium"
-                    >
-                      Analyse en cours...
-                    </motion.div>
-                  </div>
+                    {detectionStatus}
+                  </motion.p>
                 )}
-              </div>
+              </motion.div>
             </div>
 
             {/* Reset button */}
@@ -455,7 +540,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               transition={{ delay: 0.6 }}
               className="text-muted-foreground mb-8 max-w-xs"
             >
-              Votre identité a été vérifiée avec succès. Vous obtiendrez le badge vérifié sur votre profil.
+              Votre identité a été vérifiée avec succès par notre IA. Vous obtiendrez le badge vérifié sur votre profil.
             </motion.p>
 
             {/* Verified badge preview */}
