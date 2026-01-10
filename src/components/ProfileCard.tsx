@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
-import { MapPin, BadgeCheck } from "lucide-react";
+import { MapPin, BadgeCheck, X, Star, Heart } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import { useRef } from "react";
 
@@ -7,9 +7,12 @@ interface ProfileCardProps {
   profile: Profile;
   onSwipe: (direction: "left" | "right" | "up") => void;
   onInfoClick: () => void;
+  onLike: () => void;
+  onPass: () => void;
+  onSuperLike: () => void;
 }
 
-const ProfileCard = ({ profile, onSwipe, onInfoClick }: ProfileCardProps) => {
+const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLike }: ProfileCardProps) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const isDragging = useRef(false);
@@ -61,6 +64,11 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick }: ProfileCardProps) => {
     }
   };
 
+  const buttonVariants = {
+    hover: { scale: 1.1 },
+    tap: { scale: 0.9 },
+  };
+
   return (
     <motion.div
       className="absolute w-full h-full cursor-pointer"
@@ -98,18 +106,18 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick }: ProfileCardProps) => {
 
         {/* LIKE Overlay */}
         <motion.div
-          className="absolute top-10 left-6 px-5 py-2.5 border-[3px] border-success rounded-xl -rotate-12 bg-success/10 backdrop-blur-sm pointer-events-none"
+          className="absolute top-8 left-4 px-4 py-2 border-[3px] border-success rounded-xl -rotate-12 bg-success/10 backdrop-blur-sm pointer-events-none"
           style={{ opacity: likeOpacity }}
         >
-          <span className="text-3xl font-bold text-success tracking-wider">LIKE</span>
+          <span className="text-2xl font-bold text-success tracking-wider">LIKE</span>
         </motion.div>
 
         {/* NOPE Overlay */}
         <motion.div
-          className="absolute top-10 right-6 px-5 py-2.5 border-[3px] border-destructive rounded-xl rotate-12 bg-destructive/10 backdrop-blur-sm pointer-events-none"
+          className="absolute top-8 right-4 px-4 py-2 border-[3px] border-destructive rounded-xl rotate-12 bg-destructive/10 backdrop-blur-sm pointer-events-none"
           style={{ opacity: nopeOpacity }}
         >
-          <span className="text-3xl font-bold text-destructive tracking-wider">NOPE</span>
+          <span className="text-2xl font-bold text-destructive tracking-wider">NOPE</span>
         </motion.div>
 
         {/* SUPER LIKE Overlay */}
@@ -117,17 +125,17 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick }: ProfileCardProps) => {
           className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 pointer-events-none"
           style={{ opacity: superLikeOpacity }}
         >
-          <span className="text-7xl">⭐</span>
-          <span className="text-xl font-bold text-accent tracking-wider">SUPER LIKE</span>
+          <span className="text-6xl">⭐</span>
+          <span className="text-lg font-bold text-accent tracking-wider">SUPER LIKE</span>
         </motion.div>
 
         {/* Gradient Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-56 overlay-gradient pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-48 overlay-gradient pointer-events-none" />
 
         {/* Profile Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3 pointer-events-none">
-          <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-bold text-foreground drop-shadow-lg">
+        <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2 pointer-events-none">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-foreground drop-shadow-lg">
               {profile.name}, {profile.age}
             </h2>
             {profile.isVerified && (
@@ -136,28 +144,66 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick }: ProfileCardProps) => {
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring" }}
               >
-                <BadgeCheck className="w-7 h-7 text-primary drop-shadow-lg" />
+                <BadgeCheck className="w-5 h-5 text-primary drop-shadow-lg" />
               </motion.div>
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {profile.isOnline && (
-              <span className="flex items-center gap-2 text-sm font-medium">
+              <span className="flex items-center gap-1.5 text-xs font-medium">
                 <span className="relative">
-                  <span className="w-2.5 h-2.5 bg-success rounded-full block" />
-                  <span className="absolute inset-0 w-2.5 h-2.5 bg-success rounded-full animate-ping opacity-75" />
+                  <span className="w-2 h-2 bg-success rounded-full block" />
+                  <span className="absolute inset-0 w-2 h-2 bg-success rounded-full animate-ping opacity-75" />
                 </span>
                 <span className="text-success">En ligne</span>
               </span>
             )}
-            <span className="flex items-center gap-1.5 text-sm text-foreground/70">
-              <MapPin className="w-4 h-4" />
+            <span className="flex items-center gap-1 text-xs text-foreground/70">
+              <MapPin className="w-3 h-3" />
               {profile.distance}
             </span>
           </div>
 
-          <p className="text-foreground/80 text-sm line-clamp-2 leading-relaxed">{profile.bio}</p>
+          <p className="text-foreground/80 text-xs line-clamp-2 leading-relaxed">{profile.bio}</p>
+
+          {/* Action Buttons on card */}
+          <div className="flex items-center justify-center gap-4 pt-2 pointer-events-auto">
+            {/* Pass Button */}
+            <motion.button
+              onClick={(e) => { e.stopPropagation(); onPass(); }}
+              variants={buttonVariants}
+              whileHover="hover"
+              whileTap="tap"
+              className="relative p-3 glass rounded-full text-destructive transition-shadow hover:glow-red"
+            >
+              <div className="absolute inset-0 rounded-full bg-destructive/10" />
+              <X className="w-5 h-5 relative z-10" strokeWidth={3} />
+            </motion.button>
+
+            {/* Super Like Button */}
+            <motion.button
+              onClick={(e) => { e.stopPropagation(); onSuperLike(); }}
+              variants={buttonVariants}
+              whileHover="hover"
+              whileTap="tap"
+              className="relative p-2.5 glass rounded-full text-accent transition-shadow hover:glow-blue"
+            >
+              <div className="absolute inset-0 rounded-full bg-accent/10" />
+              <Star className="w-4 h-4 relative z-10" fill="currentColor" />
+            </motion.button>
+
+            {/* Like Button */}
+            <motion.button
+              onClick={(e) => { e.stopPropagation(); onLike(); }}
+              variants={buttonVariants}
+              whileHover="hover"
+              whileTap="tap"
+              className="relative p-3 btn-gold rounded-full animate-glow-pulse"
+            >
+              <Heart className="w-5 h-5 text-primary-foreground relative z-10" fill="currentColor" />
+            </motion.button>
+          </div>
         </div>
       </div>
     </motion.div>
