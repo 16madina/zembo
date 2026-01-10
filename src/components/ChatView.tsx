@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X } from "lucide-react";
+import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Square } from "lucide-react";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
@@ -8,6 +8,8 @@ interface Message {
   id: string;
   text: string;
   image?: string;
+  audioUrl?: string;
+  audioDuration?: number;
   time: string;
   isMe: boolean;
   status: "sent" | "delivered" | "read";
@@ -42,9 +44,15 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -128,6 +136,94 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       reader.readAsDataURL(file);
     }
   };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const message: Message = {
+          id: Date.now().toString(),
+          text: "",
+          audioUrl,
+          audioDuration: recordingDuration,
+          time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+          isMe: true,
+          status: "sent",
+        };
+
+        setMessages((prev) => [...prev, message]);
+
+        // Simulate message status updates
+        setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === message.id ? { ...m, status: "delivered" as const } : m))
+          );
+        }, 1000);
+
+        setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === message.id ? { ...m, status: "read" as const } : m))
+          );
+        }, 2500);
+
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const showSendButton = newMessage.trim() || selectedImage || isFocused;
 
   const MessageStatus = ({ status }: { status: Message["status"] }) => {
     if (status === "sent") {
@@ -232,12 +328,22 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
                     whileTap={{ scale: 0.98 }}
                   />
                 )}
+                {message.audioUrl && (
+                  <div className="flex items-center gap-3 min-w-[180px]">
+                    <audio
+                      src={message.audioUrl}
+                      controls
+                      className="h-8 w-full max-w-[200px]"
+                      style={{ filter: message.isMe ? "invert(1)" : "none" }}
+                    />
+                  </div>
+                )}
                 {message.text && (
                   <p className={`text-sm leading-relaxed ${message.image ? "px-2.5 pt-2 pb-1" : ""}`}>
                     {message.text}
                   </p>
                 )}
-                <div className={`flex items-center justify-end gap-1 ${message.image ? "px-2.5 pb-1.5" : "mt-1"} ${
+                <div className={`flex items-center justify-end gap-1 ${message.image || message.audioUrl ? "px-2.5 pb-1.5" : "mt-1"} ${
                   message.isMe ? "text-primary-foreground/70" : "text-muted-foreground"
                 }`}>
                   <span className="text-[10px]">{message.time}</span>
@@ -333,54 +439,107 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       </AnimatePresence>
 
       {/* Input */}
-      <div className="px-4 py-3 pb-20 glass-strong border-t border-border/50">
-        <div className="flex items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageSelect}
-            className="hidden"
-          />
-          <motion.button
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2.5 tap-highlight rounded-full glass"
-            whileTap={{ scale: 0.9 }}
-          >
-            <Image className="w-5 h-5 text-muted-foreground" />
-          </motion.button>
-          
-          <div className="flex-1 flex items-center gap-2 glass rounded-full px-4 py-2.5">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Écris ton message..."
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0"
-            />
+      <div className="px-4 py-3 mb-20 glass-strong border-t border-border/50">
+        {isRecording ? (
+          <div className="flex items-center gap-3">
             <motion.button
-              ref={emojiButtonRef}
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="tap-highlight flex-shrink-0"
+              onClick={cancelRecording}
+              className="p-2.5 tap-highlight rounded-full glass"
               whileTap={{ scale: 0.9 }}
             >
-              <Smile className={`w-5 h-5 ${showEmojiPicker ? "text-primary" : "text-muted-foreground"}`} />
+              <X className="w-5 h-5 text-destructive" />
+            </motion.button>
+            
+            <div className="flex-1 flex items-center gap-3 glass rounded-full px-4 py-2.5">
+              <motion.div
+                className="w-3 h-3 bg-destructive rounded-full"
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              />
+              <span className="text-sm text-foreground font-medium">
+                Enregistrement... {formatDuration(recordingDuration)}
+              </span>
+            </div>
+
+            <motion.button
+              onClick={stopRecording}
+              className="p-3 rounded-full flex-shrink-0 btn-gold"
+              whileTap={{ scale: 0.9 }}
+            >
+              <Send className="w-5 h-5 text-primary-foreground" />
             </motion.button>
           </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <motion.button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2.5 tap-highlight rounded-full glass"
+              whileTap={{ scale: 0.9 }}
+            >
+              <Image className="w-5 h-5 text-muted-foreground" />
+            </motion.button>
+            
+            <div className="flex-1 flex items-center gap-2 glass rounded-full px-4 py-2.5">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder="Écris ton message..."
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0"
+              />
+              <motion.button
+                ref={emojiButtonRef}
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="tap-highlight flex-shrink-0"
+                whileTap={{ scale: 0.9 }}
+              >
+                <Smile className={`w-5 h-5 ${showEmojiPicker ? "text-primary" : "text-muted-foreground"}`} />
+              </motion.button>
+            </div>
 
-          <motion.button
-            onClick={handleSend}
-            className={`p-3 rounded-full flex-shrink-0 ${
-              newMessage.trim() || selectedImage ? "btn-gold" : "glass"
-            }`}
-            whileTap={{ scale: 0.9 }}
-          >
-            <Send className={`w-5 h-5 ${
-              newMessage.trim() || selectedImage ? "text-primary-foreground" : "text-muted-foreground"
-            }`} />
-          </motion.button>
-        </div>
+            <AnimatePresence mode="wait">
+              {showSendButton ? (
+                <motion.button
+                  key="send"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  onClick={handleSend}
+                  className={`p-3 rounded-full flex-shrink-0 ${
+                    newMessage.trim() || selectedImage ? "btn-gold" : "glass"
+                  }`}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Send className={`w-5 h-5 ${
+                    newMessage.trim() || selectedImage ? "text-primary-foreground" : "text-muted-foreground"
+                  }`} />
+                </motion.button>
+              ) : (
+                <motion.button
+                  key="mic"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  onClick={startRecording}
+                  className="p-3 rounded-full flex-shrink-0 btn-gold"
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Mic className="w-5 h-5 text-primary-foreground" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* Image Preview Modal */}
