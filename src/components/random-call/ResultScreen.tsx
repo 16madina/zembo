@@ -104,26 +104,54 @@ const ResultScreen = ({ matched, onRetry, otherUserId }: ResultScreenProps) => {
           </p>
         </motion.div>
 
-        {/* Profile reveal card */}
+        {/* Profile reveal card with curtain animation */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="w-full max-w-xs rounded-3xl glass overflow-hidden"
         >
-          {/* Avatar */}
-          <div className="relative h-48 bg-gradient-to-b from-primary/20 to-background flex items-center justify-center">
+          {/* Avatar with curtain reveal */}
+          <div className="relative h-48 bg-gradient-to-b from-primary/20 to-background flex items-center justify-center overflow-hidden">
             {otherProfile?.avatar_url ? (
-              <img 
+              <motion.img 
                 src={otherProfile.avatar_url} 
                 alt="Profile" 
                 className="w-full h-full object-cover"
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.8, duration: 0.8, ease: "easeOut" }}
               />
             ) : (
               <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
                 <User className="w-12 h-12 text-muted-foreground" />
               </div>
             )}
+            
+            {/* Curtain left */}
+            <motion.div
+              className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-primary via-primary to-primary/80"
+              initial={{ x: 0 }}
+              animate={{ x: "-100%" }}
+              transition={{ delay: 0.7, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+            />
+            
+            {/* Curtain right */}
+            <motion.div
+              className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-primary via-primary to-primary/80"
+              initial={{ x: 0 }}
+              animate={{ x: "100%" }}
+              transition={{ delay: 0.7, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+            />
+            
+            {/* Sparkle effect after reveal */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.5, 0] }}
+              transition={{ delay: 1.2, duration: 0.5 }}
+            />
+            
             {/* Gradient overlay */}
             <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent" />
           </div>
