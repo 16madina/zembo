@@ -20,8 +20,8 @@ serve(async (req) => {
 
     console.log("Generating TTS for:", text);
 
-    // Using a deep, impactful voice for "ZEMBO"
-    const selectedVoiceId = voiceId || "onwK4e9ZLuTAKqWW03F9"; // Daniel - deep voice
+    // Using Brian - deep, powerful voice for impact
+    const selectedVoiceId = voiceId || "nPczCjzI2devNBz1zQrb";
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}?output_format=mp3_44100_128`,
@@ -35,9 +35,9 @@ serve(async (req) => {
           text,
           model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.7,
-            similarity_boost: 0.8,
-            style: 0.6,
+            stability: 0.3,        // Less stable = more expressive
+            similarity_boost: 0.9, // High voice fidelity
+            style: 0.9,            // Maximum style/energy
             use_speaker_boost: true,
           },
         }),
