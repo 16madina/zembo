@@ -18,7 +18,15 @@ serve(async (req) => {
       throw new Error("ELEVENLABS_API_KEY not configured");
     }
 
-    console.log("Generating TTS for:", text);
+    const sanitizedText = typeof text === "string" ? text.trim() : "";
+    if (!sanitizedText) {
+      return new Response(JSON.stringify({ error: "Missing text" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("Generating TTS for:", sanitizedText);
 
     // Using Daniel - very deep, powerful voice
     const selectedVoiceId = voiceId || "onwK4e9ZLuTAKqWW03F9";
@@ -32,14 +40,15 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text,
+          // Keep it short + strict to avoid the model "adding" extra words
+          text: sanitizedText,
           model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.15,       // Very low = maximum expressiveness
-            similarity_boost: 1.0, // Maximum voice fidelity
-            style: 1.0,            // Maximum style/energy
+            stability: 0.85, // higher stability = less improvisation
+            similarity_boost: 1.0,
+            style: 0.0,
             use_speaker_boost: true,
-            speed: 0.85,           // Slightly slower for dramatic effect
+            speed: 0.9,
           },
         }),
       }
