@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, X, MessageCircle, Heart, Shield, Loader2, MapPinOff, Info, SlidersHorizontal } from "lucide-react";
+import { MapPin, Navigation, X, MessageCircle, Heart, Shield, Loader2, MapPinOff, Info, SlidersHorizontal, Radio } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { getCoordinatesFromCountryName } from "@/data/countryCoordinates";
@@ -47,9 +47,28 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
   const [usingFallback, setUsingFallback] = useState(false);
   const [maxDistance, setMaxDistance] = useState(50);
   const [showDistanceFilter, setShowDistanceFilter] = useState(false);
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  
+  // Calculate zoom level based on distance
+  const getZoomLevel = (distance: number): number => {
+    if (distance <= 1) return 17;
+    if (distance <= 2) return 16;
+    if (distance <= 5) return 15;
+    if (distance <= 10) return 14;
+    if (distance <= 20) return 13;
+    if (distance <= 50) return 12;
+    return 11;
+  };
+
+  const zoomLevel = getZoomLevel(maxDistance);
   
   const onlineProfiles = profiles.filter((p) => p.isOnline);
   const offlineProfiles = profiles.filter((p) => !p.isOnline);
+  
+  // Profiles to display based on online filter
+  const displayProfiles = onlineOnly 
+    ? onlineProfiles 
+    : [...onlineProfiles, ...offlineProfiles];
 
   // Get fallback coordinates from user's country
   const fallbackLocation = userCountry ? getCoordinatesFromCountryName(userCountry) : null;
@@ -121,11 +140,12 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
         <LeafletMap
           latitude={effectiveLat}
           longitude={effectiveLng}
-          profiles={[...onlineProfiles, ...offlineProfiles]}
+          profiles={displayProfiles}
           profilePositions={profilePositions}
           onProfileSelect={setSelectedProfile}
           onRecenter={requestPosition}
           maxDistance={maxDistance}
+          zoomLevel={zoomLevel}
         />
       </Suspense>
 
@@ -149,8 +169,7 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
         </motion.div>
       )}
 
-      {/* Overlay UI */}
-      {/* Legend */}
+      {/* Legend with online filter */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -158,14 +177,20 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
         className={`absolute ${usingFallback ? 'top-16' : 'top-4'} left-4 glass rounded-xl p-3 z-[1000]`}
       >
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2 text-sm">
+          <button 
+            onClick={() => setOnlineOnly(false)}
+            className={`flex items-center gap-2 text-sm transition-opacity ${!onlineOnly ? 'opacity-100' : 'opacity-50'}`}
+          >
             <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
             <span className="text-foreground font-medium">{onlineProfiles.length} en ligne</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
+          </button>
+          <button 
+            onClick={() => setOnlineOnly(false)}
+            className={`flex items-center gap-2 text-sm transition-opacity ${!onlineOnly ? 'opacity-100' : 'opacity-30'}`}
+          >
             <div className="w-3 h-3 rounded-full bg-gray-400" />
             <span className="text-muted-foreground">{offlineProfiles.length} hors ligne</span>
-          </div>
+          </button>
         </div>
       </motion.div>
 
@@ -190,6 +215,16 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
           className={`p-2.5 glass rounded-xl transition-colors ${showDistanceFilter ? 'bg-primary/20' : 'hover:bg-white/10'}`}
         >
           <SlidersHorizontal className="w-4 h-4 text-primary" />
+        </motion.button>
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setOnlineOnly(!onlineOnly)}
+          className={`p-2.5 glass rounded-xl transition-colors ${onlineOnly ? 'bg-green-500/20' : 'hover:bg-white/10'}`}
+        >
+          <Radio className={`w-4 h-4 ${onlineOnly ? 'text-green-400' : 'text-primary'}`} />
         </motion.button>
       </div>
 
