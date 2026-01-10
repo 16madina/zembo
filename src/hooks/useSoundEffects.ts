@@ -116,7 +116,7 @@ export const useSoundEffects = () => {
       3
     );
 
-    void loadTts("ZEMMBOOO");
+    void loadTts("ZEMMBO");
   }, []);
 
   const playDiceSound = useCallback(async () => {
@@ -153,7 +153,7 @@ export const useSoundEffects = () => {
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
               Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
-            body: JSON.stringify({ text: "ZEMMBOOO" }),
+            body: JSON.stringify({ text: "ZEMMBO" }),
           }
         );
 
