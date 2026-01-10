@@ -12,6 +12,7 @@ import BirthdayStep from "./steps/BirthdayStep";
 import GenderAndPreferenceStep from "./steps/GenderAndPreferenceStep";
 import InterestsStep from "./steps/InterestsStep";
 import PhotosStep from "./steps/PhotosStep";
+import { FaceVerificationStep } from "./steps/FaceVerificationStep";
 
 // Background images
 import bgIdentity from "@/assets/onboarding/bg-identity.jpg";
@@ -22,6 +23,7 @@ import bgBirthday from "@/assets/onboarding/bg-birthday.jpg";
 import bgGender from "@/assets/onboarding/bg-gender.jpg";
 import bgInterests from "@/assets/onboarding/bg-interests.jpg";
 import bgPhotos from "@/assets/onboarding/bg-photos.jpg";
+import bgVerification from "@/assets/onboarding/bg-verification.jpg";
 
 export interface OnboardingData {
   firstName: string;
@@ -37,6 +39,7 @@ export interface OnboardingData {
   lookingFor: string[];
   interests: string[];
   photos: string[];
+  faceVerified: boolean;
 }
 
 interface OnboardingStepsProps {
@@ -53,6 +56,7 @@ const steps = [
   { id: "genderAndPreference", title: "Je suis & Je recherche", bg: bgGender },
   { id: "interests", title: "Centres d'intérêt", bg: bgInterests },
   { id: "photos", title: "Vos photos", bg: bgPhotos },
+  { id: "faceVerification", title: "Vérification", bg: bgVerification, fullScreen: true },
 ];
 
 const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
@@ -71,6 +75,7 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
     lookingFor: [],
     interests: [],
     photos: [],
+    faceVerified: false,
   });
 
   const progress = ((currentStep + 1) / steps.length) * 100;
@@ -113,6 +118,8 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
         return data.interests.length >= 3;
       case "photos":
         return data.photos.length >= 1;
+      case "faceVerification":
+        return data.faceVerified;
       default:
         return false;
     }
@@ -136,10 +143,47 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
         return <InterestsStep data={data} updateData={updateData} />;
       case "photos":
         return <PhotosStep data={data} updateData={updateData} />;
+      case "faceVerification":
+        return <FaceVerificationStep data={data} updateData={updateData} onNext={handleNext} onBack={handleBack} />;
       default:
         return null;
     }
   };
+
+  const currentStepConfig = steps[currentStep];
+  const isFullScreen = 'fullScreen' in currentStepConfig && currentStepConfig.fullScreen;
+
+  // Full screen mode for face verification
+  if (isFullScreen) {
+    return (
+      <div className="min-h-screen flex flex-col relative overflow-hidden bg-background">
+        {/* Background Image with Animation */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 z-0"
+          >
+            <img
+              src={currentStepConfig.bg}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-background/70" />
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Full Screen Content */}
+        <div className="relative z-10 flex-1 flex flex-col safe-area-top safe-area-bottom">
+          {renderStep()}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -154,7 +198,7 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
           className="absolute inset-0 z-0"
         >
           <img
-            src={steps[currentStep].bg}
+            src={currentStepConfig.bg}
             alt=""
             className="w-full h-full object-cover"
           />
@@ -188,7 +232,7 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
           animate={{ opacity: 1, x: 0 }}
           className="text-2xl font-bold text-foreground mb-6"
         >
-          {steps[currentStep].title}
+          {currentStepConfig.title}
         </motion.h1>
 
         {/* Step Content */}
