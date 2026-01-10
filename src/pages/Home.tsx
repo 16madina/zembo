@@ -142,6 +142,33 @@ const Home = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
+          {/* Background cards (stack effect) */}
+          {profiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
+            <motion.div
+              key={profile.id}
+              className="absolute w-full h-full rounded-3xl overflow-hidden"
+              initial={false}
+              animate={{
+                scale: 1 - (index + 1) * 0.05,
+                y: (index + 1) * 8,
+                opacity: 1 - (index + 1) * 0.3,
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              style={{ zIndex: -index - 1 }}
+            >
+              <div className="w-full h-full glass-strong rounded-3xl overflow-hidden">
+                <img
+                  src={profile.photos[0]}
+                  alt={profile.name}
+                  className="w-full h-full object-cover opacity-80"
+                  draggable={false}
+                />
+                <div className="absolute inset-0 bg-background/20" />
+              </div>
+            </motion.div>
+          ))}
+
+          {/* Active card */}
           <AnimatePresence mode="popLayout">
             {currentProfile && (
               <ProfileCard
