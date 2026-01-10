@@ -27,7 +27,29 @@ interface LeafletMapProps {
   profilePositions: Record<string, { lat: number; lng: number }>;
   onProfileSelect: (profile: Profile) => void;
   onRecenter: () => void;
+  maxDistance?: number;
 }
+
+// Calculate distance between two coordinates in km
+const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+// Format distance for display
+const formatDistance = (km: number): string => {
+  if (km < 1) {
+    return `${Math.round(km * 1000)} m`;
+  }
+  return `${km.toFixed(1)} km`;
+};
 
 // Custom user marker icon
 const createUserIcon = () => {
@@ -48,33 +70,33 @@ const createUserIcon = () => {
   });
 };
 
-// Custom profile marker icon
-const createProfileIcon = (photoUrl: string, isOnline: boolean, isVerified: boolean) => {
+// Custom profile marker icon - smaller and with distance
+const createProfileIcon = (photoUrl: string, isOnline: boolean, isVerified: boolean, distance: string) => {
   return L.divIcon({
     className: "profile-marker",
     html: `
       <div class="relative group cursor-pointer transform transition-transform hover:scale-110">
-        <div class="absolute inset-0 rounded-full ${isOnline ? 'bg-green-400/40' : 'bg-gray-400/20'} blur-md animate-pulse" style="width: 56px; height: 56px; margin-left: -8px; margin-top: -8px;"></div>
-        <div class="relative w-10 h-10 rounded-full overflow-hidden border-2 ${isOnline ? 'border-green-400' : 'border-gray-400'} shadow-lg" style="box-shadow: ${isOnline ? '0 0 15px rgba(74, 222, 128, 0.4)' : '0 4px 12px rgba(0,0,0,0.3)'};">
+        <div class="relative w-8 h-8 rounded-full overflow-hidden border-2 ${isOnline ? 'border-green-400' : 'border-gray-400/60'} shadow-md">
           <img src="${photoUrl}" alt="Profile" class="w-full h-full object-cover" />
         </div>
         ${isOnline ? `
-          <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-white">
-            <div class="w-full h-full rounded-full bg-green-300 animate-pulse"></div>
-          </div>
+          <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border border-white"></div>
         ` : ''}
         ${isVerified ? `
-          <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none">
+          <div class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-500 flex items-center justify-center">
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="white" stroke="none">
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
             </svg>
           </div>
         ` : ''}
+        <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[9px] px-1 py-0.5 rounded whitespace-nowrap">
+          ${distance}
+        </div>
       </div>
     `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-    popupAnchor: [0, -20],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 };
 
@@ -106,8 +128,16 @@ const LeafletMap = ({
   longitude, 
   profiles, 
   profilePositions, 
-  onProfileSelect 
+  onProfileSelect,
+  maxDistance = 100
 }: LeafletMapProps) => {
+  // Filter profiles by distance
+  const filteredProfiles = profiles.filter((profile) => {
+    const position = profilePositions[profile.id];
+    if (!position) return false;
+    const distance = calculateDistance(latitude, longitude, position.lat, position.lng);
+    return distance <= maxDistance;
+  });
   return (
     <MapContainer
       center={[latitude, longitude]}
@@ -168,15 +198,18 @@ const LeafletMap = ({
       </Marker>
 
       {/* Profile markers */}
-      {profiles.map((profile) => {
+      {filteredProfiles.map((profile) => {
         const position = profilePositions[profile.id];
         if (!position) return null;
+
+        const distance = calculateDistance(latitude, longitude, position.lat, position.lng);
+        const distanceStr = formatDistance(distance);
 
         return (
           <Marker
             key={profile.id}
             position={[position.lat, position.lng]}
-            icon={createProfileIcon(profile.photos[0], profile.isOnline, profile.isVerified)}
+            icon={createProfileIcon(profile.photos[0], profile.isOnline, profile.isVerified, distanceStr)}
             eventHandlers={{
               click: () => onProfileSelect(profile),
             }}

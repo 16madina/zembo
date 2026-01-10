@@ -1,9 +1,10 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, X, MessageCircle, Heart, Shield, Loader2, MapPinOff, Info } from "lucide-react";
+import { MapPin, Navigation, X, MessageCircle, Heart, Shield, Loader2, MapPinOff, Info, SlidersHorizontal } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { getCoordinatesFromCountryName } from "@/data/countryCoordinates";
+import { Slider } from "@/components/ui/slider";
 
 interface NearbyMapProps {
   profiles: Profile[];
@@ -44,6 +45,8 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profilePositions, setProfilePositions] = useState<Record<string, { lat: number; lng: number }>>({});
   const [usingFallback, setUsingFallback] = useState(false);
+  const [maxDistance, setMaxDistance] = useState(50);
+  const [showDistanceFilter, setShowDistanceFilter] = useState(false);
   
   const onlineProfiles = profiles.filter((p) => p.isOnline);
   const offlineProfiles = profiles.filter((p) => !p.isOnline);
@@ -122,6 +125,7 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
           profilePositions={profilePositions}
           onProfileSelect={setSelectedProfile}
           onRecenter={requestPosition}
+          maxDistance={maxDistance}
         />
       </Suspense>
 
@@ -165,17 +169,54 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
         </div>
       </motion.div>
 
-      {/* Recenter button */}
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={requestPosition}
-        className="absolute top-4 right-4 p-3 glass rounded-xl z-[1000] hover:bg-white/10 transition-colors"
-      >
-        <Navigation className="w-5 h-5 text-primary" />
-      </motion.button>
+      {/* Control buttons */}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={requestPosition}
+          className="p-2.5 glass rounded-xl hover:bg-white/10 transition-colors"
+        >
+          <Navigation className="w-4 h-4 text-primary" />
+        </motion.button>
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowDistanceFilter(!showDistanceFilter)}
+          className={`p-2.5 glass rounded-xl transition-colors ${showDistanceFilter ? 'bg-primary/20' : 'hover:bg-white/10'}`}
+        >
+          <SlidersHorizontal className="w-4 h-4 text-primary" />
+        </motion.button>
+      </div>
+
+      {/* Distance filter popup */}
+      <AnimatePresence>
+        {showDistanceFilter && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute top-4 right-16 glass rounded-xl p-3 z-[1000] w-48"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-foreground">Distance</span>
+              <span className="text-xs text-primary font-semibold">{maxDistance} km</span>
+            </div>
+            <Slider
+              value={[maxDistance]}
+              onValueChange={(values) => setMaxDistance(values[0])}
+              min={1}
+              max={100}
+              step={1}
+              className="w-full"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Profile popup */}
       <AnimatePresence>
