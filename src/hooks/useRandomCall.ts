@@ -15,6 +15,10 @@ export type CallStatus =
   | "result"
   | "rejected";       // Other person said no
 
+// Demo mode flag - set to true to simulate matches without a real user
+const DEMO_MODE = true;
+const DEMO_MATCH_DELAY_MS = 4000; // Time before "finding" a demo match
+
 interface RandomCallSession {
   id: string;
   user1_id: string;
@@ -53,10 +57,12 @@ export const useRandomCall = (): UseRandomCallReturn => {
   const [userGender, setUserGender] = useState<string | null>(null);
   const [isExtendedCall, setIsExtendedCall] = useState(false);
   const [hasAskedFirstDecision, setHasAskedFirstDecision] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   
   const channelRef = useRef<RealtimeChannel | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const searchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const demoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch user gender on mount
   useEffect(() => {
@@ -138,19 +144,29 @@ export const useRandomCall = (): UseRandomCallReturn => {
     };
   }, [session?.id, user]);
 
-  // Timer for call duration
+  // Timer for call duration (works for both real and demo mode)
   useEffect(() => {
-    if ((status !== "in_call" && status !== "call_extended") || !session) return;
+    if (status !== "in_call" && status !== "call_extended") return;
+    if (!session && !isDemoMode) return;
 
-    const endTime = new Date(session.ends_at).getTime();
-    const decisionTime = new Date(session.started_at).getTime() + 60000; // 1 minute mark
+    // For demo mode, we use a simple countdown from timeRemaining
+    // For real mode, we use session.ends_at
+    const getEndTime = () => {
+      if (isDemoMode) {
+        // Demo: countdown from current timeRemaining
+        return Date.now() + timeRemaining * 1000;
+      }
+      return session ? new Date(session.ends_at).getTime() : Date.now();
+    };
+
+    const endTime = getEndTime();
     
     timerRef.current = setInterval(() => {
       const now = Date.now();
       const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
       setTimeRemaining(remaining);
       
-      // At 1 minute mark (30 seconds remaining), show first decision
+      // At 30 seconds remaining, show first decision
       if (!hasAskedFirstDecision && remaining <= 30 && remaining > 0 && status === "in_call") {
         setHasAskedFirstDecision(true);
         setStatus("first_decision");
@@ -174,13 +190,21 @@ export const useRandomCall = (): UseRandomCallReturn => {
         clearInterval(timerRef.current);
       }
     };
-  }, [status, session, hasAskedFirstDecision]);
+  }, [status, session, hasAskedFirstDecision, isDemoMode]);
 
-  // Timer for extended call
+  // Timer for extended call (demo mode compatible)
   useEffect(() => {
-    if (status !== "call_extended" || !session) return;
+    if (status !== "call_extended") return;
+    if (!session && !isDemoMode) return;
 
-    const endTime = new Date(session.ends_at).getTime();
+    const getEndTime = () => {
+      if (isDemoMode) {
+        return Date.now() + timeRemaining * 1000;
+      }
+      return session ? new Date(session.ends_at).getTime() : Date.now();
+    };
+
+    const endTime = getEndTime();
     
     timerRef.current = setInterval(() => {
       const now = Date.now();
@@ -188,7 +212,6 @@ export const useRandomCall = (): UseRandomCallReturn => {
       setTimeRemaining(remaining);
       
       if (remaining <= 0) {
-        // Time's up - no more contact possible
         setMatchResult("not_matched");
         setStatus("result");
         if (timerRef.current) {
@@ -202,19 +225,55 @@ export const useRandomCall = (): UseRandomCallReturn => {
         clearInterval(timerRef.current);
       }
     };
-  }, [status, session]);
+  }, [status, session, isDemoMode]);
 
   const startSelecting = useCallback(() => {
     setStatus("selecting");
   }, []);
 
   const startSearch = useCallback(async (preference: string) => {
-    if (!user || !userGender) return;
+    if (!user) return;
     
     setSelectedPreference(preference);
     setStatus("searching");
     setHasAskedFirstDecision(false);
     setIsExtendedCall(false);
+    setIsDemoMode(false);
+    
+    // If DEMO_MODE is enabled, simulate a match after delay
+    if (DEMO_MODE) {
+      demoTimeoutRef.current = setTimeout(() => {
+        // Create a fake demo session
+        const now = new Date();
+        const endsAt = new Date(now.getTime() + 90 * 1000); // 90 seconds from now
+        
+        const demoSession: RandomCallSession = {
+          id: "demo-session-" + Date.now(),
+          user1_id: user.id,
+          user2_id: "demo-user-id",
+          started_at: now.toISOString(),
+          ends_at: endsAt.toISOString(),
+          user1_decision: null,
+          user2_decision: null,
+          status: "active",
+        };
+        
+        setSession(demoSession);
+        setIsDemoMode(true);
+        setTimeRemaining(90);
+        setStatus("matched");
+        
+        // Short delay then start call
+        setTimeout(() => {
+          setStatus("in_call");
+        }, 2000);
+      }, DEMO_MATCH_DELAY_MS);
+      
+      return;
+    }
+    
+    // Real mode - requires userGender
+    if (!userGender) return;
     
     try {
       // Add to queue
@@ -290,7 +349,17 @@ export const useRandomCall = (): UseRandomCallReturn => {
   }, [user, userGender]);
 
   const cancelSearch = useCallback(async () => {
-    if (!user) return;
+    // Clear demo timeout if running
+    if (demoTimeoutRef.current) {
+      clearTimeout(demoTimeoutRef.current);
+      demoTimeoutRef.current = null;
+    }
+    
+    if (!user) {
+      setStatus("idle");
+      setSelectedPreference(null);
+      return;
+    }
     
     try {
       await supabase
@@ -308,13 +377,49 @@ export const useRandomCall = (): UseRandomCallReturn => {
       
       setStatus("idle");
       setSelectedPreference(null);
+      setIsDemoMode(false);
     } catch (error) {
       console.error("Error canceling search:", error);
     }
   }, [user]);
 
   const submitDecision = useCallback(async (decision: "yes" | "no" | "continue") => {
-    if (!session?.id || !user) return;
+    if (!user) return;
+    
+    // DEMO MODE: simulate the other person's response
+    if (isDemoMode) {
+      if (decision === "no") {
+        setMatchResult("not_matched");
+        setStatus("result");
+      } else {
+        setWaitingForOther(true);
+        setStatus("waiting_decision");
+        
+        // Simulate the other person responding after 1-2 seconds
+        setTimeout(() => {
+          // Demo: randomly decide if they match or continue (80% match, 20% continue)
+          const demoResponse = Math.random() > 0.2 ? "yes" : "continue";
+          
+          if (decision === "yes" && demoResponse === "yes") {
+            setMatchResult("matched");
+            setStatus("result");
+          } else if (decision === "continue" || demoResponse === "continue") {
+            // At least one wants to continue
+            setIsExtendedCall(true);
+            setTimeRemaining(30); // 30 more seconds
+            setStatus("call_extended");
+          } else {
+            setMatchResult("matched");
+            setStatus("result");
+          }
+          setWaitingForOther(false);
+        }, 1500);
+      }
+      return;
+    }
+    
+    // Real mode
+    if (!session?.id) return;
     
     // If no, immediately show rejected status
     if (decision === "no") {
@@ -357,16 +462,22 @@ export const useRandomCall = (): UseRandomCallReturn => {
       console.error("Error submitting decision:", error);
       setWaitingForOther(false);
     }
-  }, [session, user]);
+  }, [session, user, isDemoMode]);
 
   const reset = useCallback(async () => {
-    if (!user) return;
+    // Clear demo timeout
+    if (demoTimeoutRef.current) {
+      clearTimeout(demoTimeoutRef.current);
+      demoTimeoutRef.current = null;
+    }
     
-    // Clean up queue
-    await supabase
-      .from("random_call_queue")
-      .delete()
-      .eq("user_id", user.id);
+    // Clean up queue (only if real mode and user exists)
+    if (user && !isDemoMode) {
+      await supabase
+        .from("random_call_queue")
+        .delete()
+        .eq("user_id", user.id);
+    }
     
     if (searchIntervalRef.current) {
       clearInterval(searchIntervalRef.current);
@@ -388,7 +499,8 @@ export const useRandomCall = (): UseRandomCallReturn => {
     setWaitingForOther(false);
     setIsExtendedCall(false);
     setHasAskedFirstDecision(false);
-  }, [user]);
+    setIsDemoMode(false);
+  }, [user, isDemoMode]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -401,6 +513,9 @@ export const useRandomCall = (): UseRandomCallReturn => {
       }
       if (channelRef.current) {
         channelRef.current.unsubscribe();
+      }
+      if (demoTimeoutRef.current) {
+        clearTimeout(demoTimeoutRef.current);
       }
     };
   }, []);
