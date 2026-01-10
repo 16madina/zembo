@@ -16,9 +16,11 @@ const Random = () => {
   const {
     status,
     selectedPreference,
+    session,
     timeRemaining,
     matchResult,
     waitingForOther,
+    otherUserId,
     startSelecting,
     startSearch,
     cancelSearch,
@@ -43,7 +45,7 @@ const Random = () => {
         return <MatchFoundScreen />;
       
       case "in_call":
-        return <InCallScreen timeRemaining={timeRemaining} />;
+        return <InCallScreen timeRemaining={timeRemaining} otherUserId={otherUserId || undefined} sessionId={session?.id} />;
       
       case "first_decision":
       case "waiting_decision":
@@ -56,7 +58,7 @@ const Random = () => {
         );
       
       case "call_extended":
-        return <ExtendedCallScreen timeRemaining={timeRemaining} />;
+        return <ExtendedCallScreen timeRemaining={timeRemaining} otherUserId={otherUserId || undefined} sessionId={session?.id} />;
       
       case "rejected":
         return <RejectedScreen onRetry={reset} />;
