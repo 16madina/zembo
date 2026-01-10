@@ -308,38 +308,61 @@ const Profile = () => {
             <Pencil className="w-4 h-4 text-primary-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
 
-          {/* Verification badge and button */}
-          {isVerified ? (
-            <div className="mt-2 flex items-center gap-2 px-4 py-2 rounded-full bg-success/20 text-success">
-              <ShieldCheck className="w-4 h-4" />
-              <span className="text-sm font-medium">Profil vérifié</span>
-            </div>
-          ) : (
-            <div className="mt-3 flex flex-col items-center gap-2">
+          {/* Verification badges and actions */}
+          <div className="mt-3 flex flex-col items-center gap-2">
+            {/* Profile verification status */}
+            {isVerified ? (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-success/20 text-success">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-sm font-medium">Profil vérifié</span>
+              </div>
+            ) : (
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 text-muted-foreground">
                 <ShieldOff className="w-4 h-4" />
-                <span className="text-sm font-medium">Non vérifié</span>
+                <span className="text-sm font-medium">Profil non vérifié</span>
               </div>
-              <Button
-                onClick={handleSendVerificationEmail}
-                disabled={isSendingVerification}
-                size="sm"
-                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
-              >
-                {isSendingVerification ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Envoi...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Vérifier mon email
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+            )}
+
+            {/* Email verification status */}
+            {profile?.email_verified ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-400">
+                <Mail className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">Email vérifié : {profile?.email}</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                {profile?.email ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-400">
+                    <Mail className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">Email en attente : {profile?.email}</span>
+                  </div>
+                ) : null}
+                <Button
+                  onClick={handleSendVerificationEmail}
+                  disabled={isSendingVerification}
+                  size="sm"
+                  className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+                >
+                  {isSendingVerification ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Envoi...
+                    </>
+                  ) : profile?.email ? (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Renvoyer l'email
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Vérifier mon email
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
         </motion.div>
       </div>
 
