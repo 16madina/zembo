@@ -1,5 +1,7 @@
 import { Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { countries } from "@/data/countries";
+import FlagIcon from "@/components/FlagIcon";
 import type { OnboardingData } from "../OnboardingSteps";
 
 interface PhoneStepProps {
@@ -16,12 +18,8 @@ const PhoneStep = ({ data, updateData }: PhoneStepProps) => {
 
       <div className="flex gap-3">
         {/* Country code (auto-filled) */}
-        <div className="w-24 h-14 glass rounded-2xl flex items-center justify-center gap-2 text-foreground font-medium">
-          <span className="text-lg">
-            {data.countryCode
-              ? countries.find((c) => c.code === data.countryCode)?.flag
-              : "🌍"}
-          </span>
+        <div className="w-28 h-14 glass rounded-2xl flex items-center justify-center gap-2 text-foreground font-medium">
+          <FlagIcon countryCode={data.countryCode || ""} className="w-6 h-4" />
           <span>{data.dialCode || "+--"}</span>
         </div>
 
@@ -49,8 +47,5 @@ const PhoneStep = ({ data, updateData }: PhoneStepProps) => {
     </div>
   );
 };
-
-// Import countries for flag display
-import { countries } from "@/data/countries";
 
 export default PhoneStep;
