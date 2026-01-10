@@ -8,6 +8,7 @@ import ProfileCard from "@/components/ProfileCard";
 import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
+import NearbyMap from "@/components/NearbyMap";
 
 import { mockProfiles, Profile } from "@/data/mockProfiles";
 
@@ -176,96 +177,119 @@ const Home = () => {
         ))}
       </motion.div>
 
-      {/* Card Stack */}
+      {/* Card Stack or Map */}
       <div className="flex-1 px-2 max-w-md mx-auto w-full flex flex-col min-h-0">
-        <motion.div 
-          className="relative flex-1 min-h-0"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          {/* Background cards (stack effect) */}
-          {filteredProfiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
-            <motion.div
-              key={profile.id}
-              className="absolute w-full h-full rounded-3xl overflow-hidden"
-              initial={false}
-              animate={{
-                scale: 1 - (index + 1) * 0.05,
-                y: (index + 1) * 8,
-                opacity: 1 - (index + 1) * 0.3,
-              }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              style={{ zIndex: -index - 1 }}
+        <AnimatePresence mode="wait">
+          {activeTab === "discover" ? (
+            <motion.div 
+              key="discover"
+              className="relative flex-1 min-h-0"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              <div className="w-full h-full glass-strong rounded-3xl overflow-hidden">
-                <img
-                  src={profile.photos[0]}
-                  alt={profile.name}
-                  className="w-full h-full object-cover opacity-80"
-                  draggable={false}
-                />
-                <div className="absolute inset-0 bg-background/20" />
-              </div>
-            </motion.div>
-          ))}
+              {/* Background cards (stack effect) */}
+              {filteredProfiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
+                <motion.div
+                  key={profile.id}
+                  className="absolute w-full h-full rounded-3xl overflow-hidden"
+                  initial={false}
+                  animate={{
+                    scale: 1 - (index + 1) * 0.05,
+                    y: (index + 1) * 8,
+                    opacity: 1 - (index + 1) * 0.3,
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  style={{ zIndex: -index - 1 }}
+                >
+                  <div className="w-full h-full glass-strong rounded-3xl overflow-hidden">
+                    <img
+                      src={profile.photos[0]}
+                      alt={profile.name}
+                      className="w-full h-full object-cover opacity-80"
+                      draggable={false}
+                    />
+                    <div className="absolute inset-0 bg-background/20" />
+                  </div>
+                </motion.div>
+              ))}
 
-          {/* Active card or empty state */}
-          <AnimatePresence mode="popLayout">
-            {currentProfile ? (
-              <ProfileCard
-                key={currentProfile.id}
-                profile={currentProfile}
-                onSwipe={handleSwipe}
-                onInfoClick={handleInfoClick}
-                onLike={handleLike}
-                onPass={handlePass}
-                onSuperLike={handleSuperLike}
+              {/* Active card or empty state */}
+              <AnimatePresence mode="popLayout">
+                {currentProfile ? (
+                  <ProfileCard
+                    key={currentProfile.id}
+                    profile={currentProfile}
+                    onSwipe={handleSwipe}
+                    onInfoClick={handleInfoClick}
+                    onLike={handleLike}
+                    onPass={handlePass}
+                    onSuperLike={handleSuperLike}
+                  />
+                ) : (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center glass-strong rounded-3xl p-6 text-center"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                      <SearchX className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      Aucun profil trouvé
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Modifiez vos critères de recherche pour voir plus de profils
+                    </p>
+                    <div className="flex gap-2">
+                      <motion.button
+                        onClick={() => {
+                          setFilters({
+                            ageMin: 18,
+                            ageMax: 50,
+                            distance: 50,
+                            genders: ["all"],
+                          });
+                          setCurrentIndex(0);
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 glass rounded-xl text-sm font-medium text-foreground"
+                      >
+                        Réinitialiser
+                      </motion.button>
+                      <motion.button
+                        onClick={() => setIsFilterOpen(true)}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
+                      >
+                        Modifier
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="nearby"
+              className="relative flex-1 min-h-0"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <NearbyMap 
+                profiles={filteredProfiles} 
+                onProfileClick={(profile) => {
+                  setSelectedProfile(profile);
+                  setIsModalOpen(true);
+                }}
               />
-            ) : (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center glass-strong rounded-3xl p-6 text-center"
-              >
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                  <SearchX className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Aucun profil trouvé
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Modifiez vos critères de recherche pour voir plus de profils
-                </p>
-                <div className="flex gap-2">
-                  <motion.button
-                    onClick={() => {
-                      setFilters({
-                        ageMin: 18,
-                        ageMax: 50,
-                        distance: 50,
-                        genders: ["all"],
-                      });
-                      setCurrentIndex(0);
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 glass rounded-xl text-sm font-medium text-foreground"
-                  >
-                    Réinitialiser
-                  </motion.button>
-                  <motion.button
-                    onClick={() => setIsFilterOpen(true)}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
-                  >
-                    Modifier
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <ProfileModal
