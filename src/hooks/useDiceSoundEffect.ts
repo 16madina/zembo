@@ -2,9 +2,8 @@ import { useCallback, useRef, useEffect } from "react";
 
 export const useDiceSoundEffect = () => {
   const audioUrlRef = useRef<string | null>(null);
-  const isLoadingRef = useRef(false);
+  const isLoadingRef = useRef<boolean>(false);
 
-  // Pre-load the sound on mount
   useEffect(() => {
     const preloadSound = async () => {
       if (audioUrlRef.current || isLoadingRef.current) return;
@@ -48,7 +47,6 @@ export const useDiceSoundEffect = () => {
 
   const playDiceSound = useCallback(async () => {
     try {
-      // If preloaded, play immediately
       if (audioUrlRef.current) {
         const audio = new Audio(audioUrlRef.current);
         audio.volume = 0.6;
@@ -56,7 +54,6 @@ export const useDiceSoundEffect = () => {
         return;
       }
 
-      // Fallback: generate on-the-fly if not preloaded yet
       console.log("Sound not preloaded, generating...");
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
