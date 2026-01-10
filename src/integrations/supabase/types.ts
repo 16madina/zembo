@@ -174,10 +174,10 @@ export type Database = {
           id: string
           started_at: string
           status: string
+          user1_decision: string | null
           user1_id: string
-          user1_wants_match: boolean | null
+          user2_decision: string | null
           user2_id: string
-          user2_wants_match: boolean | null
         }
         Insert: {
           created_at?: string
@@ -185,10 +185,10 @@ export type Database = {
           id?: string
           started_at?: string
           status?: string
+          user1_decision?: string | null
           user1_id: string
-          user1_wants_match?: boolean | null
+          user2_decision?: string | null
           user2_id: string
-          user2_wants_match?: boolean | null
         }
         Update: {
           created_at?: string
@@ -196,10 +196,10 @@ export type Database = {
           id?: string
           started_at?: string
           status?: string
+          user1_decision?: string | null
           user1_id?: string
-          user1_wants_match?: boolean | null
+          user2_decision?: string | null
           user2_id?: string
-          user2_wants_match?: boolean | null
         }
         Relationships: []
       }
@@ -221,11 +221,7 @@ export type Database = {
         Returns: string
       }
       submit_random_call_decision: {
-        Args: {
-          p_session_id: string
-          p_user_id: string
-          p_wants_match: boolean
-        }
+        Args: { p_decision: string; p_session_id: string; p_user_id: string }
         Returns: Json
       }
     }
