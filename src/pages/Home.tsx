@@ -1,43 +1,77 @@
 import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { SlidersHorizontal } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import ProfileCard from "@/components/ProfileCard";
 import ProfileModal from "@/components/ProfileModal";
+import MatchModal from "@/components/MatchModal";
 import ActionButtons from "@/components/ActionButtons";
 import { mockProfiles, Profile } from "@/data/mockProfiles";
 
 const Home = () => {
+  const navigate = useNavigate();
   const [profiles, setProfiles] = useState<Profile[]>(mockProfiles);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"discover" | "nearby">("discover");
+  
+  // Match system state
+  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
+  const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
+  const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
 
   const currentProfile = profiles[currentIndex];
 
+  // Simulate which profiles have "liked" the user (for demo purposes)
+  const profilesWhoLikedUser = new Set(["1", "3", "5"]); // Sophie, Léa, Chloé
+
+  const checkForMatch = (profileId: string) => {
+    // Check if this profile has liked the user
+    if (profilesWhoLikedUser.has(profileId)) {
+      return true;
+    }
+    return false;
+  };
+
   const handleSwipe = (direction: "left" | "right" | "up") => {
+    const swipedProfile = currentProfile;
+    
+    if (direction === "right" || direction === "up") {
+      // Add to liked profiles
+      setLikedProfiles((prev) => new Set([...prev, swipedProfile.id]));
+      
+      // Check for match
+      if (checkForMatch(swipedProfile.id)) {
+        setMatchedProfile(swipedProfile);
+        setIsMatchModalOpen(true);
+      }
+    }
+
+    // Move to next profile
     if (currentIndex < profiles.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
-      // Reset to start when all profiles are viewed
       setCurrentIndex(0);
     }
   };
 
   const handlePass = () => handleSwipe("left");
+  
   const handleLike = () => {
+    if (isModalOpen) {
+      setIsModalOpen(false);
+    }
     handleSwipe("right");
-    if (isModalOpen) {
-      setIsModalOpen(false);
-    }
   };
+  
   const handleSuperLike = () => {
-    handleSwipe("up");
     if (isModalOpen) {
       setIsModalOpen(false);
     }
+    handleSwipe("up");
   };
 
   const handleInfoClick = () => {
@@ -48,6 +82,16 @@ const Home = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedProfile(null);
+  };
+
+  const handleCloseMatchModal = () => {
+    setIsMatchModalOpen(false);
+    setMatchedProfile(null);
+  };
+
+  const handleStartChat = () => {
+    setIsMatchModalOpen(false);
+    navigate("/messages");
   };
 
   return (
@@ -117,6 +161,14 @@ const Home = () => {
         onClose={handleCloseModal}
         onLike={handleLike}
         onSuperLike={handleSuperLike}
+      />
+
+      {/* Match Modal */}
+      <MatchModal
+        profile={matchedProfile}
+        isOpen={isMatchModalOpen}
+        onClose={handleCloseMatchModal}
+        onStartChat={handleStartChat}
       />
 
       {/* Bottom Navigation */}
