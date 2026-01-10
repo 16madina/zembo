@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, X, MessageCircle, Heart, Shield, Loader2, MapPinOff, Info, SlidersHorizontal, Radio } from "lucide-react";
+import { MapPin, Navigation, X, Shield, Loader2, MapPinOff, Info, SlidersHorizontal, Radio, Eye, Globe } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { getCoordinatesFromCountryName } from "@/data/countryCoordinates";
@@ -301,19 +301,18 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
 
-              <div className="flex items-center gap-3">
-                <div className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 ${selectedProfile.isOnline ? 'border-green-400' : 'border-gray-400'}`}>
+              <div className="flex items-center gap-4">
+                {/* Profile photo with status */}
+                <div className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 ${selectedProfile.isOnline ? 'border-green-400' : 'border-gray-400'}`}>
                   <img
                     src={selectedProfile.photos[0]}
                     alt={selectedProfile.name}
                     className="w-full h-full object-cover"
                   />
-                  {selectedProfile.isOnline && (
-                    <div className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-background" />
-                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">
+                  {/* Name and verification */}
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-foreground truncate">
                       {selectedProfile.name}, {selectedProfile.age}
@@ -322,38 +321,38 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
                       <Shield className="w-4 h-4 text-primary flex-shrink-0" />
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  
+                  {/* Online/Offline status */}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className={`w-2 h-2 rounded-full ${selectedProfile.isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+                    <span className={`text-sm font-medium ${selectedProfile.isOnline ? 'text-green-400' : 'text-muted-foreground'}`}>
+                      {selectedProfile.isOnline ? 'En ligne' : 'Hors ligne'}
+                    </span>
+                  </div>
+                  
+                  {/* Distance */}
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                     <MapPin className="w-3 h-3" />
                     <span>{selectedProfile.distance}</span>
-                    {selectedProfile.isOnline && (
-                      <span className="text-green-400 font-medium ml-1">• En ligne</span>
-                    )}
+                  </div>
+                  
+                  {/* Country */}
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
+                    <Globe className="w-3 h-3" />
+                    <span>{selectedProfile.location.split(',').pop()?.trim() || selectedProfile.location}</span>
                   </div>
                 </div>
               </div>
 
-              <p className="text-sm text-muted-foreground line-clamp-2 mt-3">
-                {selectedProfile.bio}
-              </p>
-
-              <div className="flex gap-2 mt-3">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleProfileAction(selectedProfile)}
-                  className="flex-1 py-2.5 rounded-xl btn-gold flex items-center justify-center gap-2 font-medium"
-                >
-                  <Heart className="w-4 h-4" />
-                  <span>J'aime</span>
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleProfileAction(selectedProfile)}
-                  className="flex-1 py-2.5 rounded-xl glass flex items-center justify-center gap-2 font-medium text-foreground"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Message</span>
-                </motion.button>
-              </div>
+              {/* View profile button */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleProfileAction(selectedProfile)}
+                className="w-full py-3 mt-4 rounded-xl btn-gold flex items-center justify-center gap-2 font-medium"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Voir le profil</span>
+              </motion.button>
             </div>
           </motion.div>
         )}
