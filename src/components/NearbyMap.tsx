@@ -5,6 +5,12 @@ import { Profile } from "@/data/mockProfiles";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { getCoordinatesFromCountryName } from "@/data/countryCoordinates";
 import { Slider } from "@/components/ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface NearbyMapProps {
   profiles: Profile[];
@@ -195,38 +201,63 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
       </motion.div>
 
       {/* Control buttons */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={requestPosition}
-          className="p-2.5 glass rounded-xl hover:bg-white/10 transition-colors"
-        >
-          <Navigation className="w-4 h-4 text-primary" />
-        </motion.button>
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowDistanceFilter(!showDistanceFilter)}
-          className={`p-2.5 glass rounded-xl transition-colors ${showDistanceFilter ? 'bg-primary/20' : 'hover:bg-white/10'}`}
-        >
-          <SlidersHorizontal className="w-4 h-4 text-primary" />
-        </motion.button>
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setOnlineOnly(!onlineOnly)}
-          className={`p-2.5 glass rounded-xl transition-colors ${onlineOnly ? 'bg-green-500/20' : 'hover:bg-white/10'}`}
-        >
-          <Radio className={`w-4 h-4 ${onlineOnly ? 'text-green-400' : 'text-primary'}`} />
-        </motion.button>
-      </div>
+      <TooltipProvider delayDuration={300}>
+        <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={requestPosition}
+                className="p-2.5 glass rounded-xl hover:bg-white/10 transition-colors"
+              >
+                <Navigation className="w-4 h-4 text-primary" />
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Recentrer sur ma position</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowDistanceFilter(!showDistanceFilter)}
+                className={`p-2.5 glass rounded-xl transition-colors ${showDistanceFilter ? 'bg-primary/20' : 'hover:bg-white/10'}`}
+              >
+                <SlidersHorizontal className="w-4 h-4 text-primary" />
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Filtrer par distance ({maxDistance} km)</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setOnlineOnly(!onlineOnly)}
+                className={`p-2.5 glass rounded-xl transition-colors ${onlineOnly ? 'bg-green-500/20' : 'hover:bg-white/10'}`}
+              >
+                <Radio className={`w-4 h-4 ${onlineOnly ? 'text-green-400' : 'text-primary'}`} />
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{onlineOnly ? 'Afficher tous les profils' : 'En ligne uniquement'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
 
       {/* Distance filter popup */}
       <AnimatePresence>
