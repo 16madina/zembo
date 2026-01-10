@@ -1,18 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2 } from "lucide-react";
+import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2, UserCheck, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isNative } from "@/lib/capacitor";
 import { useFaceDetection, FaceDirection } from "@/hooks/useFaceDetection";
+import { useFaceComparison } from "@/hooks/useFaceComparison";
 
 interface FaceVerificationStepProps {
   onNext: () => void;
   onBack: () => void;
-  data: { faceVerified?: boolean };
+  data: { faceVerified?: boolean; photos: string[] };
   updateData: (data: { faceVerified: boolean }) => void;
 }
 
-type VerificationStep = "intro" | "center" | "left" | "right" | "complete";
+type VerificationStep = "intro" | "center" | "left" | "right" | "comparing" | "complete" | "failed";
 
 const verificationSteps: { id: VerificationStep; instruction: string; subtext: string; targetDirection: FaceDirection }[] = [
   { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre", targetDirection: "center" },
@@ -21,7 +22,7 @@ const verificationSteps: { id: VerificationStep; instruction: string; subtext: s
 ];
 
 const REQUIRED_HOLD_TIME = 1500; // ms to hold position
-const PROGRESS_UPDATE_INTERVAL = 50; // ms
+const FACE_MATCH_THRESHOLD = 0.45; // Similarity threshold for face matching
 
 export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceVerificationStepProps) => {
   const [currentStep, setCurrentStep] = useState<VerificationStep>("intro");
@@ -30,14 +31,29 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isAILoading, setIsAILoading] = useState(false);
   const [detectionStatus, setDetectionStatus] = useState<string>("");
+  const [faceMatchResult, setFaceMatchResult] = useState<{ similarity: number; isMatch: boolean } | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartTimeRef = useRef<number | null>(null);
+  const comparisonAttemptedRef = useRef(false);
 
-  const isVerificationActive = currentStep !== "intro" && currentStep !== "complete";
+  const isVerificationActive = currentStep !== "intro" && currentStep !== "complete" && currentStep !== "comparing" && currentStep !== "failed";
   
+  // Face comparison hook
+  const { 
+    isLoading: isComparisonLoading, 
+    isModelsLoaded: isComparisonModelsLoaded,
+    error: comparisonError, 
+    compareFace,
+    hasPhotoDescriptors 
+  } = useFaceComparison({
+    photos: data.photos,
+    enabled: currentStep !== "intro",
+    threshold: FACE_MATCH_THRESHOLD,
+  });
+
   const { isLoading: isFaceDetectionLoading, error: faceDetectionError, result: faceResult } = useFaceDetection({
     videoRef,
     enabled: isVerificationActive,
@@ -99,6 +115,42 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     },
   });
 
+  // Perform face comparison after movement verification is complete
+  const performFaceComparison = useCallback(async () => {
+    if (!videoRef.current || comparisonAttemptedRef.current) return;
+    
+    comparisonAttemptedRef.current = true;
+    setCurrentStep("comparing");
+    setDetectionStatus("Comparaison avec vos photos...");
+
+    // Wait a moment for stable video frame
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Perform multiple comparisons for better accuracy
+    const results: { similarity: number; isMatch: boolean }[] = [];
+    
+    for (let i = 0; i < 3; i++) {
+      const result = await compareFace(videoRef.current!);
+      results.push({ similarity: result.similarity, isMatch: result.isMatch });
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    // Take the best result
+    const bestResult = results.reduce((best, curr) => 
+      curr.similarity > best.similarity ? curr : best
+    , results[0]);
+
+    setFaceMatchResult(bestResult);
+
+    if (bestResult.isMatch) {
+      stopCamera();
+      setCurrentStep("complete");
+      updateData({ faceVerified: true });
+    } else {
+      setCurrentStep("failed");
+    }
+  }, [compareFace, updateData]);
+
   const completeCurrentStep = useCallback(() => {
     setCompletedSteps(prev => [...prev, currentStep as VerificationStep]);
     holdStartTimeRef.current = null;
@@ -113,12 +165,11 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         setProgress(0);
         setDetectionStatus("");
       } else if (currentStep === "right") {
-        setCurrentStep("complete");
-        stopCamera();
-        updateData({ faceVerified: true });
+        // After all movement steps, perform face comparison
+        performFaceComparison();
       }
     }, 300);
-  }, [currentStep, updateData]);
+  }, [currentStep, performFaceComparison]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -157,7 +208,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   }, []);
 
   useEffect(() => {
-    if (currentStep !== "intro" && currentStep !== "complete") {
+    if (currentStep !== "intro" && currentStep !== "complete" && currentStep !== "failed") {
       startCamera();
     }
     
@@ -177,6 +228,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     setProgress(0);
     setCompletedSteps([]);
     setDetectionStatus("");
+    comparisonAttemptedRef.current = false;
+    setFaceMatchResult(null);
   };
 
   const resetVerification = () => {
@@ -186,6 +239,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     setCompletedSteps([]);
     setDetectionStatus("");
     holdStartTimeRef.current = null;
+    comparisonAttemptedRef.current = false;
+    setFaceMatchResult(null);
   };
 
   const currentStepIndex = verificationSteps.findIndex(s => s.id === currentStep);
@@ -200,6 +255,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     }
     return "hsl(var(--destructive) / 0.5)";
   };
+
+  const isLoadingModels = isAILoading || isFaceDetectionLoading || isComparisonLoading;
 
   return (
     <div className="min-h-full flex flex-col">
@@ -248,8 +305,24 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               transition={{ delay: 0.4 }}
               className="text-muted-foreground mb-8 max-w-xs"
             >
-              Notre IA va vérifier votre identité par reconnaissance faciale en temps réel.
+              Notre IA va vérifier que vous êtes la même personne que sur vos photos de profil.
             </motion.p>
+
+            {/* Info box about face matching */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45 }}
+              className="w-full max-w-xs mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <UserCheck className="w-5 h-5 text-primary" />
+                <span className="font-medium text-foreground text-sm">Reconnaissance faciale</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Votre visage sera comparé avec vos {data.photos.length} photo{data.photos.length > 1 ? 's' : ''} uploadée{data.photos.length > 1 ? 's' : ''} pour confirmer votre identité.
+              </p>
+            </motion.div>
 
             {/* Steps Preview */}
             <motion.div
@@ -269,6 +342,12 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                   <span className="text-sm text-foreground">{step.instruction}</span>
                 </div>
               ))}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 backdrop-blur-sm border border-primary/30">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                  4
+                </div>
+                <span className="text-sm text-primary font-medium">Comparaison avec vos photos</span>
+              </div>
             </motion.div>
 
             <motion.div
@@ -288,7 +367,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           </motion.div>
         )}
 
-        {currentStep !== "intro" && currentStep !== "complete" && (
+        {(currentStep !== "intro" && currentStep !== "complete" && currentStep !== "failed") && (
           <motion.div
             key="verification"
             initial={{ opacity: 0 }}
@@ -323,9 +402,29 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                     )}
                   </div>
                 ))}
+                {/* Face comparison step indicator */}
+                <div className="flex items-center">
+                  <div className="w-8 h-0.5 mx-1 transition-colors bg-muted" />
+                  <motion.div
+                    animate={{
+                      scale: currentStep === "comparing" ? 1.1 : 1,
+                      backgroundColor: currentStep === "comparing" 
+                        ? "hsl(var(--primary) / 0.5)" 
+                        : "hsl(var(--muted))"
+                    }}
+                    className="w-3 h-3 rounded-full flex items-center justify-center"
+                  >
+                    {currentStep === "comparing" && (
+                      <Loader2 className="w-2 h-2 text-white animate-spin" />
+                    )}
+                  </motion.div>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Étape {currentStepIndex + 1} sur {verificationSteps.length}
+                {currentStep === "comparing" 
+                  ? "Comparaison en cours..." 
+                  : `Étape ${currentStepIndex + 1} sur ${verificationSteps.length + 1}`
+                }
               </p>
             </div>
 
@@ -347,23 +446,23 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                     cy="50"
                     r="45"
                     fill="none"
-                    stroke={progress > 0 ? "hsl(var(--primary))" : getRingColor()}
+                    stroke={currentStep === "comparing" ? "hsl(var(--primary))" : progress > 0 ? "hsl(var(--primary))" : getRingColor()}
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeDasharray={283}
-                    strokeDashoffset={283 - (283 * progress) / 100}
+                    strokeDashoffset={currentStep === "comparing" ? 0 : 283 - (283 * progress) / 100}
                     initial={{ strokeDashoffset: 283 }}
-                    animate={{ strokeDashoffset: 283 - (283 * progress) / 100 }}
+                    animate={{ strokeDashoffset: currentStep === "comparing" ? 0 : 283 - (283 * progress) / 100 }}
                     transition={{ duration: 0.1 }}
                   />
                 </svg>
 
                 {/* Camera container */}
                 <div className="absolute inset-4 rounded-full overflow-hidden bg-black/50 backdrop-blur-sm">
-                  {cameraError || faceDetectionError ? (
+                  {cameraError || faceDetectionError || comparisonError ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-center p-4">
                       <AlertCircle className="w-8 h-8 text-destructive mb-2" />
-                      <p className="text-xs text-muted-foreground">{cameraError || faceDetectionError}</p>
+                      <p className="text-xs text-muted-foreground">{cameraError || faceDetectionError || comparisonError}</p>
                     </div>
                   ) : (
                     <>
@@ -375,16 +474,33 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                         className="w-full h-full object-cover scale-x-[-1]"
                       />
                       {/* Loading overlay */}
-                      {(isAILoading || isFaceDetectionLoading) && (
+                      {isLoadingModels && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <div className="text-center">
                             <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
-                            <p className="text-xs text-white">Chargement de l'IA...</p>
+                            <p className="text-xs text-white">
+                              {isComparisonLoading ? "Chargement reconnaissance..." : "Chargement de l'IA..."}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Comparing overlay */}
+                      {currentStep === "comparing" && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <div className="text-center">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                            >
+                              <UserCheck className="w-10 h-10 text-primary mx-auto mb-2" />
+                            </motion.div>
+                            <p className="text-sm text-white font-medium">Comparaison faciale...</p>
+                            <p className="text-xs text-white/70 mt-1">Vérification de votre identité</p>
                           </div>
                         </div>
                       )}
                       {/* Face detection indicator */}
-                      {!isFaceDetectionLoading && faceResult.isDetected && (
+                      {!isFaceDetectionLoading && faceResult.isDetected && currentStep !== "comparing" && (
                         <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -441,14 +557,27 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-8 text-center"
               >
-                <h3 className="text-xl font-semibold text-foreground mb-2">
-                  {currentInstruction?.instruction}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {currentInstruction?.subtext}
-                </p>
+                {currentStep === "comparing" ? (
+                  <>
+                    <h3 className="text-xl font-semibold text-foreground mb-2">
+                      Comparaison en cours
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Vérification avec vos photos de profil...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-semibold text-foreground mb-2">
+                      {currentInstruction?.instruction}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {currentInstruction?.subtext}
+                    </p>
+                  </>
+                )}
                 {/* Real-time feedback */}
-                {detectionStatus && !isFaceDetectionLoading && (
+                {detectionStatus && !isFaceDetectionLoading && currentStep !== "comparing" && (
                   <motion.p
                     key={detectionStatus}
                     initial={{ opacity: 0, y: 5 }}
@@ -466,15 +595,99 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
             </div>
 
             {/* Reset button */}
-            <div className="px-6 py-4">
-              <button
-                onClick={resetVerification}
-                className="flex items-center justify-center gap-2 w-full text-muted-foreground hover:text-foreground transition-colors"
+            {currentStep !== "comparing" && (
+              <div className="px-6 py-4">
+                <button
+                  onClick={resetVerification}
+                  className="flex items-center justify-center gap-2 w-full text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span className="text-sm">Recommencer</span>
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {currentStep === "failed" && (
+          <motion.div
+            key="failed"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex-1 flex flex-col items-center justify-center text-center px-6"
+          >
+            {/* Failed animation */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", delay: 0.2 }}
+              className="relative mb-8"
+            >
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-destructive/20 to-destructive/5 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-destructive/30 to-destructive/10 flex items-center justify-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", delay: 0.4 }}
+                  >
+                    <XCircle className="w-12 h-12 text-destructive" />
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="text-2xl font-bold text-foreground mb-3"
+            >
+              Vérification échouée
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-muted-foreground mb-4 max-w-xs"
+            >
+              Nous n'avons pas pu confirmer que vous êtes la même personne que sur vos photos de profil.
+            </motion.p>
+
+            {faceMatchResult && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.65 }}
+                className="mb-8 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20"
               >
-                <RotateCcw className="w-4 h-4" />
-                <span className="text-sm">Recommencer</span>
-              </button>
-            </div>
+                <p className="text-xs text-muted-foreground">
+                  Similarité détectée : {Math.round(faceMatchResult.similarity * 100)}%
+                </p>
+              </motion.div>
+            )}
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="w-full max-w-xs space-y-3"
+            >
+              <Button
+                onClick={resetVerification}
+                className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
+              >
+                <RotateCcw className="w-5 h-5 mr-2" />
+                Réessayer
+              </Button>
+              <Button
+                onClick={onBack}
+                variant="ghost"
+                className="w-full h-12 text-muted-foreground"
+              >
+                Modifier mes photos
+              </Button>
+            </motion.div>
           </motion.div>
         )}
 
@@ -531,17 +744,30 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               transition={{ delay: 0.5 }}
               className="text-2xl font-bold text-foreground mb-3"
             >
-              Vérification réussie !
+              Identité confirmée !
             </motion.h2>
 
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="text-muted-foreground mb-8 max-w-xs"
+              className="text-muted-foreground mb-4 max-w-xs"
             >
-              Votre identité a été vérifiée avec succès par notre IA. Vous obtiendrez le badge vérifié sur votre profil.
+              Votre visage correspond à vos photos de profil. Vous obtiendrez le badge vérifié.
             </motion.p>
+
+            {faceMatchResult && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.65 }}
+                className="mb-6 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20"
+              >
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  Similarité : {Math.round(faceMatchResult.similarity * 100)}%
+                </p>
+              </motion.div>
+            )}
 
             {/* Verified badge preview */}
             <motion.div
