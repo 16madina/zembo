@@ -5,17 +5,11 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Force new cache to avoid stale bundles (Leaflet DomUtil fix)
-  cacheDir: "node_modules/.vite_zembo_v3",
+  // Force new cache to avoid stale bundles (Leaflet named exports fix)
+  cacheDir: "node_modules/.vite_zembo_v4",
   optimizeDeps: {
-    // Exclude leaflet from pre-bundling to avoid CommonJS named export issues
-    exclude: ["leaflet"],
-  },
-  build: {
-    commonjsOptions: {
-      // Transform leaflet CommonJS exports correctly
-      include: [/leaflet/, /node_modules/],
-    },
+    // Pre-bundle Leaflet so Vite can generate proper ESM wrappers
+    include: ["leaflet"],
   },
   server: {
     host: "::",
@@ -25,6 +19,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Leaflet ships a UMD main; force the official ESM build to avoid "does not provide an export" errors.
+      leaflet: path.resolve(__dirname, "node_modules/leaflet/dist/leaflet-src.esm.js"),
     },
   },
 }));
