@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
-import { Heart, X, MessageCircle, Loader2, UserCircle } from "lucide-react";
+import { Heart, X, Loader2, UserCircle } from "lucide-react";
 
 interface DecisionOverlayProps {
-  onDecide: (decision: "yes" | "no" | "continue") => void;
+  onDecide: (decision: "yes" | "no") => void;
   waitingForOther: boolean;
   timeRemaining: number;
 }
@@ -79,11 +79,11 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
             1 minute écoulée !
           </h2>
           <p className="text-muted-foreground text-sm">
-            Que voulez-vous faire ?
+            Voulez-vous révéler vos profils ?
           </p>
         </div>
 
-        {/* Decision buttons */}
+        {/* Decision buttons - only 2 options now */}
         <div className="flex flex-col gap-3 w-full">
           {/* Match button */}
           <motion.button
@@ -93,18 +93,7 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
             whileTap={{ scale: 0.98 }}
           >
             <Heart className="w-5 h-5" fill="currentColor" />
-            <span className="font-semibold">Oui, je veux matcher !</span>
-          </motion.button>
-
-          {/* Continue button */}
-          <motion.button
-            onClick={() => onDecide("continue")}
-            className="flex items-center justify-center gap-3 p-4 rounded-2xl glass hover:bg-primary/10 transition-colors"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <MessageCircle className="w-5 h-5 text-primary" />
-            <span className="font-medium text-foreground">Continuer à parler</span>
+            <span className="font-semibold">Oui, matcher !</span>
           </motion.button>
 
           {/* No button */}
@@ -115,12 +104,12 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
             whileTap={{ scale: 0.98 }}
           >
             <X className="w-5 h-5 text-muted-foreground" />
-            <span className="font-medium text-muted-foreground">Non merci</span>
+            <span className="font-medium text-muted-foreground">Pas intéressé(e)</span>
           </motion.button>
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          L'appel continue en arrière-plan
+          Si vous matchez, vos profils seront révélés
         </p>
       </motion.div>
     </motion.div>

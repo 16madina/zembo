@@ -92,7 +92,8 @@ const Random = () => {
         return (
           <ResultScreen 
             matched={matchResult === "matched"} 
-            onRetry={reset} 
+            onRetry={reset}
+            otherUserId={otherUserId || undefined}
           />
         );
       
