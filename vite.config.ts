@@ -5,11 +5,17 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Force new cache to avoid stale bundles
-  cacheDir: "node_modules/.vite_zembo_v2",
+  // Force new cache to avoid stale bundles (Leaflet DomUtil fix)
+  cacheDir: "node_modules/.vite_zembo_v3",
   optimizeDeps: {
-    // Include leaflet libs to ensure proper bundling with React 18
-    include: ["leaflet", "react-leaflet", "@react-leaflet/core"],
+    // Exclude leaflet from pre-bundling to avoid CommonJS named export issues
+    exclude: ["leaflet"],
+  },
+  build: {
+    commonjsOptions: {
+      // Transform leaflet CommonJS exports correctly
+      include: [/leaflet/, /node_modules/],
+    },
   },
   server: {
     host: "::",
