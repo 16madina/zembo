@@ -1,12 +1,14 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, X, MessageCircle, Heart, Shield, Loader2, MapPinOff } from "lucide-react";
+import { MapPin, Navigation, X, MessageCircle, Heart, Shield, Loader2, MapPinOff, Info } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { getCoordinatesFromCountryName } from "@/data/countryCoordinates";
 
 interface NearbyMapProps {
   profiles: Profile[];
   onProfileClick: (profile: Profile) => void;
+  userCountry?: string | null;
 }
 
 // Lazy load the map component to avoid SSR issues with Leaflet
@@ -37,28 +39,38 @@ const generateNearbyPositions = (
   return positions;
 };
 
-const NearbyMap = ({ profiles, onProfileClick }: NearbyMapProps) => {
+const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) => {
   const { latitude, longitude, loading, error, requestPosition } = useGeolocation();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profilePositions, setProfilePositions] = useState<Record<string, { lat: number; lng: number }>>({});
+  const [usingFallback, setUsingFallback] = useState(false);
   
   const onlineProfiles = profiles.filter((p) => p.isOnline);
   const offlineProfiles = profiles.filter((p) => !p.isOnline);
 
-  // Generate positions when user location is available
+  // Get fallback coordinates from user's country
+  const fallbackLocation = userCountry ? getCoordinatesFromCountryName(userCountry) : null;
+
+  // Determine actual position to use
+  const hasRealLocation = latitude && longitude && !error;
+  const effectiveLat = hasRealLocation ? latitude : fallbackLocation?.lat;
+  const effectiveLng = hasRealLocation ? longitude : fallbackLocation?.lng;
+
+  // Generate positions when location is available
   useEffect(() => {
-    if (latitude && longitude) {
-      setProfilePositions(generateNearbyPositions(latitude, longitude, profiles));
+    if (effectiveLat && effectiveLng) {
+      setProfilePositions(generateNearbyPositions(effectiveLat, effectiveLng, profiles));
+      setUsingFallback(!hasRealLocation);
     }
-  }, [latitude, longitude, profiles]);
+  }, [effectiveLat, effectiveLng, profiles, hasRealLocation]);
 
   const handleProfileAction = (profile: Profile) => {
     onProfileClick(profile);
     setSelectedProfile(null);
   };
 
-  // Loading state
-  if (loading) {
+  // Loading state (only when no fallback available)
+  if (loading && !fallbackLocation) {
     return (
       <div className="relative w-full h-full rounded-3xl overflow-hidden glass-strong flex flex-col items-center justify-center gap-4">
         <motion.div
@@ -72,8 +84,8 @@ const NearbyMap = ({ profiles, onProfileClick }: NearbyMapProps) => {
     );
   }
 
-  // Error state
-  if (error || !latitude || !longitude) {
+  // Error state only if no fallback location available
+  if (!effectiveLat || !effectiveLng) {
     return (
       <div className="relative w-full h-full rounded-3xl overflow-hidden glass-strong flex flex-col items-center justify-center gap-4 p-6 text-center">
         <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
@@ -104,8 +116,8 @@ const NearbyMap = ({ profiles, onProfileClick }: NearbyMapProps) => {
         </div>
       }>
         <LeafletMap
-          latitude={latitude}
-          longitude={longitude}
+          latitude={effectiveLat}
+          longitude={effectiveLng}
           profiles={[...onlineProfiles, ...offlineProfiles]}
           profilePositions={profilePositions}
           onProfileSelect={setSelectedProfile}
@@ -113,13 +125,33 @@ const NearbyMap = ({ profiles, onProfileClick }: NearbyMapProps) => {
         />
       </Suspense>
 
+      {/* Fallback location notice */}
+      {usingFallback && fallbackLocation && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-3 py-2 z-[1000] flex items-center gap-2"
+        >
+          <Info className="w-4 h-4 text-primary" />
+          <span className="text-xs text-foreground">
+            Position approximative : {fallbackLocation.city}
+          </span>
+          <button
+            onClick={requestPosition}
+            className="text-xs text-primary font-medium hover:underline"
+          >
+            Activer GPS
+          </button>
+        </motion.div>
+      )}
+
       {/* Overlay UI */}
       {/* Legend */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3 }}
-        className="absolute top-4 left-4 glass rounded-xl p-3 z-[1000]"
+        className={`absolute ${usingFallback ? 'top-16' : 'top-4'} left-4 glass rounded-xl p-3 z-[1000]`}
       >
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2 text-sm">
