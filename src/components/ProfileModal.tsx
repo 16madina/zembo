@@ -116,8 +116,8 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
               <X className="w-5 h-5 text-foreground" />
             </motion.button>
 
-            {/* Photo gallery */}
-            <div className="relative aspect-[3/4] flex-shrink-0">
+            {/* Photo gallery - reduced height */}
+            <div className="relative h-[35vh] min-h-[200px] max-h-[300px] flex-shrink-0">
               <motion.img
                 key={currentPhotoIndex}
                 initial={{ opacity: 0 }}
@@ -153,7 +153,7 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
               </div>
 
               {/* Gradient overlay */}
-              <div className="absolute bottom-0 left-0 right-0 h-40 overlay-gradient" />
+              <div className="absolute bottom-0 left-0 right-0 h-20 overlay-gradient" />
             </div>
 
             {/* Profile info */}
