@@ -3,6 +3,7 @@ import { Phone } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useRandomCall } from "@/hooks/useRandomCall";
+import { useDiceSoundEffect } from "@/hooks/useDiceSoundEffect";
 import PreferenceSelector from "@/components/random-call/PreferenceSelector";
 import SearchingScreen from "@/components/random-call/SearchingScreen";
 import MatchFoundScreen from "@/components/random-call/MatchFoundScreen";
@@ -28,6 +29,13 @@ const Random = () => {
     submitDecision,
     reset,
   } = useRandomCall();
+  
+  const { playDiceSound } = useDiceSoundEffect();
+
+  const handleStartSelecting = () => {
+    playDiceSound();
+    startSelecting();
+  };
 
   const renderContent = () => {
     switch (status) {
@@ -149,7 +157,7 @@ const Random = () => {
             </motion.p>
 
             <motion.button 
-              onClick={startSelecting}
+              onClick={handleStartSelecting}
               className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
