@@ -3,6 +3,7 @@ import { Search, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { countries } from "@/data/countries";
+import FlagIcon from "@/components/FlagIcon";
 import type { OnboardingData } from "../OnboardingSteps";
 
 interface CountryStepProps {
@@ -54,7 +55,7 @@ const CountryStep = ({ data, updateData }: CountryStepProps) => {
                   : "hover:bg-secondary/50"
               }`}
             >
-              <span className="text-2xl">{country.flag}</span>
+              <FlagIcon countryCode={country.code} className="w-6 h-4" />
               <span className="flex-1 text-left text-foreground">
                 {country.name}
               </span>
