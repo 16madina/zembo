@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Briefcase, GraduationCap, Ruler, ChevronDown, User, Calendar } from "lucide-react";
+import { X, Briefcase, GraduationCap, Ruler, ChevronDown, User, Calendar, Type, FileText, Heart } from "lucide-react";
 import { toast } from "sonner";
+
+type FieldType = "occupation" | "education" | "height" | "gender" | "age" | "display_name" | "bio" | "interests";
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
-  field: "occupation" | "education" | "height" | "gender" | "age";
-  currentValue?: string | number | null;
-  onUpdate: (field: string, value: string | number) => void;
+  field: FieldType;
+  currentValue?: string | number | string[] | null;
+  onUpdate: (field: string, value: string | number | string[]) => void;
 }
 
 const educationOptions = [
@@ -33,6 +35,14 @@ const genderOptions = [
   { value: "lgbt", label: "LGBT+" },
 ];
 
+const interestsList = [
+  "Voyages", "Musique", "Sport", "Cinéma", "Lecture", "Cuisine",
+  "Photographie", "Art", "Danse", "Jeux vidéo", "Nature", "Mode",
+  "Technologie", "Fitness", "Yoga", "Méditation", "Animaux", "Randonnée",
+  "Plage", "Montagne", "Festivals", "Théâtre", "Concerts", "Restaurants",
+  "Café", "Vin", "Bière", "Cocktails", "Jardinage", "DIY"
+];
+
 const days = Array.from({ length: 31 }, (_, i) => i + 1);
 const months = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -41,38 +51,56 @@ const months = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 82 }, (_, i) => currentYear - 18 - i);
 
-const fieldConfig = {
+const fieldConfig: Record<FieldType, { icon: any; label: string; placeholder: string; type: string; options?: string[] }> = {
   occupation: {
     icon: Briefcase,
     label: "Profession",
     placeholder: "Ex: Développeur, Médecin, Étudiant...",
-    type: "text" as const,
+    type: "text",
   },
   education: {
     icon: GraduationCap,
     label: "Études",
     placeholder: "Sélectionnez votre niveau d'études",
-    type: "select" as const,
+    type: "select",
     options: educationOptions,
   },
   height: {
     icon: Ruler,
     label: "Taille",
     placeholder: "Sélectionnez votre taille",
-    type: "select" as const,
+    type: "select",
     options: heightOptions,
   },
   gender: {
     icon: User,
     label: "Genre",
     placeholder: "Sélectionnez votre genre",
-    type: "gender" as const,
+    type: "gender",
   },
   age: {
     icon: Calendar,
     label: "Date de naissance",
     placeholder: "Sélectionnez votre date de naissance",
-    type: "birthdate" as const,
+    type: "birthdate",
+  },
+  display_name: {
+    icon: Type,
+    label: "Nom d'affichage",
+    placeholder: "Votre prénom ou pseudo...",
+    type: "text",
+  },
+  bio: {
+    icon: FileText,
+    label: "Bio",
+    placeholder: "Décrivez-vous en quelques mots...",
+    type: "textarea",
+  },
+  interests: {
+    icon: Heart,
+    label: "Centres d'intérêt",
+    placeholder: "Sélectionnez 3 à 10 centres d'intérêt",
+    type: "interests",
   },
 };
 
@@ -84,9 +112,10 @@ const EditProfileModal = ({
   currentValue,
   onUpdate,
 }: EditProfileModalProps) => {
-  const [value, setValue] = useState(currentValue?.toString() || "");
+  const [value, setValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   
   // For birthdate
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -96,6 +125,17 @@ const EditProfileModal = ({
 
   const config = fieldConfig[field];
   const Icon = config.icon;
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (field === "interests" && Array.isArray(currentValue)) {
+        setSelectedInterests(currentValue);
+      } else {
+        setValue(currentValue?.toString() || "");
+      }
+    }
+  }, [isOpen, currentValue, field]);
 
   const handleSave = async () => {
     if (config.type === "birthdate") {
@@ -117,8 +157,38 @@ const EditProfileModal = ({
       return;
     }
 
+    if (config.type === "interests") {
+      if (selectedInterests.length < 3) {
+        toast.error("Sélectionnez au moins 3 centres d'intérêt");
+        return;
+      }
+      setIsLoading(true);
+      try {
+        onUpdate("interests", selectedInterests);
+        toast.success("Centres d'intérêt mis à jour");
+        onClose();
+      } catch (error) {
+        toast.error("Erreur lors de la mise à jour");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     if (!value.trim()) {
-      toast.error("Veuillez sélectionner une valeur");
+      toast.error("Veuillez entrer une valeur");
+      return;
+    }
+
+    // Validation for display_name
+    if (field === "display_name" && value.trim().length > 50) {
+      toast.error("Le nom ne doit pas dépasser 50 caractères");
+      return;
+    }
+
+    // Validation for bio
+    if (field === "bio" && value.trim().length > 500) {
+      toast.error("La bio ne doit pas dépasser 500 caractères");
       return;
     }
 
@@ -142,6 +212,19 @@ const EditProfileModal = ({
 
   const handleGenderSelect = (genderValue: string) => {
     setValue(genderValue);
+  };
+
+  const toggleInterest = (interest: string) => {
+    setSelectedInterests((prev) => {
+      if (prev.includes(interest)) {
+        return prev.filter((i) => i !== interest);
+      }
+      if (prev.length >= 10) {
+        toast.error("Maximum 10 centres d'intérêt");
+        return prev;
+      }
+      return [...prev, interest];
+    });
   };
 
   return (
@@ -191,9 +274,47 @@ const EditProfileModal = ({
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder={config.placeholder}
+                    maxLength={field === "display_name" ? 50 : 100}
                     className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     autoFocus
                   />
+                ) : config.type === "textarea" ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={value}
+                      onChange={(e) => setValue(e.target.value)}
+                      placeholder={config.placeholder}
+                      maxLength={500}
+                      rows={4}
+                      className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                      autoFocus
+                    />
+                    <p className="text-xs text-muted-foreground text-right">{value.length}/500</p>
+                  </div>
+                ) : config.type === "interests" ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Sélectionnés: {selectedInterests.length}/10 (min. 3)
+                    </p>
+                    <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto">
+                      {interestsList.map((interest) => (
+                        <motion.button
+                          key={interest}
+                          type="button"
+                          onClick={() => toggleInterest(interest)}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                            selectedInterests.includes(interest)
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted/50 text-foreground border-border hover:border-primary/50"
+                          }`}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          {interest}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
                 ) : config.type === "gender" ? (
                   <div className="flex gap-2">
                     {genderOptions.map((option) => (
@@ -341,7 +462,7 @@ const EditProfileModal = ({
                           exit={{ opacity: 0, y: -10 }}
                           className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-60 max-h-60 overflow-y-auto"
                         >
-                          {(config as any).options?.map((option: string) => (
+                          {config.options?.map((option: string) => (
                             <button
                               key={option}
                               type="button"
