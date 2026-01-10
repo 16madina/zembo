@@ -6,8 +6,8 @@ interface FaceDetectionResult {
   isDetected: boolean;
   direction: FaceDirection;
   confidence: number;
-  yaw: number; // Head rotation left/right
-  pitch: number; // Head rotation up/down
+  yaw: number;
+  pitch: number;
 }
 
 interface UseFaceDetectionProps {
@@ -15,14 +15,6 @@ interface UseFaceDetectionProps {
   enabled: boolean;
   onDetection?: (result: FaceDetectionResult) => void;
 }
-
-// Landmark indices for head pose estimation
-const NOSE_TIP = 1;
-const CHIN = 152;
-const LEFT_EYE_OUTER = 33;
-const RIGHT_EYE_OUTER = 263;
-const LEFT_EAR = 234;
-const RIGHT_EAR = 454;
 
 export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDetectionProps) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -35,40 +27,36 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
     pitch: 0,
   });
   
-  const faceMeshRef = useRef<any>(null);
+  const faceLandmarkerRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastDetectionRef = useRef<FaceDetectionResult>(currentResult);
 
   const calculateHeadPose = useCallback((landmarks: any[]) => {
-    // Get key landmarks
-    const noseTip = landmarks[NOSE_TIP];
-    const leftEyeOuter = landmarks[LEFT_EYE_OUTER];
-    const rightEyeOuter = landmarks[RIGHT_EYE_OUTER];
-    const leftEar = landmarks[LEFT_EAR];
-    const rightEar = landmarks[RIGHT_EAR];
+    // Key landmark indices for head pose
+    const noseTip = landmarks[1];
+    const leftEyeOuter = landmarks[33];
+    const rightEyeOuter = landmarks[263];
+    const leftEar = landmarks[234];
+    const rightEar = landmarks[454];
 
-    // Calculate yaw (horizontal rotation) based on nose position relative to eyes
+    // Calculate eye center
     const eyeCenter = {
       x: (leftEyeOuter.x + rightEyeOuter.x) / 2,
       y: (leftEyeOuter.y + rightEyeOuter.y) / 2,
     };
     
-    // Distance from nose to eye center (horizontal)
+    // Distance from nose to eye center
     const noseOffset = noseTip.x - eyeCenter.x;
-    
-    // Calculate eye distance for normalization
     const eyeDistance = Math.abs(rightEyeOuter.x - leftEyeOuter.x);
     
-    // Normalized yaw (-1 to 1, negative = looking left, positive = looking right)
-    // When looking left, nose moves right relative to eyes (from camera perspective)
-    // But since video is mirrored, we invert this
-    const yaw = -(noseOffset / (eyeDistance * 0.5)) * 45; // Convert to approximate degrees
+    // Yaw calculation (inverted because video is mirrored)
+    const yaw = -(noseOffset / (eyeDistance * 0.5)) * 45;
 
-    // Calculate pitch based on nose tip relative to eye level
+    // Pitch calculation
     const nosePitchOffset = noseTip.y - eyeCenter.y;
     const pitch = (nosePitchOffset / eyeDistance) * 30;
 
-    // Determine direction based on yaw
+    // Determine direction
     let direction: FaceDirection = "center";
     if (yaw < -15) {
       direction = "left";
@@ -76,7 +64,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
       direction = "right";
     }
 
-    // Confidence based on how well we can detect the face
+    // Confidence based on landmark visibility
     const earDistance = Math.abs(rightEar.x - leftEar.x);
     const confidence = Math.min(1, (eyeDistance / 0.15) * (earDistance > 0.05 ? 1 : 0.5));
 
@@ -88,69 +76,79 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
     let isMounted = true;
 
-    const initFaceMesh = async () => {
+    const initFaceLandmarker = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Dynamically import MediaPipe
-        const { FaceMesh } = await import("@mediapipe/face_mesh");
+        const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
 
-        const faceMesh = new FaceMesh({
-          locateFile: (file: string) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+        const filesetResolver = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
+        );
+
+        const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+            delegate: "GPU"
           },
+          outputFaceBlendshapes: false,
+          runningMode: "VIDEO",
+          numFaces: 1
         });
 
-        faceMesh.setOptions({
-          maxNumFaces: 1,
-          refineLandmarks: true,
-          minDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5,
-        });
+        if (!isMounted) {
+          faceLandmarker.close();
+          return;
+        }
 
-        faceMesh.onResults((results: any) => {
-          if (!isMounted) return;
-
-          if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-            const landmarks = results.multiFaceLandmarks[0];
-            const { yaw, pitch, direction, confidence } = calculateHeadPose(landmarks);
-
-            const newResult: FaceDetectionResult = {
-              isDetected: true,
-              direction,
-              confidence,
-              yaw,
-              pitch,
-            };
-
-            lastDetectionRef.current = newResult;
-            setCurrentResult(newResult);
-            onDetection?.(newResult);
-          } else {
-            const noFaceResult: FaceDetectionResult = {
-              isDetected: false,
-              direction: "none",
-              confidence: 0,
-              yaw: 0,
-              pitch: 0,
-            };
-            lastDetectionRef.current = noFaceResult;
-            setCurrentResult(noFaceResult);
-            onDetection?.(noFaceResult);
-          }
-        });
-
-        faceMeshRef.current = faceMesh;
+        faceLandmarkerRef.current = faceLandmarker;
         setIsLoading(false);
 
         // Start detection loop
-        const detectFace = async () => {
-          if (!isMounted || !videoRef.current || !faceMeshRef.current) return;
+        let lastVideoTime = -1;
+        
+        const detectFace = () => {
+          if (!isMounted || !videoRef.current || !faceLandmarkerRef.current) return;
           
           const video = videoRef.current;
-          if (video.readyState >= 2) {
-            await faceMeshRef.current.send({ image: video });
+          
+          if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+            lastVideoTime = video.currentTime;
+            
+            try {
+              const results = faceLandmarkerRef.current.detectForVideo(video, performance.now());
+              
+              if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+                const landmarks = results.faceLandmarks[0];
+                const { yaw, pitch, direction, confidence } = calculateHeadPose(landmarks);
+
+                const newResult: FaceDetectionResult = {
+                  isDetected: true,
+                  direction,
+                  confidence,
+                  yaw,
+                  pitch,
+                };
+
+                lastDetectionRef.current = newResult;
+                setCurrentResult(newResult);
+                onDetection?.(newResult);
+              } else {
+                const noFaceResult: FaceDetectionResult = {
+                  isDetected: false,
+                  direction: "none",
+                  confidence: 0,
+                  yaw: 0,
+                  pitch: 0,
+                };
+                lastDetectionRef.current = noFaceResult;
+                setCurrentResult(noFaceResult);
+                onDetection?.(noFaceResult);
+              }
+            } catch (err) {
+              console.error("Detection error:", err);
+            }
           }
           
           animationFrameRef.current = requestAnimationFrame(detectFace);
@@ -158,6 +156,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
         // Wait for video to be ready
         const checkVideoReady = () => {
+          if (!isMounted) return;
           if (videoRef.current && videoRef.current.readyState >= 2) {
             detectFace();
           } else {
@@ -167,7 +166,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
         checkVideoReady();
       } catch (err) {
-        console.error("Face detection error:", err);
+        console.error("Face detection init error:", err);
         if (isMounted) {
           setError("Erreur lors de l'initialisation de la détection faciale");
           setIsLoading(false);
@@ -175,16 +174,16 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
       }
     };
 
-    initFaceMesh();
+    initFaceLandmarker();
 
     return () => {
       isMounted = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      if (faceMeshRef.current) {
-        faceMeshRef.current.close();
-        faceMeshRef.current = null;
+      if (faceLandmarkerRef.current) {
+        faceLandmarkerRef.current.close();
+        faceLandmarkerRef.current = null;
       }
     };
   }, [enabled, videoRef, calculateHeadPose, onDetection]);
