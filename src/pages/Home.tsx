@@ -7,7 +7,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import ProfileCard from "@/components/ProfileCard";
 import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
-import ActionButtons from "@/components/ActionButtons";
+
 import { mockProfiles, Profile } from "@/data/mockProfiles";
 
 const Home = () => {
@@ -149,23 +149,12 @@ const Home = () => {
                 profile={currentProfile}
                 onSwipe={handleSwipe}
                 onInfoClick={handleInfoClick}
+                onLike={handleLike}
+                onPass={handlePass}
+                onSuperLike={handleSuperLike}
               />
             )}
           </AnimatePresence>
-        </motion.div>
-
-        {/* Action Buttons */}
-        <motion.div 
-          className="py-1.5 flex-shrink-0"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-        >
-          <ActionButtons
-            onPass={handlePass}
-            onSuperLike={handleSuperLike}
-            onLike={handleLike}
-          />
         </motion.div>
       </div>
 
