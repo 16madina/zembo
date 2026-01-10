@@ -1,7 +1,9 @@
-import { motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, CheckCheck, Check } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
+import ChatView from "@/components/ChatView";
 
 interface Conversation {
   id: string;
@@ -13,6 +15,8 @@ interface Conversation {
   lastMessage: string;
   time: string;
   unread: number;
+  status: "sent" | "delivered" | "read";
+  isTyping: boolean;
 }
 
 const mockConversations: Conversation[] = [
@@ -25,7 +29,9 @@ const mockConversations: Conversation[] = [
     },
     lastMessage: "On se retrouve où demain ?",
     time: "14:32",
-    unread: 2
+    unread: 2,
+    status: "read",
+    isTyping: true
   },
   {
     id: "2",
@@ -36,7 +42,9 @@ const mockConversations: Conversation[] = [
     },
     lastMessage: "Super, j'ai hâte d'y être ! 😊",
     time: "Hier",
-    unread: 0
+    unread: 0,
+    status: "read",
+    isTyping: false
   },
   {
     id: "3",
@@ -47,7 +55,22 @@ const mockConversations: Conversation[] = [
     },
     lastMessage: "Tu fais quoi ce weekend ?",
     time: "Lun",
-    unread: 1
+    unread: 1,
+    status: "delivered",
+    isTyping: false
+  },
+  {
+    id: "4",
+    user: {
+      name: "Camille",
+      photo: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=100&h=100&fit=crop",
+      isOnline: false
+    },
+    lastMessage: "Merci pour la soirée !",
+    time: "Dim",
+    unread: 0,
+    status: "sent",
+    isTyping: false
   }
 ];
 
@@ -64,15 +87,36 @@ const item = {
   show: { opacity: 1, x: 0 }
 };
 
+const MessageStatus = ({ status }: { status: Conversation["status"] }) => {
+  if (status === "sent") {
+    return <Check className="w-3.5 h-3.5 text-muted-foreground" />;
+  }
+  if (status === "delivered") {
+    return <CheckCheck className="w-3.5 h-3.5 text-muted-foreground" />;
+  }
+  return <CheckCheck className="w-3.5 h-3.5 text-accent" />;
+};
+
 const Messages = () => {
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+
+  const handleOpenChat = (conv: Conversation) => {
+    setSelectedConversation(conv);
+  };
+
+  const handleCloseChat = () => {
+    setSelectedConversation(null);
+  };
+
   return (
     <div className="min-h-screen pb-28">
       <motion.header 
-        className="flex items-center justify-center px-6 py-4"
+        className="flex items-center justify-between px-4 py-3"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <ZemboLogo />
+        <div className="w-8" />
       </motion.header>
 
       <motion.div 
@@ -98,6 +142,7 @@ const Messages = () => {
               variants={item}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
+              onClick={() => handleOpenChat(conv)}
               className="flex items-center gap-4 p-4 glass rounded-2xl cursor-pointer transition-colors"
             >
               <div className="relative flex-shrink-0">
@@ -110,18 +155,31 @@ const Messages = () => {
                   <span className="absolute bottom-0 right-0 w-4 h-4 bg-success border-[3px] border-card rounded-full" />
                 )}
               </div>
+              
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-semibold text-foreground">{conv.user.name}</h3>
                   <span className="text-xs text-muted-foreground">{conv.time}</span>
                 </div>
-                <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
+                <div className="flex items-center gap-1.5">
+                  {conv.unread === 0 && <MessageStatus status={conv.status} />}
+                  <p className={`text-sm truncate ${
+                    conv.unread > 0 ? "text-foreground font-medium" : "text-muted-foreground"
+                  }`}>
+                    {conv.isTyping ? (
+                      <span className="text-success italic">écrit...</span>
+                    ) : (
+                      conv.lastMessage
+                    )}
+                  </p>
+                </div>
               </div>
+              
               {conv.unread > 0 && (
                 <motion.span 
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="w-6 h-6 flex items-center justify-center btn-gold text-primary-foreground text-xs font-bold rounded-full"
+                  className="w-6 h-6 flex items-center justify-center btn-gold text-primary-foreground text-xs font-bold rounded-full flex-shrink-0"
                 >
                   {conv.unread}
                 </motion.span>
@@ -142,6 +200,22 @@ const Messages = () => {
           <p className="text-muted-foreground">Vos conversations apparaîtront ici</p>
         </motion.div>
       )}
+
+      {/* Chat View */}
+      <AnimatePresence>
+        {selectedConversation && (
+          <ChatView
+            user={{
+              id: selectedConversation.id,
+              name: selectedConversation.user.name,
+              photo: selectedConversation.user.photo,
+              isOnline: selectedConversation.user.isOnline,
+              isTyping: selectedConversation.isTyping,
+            }}
+            onBack={handleCloseChat}
+          />
+        )}
+      </AnimatePresence>
 
       <BottomNavigation />
     </div>
