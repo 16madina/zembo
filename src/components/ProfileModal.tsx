@@ -48,19 +48,19 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
   if (!profile) return null;
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y > 100) {
-      if (showDetails) {
-        setShowDetails(false);
-      } else {
-        onClose();
-      }
-    } else if (info.offset.y < -80) {
+    // Swipe down to close
+    if (info.offset.y > 80 && info.velocity.y > 0) {
+      onClose();
+    } 
+    // Swipe up to show details
+    else if (info.offset.y < -60 || info.velocity.y < -500) {
       setShowDetails(true);
     }
   };
 
   const handleDetailsDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y > 100) {
+    // Swipe down to hide details
+    if (info.offset.y > 80 || info.velocity.y > 500) {
       setShowDetails(false);
     }
   };
