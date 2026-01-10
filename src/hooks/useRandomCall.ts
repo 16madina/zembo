@@ -7,6 +7,7 @@ export type CallStatus =
   | "idle" 
   | "selecting" 
   | "searching" 
+  | "search_timeout"   // 30s timeout - no users found
   | "matched" 
   | "in_call" 
   | "first_decision"  // At 1 minute mark
@@ -63,6 +64,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const searchIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const demoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch user gender on mount
   useEffect(() => {
@@ -241,7 +243,23 @@ export const useRandomCall = (): UseRandomCallReturn => {
     
     // If DEMO_MODE is enabled, simulate a match after delay
     if (DEMO_MODE) {
+      // Set a 30 second timeout for search
+      searchTimeoutRef.current = setTimeout(() => {
+        // Cancel the demo match if it hasn't happened yet
+        if (demoTimeoutRef.current) {
+          clearTimeout(demoTimeoutRef.current);
+          demoTimeoutRef.current = null;
+        }
+        setStatus("search_timeout");
+      }, 30000); // 30 seconds timeout
+      
       demoTimeoutRef.current = setTimeout(() => {
+        // Clear the search timeout since we found a match
+        if (searchTimeoutRef.current) {
+          clearTimeout(searchTimeoutRef.current);
+          searchTimeoutRef.current = null;
+        }
+        
         // Create a fake demo session
         const now = new Date();
         const endsAt = new Date(now.getTime() + 90 * 1000); // 90 seconds from now
@@ -352,6 +370,12 @@ export const useRandomCall = (): UseRandomCallReturn => {
     if (demoTimeoutRef.current) {
       clearTimeout(demoTimeoutRef.current);
       demoTimeoutRef.current = null;
+    }
+    
+    // Clear search timeout if running
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
     
     if (!user) {

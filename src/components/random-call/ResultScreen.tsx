@@ -10,6 +10,7 @@ interface ResultScreenProps {
   matched: boolean;
   onRetry: () => void;
   otherUserId?: string;
+  onRevealSound?: () => void;
 }
 
 interface OtherUserProfile {
@@ -21,7 +22,7 @@ interface OtherUserProfile {
   interests: string[] | null;
 }
 
-const ResultScreen = ({ matched, onRetry, otherUserId }: ResultScreenProps) => {
+const ResultScreen = ({ matched, onRetry, otherUserId, onRevealSound }: ResultScreenProps) => {
   const navigate = useNavigate();
   const [otherProfile, setOtherProfile] = useState<OtherUserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +55,11 @@ const ResultScreen = ({ matched, onRetry, otherUserId }: ResultScreenProps) => {
 
   useEffect(() => {
     if (matched) {
+      // Trigger reveal sound with a slight delay to match curtain animation
+      const revealSoundTimeout = setTimeout(() => {
+        onRevealSound?.();
+      }, 700); // Matches the curtain animation delay
+      
       // Trigger confetti
       const duration = 3000;
       const end = Date.now() + duration;
@@ -80,8 +86,12 @@ const ResultScreen = ({ matched, onRetry, otherUserId }: ResultScreenProps) => {
           requestAnimationFrame(frame);
         }
       })();
+      
+      return () => {
+        clearTimeout(revealSoundTimeout);
+      };
     }
-  }, [matched]);
+  }, [matched, onRevealSound]);
 
   if (matched) {
     return (
