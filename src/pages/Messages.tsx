@@ -19,6 +19,34 @@ interface Conversation {
   isTyping: boolean;
 }
 
+interface NewMatch {
+  id: string;
+  name: string;
+  photo: string;
+  isOnline: boolean;
+}
+
+const mockNewMatches: NewMatch[] = [
+  {
+    id: "m1",
+    name: "Chloé",
+    photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+    isOnline: true
+  },
+  {
+    id: "m2",
+    name: "Julie",
+    photo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop",
+    isOnline: false
+  },
+  {
+    id: "m3",
+    name: "Marie",
+    photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop",
+    isOnline: true
+  },
+];
+
 const mockConversations: Conversation[] = [
   {
     id: "1",
@@ -120,13 +148,67 @@ const Messages = () => {
       </motion.header>
 
       <motion.div 
-        className="px-6 mb-4"
+        className="px-4 mb-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
       >
-        <h2 className="text-xl font-bold text-foreground">Messages</h2>
-        <p className="text-sm text-muted-foreground">Vos conversations</p>
+        <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+        <p className="text-sm text-muted-foreground">{mockConversations.length + mockNewMatches.length} matchs</p>
+      </motion.div>
+
+      {/* New Matches Section */}
+      {mockNewMatches.length > 0 && (
+        <motion.div
+          className="px-4 mb-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Nouveaux matchs</h3>
+          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            {mockNewMatches.map((match) => (
+              <motion.button
+                key={match.id}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleOpenChat({
+                  id: match.id,
+                  user: { name: match.name, photo: match.photo, isOnline: match.isOnline },
+                  lastMessage: "",
+                  time: "",
+                  unread: 0,
+                  status: "sent",
+                  isTyping: false
+                })}
+                className="flex flex-col items-center gap-1.5 flex-shrink-0"
+              >
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-br from-primary via-primary/80 to-primary/60">
+                    <img
+                      src={match.photo}
+                      alt={match.name}
+                      className="w-full h-full rounded-full object-cover border-2 border-background"
+                    />
+                  </div>
+                  {match.isOnline && (
+                    <span className="absolute bottom-0 right-0 w-4 h-4 bg-success border-[3px] border-background rounded-full" />
+                  )}
+                </div>
+                <span className="text-xs font-medium text-foreground">{match.name}</span>
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Conversations Section */}
+      <motion.div 
+        className="px-4 mb-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h3 className="text-sm font-medium text-muted-foreground">Conversations</h3>
       </motion.div>
 
       {mockConversations.length > 0 ? (
