@@ -1,12 +1,54 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 
 export const useDiceSoundEffect = () => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  const isLoadingRef = useRef(false);
+
+  // Pre-load the sound on mount
+  useEffect(() => {
+    const preloadSound = async () => {
+      if (audioUrlRef.current || isLoadingRef.current) return;
+      
+      isLoadingRef.current = true;
+      
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              prompt: "Dice rolling and bouncing on wooden table, casino game sound effect",
+              duration: 2,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          console.error("Failed to preload dice sound:", response.status);
+          return;
+        }
+
+        const audioBlob = await response.blob();
+        audioUrlRef.current = URL.createObjectURL(audioBlob);
+        console.log("Dice sound preloaded successfully");
+      } catch (error) {
+        console.error("Error preloading dice sound:", error);
+      } finally {
+        isLoadingRef.current = false;
+      }
+    };
+
+    preloadSound();
+  }, []);
 
   const playDiceSound = useCallback(async () => {
     try {
-      // If we already have a cached audio, play it
+      // If preloaded, play immediately
       if (audioUrlRef.current) {
         const audio = new Audio(audioUrlRef.current);
         audio.volume = 0.6;
@@ -14,6 +56,8 @@ export const useDiceSoundEffect = () => {
         return;
       }
 
+      // Fallback: generate on-the-fly if not preloaded yet
+      console.log("Sound not preloaded, generating...");
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
         {
@@ -37,13 +81,10 @@ export const useDiceSoundEffect = () => {
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      
-      // Cache the audio URL for future plays
       audioUrlRef.current = audioUrl;
       
       const audio = new Audio(audioUrl);
       audio.volume = 0.6;
-      audioRef.current = audio;
       await audio.play();
     } catch (error) {
       console.error("Error playing dice sound:", error);
