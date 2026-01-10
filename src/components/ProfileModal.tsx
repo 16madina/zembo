@@ -296,17 +296,26 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
           {/* Details panel (swipe up to reveal) */}
           <AnimatePresence>
             {showDetails && (
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={0.2}
-                onDragEnd={handleDetailsDragEnd}
-                className="absolute bottom-0 left-0 right-0 z-30 w-full max-w-lg mx-auto h-[85vh] bg-background rounded-t-[2rem] overflow-hidden"
-              >
+              <>
+                {/* Backdrop to close on tap */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-25 bg-black/40"
+                  onClick={() => setShowDetails(false)}
+                />
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                  drag="y"
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={0.3}
+                  onDragEnd={handleDetailsDragEnd}
+                  className="absolute bottom-0 left-0 right-0 z-30 w-full max-w-lg mx-auto h-[85vh] bg-background rounded-t-[2rem] overflow-hidden"
+                >
                 {/* Handle bar */}
                 <div className="flex justify-center py-4 flex-shrink-0 cursor-grab active:cursor-grabbing">
                   <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
@@ -448,6 +457,7 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
                   </div>
                 </div>
               </motion.div>
+              </>
             )}
           </AnimatePresence>
         </motion.div>
