@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { isValidPhoneLength } from "@/data/countries";
 import NameStep from "./steps/NameStep";
 import CountryStep from "./steps/CountryStep";
 import PhoneStep from "./steps/PhoneStep";
@@ -89,7 +90,7 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
       case "country":
         return data.country.length > 0;
       case "phone":
-        return data.phone.length >= 6;
+        return isValidPhoneLength(data.phone, data.countryCode);
       case "email":
         return data.email.includes("@") && data.password.length >= 6;
       case "birthday":
