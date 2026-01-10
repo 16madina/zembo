@@ -486,16 +486,15 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                       )}
                       {/* Comparing overlay */}
                       {currentStep === "comparing" && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                           <div className="text-center">
                             <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{ duration: 1.5, repeat: Infinity }}
                             >
-                              <UserCheck className="w-10 h-10 text-primary mx-auto mb-2" />
+                              <UserCheck className="w-8 h-8 text-primary mx-auto mb-2" />
                             </motion.div>
-                            <p className="text-sm text-white font-medium">Comparaison faciale...</p>
-                            <p className="text-xs text-white/70 mt-1">Vérification de votre identité</p>
+                            <p className="text-xs text-white font-medium">Comparaison...</p>
                           </div>
                         </div>
                       )}
@@ -559,12 +558,68 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               >
                 {currentStep === "comparing" ? (
                   <>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">
+                    <h3 className="text-xl font-semibold text-foreground mb-3">
                       Comparaison en cours
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Vérification avec vos photos de profil...
                     </p>
+                    
+                    {/* Photo thumbnails during comparison */}
+                    <div className="flex items-center justify-center gap-2">
+                      {data.photos.slice(0, 4).map((photo, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="relative"
+                        >
+                          <motion.div
+                            animate={{ 
+                              boxShadow: [
+                                "0 0 0 0 hsl(var(--primary) / 0)",
+                                "0 0 0 4px hsl(var(--primary) / 0.3)",
+                                "0 0 0 0 hsl(var(--primary) / 0)"
+                              ]
+                            }}
+                            transition={{ 
+                              duration: 1.5, 
+                              repeat: Infinity, 
+                              delay: index * 0.3 
+                            }}
+                            className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/50"
+                          >
+                            <img
+                              src={photo}
+                              alt={`Photo ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </motion.div>
+                          {index === 0 && (
+                            <motion.div
+                              animate={{ scale: [1, 1.2, 1] }}
+                              transition={{ duration: 0.5, repeat: Infinity }}
+                              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-primary-foreground" />
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      ))}
+                      {data.photos.length > 4 && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.4 }}
+                          className="w-12 h-12 rounded-full bg-muted flex items-center justify-center border-2 border-border"
+                        >
+                          <span className="text-xs font-medium text-muted-foreground">
+                            +{data.photos.length - 4}
+                          </span>
+                        </motion.div>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
