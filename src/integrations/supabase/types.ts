@@ -38,6 +38,8 @@ export type Database = {
           occupation: string | null
           updated_at: string
           user_id: string
+          verification_email_count: number | null
+          verification_email_count_reset_at: string | null
         }
         Insert: {
           age?: number | null
@@ -62,6 +64,8 @@ export type Database = {
           occupation?: string | null
           updated_at?: string
           user_id: string
+          verification_email_count?: number | null
+          verification_email_count_reset_at?: string | null
         }
         Update: {
           age?: number | null
@@ -86,6 +90,8 @@ export type Database = {
           occupation?: string | null
           updated_at?: string
           user_id?: string
+          verification_email_count?: number | null
+          verification_email_count_reset_at?: string | null
         }
         Relationships: []
       }

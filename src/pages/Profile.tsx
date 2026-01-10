@@ -190,8 +190,22 @@ const Profile = () => {
 
       if (error) throw error;
 
+      if (data.rateLimited) {
+        toast.error(data.error, {
+          description: "Vous avez atteint la limite journalière.",
+          duration: 5000,
+        });
+        return;
+      }
+
       if (data.success) {
-        toast.success("Email de vérification envoyé !");
+        const remaining = data.remainingEmails;
+        toast.success("Email de vérification envoyé ! ✉️", {
+          description: remaining > 0 
+            ? `Il vous reste ${remaining} envoi${remaining > 1 ? 's' : ''} aujourd'hui.`
+            : "C'était votre dernier envoi de la journée.",
+          duration: 5000,
+        });
         // Update local state to show email was saved
         setProfile((prev) => prev ? { ...prev, email: user.email } : null);
       } else {
