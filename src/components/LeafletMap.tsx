@@ -116,10 +116,11 @@ const LeafletMap = ({
       zoomControl={false}
       attributionControl={false}
     >
-      {/* Custom dark map tiles */}
+      {/* Colorful OpenStreetMap tiles */}
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         maxZoom={19}
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
 
       {/* Recenter on user location */}
