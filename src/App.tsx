@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
-import Nearby from "./pages/Nearby";
 import Random from "./pages/Random";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
@@ -60,7 +59,6 @@ const AppRoutes = () => (
     <Route path="/verify-email" element={<VerifyEmail />} />
     <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
     <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
-    <Route path="/nearby" element={<ProtectedRoute><Nearby /></ProtectedRoute>} />
     <Route path="/random" element={<ProtectedRoute><Random /></ProtectedRoute>} />
     <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

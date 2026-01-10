@@ -1,4 +1,4 @@
-import { Home, Video, MapPin, MessageCircle, User } from "lucide-react";
+import { Home, Video, Shuffle, MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
@@ -6,7 +6,7 @@ import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 const navItems = [
   { path: "/", icon: Home, label: "Accueil" },
   { path: "/live", icon: Video, label: "Live" },
-  { path: "/nearby", icon: MapPin, label: "Proximité" },
+  { path: "/random", icon: Shuffle, label: "Random" },
   { path: "/messages", icon: MessageCircle, label: "Messages" },
   { path: "/profile", icon: User, label: "Profil" },
 ];
