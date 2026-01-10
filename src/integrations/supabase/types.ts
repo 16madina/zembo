@@ -140,6 +140,69 @@ export type Database = {
         }
         Relationships: []
       }
+      random_call_queue: {
+        Row: {
+          created_at: string
+          gender: string
+          id: string
+          looking_for: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gender: string
+          id?: string
+          looking_for: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gender?: string
+          id?: string
+          looking_for?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      random_call_sessions: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          started_at: string
+          status: string
+          user1_id: string
+          user1_wants_match: boolean | null
+          user2_id: string
+          user2_wants_match: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          started_at?: string
+          status?: string
+          user1_id: string
+          user1_wants_match?: boolean | null
+          user2_id: string
+          user2_wants_match?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          started_at?: string
+          status?: string
+          user1_id?: string
+          user1_wants_match?: boolean | null
+          user2_id?: string
+          user2_wants_match?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -148,6 +211,22 @@ export type Database = {
       are_users_matched: {
         Args: { user_a: string; user_b: string }
         Returns: boolean
+      }
+      find_random_call_match: {
+        Args: {
+          p_looking_for: string
+          p_user_gender: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      submit_random_call_decision: {
+        Args: {
+          p_session_id: string
+          p_user_id: string
+          p_wants_match: boolean
+        }
+        Returns: Json
       }
     }
     Enums: {
