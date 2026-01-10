@@ -99,20 +99,20 @@ const Random = () => {
               ))}
             </div>
 
-            {/* Hand throwing dice animation */}
-            <DiceAnimation />
-
-            {/* Title with big Z */}
+            {/* Title with big Z - BEFORE animation */}
             <motion.div 
-              className="text-center mb-2 z-10"
+              className="text-center mb-4 z-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.1 }}
             >
               <h1 className="text-3xl font-bold text-foreground">
-                Bienvenue sur <span className="text-primary text-4xl">Z</span> Roulette
+                Bienvenue sur <span className="text-primary text-5xl font-black">Z</span> Roulette
               </h1>
             </motion.div>
+
+            {/* Hand throwing dice animation */}
+            <DiceAnimation />
 
             {/* Ghost mode badge */}
             <motion.div
