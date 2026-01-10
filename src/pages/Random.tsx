@@ -11,6 +11,7 @@ import FirstDecisionScreen from "@/components/random-call/FirstDecisionScreen";
 import ExtendedCallScreen from "@/components/random-call/ExtendedCallScreen";
 import ResultScreen from "@/components/random-call/ResultScreen";
 import RejectedScreen from "@/components/random-call/RejectedScreen";
+import DiceAnimation from "@/components/random-call/DiceAnimation";
 
 const Random = () => {
   const {
@@ -98,29 +99,8 @@ const Random = () => {
               ))}
             </div>
 
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", damping: 15 }}
-              className="relative w-32 h-32 mb-8 z-10"
-            >
-              {/* Outer glow ring */}
-              <motion.div
-                className="absolute inset-0 rounded-full border-2 border-primary/20"
-                animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.2, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-              
-              {/* Main circle with phone icon */}
-              <div className="absolute inset-0 rounded-full glass flex items-center justify-center">
-                <motion.div
-                  animate={{ rotate: [0, -10, 10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <Phone className="w-12 h-12 text-primary" />
-                </motion.div>
-              </div>
-            </motion.div>
+            {/* Hand throwing dice animation */}
+            <DiceAnimation />
 
             {/* Title with big Z */}
             <motion.div 
