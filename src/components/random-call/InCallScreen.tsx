@@ -4,6 +4,16 @@ import { useState, useEffect } from "react";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useAuth } from "@/contexts/AuthContext";
 import ReportModal from "./ReportModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface InCallScreenProps {
   timeRemaining: number;
@@ -15,6 +25,7 @@ interface InCallScreenProps {
 const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCallScreenProps) => {
   const { user } = useAuth();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showHangUpConfirm, setShowHangUpConfirm] = useState(false);
 
   // Determine if this user is the initiator (user1 in session)
   const isInitiator = user?.id ? user.id < (otherUserId || "") : false;
@@ -174,10 +185,7 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCal
 
           {/* Hang up button */}
           <motion.button
-            onClick={() => {
-              endCall();
-              onHangUp?.();
-            }}
+            onClick={() => setShowHangUpConfirm(true)}
             className="w-16 h-16 rounded-full bg-destructive flex items-center justify-center text-destructive-foreground"
             whileTap={{ scale: 0.95 }}
           >
@@ -206,6 +214,30 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCal
       </motion.div>
 
       {/* Report Modal */}
+      {/* Hang Up Confirmation Dialog */}
+      <AlertDialog open={showHangUpConfirm} onOpenChange={setShowHangUpConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Raccrocher l'appel ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr(e) de vouloir mettre fin à cet appel ? Vous ne pourrez pas matcher avec cette personne.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                endCall();
+                onHangUp?.();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Raccrocher
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {otherUserId && (
         <ReportModal
           isOpen={showReportModal}
