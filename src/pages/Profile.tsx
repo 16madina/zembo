@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Edit3,
@@ -19,6 +19,7 @@ import {
   Loader2,
   Mail,
   Send,
+  Clock,
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
@@ -46,6 +47,8 @@ interface UserProfile {
   height: string | null;
   email: string | null;
   email_verified: boolean | null;
+  verification_email_count: number | null;
+  verification_email_count_reset_at: string | null;
 }
 
 interface ProfileInfoRowProps {
@@ -88,6 +91,8 @@ const ProfileInfoRow = ({ icon, label, value, onAdd, onEdit }: ProfileInfoRowPro
   </div>
 );
 
+const MAX_EMAILS_PER_DAY = 3;
+
 const Profile = () => {
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -96,6 +101,50 @@ const Profile = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editField, setEditField] = useState<EditFieldType>("occupation");
   const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [countdown, setCountdown] = useState<string | null>(null);
+
+  // Calculate countdown timer for email limit reset
+  const calculateCountdown = useCallback(() => {
+    if (!profile?.verification_email_count_reset_at) return null;
+    
+    const resetAt = new Date(profile.verification_email_count_reset_at);
+    const now = new Date();
+    const resetTime = new Date(resetAt.getTime() + 24 * 60 * 60 * 1000); // 24 hours after reset_at
+    
+    const diff = resetTime.getTime() - now.getTime();
+    
+    if (diff <= 0) return null;
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, [profile?.verification_email_count_reset_at]);
+
+  // Update countdown every second when limit is reached
+  useEffect(() => {
+    const emailCount = profile?.verification_email_count || 0;
+    if (emailCount >= MAX_EMAILS_PER_DAY && !profile?.email_verified) {
+      const interval = setInterval(() => {
+        const newCountdown = calculateCountdown();
+        setCountdown(newCountdown);
+        
+        // Reset count when countdown reaches zero
+        if (!newCountdown) {
+          setProfile(prev => prev ? { 
+            ...prev, 
+            verification_email_count: 0,
+            verification_email_count_reset_at: null 
+          } : null);
+        }
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setCountdown(null);
+    }
+  }, [profile?.verification_email_count, profile?.email_verified, calculateCountdown]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -351,29 +400,56 @@ const Profile = () => {
                     <span className="text-xs font-medium">Email en attente : {profile?.email}</span>
                   </div>
                 ) : null}
-                <Button
-                  onClick={handleSendVerificationEmail}
-                  disabled={isSendingVerification}
-                  size="sm"
-                  className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
-                >
-                  {isSendingVerification ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Envoi...
-                    </>
-                  ) : profile?.email ? (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Renvoyer l'email
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Vérifier mon email
-                    </>
-                  )}
-                </Button>
+                
+                {/* Countdown timer when limit reached */}
+                {countdown ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/20 text-red-400">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium">Limite atteinte (3/3)</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/30 border border-muted">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-mono text-muted-foreground">
+                        Réessayez dans <span className="text-foreground font-semibold">{countdown}</span>
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Show remaining emails count */}
+                    {(profile?.verification_email_count || 0) > 0 && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/30 text-muted-foreground">
+                        <span className="text-xs">
+                          {MAX_EMAILS_PER_DAY - (profile?.verification_email_count || 0)} envoi{MAX_EMAILS_PER_DAY - (profile?.verification_email_count || 0) > 1 ? 's' : ''} restant{MAX_EMAILS_PER_DAY - (profile?.verification_email_count || 0) > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleSendVerificationEmail}
+                      disabled={isSendingVerification}
+                      size="sm"
+                      className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+                    >
+                      {isSendingVerification ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Envoi...
+                        </>
+                      ) : profile?.email ? (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Renvoyer l'email
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-4 h-4 mr-2" />
+                          Vérifier mon email
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
