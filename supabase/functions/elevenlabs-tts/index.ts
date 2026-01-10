@@ -35,10 +35,11 @@ serve(async (req) => {
           text,
           model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.3,        // Less stable = more expressive
-            similarity_boost: 0.9, // High voice fidelity
-            style: 0.9,            // Maximum style/energy
+            stability: 0.15,       // Very low = maximum expressiveness
+            similarity_boost: 1.0, // Maximum voice fidelity
+            style: 1.0,            // Maximum style/energy
             use_speaker_boost: true,
+            speed: 0.85,           // Slightly slower for dramatic effect
           },
         }),
       }
