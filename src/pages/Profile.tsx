@@ -15,6 +15,7 @@ import {
   Plus,
   Heart,
   Pencil,
+  FileText,
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
@@ -22,6 +23,8 @@ import EditProfileModal from "@/components/profile/EditProfileModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+
+type EditFieldType = "occupation" | "education" | "height" | "gender" | "age" | "display_name" | "bio" | "interests";
 
 interface UserProfile {
   id: string;
@@ -85,7 +88,7 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [photos, setPhotos] = useState<string[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editField, setEditField] = useState<"occupation" | "education" | "height" | "gender" | "age">("occupation");
+  const [editField, setEditField] = useState<EditFieldType>("occupation");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -141,12 +144,12 @@ const Profile = () => {
     setProfile((prev) => (prev ? { ...prev, avatar_url: url } : null));
   };
 
-  const openEditModal = (field: "occupation" | "education" | "height" | "gender" | "age") => {
+  const openEditModal = (field: EditFieldType) => {
     setEditField(field);
     setEditModalOpen(true);
   };
 
-  const handleProfileFieldUpdate = async (field: string, value: string | number) => {
+  const handleProfileFieldUpdate = async (field: string, value: string | number | string[]) => {
     if (!user) return;
     
     try {
@@ -157,7 +160,7 @@ const Profile = () => {
 
       if (error) throw error;
       
-      setProfile((prev) => prev ? { ...prev, [field]: value } : null);
+      setProfile((prev) => prev ? { ...prev, [field]: value } as UserProfile : null);
     } catch (error) {
       console.error("Error updating profile:", error);
     }
@@ -183,6 +186,7 @@ const Profile = () => {
   const location = profile?.location;
   const age = profile?.age;
   const interests = profile?.interests || [];
+  const bio = profile?.bio;
 
   // Calculate birth year from age
   const birthYear = age ? new Date().getFullYear() - age : null;
@@ -256,8 +260,14 @@ const Profile = () => {
             </motion.button>
           </div>
 
-          {/* Name */}
-          <h2 className="mt-4 text-2xl font-bold text-primary-foreground">{displayName}</h2>
+          {/* Name - Editable */}
+          <button 
+            onClick={() => openEditModal("display_name")}
+            className="mt-4 flex items-center gap-2 group"
+          >
+            <h2 className="text-2xl font-bold text-primary-foreground">{displayName}</h2>
+            <Pencil className="w-4 h-4 text-primary-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
 
           {/* Verification badge */}
           <div
@@ -287,6 +297,32 @@ const Profile = () => {
               onPhotosChange={handlePhotosChange}
               onAvatarChange={handleAvatarChange}
             />
+          )}
+        </div>
+
+        {/* Bio Card */}
+        <div className="glass-strong rounded-3xl p-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className="text-primary"><FileText className="w-5 h-5" /></span>
+              <span className="text-foreground font-medium">À propos de moi</span>
+            </div>
+            <button 
+              onClick={() => openEditModal("bio")}
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          </div>
+          {bio ? (
+            <p className="text-muted-foreground text-sm leading-relaxed">{bio}</p>
+          ) : (
+            <button 
+              onClick={() => openEditModal("bio")}
+              className="text-primary text-sm flex items-center gap-1"
+            >
+              Ajouter une bio <Plus className="w-4 h-4" />
+            </button>
           )}
         </div>
 
@@ -331,12 +367,20 @@ const Profile = () => {
         </div>
 
         {/* Interests Card */}
-        {interests.length > 0 && (
-          <div className="glass-strong rounded-3xl p-6">
-            <div className="flex items-center gap-3 mb-4">
+        <div className="glass-strong rounded-3xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
               <span className="text-primary"><Heart className="w-5 h-5" /></span>
               <span className="text-foreground font-medium">Centres d'intérêt</span>
             </div>
+            <button 
+              onClick={() => openEditModal("interests")}
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          </div>
+          {interests.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {interests.map((interest, index) => (
                 <motion.span
@@ -350,8 +394,15 @@ const Profile = () => {
                 </motion.span>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <button 
+              onClick={() => openEditModal("interests")}
+              className="text-primary text-sm flex items-center gap-1"
+            >
+              Ajouter des centres d'intérêt <Plus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
         {/* App version */}
         <p className="text-center text-muted-foreground text-sm mt-6">ZEMBO v1.0.0</p>
@@ -364,7 +415,17 @@ const Profile = () => {
           onClose={() => setEditModalOpen(false)}
           userId={user.id}
           field={editField}
-          currentValue={editField === "age" ? profile?.age : profile?.[editField]}
+          currentValue={
+            editField === "age" ? profile?.age : 
+            editField === "interests" ? profile?.interests : 
+            editField === "display_name" ? profile?.display_name :
+            editField === "bio" ? profile?.bio :
+            editField === "occupation" ? profile?.occupation :
+            editField === "education" ? profile?.education :
+            editField === "height" ? profile?.height :
+            editField === "gender" ? profile?.gender :
+            null
+          }
           onUpdate={handleProfileFieldUpdate}
         />
       )}
