@@ -1,6 +1,23 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Camera, Plus, X, Image } from "lucide-react";
+import { Camera, Plus, X, Image, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { OnboardingData } from "../OnboardingSteps";
 
 interface PhotosStepProps {
@@ -8,16 +25,101 @@ interface PhotosStepProps {
   updateData: (updates: Partial<OnboardingData>) => void;
 }
 
+interface SortablePhotoProps {
+  id: string;
+  photo: string;
+  index: number;
+  onRemove: (index: number) => void;
+}
+
+const SortablePhoto = ({ id, photo, index, onRemove }: SortablePhotoProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`relative aspect-square rounded-xl overflow-hidden ${
+        isDragging ? "ring-2 ring-primary shadow-xl" : ""
+      }`}
+    >
+      <img
+        src={photo}
+        alt={`Photo ${index + 1}`}
+        className="w-full h-full object-cover"
+      />
+      
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="w-3 h-3 text-white" />
+      </div>
+
+      {/* Main photo badge */}
+      {index === 0 && (
+        <div className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+          Principal
+        </div>
+      )}
+
+      {/* Remove button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(index);
+        }}
+        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap-highlight hover:bg-red-500/80 transition-colors"
+      >
+        <X className="w-4 h-4 text-white" />
+      </button>
+    </motion.div>
+  );
+};
+
 const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoIds] = useState(() => 
+    data.photos.map((_, i) => `photo-${i}-${Date.now()}`)
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const newPhotos: string[] = [];
     const remainingSlots = 8 - data.photos.length;
     const filesToProcess = Math.min(files.length, remainingSlots);
+    let processedCount = 0;
+    const newPhotos: string[] = [];
 
     for (let i = 0; i < filesToProcess; i++) {
       const file = files[i];
@@ -26,8 +128,9 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
         reader.onload = (event) => {
           const result = event.target?.result as string;
           newPhotos.push(result);
+          processedCount++;
           
-          if (newPhotos.length === filesToProcess) {
+          if (processedCount === filesToProcess) {
             updateData({ photos: [...data.photos, ...newPhotos] });
           }
         };
@@ -46,14 +149,30 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
     updateData({ photos: newPhotos });
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = data.photos.findIndex((_, i) => `photo-${i}` === active.id);
+      const newIndex = data.photos.findIndex((_, i) => `photo-${i}` === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newPhotos = arrayMove(data.photos, oldIndex, newIndex);
+        updateData({ photos: newPhotos });
+      }
+    }
+  };
+
   const openFilePicker = () => {
     fileInputRef.current?.click();
   };
 
+  const sortableIds = data.photos.map((_, i) => `photo-${i}`);
+
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm">
-        Ajoutez jusqu'à 8 photos pour votre profil. La première sera votre photo principale.
+        Ajoutez jusqu'à 8 photos. Glissez pour réorganiser. La première sera votre photo principale.
       </p>
 
       <input
@@ -65,60 +184,50 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
         className="hidden"
       />
 
-      {/* Photo Grid */}
-      <div className="grid grid-cols-4 gap-3">
-        {/* Existing photos */}
-        {data.photos.map((photo, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative aspect-square rounded-xl overflow-hidden"
-          >
-            <img
-              src={photo}
-              alt={`Photo ${index + 1}`}
-              className="w-full h-full object-cover"
-            />
-            {/* Main photo badge */}
-            {index === 0 && (
-              <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded-full font-medium">
-                Principal
-              </div>
+      {/* Photo Grid with Drag & Drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-4 gap-3">
+            {/* Existing photos */}
+            {data.photos.map((photo, index) => (
+              <SortablePhoto
+                key={`photo-${index}`}
+                id={`photo-${index}`}
+                photo={photo}
+                index={index}
+                onRemove={removePhoto}
+              />
+            ))}
+
+            {/* Add photo button */}
+            {data.photos.length < 8 && (
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={openFilePicker}
+                className="aspect-square rounded-xl glass border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-1 tap-highlight hover:border-primary/60 transition-colors"
+              >
+                <Plus className="w-6 h-6 text-primary" />
+                <span className="text-[10px] text-muted-foreground">Ajouter</span>
+              </motion.button>
             )}
-            {/* Remove button */}
-            <button
-              onClick={() => removePhoto(index)}
-              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap-highlight"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </motion.div>
-        ))}
 
-        {/* Add photo buttons */}
-        {data.photos.length < 8 && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={openFilePicker}
-            className="aspect-square rounded-xl glass border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-1 tap-highlight hover:border-primary/60 transition-colors"
-          >
-            <Plus className="w-6 h-6 text-primary" />
-            <span className="text-[10px] text-muted-foreground">Ajouter</span>
-          </motion.button>
-        )}
-
-        {/* Empty slots */}
-        {Array.from({ length: Math.max(0, 7 - data.photos.length) }).map((_, index) => (
-          <div
-            key={`empty-${index}`}
-            className="aspect-square rounded-xl glass border-2 border-dashed border-border/30 flex items-center justify-center opacity-30"
-          >
-            <Image className="w-5 h-5 text-muted-foreground" />
+            {/* Empty slots */}
+            {Array.from({ length: Math.max(0, 7 - data.photos.length) }).map((_, index) => (
+              <div
+                key={`empty-${index}`}
+                className="aspect-square rounded-xl glass border-2 border-dashed border-border/30 flex items-center justify-center opacity-30"
+              >
+                <Image className="w-5 h-5 text-muted-foreground" />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Photo count */}
       <div className="flex items-center justify-between text-sm">
