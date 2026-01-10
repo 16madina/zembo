@@ -7,6 +7,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import ProfileCard from "@/components/ProfileCard";
 import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
+import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 
 import { mockProfiles, Profile } from "@/data/mockProfiles";
 
@@ -21,6 +22,14 @@ const Home = () => {
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
+  
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterValues>({
+    ageMin: 18,
+    ageMax: 50,
+    distance: 50,
+    genders: ["all"],
+  });
 
   const currentProfile = profiles[currentIndex];
   const profilesWhoLikedUser = new Set(["1", "3", "5"]);
@@ -91,6 +100,7 @@ const Home = () => {
       >
         <ZemboLogo />
         <motion.button 
+          onClick={() => setIsFilterOpen(true)}
           className="p-2 glass rounded-lg tap-highlight"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -198,6 +208,13 @@ const Home = () => {
         isOpen={isMatchModalOpen}
         onClose={handleCloseMatchModal}
         onStartChat={handleStartChat}
+      />
+
+      <FilterSheet
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        onApply={setFilters}
       />
 
       <BottomNavigation />
