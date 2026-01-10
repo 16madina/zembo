@@ -84,19 +84,18 @@ const Home = () => {
     <div className="min-h-screen flex flex-col pb-24">
       {/* Header */}
       <motion.header 
-        className="flex items-center justify-between px-6 py-4"
+        className="flex items-center justify-between px-4 py-3"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <div className="w-10" />
         <ZemboLogo />
         <motion.button 
-          className="p-2.5 glass rounded-xl tap-highlight"
+          className="p-2 glass rounded-lg tap-highlight"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <SlidersHorizontal className="w-5 h-5 text-muted-foreground" />
+          <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
         </motion.button>
       </motion.header>
 
