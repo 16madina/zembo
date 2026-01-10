@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Edit3,
@@ -20,12 +21,14 @@ import {
   Mail,
   Send,
   Clock,
+  Shield,
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -94,7 +97,9 @@ const ProfileInfoRow = ({ icon, label, value, onAdd, onEdit }: ProfileInfoRowPro
 const MAX_EMAILS_PER_DAY = 3;
 
 const Profile = () => {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -315,6 +320,16 @@ const Profile = () => {
         >
           <h1 className="text-xl font-bold text-primary-foreground">Mon Profil</h1>
           <div className="flex gap-3">
+            {isAdmin && (
+              <motion.button
+                className="p-3 bg-amber-500/80 backdrop-blur-sm rounded-full"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/admin")}
+              >
+                <Shield className="w-5 h-5 text-white" />
+              </motion.button>
+            )}
             <motion.button
               className="p-3 bg-primary/20 backdrop-blur-sm rounded-full"
               whileHover={{ scale: 1.05 }}
