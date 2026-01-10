@@ -1,6 +1,7 @@
 import { Home, Video, Shuffle, MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
+import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 
 const navItems = [
   { path: "/", icon: Home, label: "Accueil" },
@@ -13,8 +14,14 @@ const navItems = [
 const BottomNavigation = () => {
   const location = useLocation();
 
+  const handleNavClick = () => {
+    if (isNative) {
+      haptics.impact(ImpactStyle.Light);
+    }
+  };
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-[var(--sab)]">
       <div className="mx-4 mb-4">
         <div className="glass-strong rounded-2xl">
           <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
@@ -26,6 +33,7 @@ const BottomNavigation = () => {
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={handleNavClick}
                   className="relative flex flex-col items-center gap-0.5 p-2 rounded-xl tap-highlight"
                 >
                   {isActive && (
