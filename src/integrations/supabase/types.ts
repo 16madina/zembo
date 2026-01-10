@@ -250,6 +250,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       webrtc_signals: {
         Row: {
           created_at: string
@@ -293,6 +314,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_admin_by_email: { Args: { p_email: string }; Returns: undefined }
       are_users_matched: {
         Args: { user_a: string; user_b: string }
         Returns: boolean
@@ -305,13 +327,20 @@ export type Database = {
         }
         Returns: string
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       submit_random_call_decision: {
         Args: { p_decision: string; p_session_id: string; p_user_id: string }
         Returns: Json
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -438,6 +467,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const

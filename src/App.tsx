@@ -9,6 +9,7 @@ import Live from "./pages/Live";
 import Random from "./pages/Random";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import VerifyEmail from "./pages/VerifyEmail";
 import NotFound from "./pages/NotFound";
@@ -62,6 +63,7 @@ const AppRoutes = () => (
     <Route path="/random" element={<ProtectedRoute><Random /></ProtectedRoute>} />
     <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
