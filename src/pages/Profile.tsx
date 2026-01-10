@@ -13,6 +13,8 @@ import {
   MapPin,
   Ruler,
   Plus,
+  Heart,
+  Pencil,
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
@@ -42,16 +44,33 @@ interface ProfileInfoRowProps {
   label: string;
   value?: string | null;
   onAdd?: () => void;
+  onEdit?: () => void;
 }
 
-const ProfileInfoRow = ({ icon, label, value, onAdd }: ProfileInfoRowProps) => (
+const interestColors = [
+  "bg-pink-500/20 text-pink-400 border-pink-500/30",
+  "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  "bg-green-500/20 text-green-400 border-green-500/30",
+  "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  "bg-red-500/20 text-red-400 border-red-500/30",
+  "bg-teal-500/20 text-teal-400 border-teal-500/30",
+  "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+  "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+];
+
+const ProfileInfoRow = ({ icon, label, value, onAdd, onEdit }: ProfileInfoRowProps) => (
   <div className="flex items-center justify-between py-4 border-b border-white/10 last:border-b-0">
     <div className="flex items-center gap-3">
       <span className="text-primary">{icon}</span>
       <span className="text-foreground">{label}</span>
     </div>
     {value ? (
-      <span className="text-muted-foreground">{value}</span>
+      <button onClick={onEdit} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+        <span>{value}</span>
+        {onEdit && <Pencil className="w-3.5 h-3.5" />}
+      </button>
     ) : (
       <button onClick={onAdd} className="flex items-center gap-1 text-primary font-medium">
         Ajouter <Plus className="w-4 h-4" />
@@ -66,7 +85,7 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [photos, setPhotos] = useState<string[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editField, setEditField] = useState<"occupation" | "education" | "height">("occupation");
+  const [editField, setEditField] = useState<"occupation" | "education" | "height" | "gender" | "age">("occupation");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -122,12 +141,12 @@ const Profile = () => {
     setProfile((prev) => (prev ? { ...prev, avatar_url: url } : null));
   };
 
-  const openEditModal = (field: "occupation" | "education" | "height") => {
+  const openEditModal = (field: "occupation" | "education" | "height" | "gender" | "age") => {
     setEditField(field);
     setEditModalOpen(true);
   };
 
-  const handleProfileFieldUpdate = async (field: string, value: string) => {
+  const handleProfileFieldUpdate = async (field: string, value: string | number) => {
     if (!user) return;
     
     try {
@@ -160,13 +179,14 @@ const Profile = () => {
       ? photos[0]
       : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop");
   const gender =
-    profile?.gender === "female" ? "Femme" : profile?.gender === "male" ? "Homme" : profile?.gender || null;
+    profile?.gender === "female" ? "Femme" : profile?.gender === "male" ? "Homme" : profile?.gender === "lgbt" ? "LGBT+" : profile?.gender || null;
   const location = profile?.location;
   const age = profile?.age;
+  const interests = profile?.interests || [];
 
   // Calculate birth year from age
   const birthYear = age ? new Date().getFullYear() - age : null;
-  const birthDateDisplay = birthYear ? `${birthYear}` : null;
+  const birthDateDisplay = birthYear ? `${birthYear} (${age} ans)` : null;
 
   return (
     <div className="min-h-screen pb-28 flex flex-col">
@@ -272,23 +292,33 @@ const Profile = () => {
 
         {/* Profile Info Card */}
         <div className="glass-strong rounded-3xl p-6">
-          <ProfileInfoRow icon={<User className="w-5 h-5" />} label="Genre" value={gender} />
+          <ProfileInfoRow 
+            icon={<User className="w-5 h-5" />} 
+            label="Genre" 
+            value={gender} 
+            onAdd={() => openEditModal("gender")}
+            onEdit={() => openEditModal("gender")}
+          />
           <ProfileInfoRow
             icon={<Calendar className="w-5 h-5" />}
             label="Date de naissance"
             value={birthDateDisplay}
+            onAdd={() => openEditModal("age")}
+            onEdit={() => openEditModal("age")}
           />
           <ProfileInfoRow
             icon={<Briefcase className="w-5 h-5" />}
             label="Profession"
             value={profile?.occupation}
             onAdd={() => openEditModal("occupation")}
+            onEdit={() => openEditModal("occupation")}
           />
           <ProfileInfoRow
             icon={<GraduationCap className="w-5 h-5" />}
             label="Études"
             value={profile?.education}
             onAdd={() => openEditModal("education")}
+            onEdit={() => openEditModal("education")}
           />
           <ProfileInfoRow icon={<MapPin className="w-5 h-5" />} label="Ville d'origine" value={location} />
           <ProfileInfoRow
@@ -296,8 +326,32 @@ const Profile = () => {
             label="Taille"
             value={profile?.height}
             onAdd={() => openEditModal("height")}
+            onEdit={() => openEditModal("height")}
           />
         </div>
+
+        {/* Interests Card */}
+        {interests.length > 0 && (
+          <div className="glass-strong rounded-3xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-primary"><Heart className="w-5 h-5" /></span>
+              <span className="text-foreground font-medium">Centres d'intérêt</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {interests.map((interest, index) => (
+                <motion.span
+                  key={interest}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border ${interestColors[index % interestColors.length]}`}
+                >
+                  {interest}
+                </motion.span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* App version */}
         <p className="text-center text-muted-foreground text-sm mt-6">ZEMBO v1.0.0</p>
@@ -310,7 +364,7 @@ const Profile = () => {
           onClose={() => setEditModalOpen(false)}
           userId={user.id}
           field={editField}
-          currentValue={profile?.[editField]}
+          currentValue={editField === "age" ? profile?.age : profile?.[editField]}
           onUpdate={handleProfileFieldUpdate}
         />
       )}
