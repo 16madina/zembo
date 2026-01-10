@@ -1,20 +1,44 @@
-import { Capacitor } from '@capacitor/core';
-import { StatusBar, Style } from '@capacitor/status-bar';
-import { Keyboard } from '@capacitor/keyboard';
-import { SplashScreen } from '@capacitor/splash-screen';
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+// Check if running on native platform - only check when needed
+export const isNative = typeof window !== 'undefined' && 
+  (window as any).Capacitor?.isNativePlatform?.() === true;
 
-// Check if running on native platform
-export const isNative = Capacitor.isNativePlatform();
-export const isIOS = Capacitor.getPlatform() === 'ios';
-export const isAndroid = Capacitor.getPlatform() === 'android';
+export const isIOS = typeof window !== 'undefined' && 
+  (window as any).Capacitor?.getPlatform?.() === 'ios';
 
-// Initialize Capacitor plugins
+export const isAndroid = typeof window !== 'undefined' && 
+  (window as any).Capacitor?.getPlatform?.() === 'android';
+
+// Lazy load Capacitor plugins only when needed
+const getCapacitorPlugins = async () => {
+  if (!isNative) return null;
+  
+  const [
+    { StatusBar, Style },
+    { Keyboard },
+    { SplashScreen },
+    { Haptics, ImpactStyle, NotificationType },
+    { Camera, CameraResultType, CameraSource }
+  ] = await Promise.all([
+    import('@capacitor/status-bar'),
+    import('@capacitor/keyboard'),
+    import('@capacitor/splash-screen'),
+    import('@capacitor/haptics'),
+    import('@capacitor/camera')
+  ]);
+  
+  return { StatusBar, Style, Keyboard, SplashScreen, Haptics, ImpactStyle, NotificationType, Camera, CameraResultType, CameraSource };
+};
+
+// Initialize Capacitor plugins - call this after React mounts
 export const initializeCapacitor = async () => {
   if (!isNative) return;
 
   try {
+    const plugins = await getCapacitorPlugins();
+    if (!plugins) return;
+    
+    const { StatusBar, Style, Keyboard, SplashScreen } = plugins;
+
     // Hide splash screen
     await SplashScreen.hide();
 
@@ -26,7 +50,7 @@ export const initializeCapacitor = async () => {
     }
 
     // Setup keyboard listeners
-    Keyboard.addListener('keyboardWillShow', (info) => {
+    Keyboard.addListener('keyboardWillShow', (info: { keyboardHeight: number }) => {
       document.documentElement.style.setProperty('--keyboard-height', `${info.keyboardHeight}px`);
       document.body.classList.add('keyboard-open');
     });
@@ -43,18 +67,23 @@ export const initializeCapacitor = async () => {
 
 // Haptic feedback utilities
 export const haptics = {
-  impact: async (style: ImpactStyle = ImpactStyle.Medium) => {
+  impact: async (style?: string) => {
     if (!isNative) return;
     try {
-      await Haptics.impact({ style });
+      const plugins = await getCapacitorPlugins();
+      if (!plugins) return;
+      // Use type assertion for dynamic import types
+      await plugins.Haptics.impact({ style: (style || 'MEDIUM') as any });
     } catch (error) {
       console.error('Haptics error:', error);
     }
   },
-  notification: async (type: NotificationType = NotificationType.Success) => {
+  notification: async (type?: string) => {
     if (!isNative) return;
     try {
-      await Haptics.notification({ type });
+      const plugins = await getCapacitorPlugins();
+      if (!plugins) return;
+      await plugins.Haptics.notification({ type: (type || 'SUCCESS') as any });
     } catch (error) {
       console.error('Haptics error:', error);
     }
@@ -62,8 +91,10 @@ export const haptics = {
   selection: async () => {
     if (!isNative) return;
     try {
-      await Haptics.selectionStart();
-      await Haptics.selectionEnd();
+      const plugins = await getCapacitorPlugins();
+      if (!plugins) return;
+      await plugins.Haptics.selectionStart();
+      await plugins.Haptics.selectionEnd();
     } catch (error) {
       console.error('Haptics error:', error);
     }
@@ -73,11 +104,14 @@ export const haptics = {
 // Camera utilities
 export const takePhoto = async () => {
   try {
-    const image = await Camera.getPhoto({
+    const plugins = await getCapacitorPlugins();
+    if (!plugins) return null;
+    
+    const image = await plugins.Camera.getPhoto({
       quality: 90,
       allowEditing: false,
-      resultType: CameraResultType.DataUrl,
-      source: CameraSource.Camera,
+      resultType: plugins.CameraResultType.DataUrl,
+      source: plugins.CameraSource.Camera,
       correctOrientation: true
     });
     return image.dataUrl;
@@ -89,11 +123,14 @@ export const takePhoto = async () => {
 
 export const pickImage = async () => {
   try {
-    const image = await Camera.getPhoto({
+    const plugins = await getCapacitorPlugins();
+    if (!plugins) return null;
+    
+    const image = await plugins.Camera.getPhoto({
       quality: 90,
       allowEditing: false,
-      resultType: CameraResultType.DataUrl,
-      source: CameraSource.Photos
+      resultType: plugins.CameraResultType.DataUrl,
+      source: plugins.CameraSource.Photos
     });
     return image.dataUrl;
   } catch (error) {
@@ -102,6 +139,15 @@ export const pickImage = async () => {
   }
 };
 
-// Re-export types for convenience
-export { ImpactStyle, NotificationType } from '@capacitor/haptics';
-export { CameraResultType, CameraSource } from '@capacitor/camera';
+// Export constants for haptic styles
+export const ImpactStyle = {
+  Heavy: 'HEAVY',
+  Medium: 'MEDIUM',
+  Light: 'LIGHT'
+} as const;
+
+export const NotificationType = {
+  Success: 'SUCCESS',
+  Warning: 'WARNING',
+  Error: 'ERROR'
+} as const;
