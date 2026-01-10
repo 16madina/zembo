@@ -36,6 +36,7 @@ interface UseRandomCallReturn {
   selectedPreference: string | null;
   session: RandomCallSession | null;
   timeRemaining: number;
+  searchTimeRemaining: number;
   matchResult: "matched" | "not_matched" | "rejected" | null;
   waitingForOther: boolean;
   isExtendedCall: boolean;
@@ -53,12 +54,14 @@ export const useRandomCall = (): UseRandomCallReturn => {
   const [selectedPreference, setSelectedPreference] = useState<string | null>(null);
   const [session, setSession] = useState<RandomCallSession | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(90);
+  const [searchTimeRemaining, setSearchTimeRemaining] = useState(30);
   const [matchResult, setMatchResult] = useState<"matched" | "not_matched" | "rejected" | null>(null);
   const [waitingForOther, setWaitingForOther] = useState(false);
   const [userGender, setUserGender] = useState<string | null>(null);
   const [isExtendedCall, setIsExtendedCall] = useState(false);
   const [hasAskedFirstDecision, setHasAskedFirstDecision] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [searchStartTime, setSearchStartTime] = useState<number | null>(null);
   
   const channelRef = useRef<RealtimeChannel | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -228,6 +231,21 @@ export const useRandomCall = (): UseRandomCallReturn => {
     };
   }, [status, session, isDemoMode]);
 
+  // Timer for search countdown (30 seconds)
+  useEffect(() => {
+    if (status !== "searching" || !searchStartTime) return;
+    
+    const searchTimerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - searchStartTime) / 1000);
+      const remaining = Math.max(0, 30 - elapsed);
+      setSearchTimeRemaining(remaining);
+    }, 100); // Update frequently for smooth progress bar
+    
+    return () => {
+      clearInterval(searchTimerInterval);
+    };
+  }, [status, searchStartTime]);
+
   const startSelecting = useCallback(() => {
     setStatus("selecting");
   }, []);
@@ -240,6 +258,8 @@ export const useRandomCall = (): UseRandomCallReturn => {
     setHasAskedFirstDecision(false);
     setIsExtendedCall(false);
     setIsDemoMode(false);
+    setSearchTimeRemaining(30);
+    setSearchStartTime(Date.now());
     
     // If DEMO_MODE is enabled, simulate a match after delay
     if (DEMO_MODE) {
@@ -546,6 +566,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
     selectedPreference,
     session,
     timeRemaining,
+    searchTimeRemaining,
     matchResult,
     waitingForOther,
     isExtendedCall,

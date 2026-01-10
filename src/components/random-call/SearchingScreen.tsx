@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 interface SearchingScreenProps {
   preference: string;
   onCancel: () => void;
+  timeRemaining: number;
 }
 
 const preferenceLabels: Record<string, string> = {
@@ -13,7 +14,9 @@ const preferenceLabels: Record<string, string> = {
   tous: "quelqu'un",
 };
 
-const SearchingScreen = ({ preference, onCancel }: SearchingScreenProps) => {
+const SearchingScreen = ({ preference, onCancel, timeRemaining }: SearchingScreenProps) => {
+  const progress = (timeRemaining / 30) * 100;
+  
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -65,6 +68,22 @@ const SearchingScreen = ({ preference, onCancel }: SearchingScreenProps) => {
         <p className="text-muted-foreground">
           Recherche de {preferenceLabels[preference] || "quelqu'un"} en ligne
         </p>
+      </div>
+
+      {/* Countdown progress bar */}
+      <div className="w-full max-w-xs space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Temps restant</span>
+          <span className="text-primary font-medium">{timeRemaining}s</span>
+        </div>
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+            initial={{ width: "100%" }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.1, ease: "linear" }}
+          />
+        </div>
       </div>
 
       {/* Animated dots */}
