@@ -58,7 +58,7 @@ export const useSoundEffects = () => {
               Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
             body: JSON.stringify({
-              text: "ZEMMMBOOO!",
+              text: "... ZEMMMMMBOOOOOO!",
             }),
           }
         );
@@ -114,7 +114,7 @@ export const useSoundEffects = () => {
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            text: "ZEMMMBOOO!",
+            text: "... ZEMMMMMBOOOOOO!",
           }),
         }
       );
