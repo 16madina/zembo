@@ -8,7 +8,7 @@ import PreferenceSelector from "@/components/random-call/PreferenceSelector";
 import SearchingScreen from "@/components/random-call/SearchingScreen";
 import MatchFoundScreen from "@/components/random-call/MatchFoundScreen";
 import InCallScreen from "@/components/random-call/InCallScreen";
-import FirstDecisionScreen from "@/components/random-call/FirstDecisionScreen";
+import DecisionOverlay from "@/components/random-call/DecisionOverlay";
 import ExtendedCallScreen from "@/components/random-call/ExtendedCallScreen";
 import ResultScreen from "@/components/random-call/ResultScreen";
 import RejectedScreen from "@/components/random-call/RejectedScreen";
@@ -64,16 +64,22 @@ const Random = () => {
         return <MatchFoundScreen />;
       
       case "in_call":
-        return <InCallScreen timeRemaining={timeRemaining} otherUserId={otherUserId || undefined} sessionId={session?.id} />;
-      
       case "first_decision":
       case "waiting_decision":
         return (
-          <FirstDecisionScreen 
-            onDecide={submitDecision} 
-            waitingForOther={waitingForOther}
-            timeRemaining={timeRemaining}
-          />
+          <div className="relative w-full">
+            <InCallScreen timeRemaining={timeRemaining} otherUserId={otherUserId || undefined} sessionId={session?.id} />
+            {/* Decision overlay appears on top while call continues */}
+            <AnimatePresence>
+              {(status === "first_decision" || status === "waiting_decision") && (
+                <DecisionOverlay 
+                  onDecide={submitDecision} 
+                  waitingForOther={waitingForOther}
+                  timeRemaining={timeRemaining}
+                />
+              )}
+            </AnimatePresence>
+          </div>
         );
       
       case "call_extended":
