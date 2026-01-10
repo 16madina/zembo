@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
-import { Mic, MicOff, UserCircle, Flag } from "lucide-react";
+import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useWebRTC } from "@/hooks/useWebRTC";
+import { useAuth } from "@/contexts/AuthContext";
 import ReportModal from "./ReportModal";
 
 interface InCallScreenProps {
@@ -10,17 +12,37 @@ interface InCallScreenProps {
 }
 
 const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenProps) => {
-  const [isMuted, setIsMuted] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
+  const { user } = useAuth();
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // Simulate audio levels
+  // Determine if this user is the initiator (user1 in session)
+  const isInitiator = user?.id ? user.id < (otherUserId || "") : false;
+
+  const {
+    isConnected,
+    isConnecting,
+    isMuted,
+    audioLevel,
+    error,
+    startCall,
+    endCall,
+    toggleMute,
+  } = useWebRTC({
+    sessionId: sessionId || null,
+    otherUserId: otherUserId || null,
+    isInitiator,
+  });
+
+  // Auto-start call when component mounts
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAudioLevel(Math.random() * 100);
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
+    if (sessionId && otherUserId) {
+      startCall();
+    }
+    
+    return () => {
+      endCall();
+    };
+  }, [sessionId, otherUserId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -30,14 +52,51 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenPro
 
   const isLowTime = timeRemaining <= 10;
 
+  // Normalize audio level for visualization
+  const normalizedAudioLevel = Math.min(100, audioLevel * 1.5);
+
   return (
     <>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="flex flex-col items-center justify-center gap-8 w-full"
+        className="flex flex-col items-center justify-center gap-6 w-full"
       >
+        {/* Connection status */}
+        {isConnecting && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary"
+          >
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm font-medium">Connexion en cours...</span>
+          </motion.div>
+        )}
+
+        {isConnected && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-500"
+          >
+            <Phone className="w-4 h-4" />
+            <span className="text-sm font-medium">Connecté</span>
+          </motion.div>
+        )}
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-destructive/20 text-destructive"
+          >
+            <PhoneOff className="w-4 h-4" />
+            <span className="text-sm font-medium">{error}</span>
+          </motion.div>
+        )}
+
         {/* Timer */}
         <motion.div
           className={`text-5xl font-bold ${isLowTime ? "text-destructive" : "text-primary"}`}
@@ -47,17 +106,17 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenPro
           {formatTime(timeRemaining)}
         </motion.div>
 
-        {/* Anonymous caller visual */}
+        {/* Anonymous caller visual with audio visualization */}
         <div className="relative">
           <motion.div
-            className="w-36 h-36 rounded-full glass flex items-center justify-center"
-            animate={{ 
+            className="w-36 h-36 rounded-full glass flex items-center justify-center overflow-hidden"
+            animate={isConnected ? { 
               boxShadow: [
-                "0 0 0 0 rgba(var(--primary), 0.4)",
-                "0 0 0 20px rgba(var(--primary), 0)",
+                `0 0 0 0 rgba(34, 197, 94, 0.4)`,
+                `0 0 0 ${normalizedAudioLevel * 0.3}px rgba(34, 197, 94, 0)`,
               ]
-            }}
-            transition={{ duration: 1.5, repeat: Infinity }}
+            } : {}}
+            transition={{ duration: 0.3 }}
           >
             <UserCircle className="w-24 h-24 text-muted-foreground" />
           </motion.div>
@@ -69,9 +128,11 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenPro
             {[0, 1, 2, 3, 4].map((i) => (
               <motion.div
                 key={i}
-                className="w-1 bg-primary rounded-full"
+                className={`w-1 rounded-full ${isConnected ? "bg-green-500" : "bg-primary"}`}
                 animate={{ 
-                  height: [4, Math.max(8, audioLevel * 0.3 * (1 - Math.abs(i - 2) * 0.2)), 4] 
+                  height: isConnected 
+                    ? [4, Math.max(8, normalizedAudioLevel * 0.4 * (1 - Math.abs(i - 2) * 0.2)), 4]
+                    : [4, 8, 4]
                 }}
                 transition={{ duration: 0.15, delay: i * 0.05 }}
               />
@@ -81,10 +142,13 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenPro
 
         <div className="text-center space-y-1">
           <h3 className="text-lg font-medium text-foreground">
-            Appel anonyme en cours
+            {isConnected ? "Appel en cours" : "Appel anonyme"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Découvrez-vous par la voix uniquement
+            {isConnected 
+              ? "Vous pouvez maintenant parler" 
+              : "Découvrez-vous par la voix uniquement"
+            }
           </p>
         </div>
 
@@ -92,7 +156,7 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenPro
         <div className="flex items-center gap-4">
           {/* Mute button */}
           <motion.button
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={toggleMute}
             className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
               isMuted 
                 ? "bg-destructive text-destructive-foreground" 
@@ -121,7 +185,10 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenPro
 
         {/* Info text */}
         <p className="text-xs text-muted-foreground text-center max-w-xs">
-          L'appel se terminera automatiquement. Vous pourrez ensuite décider si vous voulez matcher.
+          {isConnected 
+            ? "L'appel se terminera automatiquement. Vous pourrez ensuite décider si vous voulez matcher."
+            : "En attente de la connexion audio..."
+          }
         </p>
       </motion.div>
 
