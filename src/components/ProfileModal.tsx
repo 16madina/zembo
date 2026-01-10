@@ -65,6 +65,17 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
     }
   };
 
+  const handlePhotoSwipe = (_: any, info: PanInfo) => {
+    // Swipe left = next photo
+    if (info.offset.x < -50 || info.velocity.x < -300) {
+      nextPhoto();
+    }
+    // Swipe right = previous photo
+    else if (info.offset.x > 50 || info.velocity.x > 300) {
+      prevPhoto();
+    }
+  };
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       if (showDetails) {
@@ -133,20 +144,29 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
               <X className="w-5 h-5 text-white" />
             </motion.button>
 
-            {/* Full screen photo */}
-            <div className="absolute inset-0">
-              <motion.img
-                key={currentPhotoIndex}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                src={profile.photos[currentPhotoIndex]}
-                alt={profile.name}
-                className="w-full h-full object-cover"
-              />
+            {/* Full screen photo with swipe */}
+            <motion.div 
+              className="absolute inset-0"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.3}
+              onDragEnd={handlePhotoSwipe}
+            >
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={currentPhotoIndex}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  src={profile.photos[currentPhotoIndex]}
+                  alt={profile.name}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+              </AnimatePresence>
               
-              {/* Photo navigation zones */}
-              <div className="absolute inset-0 flex">
+              {/* Photo navigation zones (tap) */}
+              <div className="absolute inset-0 flex pointer-events-auto">
                 <div className="w-1/3 h-full cursor-pointer" onClick={prevPhoto} />
                 <div className="w-1/3 h-full" />
                 <div className="w-1/3 h-full cursor-pointer" onClick={nextPhoto} />
@@ -167,8 +187,8 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
               </div>
 
               {/* Strong gradient overlay at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 h-[50%] bg-gradient-to-t from-black via-black/60 to-transparent" />
-            </div>
+              <div className="absolute bottom-0 left-0 right-0 h-[50%] bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none" />
+            </motion.div>
 
             {/* Profile info overlay at bottom */}
             <div className="absolute bottom-0 left-0 right-0 z-10 p-6 pb-32">
