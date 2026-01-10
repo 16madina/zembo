@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Briefcase, GraduationCap, Ruler } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { X, Briefcase, GraduationCap, Ruler, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 interface EditProfileModalProps {
@@ -13,21 +12,41 @@ interface EditProfileModalProps {
   onUpdate: (field: string, value: string) => void;
 }
 
+const educationOptions = [
+  "Baccalauréat",
+  "BTS / DUT",
+  "Licence",
+  "Master",
+  "Doctorat",
+  "École d'ingénieur",
+  "École de commerce",
+  "Formation professionnelle",
+  "Autodidacte",
+  "Autre",
+];
+
+const heightOptions = Array.from({ length: 61 }, (_, i) => `${140 + i} cm`);
+
 const fieldConfig = {
   occupation: {
     icon: Briefcase,
     label: "Profession",
     placeholder: "Ex: Développeur, Médecin, Étudiant...",
+    type: "text" as const,
   },
   education: {
     icon: GraduationCap,
     label: "Études",
-    placeholder: "Ex: Master en Informatique, Licence...",
+    placeholder: "Sélectionnez votre niveau d'études",
+    type: "select" as const,
+    options: educationOptions,
   },
   height: {
     icon: Ruler,
     label: "Taille",
-    placeholder: "Ex: 175 cm",
+    placeholder: "Sélectionnez votre taille",
+    type: "select" as const,
+    options: heightOptions,
   },
 };
 
@@ -41,23 +60,19 @@ const EditProfileModal = ({
 }: EditProfileModalProps) => {
   const [value, setValue] = useState(currentValue || "");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const config = fieldConfig[field];
   const Icon = config.icon;
 
   const handleSave = async () => {
     if (!value.trim()) {
-      toast.error("Veuillez entrer une valeur");
+      toast.error("Veuillez sélectionner une valeur");
       return;
     }
 
     setIsLoading(true);
     try {
-      // For now we'll store these in bio as JSON or a dedicated column
-      // Since the profiles table doesn't have these columns yet, we'll use a workaround
-      // by storing additional info in the bio field or creating new columns via migration
-      
-      // We'll update via a metadata approach - storing in local state for now
       onUpdate(field, value.trim());
       toast.success(`${config.label} mis à jour`);
       onClose();
@@ -67,6 +82,11 @@ const EditProfileModal = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelect = (option: string) => {
+    setValue(option);
+    setIsDropdownOpen(false);
   };
 
   return (
@@ -110,14 +130,53 @@ const EditProfileModal = ({
 
               {/* Input */}
               <div className="space-y-2">
-                <input
-                  type="text"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  placeholder={config.placeholder}
-                  className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  autoFocus
-                />
+                {config.type === "text" ? (
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    placeholder={config.placeholder}
+                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    autoFocus
+                  />
+                ) : (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                      <span className={value ? "text-foreground" : "text-muted-foreground"}>
+                        {value || config.placeholder}
+                      </span>
+                      <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {isDropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-60 max-h-60 overflow-y-auto"
+                        >
+                          {config.options?.map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => handleSelect(option)}
+                              className={`w-full px-4 py-3 text-left hover:bg-muted transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                                value === option ? "bg-primary/10 text-primary" : "text-foreground"
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
 
               {/* Buttons */}
