@@ -145,8 +145,9 @@ export const useRandomCall = (): UseRandomCallReturn => {
   }, [session?.id, user]);
 
   // Timer for call duration (works for both real and demo mode)
+  // Also continues during first_decision and waiting_decision states
   useEffect(() => {
-    if (status !== "in_call" && status !== "call_extended") return;
+    if (status !== "in_call" && status !== "call_extended" && status !== "first_decision" && status !== "waiting_decision") return;
     if (!session && !isDemoMode) return;
 
     // For demo mode, we use a simple countdown from timeRemaining
@@ -166,13 +167,11 @@ export const useRandomCall = (): UseRandomCallReturn => {
       const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
       setTimeRemaining(remaining);
       
-      // At 30 seconds remaining, show first decision
+      // At 30 seconds remaining, show first decision (but keep timer running!)
       if (!hasAskedFirstDecision && remaining <= 30 && remaining > 0 && status === "in_call") {
         setHasAskedFirstDecision(true);
         setStatus("first_decision");
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
+        // DON'T clear the timer - let the countdown continue!
       }
       
       // Call ended at 0
