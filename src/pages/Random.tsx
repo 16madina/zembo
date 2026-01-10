@@ -21,6 +21,7 @@ const Random = () => {
     selectedPreference,
     session,
     timeRemaining,
+    searchTimeRemaining,
     matchResult,
     waitingForOther,
     otherUserId,
@@ -57,7 +58,8 @@ const Random = () => {
         return (
           <SearchingScreen 
             preference={selectedPreference || "tous"} 
-            onCancel={cancelSearch} 
+            onCancel={cancelSearch}
+            timeRemaining={searchTimeRemaining}
           />
         );
       
