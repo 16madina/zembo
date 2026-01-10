@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
-import { Mic, MicOff, UserCircle, Clock, Flag } from "lucide-react";
+import { Mic, MicOff, UserCircle, Clock, Flag, Phone, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useWebRTC } from "@/hooks/useWebRTC";
+import { useAuth } from "@/contexts/AuthContext";
 import ReportModal from "./ReportModal";
 
 interface ExtendedCallScreenProps {
@@ -10,17 +12,36 @@ interface ExtendedCallScreenProps {
 }
 
 const ExtendedCallScreen = ({ timeRemaining, otherUserId, sessionId }: ExtendedCallScreenProps) => {
-  const [isMuted, setIsMuted] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
+  const { user } = useAuth();
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // Simulate audio levels
+  // Determine if this user is the initiator
+  const isInitiator = user?.id ? user.id < (otherUserId || "") : false;
+
+  const {
+    isConnected,
+    isConnecting,
+    isMuted,
+    audioLevel,
+    startCall,
+    endCall,
+    toggleMute,
+  } = useWebRTC({
+    sessionId: sessionId || null,
+    otherUserId: otherUserId || null,
+    isInitiator,
+  });
+
+  // Auto-start call when component mounts (should already be connected from previous screen)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAudioLevel(Math.random() * 100);
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
+    if (sessionId && otherUserId && !isConnected) {
+      startCall();
+    }
+    
+    return () => {
+      endCall();
+    };
+  }, [sessionId, otherUserId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -29,6 +50,7 @@ const ExtendedCallScreen = ({ timeRemaining, otherUserId, sessionId }: ExtendedC
   };
 
   const isLowTime = timeRemaining <= 10;
+  const normalizedAudioLevel = Math.min(100, audioLevel * 1.5);
 
   return (
     <>
@@ -48,6 +70,21 @@ const ExtendedCallScreen = ({ timeRemaining, otherUserId, sessionId }: ExtendedC
           <span className="text-sm font-medium">Temps supplémentaire</span>
         </motion.div>
 
+        {/* Connection status */}
+        {isConnecting && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Reconnexion...</span>
+          </div>
+        )}
+
+        {isConnected && (
+          <div className="flex items-center gap-2 text-sm text-green-500">
+            <Phone className="w-4 h-4" />
+            <span>Connecté</span>
+          </div>
+        )}
+
         {/* Timer */}
         <motion.div
           className={`text-4xl font-bold ${isLowTime ? "text-destructive" : "text-foreground"}`}
@@ -61,13 +98,13 @@ const ExtendedCallScreen = ({ timeRemaining, otherUserId, sessionId }: ExtendedC
         <div className="relative">
           <motion.div
             className="w-32 h-32 rounded-full glass flex items-center justify-center"
-            animate={{ 
+            animate={isConnected ? { 
               boxShadow: [
-                "0 0 0 0 rgba(var(--primary), 0.4)",
-                "0 0 0 15px rgba(var(--primary), 0)",
+                `0 0 0 0 rgba(34, 197, 94, 0.4)`,
+                `0 0 0 ${normalizedAudioLevel * 0.25}px rgba(34, 197, 94, 0)`,
               ]
-            }}
-            transition={{ duration: 1.5, repeat: Infinity }}
+            } : {}}
+            transition={{ duration: 0.3 }}
           >
             <UserCircle className="w-20 h-20 text-muted-foreground" />
           </motion.div>
@@ -79,9 +116,11 @@ const ExtendedCallScreen = ({ timeRemaining, otherUserId, sessionId }: ExtendedC
             {[0, 1, 2, 3, 4].map((i) => (
               <motion.div
                 key={i}
-                className="w-1 bg-primary rounded-full"
+                className={`w-1 rounded-full ${isConnected ? "bg-green-500" : "bg-primary"}`}
                 animate={{ 
-                  height: [4, Math.max(8, audioLevel * 0.3 * (1 - Math.abs(i - 2) * 0.2)), 4] 
+                  height: isConnected
+                    ? [4, Math.max(8, normalizedAudioLevel * 0.35 * (1 - Math.abs(i - 2) * 0.2)), 4]
+                    : [4, 8, 4]
                 }}
                 transition={{ duration: 0.15, delay: i * 0.05 }}
               />
@@ -102,7 +141,7 @@ const ExtendedCallScreen = ({ timeRemaining, otherUserId, sessionId }: ExtendedC
         <div className="flex items-center gap-4">
           {/* Mute button */}
           <motion.button
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={toggleMute}
             className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
               isMuted 
                 ? "bg-destructive text-destructive-foreground" 
