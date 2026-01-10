@@ -74,7 +74,12 @@ const Random = () => {
       case "waiting_decision":
         return (
           <div className="relative w-full">
-            <InCallScreen timeRemaining={timeRemaining} otherUserId={otherUserId || undefined} sessionId={session?.id} />
+            <InCallScreen 
+              timeRemaining={timeRemaining} 
+              otherUserId={otherUserId || undefined} 
+              sessionId={session?.id}
+              onHangUp={reset}
+            />
             {/* Decision overlay appears on top while call continues */}
             <AnimatePresence>
               {(status === "first_decision" || status === "waiting_decision") && (

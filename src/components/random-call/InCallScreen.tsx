@@ -9,9 +9,10 @@ interface InCallScreenProps {
   timeRemaining: number;
   otherUserId?: string;
   sessionId?: string;
+  onHangUp?: () => void;
 }
 
-const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenProps) => {
+const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCallScreenProps) => {
   const { user } = useAuth();
   const [showReportModal, setShowReportModal] = useState(false);
 
@@ -169,6 +170,18 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId }: InCallScreenPro
             ) : (
               <Mic className="w-7 h-7" />
             )}
+          </motion.button>
+
+          {/* Hang up button */}
+          <motion.button
+            onClick={() => {
+              endCall();
+              onHangUp?.();
+            }}
+            className="w-16 h-16 rounded-full bg-destructive flex items-center justify-center text-destructive-foreground"
+            whileTap={{ scale: 0.95 }}
+          >
+            <PhoneOff className="w-7 h-7" />
           </motion.button>
 
           {/* Report button */}
