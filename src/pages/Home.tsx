@@ -81,7 +81,7 @@ const Home = () => {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden pb-24">
+    <div className="h-[100dvh] flex flex-col overflow-hidden pb-20">
       {/* Header */}
       <motion.header 
         className="flex items-center justify-between px-4 py-2 flex-shrink-0"
@@ -101,7 +101,7 @@ const Home = () => {
 
       {/* Navigation Tabs */}
       <motion.div 
-        className="flex justify-center gap-3 px-6 mb-3 flex-shrink-0"
+        className="flex justify-center gap-3 px-6 mb-2 flex-shrink-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
@@ -135,7 +135,7 @@ const Home = () => {
       </motion.div>
 
       {/* Card Stack */}
-      <div className="flex-1 px-4 max-w-md mx-auto w-full flex flex-col min-h-0">
+      <div className="flex-1 px-3 max-w-md mx-auto w-full flex flex-col min-h-0">
         <motion.div 
           className="relative flex-1 min-h-0"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -156,7 +156,7 @@ const Home = () => {
 
         {/* Action Buttons */}
         <motion.div 
-          className="py-3 flex-shrink-0"
+          className="py-2 flex-shrink-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
