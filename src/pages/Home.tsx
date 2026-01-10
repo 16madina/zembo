@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, SearchX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -47,7 +47,16 @@ const Home = () => {
     return true;
   });
 
-  const currentProfile = filteredProfiles[currentIndex % filteredProfiles.length];
+  // Check if filters are modified from default
+  const hasActiveFilters = 
+    filters.ageMin !== 18 || 
+    filters.ageMax !== 50 || 
+    filters.distance !== 50 || 
+    (filters.genders.length !== 1 || !filters.genders.includes("all"));
+
+  const currentProfile = filteredProfiles.length > 0 
+    ? filteredProfiles[currentIndex % filteredProfiles.length] 
+    : null;
   const profilesWhoLikedUser = new Set(["1", "3", "5"]);
 
   const checkForMatch = (profileId: string) => {
@@ -117,11 +126,18 @@ const Home = () => {
         <ZemboLogo />
         <motion.button 
           onClick={() => setIsFilterOpen(true)}
-          className="p-2 glass rounded-lg tap-highlight"
+          className={`relative p-2 rounded-lg tap-highlight ${hasActiveFilters ? 'bg-primary/20 border border-primary/30' : 'glass'}`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+          <SlidersHorizontal className={`w-4 h-4 ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground'}`} />
+          {hasActiveFilters && (
+            <motion.span 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background"
+            />
+          )}
         </motion.button>
       </motion.header>
 
@@ -194,9 +210,9 @@ const Home = () => {
             </motion.div>
           ))}
 
-          {/* Active card */}
+          {/* Active card or empty state */}
           <AnimatePresence mode="popLayout">
-            {currentProfile && (
+            {currentProfile ? (
               <ProfileCard
                 key={currentProfile.id}
                 profile={currentProfile}
@@ -206,6 +222,30 @@ const Home = () => {
                 onPass={handlePass}
                 onSuperLike={handleSuperLike}
               />
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-0 flex flex-col items-center justify-center glass-strong rounded-3xl p-6 text-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                  <SearchX className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Aucun profil trouvé
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Modifiez vos critères de recherche pour voir plus de profils
+                </p>
+                <motion.button
+                  onClick={() => setIsFilterOpen(true)}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
+                >
+                  Modifier les filtres
+                </motion.button>
+              </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
