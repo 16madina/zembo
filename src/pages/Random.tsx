@@ -6,6 +6,7 @@ import { useRandomCall } from "@/hooks/useRandomCall";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import PreferenceSelector from "@/components/random-call/PreferenceSelector";
 import SearchingScreen from "@/components/random-call/SearchingScreen";
+import SearchTimeoutScreen from "@/components/random-call/SearchTimeoutScreen";
 import MatchFoundScreen from "@/components/random-call/MatchFoundScreen";
 import InCallScreen from "@/components/random-call/InCallScreen";
 import DecisionOverlay from "@/components/random-call/DecisionOverlay";
@@ -30,7 +31,7 @@ const Random = () => {
     reset,
   } = useRandomCall();
   
-  const { playDiceSound, playZemboVoice, isDrumrollPlaying } = useSoundEffects();
+  const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
 
   const handleCommencer = () => {
     playDiceSound();
@@ -59,6 +60,9 @@ const Random = () => {
             onCancel={cancelSearch} 
           />
         );
+      
+      case "search_timeout":
+        return <SearchTimeoutScreen onRetry={reset} />;
       
       case "matched":
         return <MatchFoundScreen />;
@@ -94,6 +98,7 @@ const Random = () => {
             matched={matchResult === "matched"} 
             onRetry={reset}
             otherUserId={otherUserId || undefined}
+            onRevealSound={playRevealSound}
           />
         );
       

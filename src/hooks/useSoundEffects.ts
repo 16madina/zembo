@@ -11,12 +11,14 @@ type AudioUrls = {
   dice: string | null;
   drumroll: string | null;
   zembo: string | null;
+  reveal: string | null;
 };
 
 type LoadingState = {
   dice: boolean;
   drumroll: boolean;
   zembo: boolean;
+  reveal: boolean;
 };
 
 export const useSoundEffects = () => {
@@ -29,12 +31,14 @@ export const useSoundEffects = () => {
     dice: null,
     drumroll: null,
     zembo: null,
+    reveal: null,
   });
 
   const loadingRef = useRef<LoadingState>({
     dice: false,
     drumroll: false,
     zembo: false,
+    reveal: false,
   });
 
   // Track which exact text our cached zembo URL corresponds to
@@ -141,6 +145,12 @@ export const useSoundEffects = () => {
       3
     );
 
+    void loadSfx(
+      "reveal",
+      "Magical sparkle reveal sound, mystical unveiling shimmer, enchanting discovery chime",
+      2
+    );
+
     void loadTts(zemboTtsTextRef.current);
   }, []);
 
@@ -221,5 +231,18 @@ export const useSoundEffects = () => {
     }
   }, []);
 
-  return { playDiceSound, playZemboVoice, isDrumrollPlaying };
+  const playRevealSound = useCallback(async () => {
+    try {
+      const url = audioUrlsRef.current.reveal;
+      if (!url) return;
+
+      const audio = new Audio(url);
+      audio.volume = 0.7;
+      await audio.play();
+    } catch (error) {
+      console.error("Error playing reveal sound:", error);
+    }
+  }, []);
+
+  return { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying };
 };
