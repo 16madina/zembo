@@ -24,48 +24,68 @@ const StreamControls = ({
   if (!isStreamer) return null;
 
   return (
-    <div className="absolute bottom-32 left-0 right-0 flex justify-center gap-4">
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={onToggleMute}
+    <div className="absolute bottom-56 left-0 right-0 flex justify-center gap-4 z-30">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Toggle mute clicked, current:", isMuted);
+          onToggleMute();
+        }}
         className={cn(
-          "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
+          "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90",
           isMuted
             ? "bg-destructive text-destructive-foreground"
-            : "bg-background/80 text-foreground"
+            : "bg-background/90 text-foreground border border-border"
         )}
       >
         {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-      </motion.button>
+      </button>
 
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={onToggleVideo}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Toggle video clicked, current:", isVideoOff);
+          onToggleVideo();
+        }}
         className={cn(
-          "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
+          "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90",
           isVideoOff
             ? "bg-destructive text-destructive-foreground"
-            : "bg-background/80 text-foreground"
+            : "bg-background/90 text-foreground border border-border"
         )}
       >
         {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-      </motion.button>
+      </button>
 
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={onSwitchCamera}
-        className="w-12 h-12 rounded-full bg-background/80 text-foreground flex items-center justify-center"
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Switch camera clicked");
+          onSwitchCamera();
+        }}
+        className="w-14 h-14 rounded-full bg-background/90 text-foreground border border-border flex items-center justify-center shadow-lg active:scale-90 transition-all"
       >
         <SwitchCamera className="w-6 h-6" />
-      </motion.button>
+      </button>
 
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={onEndStream}
-        className="w-12 h-12 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("End stream clicked");
+          onEndStream();
+        }}
+        className="w-14 h-14 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg active:scale-90 transition-all"
       >
         <PhoneOff className="w-6 h-6" />
-      </motion.button>
+      </button>
     </div>
   );
 };
