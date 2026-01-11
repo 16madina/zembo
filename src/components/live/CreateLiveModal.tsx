@@ -172,14 +172,14 @@ const CreateLiveModal = ({
       {isOpen && (
         <>
           <motion.div
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
           <motion.div
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-md mx-auto max-h-[90vh] overflow-y-auto"
+            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[60] max-w-md mx-auto max-h-[90vh] overflow-y-auto"
             initial={{ opacity: 0, scale: 0.95, y: "-45%" }}
             animate={{ opacity: 1, scale: 1, y: "-50%" }}
             exit={{ opacity: 0, scale: 0.95, y: "-45%" }}
