@@ -272,7 +272,7 @@ const SnapchatFilterPanel = ({
                   {/* Info Banner */}
                   <div className="rounded-lg bg-primary/10 p-3 border border-primary/20">
                     <p className="text-xs text-muted-foreground">
-                      💡 Les effets avancés de morphing (yeux, visage) nécessitent le traitement Canvas et sont en développement.
+                      💡 Le lissage peau et l'éclat des yeux utilisent des filtres CSS (luminosité, flou léger). Les effets de morphing avancés seront disponibles dans une future mise à jour.
                     </p>
                   </div>
                 </TabsContent>
@@ -317,9 +317,9 @@ const SnapchatFilterPanel = ({
                   </div>
 
                   {/* Info Banner */}
-                  <div className="rounded-lg bg-amber-500/10 p-3 border border-amber-500/20">
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      🔮 Les masques AR avec tracking facial sont en développement et seront bientôt disponibles !
+                  <div className="rounded-lg bg-green-500/10 p-3 border border-green-500/20">
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      ✅ Les masques AR suivent votre visage en temps réel grâce au tracking MediaPipe !
                     </p>
                   </div>
                 </TabsContent>
