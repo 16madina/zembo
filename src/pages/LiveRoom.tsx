@@ -478,20 +478,20 @@ const LiveRoom = () => {
         </div>
 
         {/* Side Actions - Always visible */}
-        <div className="absolute right-4 bottom-56 flex flex-col gap-4 z-20">
+        <div className="absolute right-4 bottom-56 flex flex-col gap-3 z-20">
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => toast.success("❤️ Vous aimez ce live !")}
-            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-destructive/80 transition-colors"
+            className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-destructive/80 transition-colors"
           >
-            <Heart className="w-6 h-6 text-foreground" />
+            <Heart className="w-5 h-5 text-foreground" />
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
+            className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
             onClick={() => setShowGiftPanel(true)}
           >
-            <Gift className="w-6 h-6 text-primary" />
+            <Gift className="w-5 h-5 text-primary" />
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -512,9 +512,9 @@ const LiveRoom = () => {
                 toast.success("Lien copié !");
               }
             }}
-            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
+            className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
           >
-            <Share2 className="w-6 h-6 text-foreground" />
+            <Share2 className="w-5 h-5 text-foreground" />
           </motion.button>
 
           {/* Stage Queue Button for Streamer (après Share) */}
@@ -522,11 +522,11 @@ const LiveRoom = () => {
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowStageQueue(true)}
-              className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors relative"
+              className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors relative"
             >
-              <Hand className="w-6 h-6 text-primary" />
+              <Hand className="w-5 h-5 text-primary" />
               {stageRequests.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-xs text-white font-bold">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full flex items-center justify-center text-[10px] text-white font-bold">
                   {stageRequests.length}
                 </span>
               )}
@@ -548,9 +548,9 @@ const LiveRoom = () => {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => toast.info("Plus d'options bientôt disponibles")}
-            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
+            className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
           >
-            <MoreVertical className="w-6 h-6 text-foreground" />
+            <MoreVertical className="w-5 h-5 text-foreground" />
           </motion.button>
         </div>
       </div>

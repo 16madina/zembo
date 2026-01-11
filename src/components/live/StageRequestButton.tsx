@@ -24,9 +24,9 @@ const StageRequestButton = ({
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={onLeave}
-        className="w-12 h-12 rounded-full bg-destructive/80 backdrop-blur-sm flex items-center justify-center active:bg-destructive transition-colors"
+        className="w-10 h-10 rounded-full bg-destructive/80 backdrop-blur-sm flex items-center justify-center active:bg-destructive transition-colors"
       >
-        <X className="w-6 h-6 text-white" />
+        <X className="w-5 h-5 text-white" />
       </motion.button>
     );
   }
@@ -36,10 +36,10 @@ const StageRequestButton = ({
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={onCancel}
-        className="w-12 h-12 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center relative"
+        className="w-10 h-10 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center relative"
       >
-        <Hand className="w-6 h-6 text-white" />
-        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+        <Hand className="w-5 h-5 text-white" />
+        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
       </motion.button>
     );
   }
@@ -50,14 +50,14 @@ const StageRequestButton = ({
       onClick={onRequest}
       disabled={isLoading}
       className={cn(
-        "w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors",
+        "w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors",
         isLoading && "opacity-50"
       )}
     >
       {isLoading ? (
-        <Loader2 className="w-6 h-6 text-foreground animate-spin" />
+        <Loader2 className="w-5 h-5 text-foreground animate-spin" />
       ) : (
-        <Hand className="w-6 h-6 text-foreground" />
+        <Hand className="w-5 h-5 text-foreground" />
       )}
     </motion.button>
   );
