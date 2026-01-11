@@ -19,6 +19,11 @@ export const useSoundEffects = () => {
 
   const playDiceSound = useCallback(() => {
     try {
+      // Trigger light haptic feedback on mobile
+      if (isNative) {
+        haptics.impact('light');
+      }
+      
       // Create new audio instance for each play to allow overlapping
       const audio = new Audio(diceRollSound);
       audio.volume = 0.7;
