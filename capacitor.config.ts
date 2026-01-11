@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.6edefc5ef7d2465fb971263eccd91309',
+  appId: 'com.zembo.app',
   appName: 'Zembo',
   webDir: 'dist',
   server: {
