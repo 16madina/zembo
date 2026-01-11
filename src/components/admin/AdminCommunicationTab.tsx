@@ -122,8 +122,54 @@ const AdminCommunicationTab = () => {
       return;
     }
 
+    if (!sendEmail && !sendPush) {
+      toast.error("Veuillez sélectionner au moins un canal d'envoi");
+      return;
+    }
+
     setIsSending(true);
     try {
+      let emailSentAt = null;
+      let emailResult = null;
+
+      // Send email if enabled
+      if (sendEmail) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+
+        if (!accessToken) {
+          throw new Error("Non authentifié");
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-admin-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              recipientType,
+              recipientId: recipientType === "individual" ? selectedUserId : undefined,
+              title: messageTitle,
+              message: messageContent,
+              notificationType,
+            }),
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Erreur lors de l'envoi de l'email");
+        }
+
+        emailSentAt = new Date().toISOString();
+        emailResult = result;
+      }
+
+      // Save notification to database
       const { error } = await supabase.from("admin_notifications").insert({
         sender_id: currentUser.id,
         recipient_id: recipientType === "individual" ? selectedUserId : null,
@@ -133,17 +179,24 @@ const AdminCommunicationTab = () => {
         notification_type: notificationType,
         is_email: sendEmail,
         is_push: sendPush,
-        email_sent_at: sendEmail ? new Date().toISOString() : null,
+        email_sent_at: emailSentAt,
         push_sent_at: sendPush ? new Date().toISOString() : null,
       });
 
       if (error) throw error;
 
-      toast.success(
-        recipientType === "all"
-          ? "Notification envoyée à tous les utilisateurs"
-          : "Notification envoyée avec succès"
-      );
+      // Build success message
+      let successMessage = "";
+      if (sendEmail && emailResult) {
+        successMessage = recipientType === "all"
+          ? `Email envoyé à ${emailResult.sent}/${emailResult.total} utilisateurs`
+          : "Email envoyé avec succès";
+      }
+      if (sendPush) {
+        successMessage += sendEmail ? " + Push enregistré" : "Notification push enregistrée";
+      }
+
+      toast.success(successMessage);
 
       // Reset form
       setMessageTitle("");
@@ -153,7 +206,7 @@ const AdminCommunicationTab = () => {
       setSendPush(true);
     } catch (error) {
       console.error("Error sending notification:", error);
-      toast.error("Erreur lors de l'envoi");
+      toast.error(error instanceof Error ? error.message : "Erreur lors de l'envoi");
     } finally {
       setIsSending(false);
     }
