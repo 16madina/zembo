@@ -361,6 +361,11 @@ const LiveRoom = () => {
                 <span className="font-semibold text-primary text-sm">{balance}</span>
               </div>
             )}
+            {!isStreamer && (
+              <Button size="icon" variant="ghost">
+                <Flag className="w-5 h-5" />
+              </Button>
+            )}
             {isStreamer ? (
               <Button
                 size="sm"
@@ -370,17 +375,14 @@ const LiveRoom = () => {
                 Terminer
               </Button>
             ) : (
-              <Button size="icon" variant="ghost">
-                <Flag className="w-5 h-5" />
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => navigate("/live")}
+              >
+                <X className="w-5 h-5" />
               </Button>
             )}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => navigate("/live")}
-            >
-              <X className="w-5 h-5" />
-            </Button>
           </div>
         </div>
 
