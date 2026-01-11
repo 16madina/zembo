@@ -179,12 +179,25 @@ const CreateLiveModal = ({
             onClick={onClose}
           />
           <motion.div
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[60] max-w-md mx-auto max-h-[90vh] overflow-y-auto"
-            initial={{ opacity: 0, scale: 0.95, y: "-45%" }}
-            animate={{ opacity: 1, scale: 1, y: "-50%" }}
-            exit={{ opacity: 0, scale: 0.95, y: "-45%" }}
+            className="fixed inset-x-0 bottom-0 z-[60] max-h-[90vh] overflow-y-auto"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                onClose();
+              }
+            }}
           >
-            <div className="glass rounded-3xl p-6 border border-border/50">
+            <div className="glass rounded-t-3xl p-6 border border-border/50 pb-8">
+              {/* Drag Handle */}
+              <div className="flex justify-center mb-4">
+                <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
+              </div>
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
