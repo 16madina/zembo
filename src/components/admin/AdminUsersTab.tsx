@@ -13,6 +13,8 @@ import {
   Crown,
   Coins,
   Gift,
+  MinusCircle,
+  XCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -97,6 +99,11 @@ const AdminUsersTab = () => {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [showGrantAccessDialog, setShowGrantAccessDialog] = useState(false);
+  const [showManageCoinsDialog, setShowManageCoinsDialog] = useState(false);
+  const [coinsAction, setCoinsAction] = useState<{ type: "add" | "remove"; amount: number }>({
+    type: "add",
+    amount: 0,
+  });
   const [banData, setBanData] = useState<BanData>({
     reason: "",
     description: "",
@@ -348,10 +355,98 @@ const AdminUsersTab = () => {
 
       setShowGrantAccessDialog(false);
       setGrantAccessData({ tier: "premium", duration: "30", coins: 0 });
-      setSelectedUser(null);
     } catch (error) {
       console.error("Error granting access:", error);
       toast.error("Erreur lors de l'attribution de l'accès");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRevokeSubscription = async () => {
+    if (!selectedUser || !currentUser) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from("user_subscriptions")
+        .update({
+          tier: "free",
+          is_active: false,
+          current_period_end: new Date().toISOString(),
+        })
+        .eq("user_id", selectedUser.user_id);
+
+      if (error) throw error;
+
+      setUserSubscriptions((prev) => ({
+        ...prev,
+        [selectedUser.user_id]: {
+          tier: "free",
+          is_active: false,
+          current_period_end: new Date().toISOString(),
+        },
+      }));
+
+      toast.success(`Abonnement de ${selectedUser.display_name || "l'utilisateur"} révoqué`);
+    } catch (error) {
+      console.error("Error revoking subscription:", error);
+      toast.error("Erreur lors de la révocation");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleManageCoins = async () => {
+    if (!selectedUser || !currentUser || coinsAction.amount <= 0) return;
+
+    setIsProcessing(true);
+    try {
+      const existingCoins = userCoins[selectedUser.user_id];
+      let newBalance = coinsAction.amount;
+
+      if (existingCoins) {
+        if (coinsAction.type === "add") {
+          newBalance = existingCoins.balance + coinsAction.amount;
+        } else {
+          newBalance = Math.max(0, existingCoins.balance - coinsAction.amount);
+        }
+
+        const { error } = await supabase
+          .from("user_coins")
+          .update({
+            balance: newBalance,
+            ...(coinsAction.type === "add" ? { total_earned: existingCoins.balance + coinsAction.amount } : { total_spent: coinsAction.amount }),
+          })
+          .eq("user_id", selectedUser.user_id);
+
+        if (error) throw error;
+      } else if (coinsAction.type === "add") {
+        const { error } = await supabase.from("user_coins").insert({
+          user_id: selectedUser.user_id,
+          balance: coinsAction.amount,
+          total_earned: coinsAction.amount,
+        });
+
+        if (error) throw error;
+      }
+
+      setUserCoins((prev) => ({
+        ...prev,
+        [selectedUser.user_id]: { balance: newBalance },
+      }));
+
+      toast.success(
+        coinsAction.type === "add"
+          ? `${coinsAction.amount} coins ajoutés à ${selectedUser.display_name || "l'utilisateur"}`
+          : `${coinsAction.amount} coins retirés de ${selectedUser.display_name || "l'utilisateur"}`
+      );
+
+      setShowManageCoinsDialog(false);
+      setCoinsAction({ type: "add", amount: 0 });
+    } catch (error) {
+      console.error("Error managing coins:", error);
+      toast.error("Erreur lors de la gestion des coins");
     } finally {
       setIsProcessing(false);
     }
@@ -632,13 +727,25 @@ const AdminUsersTab = () => {
               </div>
 
               {/* Subscription Info */}
-              {userSubscriptions[selectedUser.user_id] && userSubscriptions[selectedUser.user_id].tier !== "free" && (
+              {userSubscriptions[selectedUser.user_id] && userSubscriptions[selectedUser.user_id].tier !== "free" && userSubscriptions[selectedUser.user_id].is_active && (
                 <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Crown className="w-4 h-4 text-purple-400" />
-                    <span className="font-medium text-purple-400">
-                      Abonnement {userSubscriptions[selectedUser.user_id].tier.toUpperCase()}
-                    </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-purple-400" />
+                      <span className="font-medium text-purple-400">
+                        Abonnement {userSubscriptions[selectedUser.user_id].tier.toUpperCase()}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      onClick={handleRevokeSubscription}
+                      disabled={isProcessing}
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Révoquer
+                    </Button>
                   </div>
                   {userSubscriptions[selectedUser.user_id].current_period_end && (
                     <p className="text-sm text-muted-foreground">
@@ -650,16 +757,25 @@ const AdminUsersTab = () => {
               )}
 
               {/* Coins Info */}
-              {userCoins[selectedUser.user_id] && (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Coins className="w-4 h-4 text-amber-400" />
                     <span className="font-medium text-amber-400">
-                      {userCoins[selectedUser.user_id].balance} coins
+                      {userCoins[selectedUser.user_id]?.balance || 0} coins
                     </span>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                    onClick={() => setShowManageCoinsDialog(true)}
+                  >
+                    <Coins className="w-4 h-4 mr-1" />
+                    Gérer
+                  </Button>
                 </div>
-              )}
+              </div>
 
               <div className="flex gap-2 pt-4">
                 <Button
@@ -904,6 +1020,114 @@ const AdminUsersTab = () => {
                 <Gift className="w-4 h-4 mr-2" />
               )}
               Accorder l'accès
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Coins Dialog */}
+      <Dialog open={showManageCoinsDialog} onOpenChange={setShowManageCoinsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="w-5 h-5 text-amber-400" />
+              Gérer les coins
+            </DialogTitle>
+            <DialogDescription>
+              Ajouter ou retirer des coins pour {selectedUser?.display_name || "cet utilisateur"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">Solde actuel</p>
+              <p className="text-2xl font-bold text-amber-400">
+                {selectedUser ? userCoins[selectedUser.user_id]?.balance || 0 : 0} coins
+              </p>
+            </div>
+
+            <div>
+              <Label>Action</Label>
+              <Select
+                value={coinsAction.type}
+                onValueChange={(value: "add" | "remove") =>
+                  setCoinsAction((prev) => ({ ...prev, type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="add">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-green-400" />
+                      Ajouter des coins
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="remove">
+                    <div className="flex items-center gap-2">
+                      <MinusCircle className="w-4 h-4 text-red-400" />
+                      Retirer des coins
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Montant</Label>
+              <Input
+                type="number"
+                placeholder="0"
+                min="1"
+                value={coinsAction.amount || ""}
+                onChange={(e) =>
+                  setCoinsAction((prev) => ({
+                    ...prev,
+                    amount: parseInt(e.target.value) || 0,
+                  }))
+                }
+              />
+              {coinsAction.type === "remove" && selectedUser && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nouveau solde : {Math.max(0, (userCoins[selectedUser.user_id]?.balance || 0) - coinsAction.amount)} coins
+                </p>
+              )}
+              {coinsAction.type === "add" && selectedUser && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nouveau solde : {(userCoins[selectedUser.user_id]?.balance || 0) + coinsAction.amount} coins
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowManageCoinsDialog(false);
+                setCoinsAction({ type: "add", amount: 0 });
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleManageCoins}
+              disabled={isProcessing || coinsAction.amount <= 0}
+              className={
+                coinsAction.type === "add"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                  : "bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+              }
+            >
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : coinsAction.type === "add" ? (
+                <Gift className="w-4 h-4 mr-2" />
+              ) : (
+                <MinusCircle className="w-4 h-4 mr-2" />
+              )}
+              {coinsAction.type === "add" ? "Ajouter" : "Retirer"} {coinsAction.amount || 0} coins
             </Button>
           </DialogFooter>
         </DialogContent>
