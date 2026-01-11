@@ -15,6 +15,7 @@ import {
   Clock,
   AlertTriangle,
   ChevronRight,
+  Download,
   X,
   Check,
   Info,
@@ -100,6 +101,11 @@ const translations = {
     dataPrivacy: "Confidentialité des données",
     consequences: "Sanctions",
     reportingAndBlocking: "Signalement & blocage",
+    exportData: "Exporter mes données",
+    exportDataDescription: "Télécharger toutes vos données personnelles (RGPD)",
+    exporting: "Export en cours...",
+    exportSuccess: "Vos données ont été exportées avec succès",
+    exportError: "Erreur lors de l'export des données",
   },
   en: {
     settings: "Settings",
@@ -140,6 +146,11 @@ const translations = {
     dataPrivacy: "Data Privacy",
     consequences: "Consequences",
     reportingAndBlocking: "Reporting & Blocking",
+    exportData: "Export my data",
+    exportDataDescription: "Download all your personal data (GDPR)",
+    exporting: "Exporting...",
+    exportSuccess: "Your data has been exported successfully",
+    exportError: "Error exporting data",
   },
 };
 
@@ -476,6 +487,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
   const [language, setLanguage] = useState<Language>("fr");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const t = translations[language];
   const dataInfo = dataCollectionInfo[language];
@@ -567,7 +579,57 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
     }
   };
 
-  const SettingRow = ({ 
+  const handleExportData = async () => {
+    if (!user) return;
+    
+    setIsExporting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        toast.error(t.exportError);
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-user-data`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      const data = await response.json();
+      
+      // Create and download the file
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `zembo-data-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success(t.exportSuccess);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error(t.exportError);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const SettingRow = ({
     icon, 
     label, 
     description,
@@ -790,6 +852,36 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   <p className="text-sm text-muted-foreground mt-1">{t.dataRetentionInfo}</p>
                 </div>
               </div>
+            </div>
+
+            {/* Export Data Section (GDPR) */}
+            <div className="glass-strong rounded-2xl p-4">
+              <SettingRow
+                icon={<Download className="w-5 h-5" />}
+                label={t.exportData}
+                description={t.exportDataDescription}
+                action={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportData}
+                    disabled={isExporting}
+                    className="flex items-center gap-2"
+                  >
+                    {isExporting ? (
+                      <>
+                        <span className="animate-spin">⏳</span>
+                        {t.exporting}
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        {language === "fr" ? "Télécharger" : "Download"}
+                      </>
+                    )}
+                  </Button>
+                }
+              />
             </div>
 
             {/* Community Guidelines Section */}
