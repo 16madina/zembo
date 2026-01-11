@@ -15,6 +15,8 @@ import {
   Gift,
   MinusCircle,
   XCircle,
+  Filter,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -96,6 +98,15 @@ const AdminUsersTab = () => {
   const [userCoins, setUserCoins] = useState<Record<string, UserCoins>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    gender: "all",
+    ageMin: "",
+    ageMax: "",
+    verified: "all",
+    subscription: "all",
+    banned: "all",
+  });
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [showGrantAccessDialog, setShowGrantAccessDialog] = useState(false);
@@ -486,12 +497,61 @@ const AdminUsersTab = () => {
 
   const filteredUsers = users.filter((user) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       (user.display_name?.toLowerCase().includes(query) || false) ||
       (user.email?.toLowerCase().includes(query) || false) ||
-      (user.location?.toLowerCase().includes(query) || false)
-    );
+      (user.location?.toLowerCase().includes(query) || false);
+
+    // Gender filter
+    const matchesGender =
+      filters.gender === "all" || user.gender === filters.gender;
+
+    // Age filter
+    const matchesAge =
+      (!filters.ageMin || (user.age && user.age >= parseInt(filters.ageMin))) &&
+      (!filters.ageMax || (user.age && user.age <= parseInt(filters.ageMax)));
+
+    // Verified filter
+    const matchesVerified =
+      filters.verified === "all" ||
+      (filters.verified === "verified" && user.is_verified) ||
+      (filters.verified === "unverified" && !user.is_verified);
+
+    // Subscription filter
+    const userSub = userSubscriptions[user.user_id];
+    const matchesSubscription =
+      filters.subscription === "all" ||
+      (filters.subscription === "free" && (!userSub || userSub.tier === "free" || !userSub.is_active)) ||
+      (filters.subscription === "premium" && userSub?.tier === "premium" && userSub.is_active) ||
+      (filters.subscription === "vip" && userSub?.tier === "vip" && userSub.is_active);
+
+    // Banned filter
+    const matchesBanned =
+      filters.banned === "all" ||
+      (filters.banned === "banned" && user.is_banned) ||
+      (filters.banned === "active" && !user.is_banned);
+
+    return matchesSearch && matchesGender && matchesAge && matchesVerified && matchesSubscription && matchesBanned;
   });
+
+  const activeFiltersCount = [
+    filters.gender !== "all",
+    filters.ageMin !== "" || filters.ageMax !== "",
+    filters.verified !== "all",
+    filters.subscription !== "all",
+    filters.banned !== "all",
+  ].filter(Boolean).length;
+
+  const resetFilters = () => {
+    setFilters({
+      gender: "all",
+      ageMin: "",
+      ageMax: "",
+      verified: "all",
+      subscription: "all",
+      banned: "all",
+    });
+  };
 
   if (isLoading) {
     return (
@@ -507,16 +567,158 @@ const AdminUsersTab = () => {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher un utilisateur..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Filters Bar */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un utilisateur..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button
+          variant={showFilters ? "secondary" : "outline"}
+          onClick={() => setShowFilters(!showFilters)}
+          className="relative"
+        >
+          <Filter className="w-4 h-4 mr-2" />
+          Filtres
+          {activeFiltersCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+              {activeFiltersCount}
+            </span>
+          )}
+        </Button>
       </div>
+
+      {/* Advanced Filters Panel */}
+      {showFilters && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="p-4 rounded-lg border border-border bg-card/50"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              Filtres avancés
+            </h3>
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                <X className="w-4 h-4 mr-1" />
+                Réinitialiser
+              </Button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {/* Gender Filter */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Genre</Label>
+              <Select
+                value={filters.gender}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, gender: value }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="homme">Homme</SelectItem>
+                  <SelectItem value="femme">Femme</SelectItem>
+                  <SelectItem value="lgbt">LGBT+</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Age Min */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Âge min</Label>
+              <Input
+                type="number"
+                placeholder="18"
+                min="18"
+                max="99"
+                value={filters.ageMin}
+                onChange={(e) => setFilters((prev) => ({ ...prev, ageMin: e.target.value }))}
+                className="h-9"
+              />
+            </div>
+
+            {/* Age Max */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Âge max</Label>
+              <Input
+                type="number"
+                placeholder="99"
+                min="18"
+                max="99"
+                value={filters.ageMax}
+                onChange={(e) => setFilters((prev) => ({ ...prev, ageMax: e.target.value }))}
+                className="h-9"
+              />
+            </div>
+
+            {/* Verified Filter */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Vérification</Label>
+              <Select
+                value={filters.verified}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, verified: value }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="verified">Vérifiés</SelectItem>
+                  <SelectItem value="unverified">Non vérifiés</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Subscription Filter */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Abonnement</Label>
+              <Select
+                value={filters.subscription}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, subscription: value }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="free">Gratuit</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Banned Filter */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Statut</Label>
+              <Select
+                value={filters.banned}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, banned: value }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="active">Actifs</SelectItem>
+                  <SelectItem value="banned">Bannis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Users Table */}
       <Card className="glass-strong">
