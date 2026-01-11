@@ -53,7 +53,7 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
         {/* Background glow */}
         <ellipse cx="140" cy="170" rx="80" ry="40" fill="url(#handGlow)" />
 
-        {/* Golden Hand - more realistic open palm */}
+        {/* Elegant Golden Hand with 5 defined fingers */}
         <motion.g
           animate={{ 
             y: [0, -8, 0],
@@ -62,71 +62,160 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           style={{ originX: "140px", originY: "200px" }}
         >
-          {/* Palm base */}
+          {/* Gradient for hand */}
+          <defs>
+            <linearGradient id="handGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="hsl(var(--primary))" />
+              <stop offset="50%" stopColor="hsl(45 93% 55%)" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" />
+            </linearGradient>
+            <linearGradient id="handHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="hsl(45 93% 75%)" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="transparent" />
+            </linearGradient>
+          </defs>
+
+          {/* Palm - elegant curved shape */}
           <path
-            d="M90 220 
-               C85 195 88 175 95 160
-               L95 155
-               C95 150 100 145 107 145
-               L107 130
-               C107 122 113 116 121 116
-               C129 116 135 122 135 130
-               L135 140
-               L138 125
-               C140 117 147 112 155 114
-               C163 116 168 123 166 131
-               L162 150
-               L168 135
-               C171 127 179 123 187 126
-               C195 129 199 137 196 145
-               L185 175
-               L193 165
-               C198 158 208 157 215 163
-               C222 169 223 179 217 186
-               L175 220
+            d="M100 220 
+               C92 205 90 190 92 178
+               Q94 168 100 160
+               L100 158
+               Q100 155 102 153
+               L180 153
+               Q185 155 185 160
+               L185 165
+               Q190 175 192 190
+               C195 210 190 220 180 220
                Z"
-            fill="hsl(var(--primary))"
-            stroke="hsl(var(--primary-foreground) / 0.2)"
-            strokeWidth="1.5"
+            fill="url(#handGradient)"
+            stroke="hsl(35 70% 35%)"
+            strokeWidth="1"
           />
           
-          {/* Thumb */}
+          {/* Palm highlight */}
           <path
-            d="M95 160 
-               C80 155 70 165 68 180
-               C66 195 75 205 90 210"
-            fill="hsl(var(--primary))"
-            stroke="hsl(var(--primary-foreground) / 0.2)"
-            strokeWidth="1.5"
+            d="M105 170 Q140 165 175 170 Q175 180 140 180 Q105 180 105 170 Z"
+            fill="url(#handHighlight)"
           />
-          
-          {/* Palm lines */}
+
+          {/* Pinky finger (5th) */}
           <path
-            d="M105 185 Q125 175 145 183"
-            stroke="hsl(var(--primary-foreground) / 0.25)"
-            strokeWidth="1.5"
+            d="M100 158 
+               Q95 155 93 148
+               L93 120
+               Q93 112 98 112
+               Q103 112 103 120
+               L103 148
+               Q103 152 100 155"
+            fill="url(#handGradient)"
+            stroke="hsl(35 70% 35%)"
+            strokeWidth="1"
+          />
+          <path d="M95 130 Q98 128 101 130" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          <path d="M95 138 Q98 136 101 138" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          
+          {/* Ring finger (4th) */}
+          <path
+            d="M115 155 
+               Q110 152 108 145
+               L108 105
+               Q108 95 115 95
+               Q122 95 122 105
+               L122 145
+               Q122 150 118 153"
+            fill="url(#handGradient)"
+            stroke="hsl(35 70% 35%)"
+            strokeWidth="1"
+          />
+          <path d="M111 115 Q115 113 119 115" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          <path d="M111 125 Q115 123 119 125" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          
+          {/* Middle finger (3rd) - tallest */}
+          <path
+            d="M138 155 
+               Q133 152 131 145
+               L131 90
+               Q131 80 140 80
+               Q149 80 149 90
+               L149 145
+               Q149 150 145 153"
+            fill="url(#handGradient)"
+            stroke="hsl(35 70% 35%)"
+            strokeWidth="1"
+          />
+          <path d="M134 100 Q140 98 146 100" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          <path d="M134 112 Q140 110 146 112" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          
+          {/* Index finger (2nd) */}
+          <path
+            d="M163 155 
+               Q158 152 156 145
+               L156 100
+               Q156 90 164 90
+               Q172 90 172 100
+               L172 145
+               Q172 150 168 153"
+            fill="url(#handGradient)"
+            stroke="hsl(35 70% 35%)"
+            strokeWidth="1"
+          />
+          <path d="M159 110 Q164 108 170 110" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          <path d="M159 122 Q164 120 170 122" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          
+          {/* Thumb - curved and elegant */}
+          <path
+            d="M100 175 
+               Q90 172 82 178
+               L70 195
+               Q62 205 68 215
+               Q75 225 88 218
+               L100 208
+               Q105 200 100 185"
+            fill="url(#handGradient)"
+            stroke="hsl(35 70% 35%)"
+            strokeWidth="1"
+          />
+          <path d="M78 198 Q82 195 86 198" stroke="hsl(35 70% 35% / 0.5)" strokeWidth="0.8" fill="none" />
+          
+          {/* Fingernails - subtle shine */}
+          <ellipse cx="98" cy="114" rx="3" ry="4" fill="hsl(45 50% 85%)" opacity="0.8" />
+          <ellipse cx="115" cy="98" rx="4" ry="5" fill="hsl(45 50% 85%)" opacity="0.8" />
+          <ellipse cx="140" cy="83" rx="5" ry="5" fill="hsl(45 50% 85%)" opacity="0.8" />
+          <ellipse cx="164" cy="93" rx="4" ry="5" fill="hsl(45 50% 85%)" opacity="0.8" />
+          <ellipse cx="75" cy="202" rx="4" ry="3" fill="hsl(45 50% 85%)" opacity="0.8" transform="rotate(-30 75 202)" />
+          
+          {/* Palm lines - elegant curves */}
+          <path
+            d="M108 180 Q135 172 165 180"
+            stroke="hsl(35 70% 35% / 0.3)"
+            strokeWidth="1.2"
             fill="none"
             strokeLinecap="round"
           />
           <path
-            d="M100 195 Q125 185 155 193"
-            stroke="hsl(var(--primary-foreground) / 0.25)"
-            strokeWidth="1.5"
+            d="M105 190 Q135 182 170 190"
+            stroke="hsl(35 70% 35% / 0.3)"
+            strokeWidth="1.2"
             fill="none"
             strokeLinecap="round"
           />
           <path
-            d="M110 205 Q130 198 150 203"
-            stroke="hsl(var(--primary-foreground) / 0.25)"
-            strokeWidth="1.5"
+            d="M108 200 Q135 195 168 200"
+            stroke="hsl(35 70% 35% / 0.3)"
+            strokeWidth="1"
             fill="none"
             strokeLinecap="round"
           />
           
-          {/* Finger creases */}
-          <path d="M107 142 Q110 140 113 142" stroke="hsl(var(--primary-foreground) / 0.2)" strokeWidth="1" fill="none" />
-          <path d="M135 137 Q138 135 141 137" stroke="hsl(var(--primary-foreground) / 0.2)" strokeWidth="1" fill="none" />
-          <path d="M162 147 Q165 145 168 147" stroke="hsl(var(--primary-foreground) / 0.2)" strokeWidth="1" fill="none" />
+          {/* Life line */}
+          <path
+            d="M100 175 Q115 195 110 215"
+            stroke="hsl(35 70% 35% / 0.25)"
+            strokeWidth="1"
+            fill="none"
+            strokeLinecap="round"
+          />
         </motion.g>
 
         {/* Dice 1 - Left */}
