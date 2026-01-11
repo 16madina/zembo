@@ -31,7 +31,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
           transition={{ duration: 0.6 }}
           className="flex justify-center pt-8"
         >
-          <ZemboLogo />
+          <ZemboLogo size="lg" />
         </motion.div>
 
         {/* Spacer */}
