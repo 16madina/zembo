@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Ban,
   Loader2,
+  Settings,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -21,6 +22,7 @@ import AdminReportsTab from "@/components/admin/AdminReportsTab";
 import AdminUsersTab from "@/components/admin/AdminUsersTab";
 import AdminCommunicationTab from "@/components/admin/AdminCommunicationTab";
 import AdminBansTab from "@/components/admin/AdminBansTab";
+import AdminSettingsTab from "@/components/admin/AdminSettingsTab";
 
 interface Report {
   id: string;
@@ -163,7 +165,7 @@ const Admin = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden sm:inline">Signalements</span>
@@ -179,6 +181,10 @@ const Admin = () => {
             <TabsTrigger value="communication" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Messages</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Paramètres</span>
             </TabsTrigger>
           </TabsList>
 
@@ -196,6 +202,10 @@ const Admin = () => {
 
           <TabsContent value="communication">
             <AdminCommunicationTab />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <AdminSettingsTab />
           </TabsContent>
         </Tabs>
       </div>
