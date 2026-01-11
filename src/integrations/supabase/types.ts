@@ -437,6 +437,7 @@ export type Database = {
           email_verification_sent_at: string | null
           email_verification_token: string | null
           email_verified: boolean | null
+          fcm_token: string | null
           gender: string | null
           height: string | null
           id: string
@@ -463,6 +464,7 @@ export type Database = {
           email_verification_sent_at?: string | null
           email_verification_token?: string | null
           email_verified?: boolean | null
+          fcm_token?: string | null
           gender?: string | null
           height?: string | null
           id?: string
@@ -489,6 +491,7 @@ export type Database = {
           email_verification_sent_at?: string | null
           email_verification_token?: string | null
           email_verified?: boolean | null
+          fcm_token?: string | null
           gender?: string | null
           height?: string | null
           id?: string
