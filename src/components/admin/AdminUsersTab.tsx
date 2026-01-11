@@ -563,7 +563,7 @@ const AdminUsersTab = () => {
 
       {/* User Detail Dialog */}
       <Dialog
-        open={!!selectedUser && !showBanDialog}
+        open={!!selectedUser && !showBanDialog && !showGrantAccessDialog}
         onOpenChange={() => setSelectedUser(null)}
       >
         <DialogContent className="max-w-md">
