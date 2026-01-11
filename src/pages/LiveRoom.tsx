@@ -281,9 +281,9 @@ const LiveRoom = () => {
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${live.streamer_id}`;
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col">
-      {/* Video Area */}
-      <div className="flex-1 relative">
+    <div className="fixed inset-0 bg-black">
+      {/* Video Area - Full Screen */}
+      <div className="absolute inset-0">
         <LiveKitVideo
           isStreamer={isStreamer}
           isVideoOff={isVideoOff}
@@ -396,10 +396,10 @@ const LiveRoom = () => {
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="h-64 bg-background/95 backdrop-blur-sm border-t border-border">
+      {/* Chat Area - Compact overlay */}
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background/95 via-background/80 to-transparent">
         {/* Messages */}
-        <div className="h-48 overflow-y-auto p-4 space-y-3">
+        <div className="h-32 overflow-y-auto px-4 pt-4 space-y-2">
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
@@ -429,13 +429,13 @@ const LiveRoom = () => {
         </div>
 
         {/* Message Input */}
-        <div className="p-4 border-t border-border flex gap-2">
+        <div className="px-4 pb-4 flex gap-2">
           <Input
             placeholder="Envoyer un message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-            className="flex-1"
+            className="flex-1 bg-background/50 backdrop-blur-sm border-border/50"
             disabled={!user}
           />
           <Button
