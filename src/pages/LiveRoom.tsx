@@ -11,21 +11,20 @@ import {
   Send,
   Flag,
   Coins,
-  Wifi,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLives, type Live } from "@/hooks/useLives";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
-import { useLiveKit } from "@/hooks/useLiveKit";
+import { useLocalStream } from "@/hooks/useLocalStream";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
-import LiveKitVideo from "@/components/live/LiveKitVideo";
+import LocalVideoPlayer from "@/components/live/LocalVideoPlayer";
 import StreamControls from "@/components/live/StreamControls";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -55,25 +54,19 @@ const LiveRoom = () => {
     senderName: string;
   } | null>(null);
 
-  // LiveKit connection (uses room name from live data)
-  const roomName = live?.livekit_room_name || id || "";
+  // Local stream for streamer (fallback without LiveKit)
   const {
-    isConnected,
-    isConnecting,
+    stream,
     isMuted,
     isVideoOff,
-    remoteVideoTrack,
-    connect,
-    disconnect,
+    isInitialized,
+    initCamera,
+    stopStream,
     toggleMute,
     toggleVideo,
     switchCamera,
-    setLocalVideoRef,
-    setRemoteVideoRef,
-  } = useLiveKit({
-    roomName,
-    isStreamer,
-  });
+    setVideoRef,
+  } = useLocalStream();
 
   // Fetch live data
   useEffect(() => {
@@ -116,21 +109,21 @@ const LiveRoom = () => {
 
     fetchLive();
 
-    // Cleanup: decrement viewer count and disconnect LiveKit
+    // Cleanup: decrement viewer count and stop stream
     return () => {
       if (id && user && !isStreamer) {
         updateViewerCount(id, false);
       }
-      disconnect();
+      stopStream();
     };
   }, [id, user]);
 
-  // Auto-connect to LiveKit when live data is loaded
+  // Auto-start camera for streamer
   useEffect(() => {
-    if (live && !isConnected && !isConnecting && roomName) {
-      connect();
+    if (live && isStreamer && !isInitialized) {
+      initCamera();
     }
-  }, [live, isConnected, isConnecting, roomName, connect]);
+  }, [live, isStreamer, isInitialized, initCamera]);
 
   // Fetch and subscribe to messages
   useEffect(() => {
@@ -284,17 +277,15 @@ const LiveRoom = () => {
     <div className="fixed inset-0 bg-black">
       {/* Video Area - Full Screen */}
       <div className="absolute inset-0">
-        <LiveKitVideo
+        <LocalVideoPlayer
           isStreamer={isStreamer}
           isVideoOff={isVideoOff}
-          isConnected={isConnected}
-          isConnecting={isConnecting}
+          isInitialized={isInitialized}
+          stream={stream}
           streamerId={live.streamer_id}
           streamerName={live.streamer?.display_name}
           streamerAvatar={live.streamer?.avatar_url}
-          remoteVideoTrack={remoteVideoTrack}
-          setLocalVideoRef={setLocalVideoRef}
-          setRemoteVideoRef={setRemoteVideoRef}
+          setVideoRef={setVideoRef}
         />
 
         {/* Stream Controls for Streamer */}
