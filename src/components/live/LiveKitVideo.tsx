@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Camera, CameraOff, Wifi, WifiOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,9 +31,65 @@ const LiveKitVideo = ({
 }: LiveKitVideoProps) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [hasLocalVideo, setHasLocalVideo] = useState(false);
 
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${streamerId}`;
 
+  // Initialize local camera for streamer (fallback mode when LiveKit not connected)
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+
+    const initLocalCamera = async () => {
+      if (isStreamer && !isVideoOff && !isConnected) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: 1280, height: 720 },
+            audio: true,
+          });
+          setLocalStream(stream);
+          setHasLocalVideo(true);
+
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+          }
+        } catch (err) {
+          console.error("Camera access error:", err);
+          setHasLocalVideo(false);
+        }
+      }
+    };
+
+    initLocalCamera();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [isStreamer, isVideoOff, isConnected]);
+
+  // Update video element when stream changes
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  // Handle video off - stop tracks
+  useEffect(() => {
+    if (localStream && isVideoOff) {
+      localStream.getVideoTracks().forEach((track) => {
+        track.enabled = false;
+      });
+    } else if (localStream && !isVideoOff) {
+      localStream.getVideoTracks().forEach((track) => {
+        track.enabled = true;
+      });
+    }
+  }, [isVideoOff, localStream]);
+
+  // Set refs for LiveKit
   useEffect(() => {
     if (localVideoRef.current) {
       setLocalVideoRef(localVideoRef.current);
@@ -46,7 +102,81 @@ const LiveKitVideo = ({
     }
   }, [setRemoteVideoRef]);
 
-  // Connecting state
+  // Streamer view - show local camera
+  if (isStreamer) {
+    if (!isVideoOff && (hasLocalVideo || isConnected)) {
+      return (
+        <div className="absolute inset-0 bg-black">
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+            style={{ transform: "scaleX(-1)" }}
+          />
+          {/* Live indicator */}
+          <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm z-10">
+            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-white">EN DIRECT</span>
+          </div>
+          {/* Connection status */}
+          <div className="absolute top-16 right-16 flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 backdrop-blur-sm z-10">
+            {isConnected ? (
+              <>
+                <Wifi className="w-3 h-3 text-green-500" />
+                <span className="text-xs text-green-500">LiveKit</span>
+              </>
+            ) : (
+              <>
+                <Camera className="w-3 h-3 text-yellow-500" />
+                <span className="text-xs text-yellow-500">Local</span>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Camera off state for streamer
+    if (isVideoOff) {
+      return (
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center"
+          >
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <CameraOff className="w-12 h-12 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground">Caméra désactivée</p>
+          </motion.div>
+          {/* Still show live indicator */}
+          <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
+            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-white">EN DIRECT</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Connecting/initializing state
+    return (
+      <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="w-16 h-16 mx-auto mb-4 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Initialisation de la caméra...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Viewer view - connecting state
   if (isConnecting) {
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
@@ -62,73 +192,6 @@ const LiveKitVideo = ({
     );
   }
 
-  // Not connected state
-  if (!isConnected) {
-    return (
-      <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-            <WifiOff className="w-10 h-10 text-muted-foreground" />
-          </div>
-          <p className="text-muted-foreground">Non connecté au stream</p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Streamer view
-  if (isStreamer) {
-    if (!isVideoOff) {
-      return (
-        <div className="absolute inset-0 bg-black">
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-            style={{ transform: "scaleX(-1)" }}
-          />
-          {/* Live indicator */}
-          <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-white">EN DIRECT</span>
-          </div>
-          {/* Connection status */}
-          <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 backdrop-blur-sm">
-            <Wifi className="w-3 h-3 text-green-500" />
-            <span className="text-xs text-green-500">Connecté</span>
-          </div>
-        </div>
-      );
-    }
-
-    // Camera off state for streamer
-    return (
-      <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="text-center"
-        >
-          <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-            <CameraOff className="w-12 h-12 text-muted-foreground" />
-          </div>
-          <p className="text-muted-foreground">Caméra désactivée</p>
-        </motion.div>
-        {/* Still show live indicator */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
-          <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-white">EN DIRECT</span>
-        </div>
-      </div>
-    );
-  }
-
   // Viewer view - show remote video
   if (remoteVideoTrack) {
     return (
@@ -140,7 +203,7 @@ const LiveKitVideo = ({
           className="w-full h-full object-cover"
         />
         {/* Live indicator */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
+        <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
           <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
           <span className="text-xs font-bold text-white">EN DIRECT</span>
         </div>
