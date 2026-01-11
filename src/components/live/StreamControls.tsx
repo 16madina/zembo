@@ -24,7 +24,7 @@ const StreamControls = ({
   if (!isStreamer) return null;
 
   return (
-    <div className="absolute bottom-24 left-0 right-0 flex justify-center gap-4 z-30">
+    <div className="absolute bottom-52 left-0 right-0 flex justify-center gap-4 z-30">
       <button
         type="button"
         onClick={(e) => {
