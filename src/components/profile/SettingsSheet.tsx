@@ -23,17 +23,22 @@ import {
   Users,
   Heart,
   Eye,
+  EyeOff,
   Ban,
   Flag,
   ShieldCheck,
   ShieldAlert,
   Baby,
   UserX,
+  MapPin,
+  MessageCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,103 +57,17 @@ import {
 } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
-type Language = "fr" | "en";
 type Theme = "dark" | "light" | "system";
+type ProfileVisibility = "all" | "matches" | "invisible";
+type ContactPermission = "anyone" | "matches" | "verified";
+type GeoBlocking = "none" | "country" | "nearby";
 
 interface SettingsSheetProps {
   children?: React.ReactNode;
 }
-
-const translations = {
-  fr: {
-    settings: "Paramètres",
-    notifications: "Notifications",
-    pushNotifications: "Notifications push",
-    pushDescription: "Recevoir des alertes pour les matchs, messages et activités",
-    appearance: "Apparence",
-    darkMode: "Mode sombre",
-    lightMode: "Mode clair",
-    systemMode: "Système",
-    language: "Langue",
-    french: "Français",
-    english: "English",
-    privacyAndSecurity: "Confidentialité et sécurité",
-    privacyPolicy: "Politique de confidentialité",
-    termsOfService: "Conditions d'utilisation",
-    dataCollection: "Collecte des données",
-    accountManagement: "Gestion du compte",
-    deleteAccount: "Supprimer mon compte",
-    deleteAccountWarning: "Cette action est irréversible",
-    dataRetention: "Conservation des données",
-    dataRetentionInfo: "Vos données sont supprimées 90 jours après la suppression du compte",
-    storeGuidelines: "Directives des stores",
-    confirmDelete: "Confirmer la suppression",
-    deleteConfirmMessage: "Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Toutes vos données seront supprimées après 90 jours conformément à notre politique de conservation.",
-    cancel: "Annuler",
-    delete: "Supprimer",
-    saved: "Paramètres sauvegardés",
-    communityGuidelines: "Règles de la communauté",
-    safetyTips: "Conseils de sécurité",
-    contentModeration: "Modération du contenu",
-    userSafety: "Sécurité des utilisateurs",
-    childSafety: "Protection des mineurs",
-    contentPolicy: "Politique de contenu",
-    userProtection: "Protection des utilisateurs",
-    dataPrivacy: "Confidentialité des données",
-    consequences: "Sanctions",
-    reportingAndBlocking: "Signalement & blocage",
-    exportData: "Exporter mes données",
-    exportDataDescription: "Télécharger toutes vos données personnelles (RGPD)",
-    exporting: "Export en cours...",
-    exportSuccess: "Vos données ont été exportées avec succès",
-    exportError: "Erreur lors de l'export des données",
-  },
-  en: {
-    settings: "Settings",
-    notifications: "Notifications",
-    pushNotifications: "Push notifications",
-    pushDescription: "Receive alerts for matches, messages and activities",
-    appearance: "Appearance",
-    darkMode: "Dark mode",
-    lightMode: "Light mode",
-    systemMode: "System",
-    language: "Language",
-    french: "Français",
-    english: "English",
-    privacyAndSecurity: "Privacy & Security",
-    privacyPolicy: "Privacy Policy",
-    termsOfService: "Terms of Service",
-    dataCollection: "Data Collection",
-    accountManagement: "Account Management",
-    deleteAccount: "Delete my account",
-    deleteAccountWarning: "This action is irreversible",
-    dataRetention: "Data Retention",
-    dataRetentionInfo: "Your data is deleted 90 days after account deletion",
-    storeGuidelines: "Store Guidelines",
-    confirmDelete: "Confirm deletion",
-    deleteConfirmMessage: "Are you sure you want to permanently delete your account? All your data will be deleted after 90 days according to our retention policy.",
-    cancel: "Cancel",
-    delete: "Delete",
-    saved: "Settings saved",
-    communityGuidelines: "Community Guidelines",
-    safetyTips: "Safety Tips",
-    contentModeration: "Content Moderation",
-    userSafety: "User Safety",
-    childSafety: "Child Safety",
-    contentPolicy: "Content Policy",
-    userProtection: "User Protection",
-    dataPrivacy: "Data Privacy",
-    consequences: "Consequences",
-    reportingAndBlocking: "Reporting & Blocking",
-    exportData: "Export my data",
-    exportDataDescription: "Download all your personal data (GDPR)",
-    exporting: "Exporting...",
-    exportSuccess: "Your data has been exported successfully",
-    exportError: "Error exporting data",
-  },
-};
 
 const dataCollectionInfo = {
   fr: [
@@ -545,28 +464,36 @@ const safetyTips = {
 
 export const SettingsSheet = ({ children }: SettingsSheetProps) => {
   const { user, signOut } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
-  const [language, setLanguage] = useState<Language>("fr");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTermsOfService, setShowTermsOfService] = useState(false);
+  
+  // Advanced Privacy Settings
+  const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>("all");
+  const [contactPermission, setContactPermission] = useState<ContactPermission>("anyone");
+  const [geoBlocking, setGeoBlocking] = useState<GeoBlocking>("none");
 
-  const t = translations[language];
   const dataInfo = dataCollectionInfo[language];
 
   useEffect(() => {
     // Load saved preferences from localStorage
-    const savedLang = localStorage.getItem("zembo-language") as Language;
     const savedTheme = localStorage.getItem("zembo-theme") as Theme;
     const savedPush = localStorage.getItem("zembo-push");
+    const savedVisibility = localStorage.getItem("zembo-profile-visibility") as ProfileVisibility;
+    const savedContact = localStorage.getItem("zembo-contact-permission") as ContactPermission;
+    const savedGeo = localStorage.getItem("zembo-geo-blocking") as GeoBlocking;
 
-    if (savedLang) setLanguage(savedLang);
     if (savedTheme) setTheme(savedTheme);
     if (savedPush) setPushEnabled(savedPush === "true");
+    if (savedVisibility) setProfileVisibility(savedVisibility);
+    if (savedContact) setContactPermission(savedContact);
+    if (savedGeo) setGeoBlocking(savedGeo);
   }, []);
 
   const handlePushToggle = (enabled: boolean) => {
@@ -603,8 +530,25 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
-    localStorage.setItem("zembo-language", newLang);
-    toast.success(translations[newLang].saved);
+    toast.success(language === "fr" ? "Settings saved" : "Paramètres sauvegardés");
+  };
+
+  const handleVisibilityChange = (value: ProfileVisibility) => {
+    setProfileVisibility(value);
+    localStorage.setItem("zembo-profile-visibility", value);
+    toast.success(t.privacySettingsSaved);
+  };
+
+  const handleContactPermissionChange = (value: ContactPermission) => {
+    setContactPermission(value);
+    localStorage.setItem("zembo-contact-permission", value);
+    toast.success(t.privacySettingsSaved);
+  };
+
+  const handleGeoBlockingChange = (value: GeoBlocking) => {
+    setGeoBlocking(value);
+    localStorage.setItem("zembo-geo-blocking", value);
+    toast.success(t.privacySettingsSaved);
   };
 
   const handleDeleteAccount = async () => {
@@ -884,6 +828,108 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
+            </div>
+
+            {/* Advanced Privacy Settings */}
+            <div className="glass-strong rounded-2xl p-4">
+              <h3 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2">
+                <EyeOff className="w-4 h-4" />
+                {t.advancedPrivacy}
+              </h3>
+              
+              {/* Profile Visibility */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground">{t.profileVisibility}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{t.profileVisibilityDescription}</p>
+                <RadioGroup 
+                  value={profileVisibility} 
+                  onValueChange={(v) => handleVisibilityChange(v as ProfileVisibility)}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="all" id="vis-all" />
+                    <Label htmlFor="vis-all" className="text-sm cursor-pointer flex-1">{t.visibleToAll}</Label>
+                    <Eye className="w-4 h-4 text-green-500" />
+                  </div>
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="matches" id="vis-matches" />
+                    <Label htmlFor="vis-matches" className="text-sm cursor-pointer flex-1">{t.visibleToMatches}</Label>
+                    <Heart className="w-4 h-4 text-pink-500" />
+                  </div>
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="invisible" id="vis-invisible" />
+                    <Label htmlFor="vis-invisible" className="text-sm cursor-pointer flex-1">{t.invisible}</Label>
+                    <EyeOff className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Who Can Contact Me */}
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground">{t.whoCanContact}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{t.whoCanContactDescription}</p>
+                <RadioGroup 
+                  value={contactPermission} 
+                  onValueChange={(v) => handleContactPermissionChange(v as ContactPermission)}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="anyone" id="contact-anyone" />
+                    <Label htmlFor="contact-anyone" className="text-sm cursor-pointer flex-1">{t.anyoneCanContact}</Label>
+                    <Users className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="matches" id="contact-matches" />
+                    <Label htmlFor="contact-matches" className="text-sm cursor-pointer flex-1">{t.matchesOnly}</Label>
+                    <Heart className="w-4 h-4 text-pink-500" />
+                  </div>
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="verified" id="contact-verified" />
+                    <Label htmlFor="contact-verified" className="text-sm cursor-pointer flex-1">{t.verifiedOnly}</Label>
+                    <ShieldCheck className="w-4 h-4 text-green-500" />
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Geographic Blocking */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground">{t.geographicBlocking}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{t.geographicBlockingDescription}</p>
+                <RadioGroup 
+                  value={geoBlocking} 
+                  onValueChange={(v) => handleGeoBlockingChange(v as GeoBlocking)}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="none" id="geo-none" />
+                    <Label htmlFor="geo-none" className="text-sm cursor-pointer flex-1">{t.noBlocking}</Label>
+                    <Globe className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="country" id="geo-country" />
+                    <Label htmlFor="geo-country" className="text-sm cursor-pointer flex-1">{t.blockMyCountry}</Label>
+                    <Ban className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem value="nearby" id="geo-nearby" />
+                    <Label htmlFor="geo-nearby" className="text-sm cursor-pointer flex-1">{t.blockNearby}</Label>
+                    <MapPin className="w-4 h-4 text-red-500" />
+                  </div>
+                </RadioGroup>
+              </div>
             </div>
 
             {/* Data Retention Info */}

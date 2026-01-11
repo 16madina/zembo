@@ -10,6 +10,7 @@ import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 import NearbyMap from "@/components/NearbyMap";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 
 import { mockProfiles, Profile } from "@/data/mockProfiles";
@@ -17,6 +18,7 @@ import { mockProfiles, Profile } from "@/data/mockProfiles";
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [profiles] = useState<Profile[]>(mockProfiles);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -172,30 +174,31 @@ const Home = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
       >
-        {["discover", "nearby"].map((tab) => (
+        {[
+          { key: "discover", label: t.discover },
+          { key: "nearby", label: t.nearby }
+        ].map((tab) => (
           <motion.button
-            key={tab}
-            onClick={() => setActiveTab(tab as "discover" | "nearby")}
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as "discover" | "nearby")}
             className={`relative px-4 py-1.5 rounded-full font-medium text-sm transition-colors duration-200 ${
-              activeTab === tab
+              activeTab === tab.key
                 ? "text-primary-foreground"
                 : "text-muted-foreground hover:text-secondary-foreground"
             }`}
             whileTap={{ scale: 0.95 }}
           >
-            {activeTab === tab && (
+            {activeTab === tab.key && (
               <motion.div
                 layoutId="activeTabBg"
                 className="absolute inset-0 btn-gold rounded-full"
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
             )}
-            {activeTab !== tab && (
+            {activeTab !== tab.key && (
               <div className="absolute inset-0 glass rounded-full" />
             )}
-            <span className="relative z-10">
-              {tab === "discover" ? "Découvrir" : "À proximité"}
-            </span>
+            <span className="relative z-10">{tab.label}</span>
           </motion.button>
         ))}
       </motion.div>
@@ -261,10 +264,10 @@ const Home = () => {
                       <SearchX className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
-                      Aucun profil trouvé
+                      {t.noProfilesFound}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Modifiez vos critères de recherche pour voir plus de profils
+                      {t.modifyFilters}
                     </p>
                     <div className="flex gap-2">
                       <motion.button
@@ -280,14 +283,14 @@ const Home = () => {
                         whileTap={{ scale: 0.95 }}
                         className="px-4 py-2 glass rounded-xl text-sm font-medium text-foreground"
                       >
-                        Réinitialiser
+                        {t.reset}
                       </motion.button>
                       <motion.button
                         onClick={() => setIsFilterOpen(true)}
                         whileTap={{ scale: 0.95 }}
                         className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
                       >
-                        Modifier
+                        {t.modify}
                       </motion.button>
                     </div>
                   </motion.div>

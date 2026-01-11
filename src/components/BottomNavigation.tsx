@@ -2,17 +2,19 @@ import { Home, Video, Shuffle, MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
-
-const navItems = [
-  { path: "/", icon: Home, label: "Accueil" },
-  { path: "/live", icon: Video, label: "Live" },
-  { path: "/random", icon: Shuffle, label: "Random" },
-  { path: "/messages", icon: MessageCircle, label: "Messages" },
-  { path: "/profile", icon: User, label: "Profil" },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const BottomNavigation = () => {
   const location = useLocation();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { path: "/", icon: Home, label: t.home },
+    { path: "/live", icon: Video, label: t.live },
+    { path: "/random", icon: Shuffle, label: t.random },
+    { path: "/messages", icon: MessageCircle, label: t.messages },
+    { path: "/profile", icon: User, label: t.profile },
+  ];
 
   const handleNavClick = () => {
     if (isNative) {
