@@ -22,11 +22,13 @@ import {
   Send,
   Clock,
   Shield,
+  Settings,
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
 import ProfileCompletionRing from "@/components/profile/ProfileCompletionRing";
 import EditProfileModal from "@/components/profile/EditProfileModal";
+import SettingsSheet from "@/components/profile/SettingsSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -331,13 +333,15 @@ const Profile = () => {
                 <Shield className="w-5 h-5 text-white" />
               </motion.button>
             )}
-            <motion.button
-              className="p-3 bg-primary/20 backdrop-blur-sm rounded-full"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Edit3 className="w-5 h-5 text-primary-foreground" />
-            </motion.button>
+            <SettingsSheet>
+              <motion.button
+                className="p-3 bg-muted/50 backdrop-blur-sm rounded-full"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Settings className="w-5 h-5 text-primary-foreground" />
+              </motion.button>
+            </SettingsSheet>
             <motion.button
               className="p-3 bg-destructive/80 backdrop-blur-sm rounded-full"
               whileHover={{ scale: 1.05 }}
