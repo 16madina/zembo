@@ -531,9 +531,13 @@ const LiveRoom = () => {
             >
               <Hand className="w-5 h-5 text-primary" />
               {stageRequests.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full flex items-center justify-center text-[10px] text-white font-bold">
-                  {stageRequests.length}
-                </span>
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-destructive rounded-full flex items-center justify-center text-[11px] text-white font-bold shadow-lg"
+                >
+                  {stageRequests.length > 9 ? "9+" : stageRequests.length}
+                </motion.span>
               )}
             </motion.button>
           )}
