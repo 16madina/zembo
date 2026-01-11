@@ -11,6 +11,7 @@ import {
   Send,
   Flag,
   Coins,
+  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +19,7 @@ import { useLives, type Live } from "@/hooks/useLives";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { useLocalStream } from "@/hooks/useLocalStream";
+import { useBeautyFilters } from "@/hooks/useBeautyFilters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,6 +28,7 @@ import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
 import LocalVideoPlayer from "@/components/live/LocalVideoPlayer";
 import StreamControls from "@/components/live/StreamControls";
+import BeautyFilterPanel from "@/components/live/BeautyFilterPanel";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -48,11 +51,23 @@ const LiveRoom = () => {
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showGiftPanel, setShowGiftPanel] = useState(false);
+  const [showBeautyPanel, setShowBeautyPanel] = useState(false);
   const [isStreamer, setIsStreamer] = useState(false);
   const [activeGift, setActiveGift] = useState<{
     gift: VirtualGift;
     senderName: string;
   } | null>(null);
+
+  // Beauty filters for streamer
+  const {
+    settings: beautySettings,
+    isEnabled: beautyEnabled,
+    filterString,
+    updateSetting: updateBeautySetting,
+    resetSettings: resetBeautySettings,
+    toggleFilters: toggleBeautyFilters,
+    applyPreset: applyBeautyPreset,
+  } = useBeautyFilters();
 
   // Local stream for streamer (fallback without LiveKit)
   const {
@@ -286,7 +301,19 @@ const LiveRoom = () => {
           streamerName={live.streamer?.display_name}
           streamerAvatar={live.streamer?.avatar_url}
           setVideoRef={setVideoRef}
+          filterString={isStreamer ? filterString : undefined}
         />
+
+        {/* Beauty Filter Button for Streamer */}
+        {isStreamer && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowBeautyPanel(true)}
+            className="absolute top-16 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
+          >
+            <Sparkles className="w-5 h-5 text-primary" />
+          </motion.button>
+        )}
 
         {/* Stream Controls for Streamer */}
         <StreamControls
@@ -481,7 +508,17 @@ const LiveRoom = () => {
         onComplete={() => setActiveGift(null)}
       />
 
-      {/* Recent Gifts Display */}
+      {/* Beauty Filter Panel */}
+      <BeautyFilterPanel
+        isOpen={showBeautyPanel}
+        onClose={() => setShowBeautyPanel(false)}
+        settings={beautySettings}
+        isEnabled={beautyEnabled}
+        onUpdateSetting={updateBeautySetting}
+        onResetSettings={resetBeautySettings}
+        onToggleFilters={toggleBeautyFilters}
+        onApplyPreset={applyBeautyPreset}
+      />
       <AnimatePresence>
         {recentGifts.slice(0, 3).map((transaction, index) => (
           <motion.div
