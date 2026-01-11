@@ -26,13 +26,9 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     try {
-      // Store the FCM token in user's profile or a dedicated table
       const { error } = await supabase
         .from("profiles")
-        .update({ 
-          // We'll add this column or use metadata
-          // For now, we'll just log it
-        })
+        .update({ fcm_token: fcmToken })
         .eq("user_id", user.id);
 
       if (error) {
