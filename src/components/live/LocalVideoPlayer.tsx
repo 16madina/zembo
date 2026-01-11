@@ -12,6 +12,7 @@ interface LocalVideoPlayerProps {
   streamerName?: string | null;
   streamerAvatar?: string | null;
   setVideoRef: (ref: HTMLVideoElement | null) => void;
+  filterString?: string;
 }
 
 const LocalVideoPlayer = ({
@@ -23,6 +24,7 @@ const LocalVideoPlayer = ({
   streamerName,
   streamerAvatar,
   setVideoRef,
+  filterString = "none",
 }: LocalVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -53,7 +55,10 @@ const LocalVideoPlayer = ({
             playsInline
             muted
             className="w-full h-full object-cover"
-            style={{ transform: "scaleX(-1)" }}
+            style={{ 
+              transform: "scaleX(-1)",
+              filter: filterString,
+            }}
           />
           {/* Live indicator */}
           <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm z-10">
