@@ -24,7 +24,7 @@ const StreamControls = ({
   if (!isStreamer) return null;
 
   return (
-    <div className="absolute bottom-24 left-0 right-0 flex justify-center gap-4 z-30">
+    <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-3 z-30">
       <button
         type="button"
         onClick={(e) => {
@@ -34,13 +34,13 @@ const StreamControls = ({
           onToggleMute();
         }}
         className={cn(
-          "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90",
+          "w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90",
           isMuted
             ? "bg-destructive text-destructive-foreground"
             : "bg-background/90 text-foreground border border-border"
         )}
       >
-        {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+        {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
       </button>
 
       <button
@@ -52,13 +52,13 @@ const StreamControls = ({
           onToggleVideo();
         }}
         className={cn(
-          "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90",
+          "w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90",
           isVideoOff
             ? "bg-destructive text-destructive-foreground"
             : "bg-background/90 text-foreground border border-border"
         )}
       >
-        {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+        {isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
       </button>
 
       <button
@@ -69,9 +69,9 @@ const StreamControls = ({
           console.log("Switch camera clicked");
           onSwitchCamera();
         }}
-        className="w-14 h-14 rounded-full bg-background/90 text-foreground border border-border flex items-center justify-center shadow-lg active:scale-90 transition-all"
+        className="w-10 h-10 rounded-full bg-background/90 text-foreground border border-border flex items-center justify-center shadow-lg active:scale-90 transition-all"
       >
-        <SwitchCamera className="w-6 h-6" />
+        <SwitchCamera className="w-4 h-4" />
       </button>
 
       <button
@@ -82,9 +82,9 @@ const StreamControls = ({
           console.log("End stream clicked");
           onEndStream();
         }}
-        className="w-14 h-14 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg active:scale-90 transition-all"
+        className="w-10 h-10 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg active:scale-90 transition-all"
       >
-        <PhoneOff className="w-6 h-6" />
+        <PhoneOff className="w-4 h-4" />
       </button>
     </div>
   );
