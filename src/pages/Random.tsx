@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
@@ -16,6 +17,8 @@ import RejectedScreen from "@/components/random-call/RejectedScreen";
 import DiceAnimation from "@/components/random-call/DiceAnimation";
 
 const Random = () => {
+  const [isExiting, setIsExiting] = useState(false);
+  
   const {
     status,
     selectedPreference,
@@ -36,7 +39,13 @@ const Random = () => {
 
   const handleCommencer = () => {
     playDiceSound();
-    startSelecting();
+    setIsExiting(true);
+    
+    // Wait for the zoom animation to complete before transitioning
+    setTimeout(() => {
+      setIsExiting(false);
+      startSelecting();
+    }, 800);
   };
 
   const handleStartCall = () => {
@@ -148,8 +157,8 @@ const Random = () => {
               </h1>
             </motion.div>
 
-            {/* Hand throwing dice animation */}
-            <DiceAnimation />
+            {/* Hand throwing dice animation with zoom exit effect */}
+            <DiceAnimation isExiting={isExiting} />
 
             {/* Ghost mode badge */}
             <motion.div

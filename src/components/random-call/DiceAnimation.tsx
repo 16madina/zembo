@@ -1,11 +1,31 @@
 import { motion } from "framer-motion";
 
-const DiceAnimation = () => {
+interface DiceAnimationProps {
+  isExiting?: boolean;
+}
+
+const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", damping: 15, delay: 0.2 }}
+      animate={isExiting ? { 
+        scale: [1, 1.5, 8],
+        opacity: [1, 1, 0],
+        y: [0, -50, -200],
+        rotate: [0, 15, 45]
+      } : { 
+        scale: 1, 
+        opacity: 1 
+      }}
+      transition={isExiting ? {
+        duration: 0.8,
+        ease: [0.4, 0, 0.2, 1],
+        times: [0, 0.3, 1]
+      } : { 
+        type: "spring", 
+        damping: 15, 
+        delay: 0.2 
+      }}
       className="relative w-72 h-56 z-10"
     >
       <svg
@@ -23,6 +43,11 @@ const DiceAnimation = () => {
           <filter id="diceShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.3" />
           </filter>
+          <linearGradient id="diceShine" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#F5F0E8" stopOpacity="1" />
+            <stop offset="100%" stopColor="#E8E0D4" stopOpacity="1" />
+          </linearGradient>
         </defs>
         
         {/* Background glow */}
@@ -121,7 +146,7 @@ const DiceAnimation = () => {
           style={{ originX: "80px", originY: "80px" }}
         >
           {/* Front face */}
-          <rect x="50" y="50" width="55" height="55" rx="8" fill="#F5F0E8" stroke="#D4C9B8" strokeWidth="2" />
+          <rect x="50" y="50" width="55" height="55" rx="8" fill="url(#diceShine)" stroke="#D4C9B8" strokeWidth="2" />
           {/* Right face */}
           <path d="M105 50 L120 35 L120 90 L105 105 Z" fill="#E8E0D4" stroke="#D4C9B8" strokeWidth="1.5" />
           {/* Top face */}
@@ -156,7 +181,7 @@ const DiceAnimation = () => {
           style={{ originX: "175px", originY: "75px" }}
         >
           {/* Front face */}
-          <rect x="145" y="45" width="55" height="55" rx="8" fill="#F5F0E8" stroke="#D4C9B8" strokeWidth="2" />
+          <rect x="145" y="45" width="55" height="55" rx="8" fill="url(#diceShine)" stroke="#D4C9B8" strokeWidth="2" />
           {/* Right face */}
           <path d="M200 45 L215 30 L215 85 L200 100 Z" fill="#E8E0D4" stroke="#D4C9B8" strokeWidth="1.5" />
           {/* Top face */}
