@@ -76,7 +76,7 @@ const Live = () => {
   };
 
   return (
-    <div className="min-h-screen pb-36">
+    <div className="min-h-screen pb-44">
       {/* Header */}
       <motion.header
         className="flex items-center justify-center px-6 py-4"
