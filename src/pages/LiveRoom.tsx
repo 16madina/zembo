@@ -10,7 +10,7 @@ import {
   MoreVertical,
   Send,
   Coins,
-  Sparkles,
+  Wand2,
   Hand,
   Settings2,
 } from "lucide-react";
@@ -20,7 +20,7 @@ import { useLives, type Live } from "@/hooks/useLives";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { useLocalStream } from "@/hooks/useLocalStream";
-import { useBeautyFilters } from "@/hooks/useBeautyFilters";
+import { useSnapchatFilters } from "@/hooks/useSnapchatFilters";
 import { useLiveStage } from "@/hooks/useLiveStage";
 import { useStageWebRTC } from "@/hooks/useStageWebRTC";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,8 @@ import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
 import LocalVideoPlayer from "@/components/live/LocalVideoPlayer";
 import StreamControls from "@/components/live/StreamControls";
-import BeautyFilterPanel from "@/components/live/BeautyFilterPanel";
+import SnapchatFilterPanel from "@/components/live/SnapchatFilterPanel";
+import FilterOverlay from "@/components/live/FilterOverlay";
 import StageRequestButton from "@/components/live/StageRequestButton";
 import StageRequestQueue from "@/components/live/StageRequestQueue";
 import GuestPipView from "@/components/live/GuestPipView";
@@ -70,16 +71,21 @@ const LiveRoom = () => {
     senderName: string;
   } | null>(null);
 
-  // Beauty filters for streamer
+  // Snapchat-style filters for streamer
   const {
-    settings: beautySettings,
-    isEnabled: beautyEnabled,
+    state: filterState,
     filterString,
-    updateSetting: updateBeautySetting,
-    resetSettings: resetBeautySettings,
-    toggleFilters: toggleBeautyFilters,
-    applyPreset: applyBeautyPreset,
-  } = useBeautyFilters();
+    vignetteStyle,
+    grainStyle,
+    updateColorFilter,
+    updateFaceFilter,
+    updateBackground,
+    applyColorPreset,
+    applyFacePreset,
+    setOverlay,
+    toggleFilters,
+    resetAll: resetFilters,
+  } = useSnapchatFilters();
 
   // Local stream for streamer (fallback without LiveKit)
   const {
@@ -407,14 +413,23 @@ const LiveRoom = () => {
           </>
         )}
 
-        {/* Beauty Filter Button for Streamer */}
+        {/* Filter Overlays (vignette, grain, AR masks) */}
+        {isStreamer && (
+          <FilterOverlay
+            overlay={filterState.activeOverlay}
+            vignetteStyle={vignetteStyle}
+            grainStyle={grainStyle}
+          />
+        )}
+
+        {/* Snapchat Filter Button for Streamer */}
         {isStreamer && (
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowBeautyPanel(true)}
             className="absolute top-16 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
           >
-            <Sparkles className="w-5 h-5 text-primary" />
+            <Wand2 className="w-5 h-5 text-primary" />
           </motion.button>
         )}
 
@@ -653,16 +668,19 @@ const LiveRoom = () => {
         onComplete={() => setActiveGift(null)}
       />
 
-      {/* Beauty Filter Panel */}
-      <BeautyFilterPanel
+      {/* Snapchat Filter Panel */}
+      <SnapchatFilterPanel
         isOpen={showBeautyPanel}
         onClose={() => setShowBeautyPanel(false)}
-        settings={beautySettings}
-        isEnabled={beautyEnabled}
-        onUpdateSetting={updateBeautySetting}
-        onResetSettings={resetBeautySettings}
-        onToggleFilters={toggleBeautyFilters}
-        onApplyPreset={applyBeautyPreset}
+        state={filterState}
+        onUpdateColorFilter={updateColorFilter}
+        onUpdateFaceFilter={updateFaceFilter}
+        onUpdateBackground={updateBackground}
+        onApplyColorPreset={applyColorPreset}
+        onApplyFacePreset={applyFacePreset}
+        onSetOverlay={setOverlay}
+        onToggleFilters={toggleFilters}
+        onReset={resetFilters}
       />
 
       {/* Stage Request Queue for Streamer */}
