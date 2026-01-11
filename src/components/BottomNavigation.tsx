@@ -47,13 +47,23 @@ const BottomNavigation = () => {
                     />
                   )}
                   {item.customIcon ? (
-                    <img 
-                      src={item.customIcon} 
-                      alt={item.label}
-                      className={`w-5 h-5 relative z-10 transition-all duration-200 ${
-                        isActive ? "brightness-110 drop-shadow-[0_0_6px_rgba(212,175,55,0.6)]" : "brightness-75 grayscale-[30%]"
-                      }`}
-                    />
+                    <div className="relative">
+                      {isActive && (
+                        <>
+                          <div className="absolute inset-0 bg-primary/40 rounded-full blur-md animate-pulse" />
+                          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-yellow-400/30 to-primary/30 rounded-full blur-lg animate-[pulse_1.5s_ease-in-out_infinite]" />
+                        </>
+                      )}
+                      <img 
+                        src={item.customIcon} 
+                        alt={item.label}
+                        className={`w-5 h-5 relative z-10 transition-all duration-200 ${
+                          isActive 
+                            ? "brightness-125 drop-shadow-[0_0_8px_rgba(212,175,55,0.8)] animate-[pulse_2s_ease-in-out_infinite]" 
+                            : "brightness-75 grayscale-[30%]"
+                        }`}
+                      />
+                    </div>
                   ) : (
                     <Icon 
                       className={`w-5 h-5 relative z-10 transition-colors duration-200 ${
