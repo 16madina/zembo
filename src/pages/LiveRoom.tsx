@@ -9,7 +9,6 @@ import {
   Share2,
   MoreVertical,
   Send,
-  Flag,
   Coins,
   Sparkles,
   Hand,
@@ -65,6 +64,7 @@ const LiveRoom = () => {
   const [showViewModeSelector, setShowViewModeSelector] = useState(false);
   const [guestViewMode, setGuestViewMode] = useState<GuestViewMode>("pip");
   const [isStreamer, setIsStreamer] = useState(false);
+  const [realtimeViewers, setRealtimeViewers] = useState(0);
   const [activeGift, setActiveGift] = useState<{
     gift: VirtualGift;
     senderName: string;
@@ -258,9 +258,9 @@ const LiveRoom = () => {
     };
   }, [id]);
 
-  // Subscribe to live updates
+  // Subscribe to live updates and realtime presence
   useEffect(() => {
-    if (!id) return;
+    if (!id || !user) return;
 
     const channel = supabase
       .channel(`live-${id}`)
@@ -286,10 +286,28 @@ const LiveRoom = () => {
       )
       .subscribe();
 
+    // Presence channel for realtime viewer count
+    const presenceChannel = supabase.channel(`presence-live-${id}`, {
+      config: { presence: { key: user.id } },
+    });
+
+    presenceChannel
+      .on("presence", { event: "sync" }, () => {
+        const state = presenceChannel.presenceState();
+        const count = Object.keys(state).length;
+        setRealtimeViewers(count);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await presenceChannel.track({ user_id: user.id });
+        }
+      });
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(presenceChannel);
     };
-  }, [id]);
+  }, [id, user]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user || !id) return;
@@ -436,13 +454,13 @@ const LiveRoom = () => {
               <p className="font-semibold text-foreground text-sm">
                 {live.streamer?.display_name || "Anonyme"}
               </p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="w-3 h-3" />
-                  {live.viewer_count}
+                  {realtimeViewers || live.viewer_count}
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-destructive/90 rounded text-white font-semibold">
+                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                   LIVE
                 </span>
               </div>
@@ -450,17 +468,12 @@ const LiveRoom = () => {
           </div>
 
           {/* Coin Balance & Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {!isStreamer && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20">
-                <Coins className="w-4 h-4 text-primary" />
-                <span className="font-semibold text-primary text-sm">{balance}</span>
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20">
+                <Coins className="w-3.5 h-3.5 text-primary" />
+                <span className="font-semibold text-primary text-xs">{balance}</span>
               </div>
-            )}
-            {!isStreamer && (
-              <Button size="icon" variant="ghost">
-                <Flag className="w-5 h-5" />
-              </Button>
             )}
             {isStreamer ? (
               <Button
