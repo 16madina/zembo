@@ -12,6 +12,7 @@ import {
   Flag,
   Coins,
   Sparkles,
+  Hand,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +21,7 @@ import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { useLocalStream } from "@/hooks/useLocalStream";
 import { useBeautyFilters } from "@/hooks/useBeautyFilters";
+import { useLiveStage } from "@/hooks/useLiveStage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +31,9 @@ import GiftAnimation from "@/components/live/GiftAnimation";
 import LocalVideoPlayer from "@/components/live/LocalVideoPlayer";
 import StreamControls from "@/components/live/StreamControls";
 import BeautyFilterPanel from "@/components/live/BeautyFilterPanel";
+import StageRequestButton from "@/components/live/StageRequestButton";
+import StageRequestQueue from "@/components/live/StageRequestQueue";
+import SplitScreenView from "@/components/live/SplitScreenView";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -52,6 +57,7 @@ const LiveRoom = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [showBeautyPanel, setShowBeautyPanel] = useState(false);
+  const [showStageQueue, setShowStageQueue] = useState(false);
   const [isStreamer, setIsStreamer] = useState(false);
   const [activeGift, setActiveGift] = useState<{
     gift: VirtualGift;
@@ -83,7 +89,25 @@ const LiveRoom = () => {
     setVideoRef,
   } = useLocalStream();
 
-  // Fetch live data
+  // Live stage (bring viewer on stage)
+  const {
+    requests: stageRequests,
+    currentGuest,
+    myRequest,
+    isOnStage,
+    isLoading: stageLoading,
+    requestStage,
+    cancelRequest,
+    acceptRequest,
+    rejectRequest,
+    removeFromStage,
+    leaveStage,
+  } = useLiveStage({
+    liveId: id || "",
+    streamerId: live?.streamer_id || "",
+    isStreamer,
+  });
+
   useEffect(() => {
     const fetchLive = async () => {
       if (!id) return;
@@ -290,28 +314,60 @@ const LiveRoom = () => {
 
   return (
     <div className="fixed inset-0 bg-black">
-      {/* Video Area - Full Screen */}
+      {/* Video Area - Full Screen or Split Screen */}
       <div className="absolute inset-0">
-        <LocalVideoPlayer
-          isStreamer={isStreamer}
-          isVideoOff={isVideoOff}
-          isInitialized={isInitialized}
-          stream={stream}
-          streamerId={live.streamer_id}
-          streamerName={live.streamer?.display_name}
-          streamerAvatar={live.streamer?.avatar_url}
-          setVideoRef={setVideoRef}
-          filterString={isStreamer ? filterString : undefined}
-        />
+        {currentGuest ? (
+          <SplitScreenView
+            streamerStream={stream}
+            streamerName={live.streamer?.display_name || null}
+            streamerAvatar={live.streamer?.avatar_url || null}
+            streamerId={live.streamer_id}
+            isVideoOff={isVideoOff}
+            filterString={isStreamer ? filterString : undefined}
+            guestName={currentGuest.profile?.display_name || null}
+            guestAvatar={currentGuest.profile?.avatar_url || null}
+            guestId={currentGuest.user_id}
+            isStreamer={isStreamer}
+            onRemoveGuest={removeFromStage}
+          />
+        ) : (
+          <LocalVideoPlayer
+            isStreamer={isStreamer}
+            isVideoOff={isVideoOff}
+            isInitialized={isInitialized}
+            stream={stream}
+            streamerId={live.streamer_id}
+            streamerName={live.streamer?.display_name}
+            streamerAvatar={live.streamer?.avatar_url}
+            setVideoRef={setVideoRef}
+            filterString={isStreamer ? filterString : undefined}
+          />
+        )}
 
         {/* Beauty Filter Button for Streamer */}
-        {isStreamer && (
+        {isStreamer && !currentGuest && (
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowBeautyPanel(true)}
             className="absolute top-16 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
           >
             <Sparkles className="w-5 h-5 text-primary" />
+          </motion.button>
+        )}
+
+        {/* Stage Queue Button for Streamer */}
+        {isStreamer && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowStageQueue(true)}
+            className="absolute top-28 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30 relative"
+          >
+            <Hand className="w-5 h-5 text-primary" />
+            {stageRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-xs text-white font-bold">
+                {stageRequests.length}
+              </span>
+            )}
           </motion.button>
         )}
 
@@ -432,6 +488,18 @@ const LiveRoom = () => {
           >
             <MoreVertical className="w-6 h-6 text-foreground" />
           </motion.button>
+          
+          {/* Stage Request Button for Viewers */}
+          {!isStreamer && (
+            <StageRequestButton
+              hasRequest={!!myRequest}
+              isOnStage={isOnStage}
+              isLoading={stageLoading}
+              onRequest={requestStage}
+              onCancel={cancelRequest}
+              onLeave={leaveStage}
+            />
+          )}
         </div>
       </div>
 
@@ -521,6 +589,17 @@ const LiveRoom = () => {
         onToggleFilters={toggleBeautyFilters}
         onApplyPreset={applyBeautyPreset}
       />
+
+      {/* Stage Request Queue for Streamer */}
+      <StageRequestQueue
+        isOpen={showStageQueue}
+        onClose={() => setShowStageQueue(false)}
+        requests={stageRequests}
+        onAccept={acceptRequest}
+        onReject={rejectRequest}
+      />
+
+      {/* Recent Gifts Display */}
       <AnimatePresence>
         {recentGifts.slice(0, 3).map((transaction, index) => (
           <motion.div
