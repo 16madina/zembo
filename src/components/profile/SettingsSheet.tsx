@@ -83,9 +83,7 @@ const translations = {
     deleteAccountWarning: "Cette action est irréversible",
     dataRetention: "Conservation des données",
     dataRetentionInfo: "Vos données sont supprimées 90 jours après la suppression du compte",
-    appGuidelines: "Directives de l'application",
-    iosGuidelines: "Directives iOS (App Store)",
-    androidGuidelines: "Directives Android (Google Play)",
+    storeGuidelines: "Directives des stores",
     confirmDelete: "Confirmer la suppression",
     deleteConfirmMessage: "Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Toutes vos données seront supprimées après 90 jours conformément à notre politique de conservation.",
     cancel: "Annuler",
@@ -128,9 +126,7 @@ const translations = {
     deleteAccountWarning: "This action is irreversible",
     dataRetention: "Data Retention",
     dataRetentionInfo: "Your data is deleted 90 days after account deletion",
-    appGuidelines: "App Guidelines",
-    iosGuidelines: "iOS Guidelines (App Store)",
-    androidGuidelines: "Android Guidelines (Google Play)",
+    storeGuidelines: "Store Guidelines",
     confirmDelete: "Confirm deletion",
     deleteConfirmMessage: "Are you sure you want to permanently delete your account? All your data will be deleted after 90 days according to our retention policy.",
     cancel: "Cancel",
@@ -201,131 +197,199 @@ const dataCollectionInfo = {
   ],
 };
 
-// Comprehensive App Store & Play Store Guidelines for Dating Apps
-const appGuidelines = {
-  ios: {
-    fr: {
-      accountManagement: [
-        "Suppression de compte accessible directement dans l'application (Guideline 5.1.1)",
-        "Toutes vos données personnelles seront supprimées dans un délai de 90 jours",
-        "Possibilité d'exporter vos données personnelles (RGPD)",
-        "Les achats intégrés ne sont pas remboursables après utilisation",
-        "Option 'Sign in with Apple' disponible pour la connexion",
-      ],
-      contentModeration: [
-        "Système de modération actif 24h/24 pour le contenu inapproprié (Guideline 1.2)",
-        "Filtrage automatique des contenus à caractère sexuel explicite (Guideline 1.1.4)",
-        "Signalement des utilisateurs abusifs avec traitement sous 24h",
-        "Blocage immédiat des utilisateurs indésirables",
-        "Interdiction stricte des contenus pornographiques ou prostitution",
-      ],
-      userSafety: [
-        "Vérification de l'âge obligatoire (18+ ans)",
-        "Protection contre le harcèlement et les comportements abusifs",
-        "Politique de tolérance zéro pour les discours haineux",
-        "Photos modérées pour prévenir le contenu inapproprié",
-        "Messagerie sécurisée avec signalement intégré",
-      ],
-      dataPrivacy: [
-        "Politique de confidentialité transparente et accessible",
-        "Consentement explicite pour la collecte de données",
-        "Localisation utilisée uniquement avec votre permission",
-        "Données chiffrées en transit et au repos",
-        "Aucun partage de données avec des tiers sans consentement",
-      ],
-    },
-    en: {
-      accountManagement: [
-        "Account deletion accessible directly in the app (Guideline 5.1.1)",
-        "All personal data deleted within 90 days",
-        "Option to export your personal data (GDPR)",
-        "In-app purchases are non-refundable after use",
-        "'Sign in with Apple' option available for login",
-      ],
-      contentModeration: [
-        "24/7 active content moderation system (Guideline 1.2)",
-        "Automatic filtering of sexually explicit content (Guideline 1.1.4)",
-        "User abuse reports processed within 24 hours",
-        "Immediate blocking of unwanted users",
-        "Strict prohibition of pornographic content or prostitution",
-      ],
-      userSafety: [
-        "Mandatory age verification (18+ years)",
-        "Protection against harassment and abusive behavior",
-        "Zero tolerance policy for hate speech",
-        "Photos moderated to prevent inappropriate content",
-        "Secure messaging with integrated reporting",
-      ],
-      dataPrivacy: [
-        "Transparent and accessible privacy policy",
-        "Explicit consent for data collection",
-        "Location used only with your permission",
-        "Data encrypted in transit and at rest",
-        "No data sharing with third parties without consent",
-      ],
-    },
+// Unified Store Guidelines (merged iOS + Android)
+const storeGuidelines = {
+  fr: {
+    accountManagement: [
+      "Suppression de compte accessible directement dans l'application",
+      "Toutes vos données personnelles supprimées sous 90 jours",
+      "Export de vos données personnelles disponible (RGPD)",
+      "Les abonnements doivent être annulés via les stores",
+    ],
+    contentModeration: [
+      "Système de modération actif 24h/24",
+      "Filtrage automatique des contenus explicites",
+      "Signalement des utilisateurs traité sous 24h",
+      "Blocage immédiat des utilisateurs indésirables",
+      "Interdiction stricte des contenus inappropriés",
+    ],
+    userSafety: [
+      "Vérification de l'âge obligatoire (18+ ans)",
+      "Protection contre le harcèlement",
+      "Politique de tolérance zéro pour les discours haineux",
+      "Photos modérées pour prévenir le contenu inapproprié",
+    ],
+    childSafety: [
+      "Interdiction stricte du contenu CSAM",
+      "Signalement obligatoire aux autorités compétentes",
+      "Conformité avec les lois sur la protection des mineurs",
+    ],
+    dataPrivacy: [
+      "Politique de confidentialité transparente",
+      "Consentement explicite pour la collecte de données",
+      "Données chiffrées en transit et au repos",
+      "Aucun partage sans consentement",
+    ],
   },
-  android: {
-    fr: {
-      accountManagement: [
-        "Suppression de compte disponible dans les paramètres",
-        "Les données sont supprimées conformément au RGPD (90 jours max)",
-        "Possibilité de télécharger toutes vos données personnelles",
-        "Les abonnements doivent être annulés via Google Play Store",
-        "Processus de suppression simple et clairement documenté",
-      ],
-      childSafety: [
-        "Interdiction stricte du contenu CSAM (Child Safety Standards)",
-        "Signalement obligatoire au NCMEC en cas de contenu illégal détecté",
-        "Mécanisme de feedback intégré pour signaler les violations",
-        "Conformité avec les lois sur la protection des mineurs",
-        "Point de contact dédié pour les signalements de sécurité enfants",
-      ],
-      contentPolicy: [
-        "Interdiction des services de 'sugar dating' ou compensés",
-        "Aucune nudité sexuelle ou poses suggestives autorisées",
-        "Modération proactive par IA des contenus téléchargés",
-        "Standards de contenu publiés dans nos conditions d'utilisation",
-        "Action rapide contre les violateurs (suspension/bannissement)",
-      ],
-      userProtection: [
-        "Mécanisme de blocage et signalement facile d'accès",
-        "Équipe de modération dédiée pour les signalements",
-        "Retrait de contenu problématique sous 24h",
-        "Protection contre les arnaques et profils frauduleux",
-        "Vérification des profils pour une communauté authentique",
-      ],
-    },
-    en: {
-      accountManagement: [
-        "Account deletion available in settings",
-        "Data deleted in accordance with GDPR (90 days max)",
-        "Option to download all your personal data",
-        "Subscriptions must be cancelled via Google Play Store",
-        "Simple and clearly documented deletion process",
-      ],
-      childSafety: [
-        "Strict prohibition of CSAM content (Child Safety Standards)",
-        "Mandatory reporting to NCMEC if illegal content detected",
-        "Integrated feedback mechanism to report violations",
-        "Compliance with child protection laws",
-        "Dedicated contact point for child safety reports",
-      ],
-      contentPolicy: [
-        "Prohibition of 'sugar dating' or compensated services",
-        "No sexual nudity or suggestive poses allowed",
-        "Proactive AI moderation of uploaded content",
-        "Content standards published in our terms of service",
-        "Swift action against violators (suspension/ban)",
-      ],
-      userProtection: [
-        "Easy-access blocking and reporting mechanism",
-        "Dedicated moderation team for reports",
-        "Problematic content removal within 24h",
-        "Protection against scams and fraudulent profiles",
-        "Profile verification for an authentic community",
-      ],
-    },
+  en: {
+    accountManagement: [
+      "Account deletion accessible directly in the app",
+      "All personal data deleted within 90 days",
+      "Personal data export available (GDPR)",
+      "Subscriptions must be cancelled via stores",
+    ],
+    contentModeration: [
+      "24/7 active content moderation system",
+      "Automatic filtering of explicit content",
+      "User reports processed within 24 hours",
+      "Immediate blocking of unwanted users",
+      "Strict prohibition of inappropriate content",
+    ],
+    userSafety: [
+      "Mandatory age verification (18+ years)",
+      "Protection against harassment",
+      "Zero tolerance policy for hate speech",
+      "Photos moderated to prevent inappropriate content",
+    ],
+    childSafety: [
+      "Strict prohibition of CSAM content",
+      "Mandatory reporting to competent authorities",
+      "Compliance with child protection laws",
+    ],
+    dataPrivacy: [
+      "Transparent privacy policy",
+      "Explicit consent for data collection",
+      "Data encrypted in transit and at rest",
+      "No sharing without consent",
+    ],
+  },
+};
+
+// Privacy Policy Content
+const privacyPolicyContent = {
+  fr: {
+    title: "Politique de confidentialité",
+    lastUpdated: "Dernière mise à jour : Janvier 2026",
+    sections: [
+      {
+        title: "1. Collecte des données",
+        content: "Nous collectons les informations que vous nous fournissez directement : nom, email, date de naissance, photos de profil, localisation, préférences de rencontre et centres d'intérêt. Ces données sont nécessaires au fonctionnement du service de mise en relation.",
+      },
+      {
+        title: "2. Utilisation des données",
+        content: "Vos données sont utilisées pour : créer et gérer votre profil, vous proposer des correspondances pertinentes, améliorer nos services, assurer la sécurité de la plateforme, et vous envoyer des communications importantes.",
+      },
+      {
+        title: "3. Partage des données",
+        content: "Nous ne vendons jamais vos données personnelles. Vos informations peuvent être partagées avec d'autres utilisateurs selon vos paramètres de confidentialité, et avec nos prestataires de services sous contrat de confidentialité.",
+      },
+      {
+        title: "4. Sécurité",
+        content: "Nous utilisons des mesures de sécurité techniques et organisationnelles pour protéger vos données : chiffrement SSL/TLS, stockage sécurisé, contrôles d'accès stricts, et surveillance continue.",
+      },
+      {
+        title: "5. Conservation",
+        content: "Vos données sont conservées tant que votre compte est actif. Après suppression du compte, vos données sont effacées sous 90 jours, sauf obligation légale de conservation.",
+      },
+      {
+        title: "6. Vos droits",
+        content: "Conformément au RGPD, vous avez le droit d'accéder, rectifier, supprimer, exporter vos données, et de vous opposer à leur traitement. Exercez ces droits via les paramètres de l'app ou contactez-nous.",
+      },
+    ],
+  },
+  en: {
+    title: "Privacy Policy",
+    lastUpdated: "Last updated: January 2026",
+    sections: [
+      {
+        title: "1. Data Collection",
+        content: "We collect information you provide directly: name, email, date of birth, profile photos, location, dating preferences and interests. This data is necessary for the matchmaking service to function.",
+      },
+      {
+        title: "2. Data Usage",
+        content: "Your data is used to: create and manage your profile, suggest relevant matches, improve our services, ensure platform security, and send you important communications.",
+      },
+      {
+        title: "3. Data Sharing",
+        content: "We never sell your personal data. Your information may be shared with other users according to your privacy settings, and with our service providers under confidentiality agreements.",
+      },
+      {
+        title: "4. Security",
+        content: "We use technical and organizational security measures to protect your data: SSL/TLS encryption, secure storage, strict access controls, and continuous monitoring.",
+      },
+      {
+        title: "5. Retention",
+        content: "Your data is kept as long as your account is active. After account deletion, your data is erased within 90 days, unless legally required to retain it.",
+      },
+      {
+        title: "6. Your Rights",
+        content: "Under GDPR, you have the right to access, rectify, delete, export your data, and object to its processing. Exercise these rights via app settings or contact us.",
+      },
+    ],
+  },
+};
+
+// Terms of Service Content
+const termsOfServiceContent = {
+  fr: {
+    title: "Conditions d'utilisation",
+    lastUpdated: "Dernière mise à jour : Janvier 2026",
+    sections: [
+      {
+        title: "1. Acceptation",
+        content: "En utilisant Zembo, vous acceptez ces conditions d'utilisation. Si vous n'êtes pas d'accord, veuillez ne pas utiliser l'application.",
+      },
+      {
+        title: "2. Éligibilité",
+        content: "Vous devez avoir au moins 18 ans pour utiliser Zembo. En créant un compte, vous confirmez avoir l'âge légal et fournir des informations exactes.",
+      },
+      {
+        title: "3. Conduite des utilisateurs",
+        content: "Vous vous engagez à : utiliser uniquement vos propres photos, ne pas harceler d'autres utilisateurs, ne pas publier de contenu illégal ou offensant, signaler tout comportement inapproprié.",
+      },
+      {
+        title: "4. Contenu interdit",
+        content: "Sont strictement interdits : nudité ou contenu sexuellement explicite, discours haineux, spam, arnaques, sollicitation commerciale, contenu impliquant des mineurs.",
+      },
+      {
+        title: "5. Suspension et résiliation",
+        content: "Nous nous réservons le droit de suspendre ou supprimer tout compte violant ces conditions, sans préavis ni remboursement.",
+      },
+      {
+        title: "6. Limitation de responsabilité",
+        content: "Zembo n'est pas responsable des interactions entre utilisateurs. Faites preuve de prudence lors de vos rencontres et signalez tout comportement suspect.",
+      },
+    ],
+  },
+  en: {
+    title: "Terms of Service",
+    lastUpdated: "Last updated: January 2026",
+    sections: [
+      {
+        title: "1. Acceptance",
+        content: "By using Zembo, you agree to these terms of service. If you disagree, please do not use the application.",
+      },
+      {
+        title: "2. Eligibility",
+        content: "You must be at least 18 years old to use Zembo. By creating an account, you confirm you are of legal age and provide accurate information.",
+      },
+      {
+        title: "3. User Conduct",
+        content: "You agree to: use only your own photos, not harass other users, not post illegal or offensive content, report any inappropriate behavior.",
+      },
+      {
+        title: "4. Prohibited Content",
+        content: "Strictly prohibited: nudity or sexually explicit content, hate speech, spam, scams, commercial solicitation, content involving minors.",
+      },
+      {
+        title: "5. Suspension and Termination",
+        content: "We reserve the right to suspend or delete any account violating these terms, without notice or refund.",
+      },
+      {
+        title: "6. Limitation of Liability",
+        content: "Zembo is not responsible for interactions between users. Exercise caution when meeting and report any suspicious behavior.",
+      },
+    ],
   },
 };
 
@@ -488,6 +552,8 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showTermsOfService, setShowTermsOfService] = useState(false);
 
   const t = translations[language];
   const dataInfo = dataCollectionInfo[language];
@@ -770,54 +836,31 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                 {t.privacyAndSecurity}
               </h3>
               
+              {/* Privacy Policy - Opens Popup */}
+              <button
+                onClick={() => setShowPrivacyPolicy(true)}
+                className="w-full flex items-center justify-between py-3 hover:bg-muted/30 rounded-lg px-2 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium">{t.privacyPolicy}</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+              
+              {/* Terms of Service - Opens Popup */}
+              <button
+                onClick={() => setShowTermsOfService(true)}
+                className="w-full flex items-center justify-between py-3 hover:bg-muted/30 rounded-lg px-2 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Lock className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium">{t.termsOfService}</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+              
               <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="privacy" className="border-none">
-                  <AccordionTrigger className="py-3 hover:no-underline">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-primary" />
-                      <span>{t.privacyPolicy}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground px-8">
-                    <p className="mb-3">
-                      {language === "fr" 
-                        ? "Notre politique de confidentialité explique comment nous collectons, utilisons et protégeons vos données personnelles."
-                        : "Our privacy policy explains how we collect, use and protect your personal data."}
-                    </p>
-                    <a 
-                      href="https://zemboapp.com/privacy" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      {language === "fr" ? "Lire la politique complète" : "Read full policy"}
-                    </a>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="terms" className="border-none">
-                  <AccordionTrigger className="py-3 hover:no-underline">
-                    <div className="flex items-center gap-3">
-                      <Lock className="w-5 h-5 text-primary" />
-                      <span>{t.termsOfService}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground px-8">
-                    <p className="mb-3">
-                      {language === "fr"
-                        ? "Les conditions d'utilisation régissent votre utilisation de l'application Zembo."
-                        : "The terms of service govern your use of the Zembo application."}
-                    </p>
-                    <a 
-                      href="https://zemboapp.com/terms" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary underline"
-                    >
-                      {language === "fr" ? "Lire les conditions" : "Read terms"}
-                    </a>
-                  </AccordionContent>
-                </AccordionItem>
 
                 <AccordionItem value="data" className="border-none">
                   <AccordionTrigger className="py-3 hover:no-underline">
@@ -944,15 +987,15 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
               </div>
             </div>
 
-            {/* App Guidelines Section - iOS */}
+            {/* Store Guidelines Section - Unified */}
             <div className="glass-strong rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
-                <span className="text-lg">🍎</span>
-                {t.iosGuidelines}
+                <Smartphone className="w-4 h-4" />
+                {t.storeGuidelines}
               </h3>
               
               <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="ios-account" className="border-none">
+                <AccordionItem value="account" className="border-none">
                   <AccordionTrigger className="py-2 hover:no-underline text-sm">
                     <div className="flex items-center gap-2">
                       <Settings className="w-4 h-4 text-primary" />
@@ -961,7 +1004,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionTrigger>
                   <AccordionContent className="px-4">
                     <ul className="space-y-2">
-                      {appGuidelines.ios[language].accountManagement.map((item, index) => (
+                      {storeGuidelines[language].accountManagement.map((item, index) => (
                         <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
                           <Check className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
                           <span>{item}</span>
@@ -971,7 +1014,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem value="ios-moderation" className="border-none">
+                <AccordionItem value="moderation" className="border-none">
                   <AccordionTrigger className="py-2 hover:no-underline text-sm">
                     <div className="flex items-center gap-2">
                       <Eye className="w-4 h-4 text-primary" />
@@ -980,7 +1023,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionTrigger>
                   <AccordionContent className="px-4">
                     <ul className="space-y-2">
-                      {appGuidelines.ios[language].contentModeration.map((item, index) => (
+                      {storeGuidelines[language].contentModeration.map((item, index) => (
                         <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
                           <ShieldCheck className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
                           <span>{item}</span>
@@ -990,7 +1033,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem value="ios-safety" className="border-none">
+                <AccordionItem value="safety" className="border-none">
                   <AccordionTrigger className="py-2 hover:no-underline text-sm">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-primary" />
@@ -999,7 +1042,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionTrigger>
                   <AccordionContent className="px-4">
                     <ul className="space-y-2">
-                      {appGuidelines.ios[language].userSafety.map((item, index) => (
+                      {storeGuidelines[language].userSafety.map((item, index) => (
                         <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
                           <ShieldAlert className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
                           <span>{item}</span>
@@ -1009,55 +1052,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem value="ios-privacy" className="border-none">
-                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
-                    <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-primary" />
-                      <span>{t.dataPrivacy}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4">
-                    <ul className="space-y-2">
-                      {appGuidelines.ios[language].dataPrivacy.map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Lock className="w-3 h-3 text-blue-500 shrink-0 mt-0.5" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
-
-            {/* App Guidelines Section - Android */}
-            <div className="glass-strong rounded-2xl p-4">
-              <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
-                <span className="text-lg">🤖</span>
-                {t.androidGuidelines}
-              </h3>
-              
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="android-account" className="border-none">
-                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
-                    <div className="flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-primary" />
-                      <span>{t.accountManagement}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4">
-                    <ul className="space-y-2">
-                      {appGuidelines.android[language].accountManagement.map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Check className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="android-child" className="border-none">
+                <AccordionItem value="child-safety" className="border-none">
                   <AccordionTrigger className="py-2 hover:no-underline text-sm">
                     <div className="flex items-center gap-2">
                       <Baby className="w-4 h-4 text-primary" />
@@ -1066,7 +1061,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionTrigger>
                   <AccordionContent className="px-4">
                     <ul className="space-y-2">
-                      {appGuidelines.android[language].childSafety.map((item, index) => (
+                      {storeGuidelines[language].childSafety.map((item, index) => (
                         <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
                           <ShieldCheck className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />
                           <span>{item}</span>
@@ -1076,37 +1071,18 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem value="android-content" className="border-none">
+                <AccordionItem value="privacy" className="border-none">
                   <AccordionTrigger className="py-2 hover:no-underline text-sm">
                     <div className="flex items-center gap-2">
-                      <Ban className="w-4 h-4 text-primary" />
-                      <span>{t.contentPolicy}</span>
+                      <Lock className="w-4 h-4 text-primary" />
+                      <span>{t.dataPrivacy}</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-4">
                     <ul className="space-y-2">
-                      {appGuidelines.android[language].contentPolicy.map((item, index) => (
+                      {storeGuidelines[language].dataPrivacy.map((item, index) => (
                         <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Ban className="w-3 h-3 text-orange-500 shrink-0 mt-0.5" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="android-protection" className="border-none">
-                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
-                    <div className="flex items-center gap-2">
-                      <Flag className="w-4 h-4 text-primary" />
-                      <span>{t.userProtection}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4">
-                    <ul className="space-y-2">
-                      {appGuidelines.android[language].userProtection.map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <UserX className="w-3 h-3 text-purple-500 shrink-0 mt-0.5" />
+                          <Lock className="w-3 h-3 text-blue-500 shrink-0 mt-0.5" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -1174,6 +1150,58 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
               ) : (
                 t.delete
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Privacy Policy Popup */}
+      <AlertDialog open={showPrivacyPolicy} onOpenChange={setShowPrivacyPolicy}>
+        <AlertDialogContent className="bg-background max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              {privacyPolicyContent[language].title}
+            </AlertDialogTitle>
+            <p className="text-xs text-muted-foreground">{privacyPolicyContent[language].lastUpdated}</p>
+          </AlertDialogHeader>
+          <div className="overflow-y-auto flex-1 pr-2 space-y-4">
+            {privacyPolicyContent[language].sections.map((section, index) => (
+              <div key={index}>
+                <h4 className="font-semibold text-sm text-foreground mb-1">{section.title}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">{section.content}</p>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogAction onClick={() => setShowPrivacyPolicy(false)}>
+              {language === "fr" ? "Fermer" : "Close"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Terms of Service Popup */}
+      <AlertDialog open={showTermsOfService} onOpenChange={setShowTermsOfService}>
+        <AlertDialogContent className="bg-background max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              {termsOfServiceContent[language].title}
+            </AlertDialogTitle>
+            <p className="text-xs text-muted-foreground">{termsOfServiceContent[language].lastUpdated}</p>
+          </AlertDialogHeader>
+          <div className="overflow-y-auto flex-1 pr-2 space-y-4">
+            {termsOfServiceContent[language].sections.map((section, index) => (
+              <div key={index}>
+                <h4 className="font-semibold text-sm text-foreground mb-1">{section.title}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">{section.content}</p>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogAction onClick={() => setShowTermsOfService(false)}>
+              {language === "fr" ? "Fermer" : "Close"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
