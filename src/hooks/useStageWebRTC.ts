@@ -34,6 +34,7 @@ export const useStageWebRTC = ({
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -364,12 +365,26 @@ export const useStageWebRTC = ({
     };
   }, []);
 
+  // Toggle mute for guest
+  const toggleMute = useCallback(() => {
+    if (localStream) {
+      const audioTracks = localStream.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsMuted(!isMuted);
+      console.log("[StageWebRTC] Mute toggled:", !isMuted);
+    }
+  }, [localStream, isMuted]);
+
   return {
     guestStream,
     localStream,
     isConnected,
     isConnecting,
+    isMuted,
     error,
     cleanup,
+    toggleMute,
   };
 };

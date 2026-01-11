@@ -120,6 +120,8 @@ const LiveRoom = () => {
     localStream: guestLocalStream,
     isConnected: stageConnected,
     isConnecting: stageConnecting,
+    isMuted: guestMuted,
+    toggleMute: toggleGuestMute,
   } = useStageWebRTC({
     liveId: id || "",
     guestId: currentGuest?.user_id || null,
@@ -375,6 +377,9 @@ const LiveRoom = () => {
                   guestId={currentGuest.user_id}
                   guestStream={guestStream}
                   isStreamer={isStreamer}
+                  isGuest={isOnStage}
+                  isMuted={guestMuted}
+                  onToggleMute={isOnStage ? toggleGuestMute : undefined}
                   onRemoveGuest={removeFromStage}
                   isConnecting={stageConnecting}
                   isConnected={stageConnected}
