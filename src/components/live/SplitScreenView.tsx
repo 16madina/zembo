@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Wifi, X, Mic, MicOff } from "lucide-react";
+import { Wifi, X, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +22,10 @@ interface SplitScreenViewProps {
   // Control props
   isStreamer: boolean;
   onRemoveGuest?: () => void;
+  
+  // Connection status
+  isConnecting?: boolean;
+  isConnected?: boolean;
 }
 
 const SplitScreenView = ({
@@ -37,6 +41,8 @@ const SplitScreenView = ({
   guestStream,
   isStreamer,
   onRemoveGuest,
+  isConnecting = false,
+  isConnected = false,
 }: SplitScreenViewProps) => {
   const streamerVideoRef = useRef<HTMLVideoElement>(null);
   const guestVideoRef = useRef<HTMLVideoElement>(null);
@@ -109,23 +115,37 @@ const SplitScreenView = ({
               animate={{ scale: 1, opacity: 1 }}
               className="text-center"
             >
-              <Avatar className="w-20 h-20 mx-auto mb-2 border-2 border-primary">
-                <AvatarImage src={guestAvatar || defaultGuestAvatar} />
-                <AvatarFallback>{guestName?.[0] || "?"}</AvatarFallback>
-              </Avatar>
-              <p className="text-sm font-medium text-foreground">
-                {guestName || "Invité"}
-              </p>
-              <p className="text-xs text-muted-foreground animate-pulse">
-                Connexion en cours...
-              </p>
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-12 h-12 mx-auto mb-3 text-primary animate-spin" />
+                  <p className="text-sm font-medium text-foreground">
+                    Connexion avec {guestName || "l'invité"}...
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Établissement de la connexion vidéo
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Avatar className="w-20 h-20 mx-auto mb-2 border-2 border-primary">
+                    <AvatarImage src={guestAvatar || defaultGuestAvatar} />
+                    <AvatarFallback>{guestName?.[0] || "?"}</AvatarFallback>
+                  </Avatar>
+                  <p className="text-sm font-medium text-foreground">
+                    {guestName || "Invité"}
+                  </p>
+                  <p className="text-xs text-muted-foreground animate-pulse">
+                    En attente de la caméra...
+                  </p>
+                </>
+              )}
             </motion.div>
           </div>
         )}
 
         {/* Guest label */}
         <div className="absolute bottom-2 left-2 flex items-center gap-2 px-2 py-1 rounded-full bg-background/80 backdrop-blur-sm">
-          <span className="w-2 h-2 bg-green-500 rounded-full" />
+          <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : isConnecting ? "bg-yellow-500 animate-pulse" : "bg-gray-400"}`} />
           <span className="text-xs font-medium text-foreground">
             {guestName || "Invité"}
           </span>

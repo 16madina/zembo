@@ -22,6 +22,7 @@ import { useCoins } from "@/hooks/useCoins";
 import { useLocalStream } from "@/hooks/useLocalStream";
 import { useBeautyFilters } from "@/hooks/useBeautyFilters";
 import { useLiveStage } from "@/hooks/useLiveStage";
+import { useStageWebRTC } from "@/hooks/useStageWebRTC";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -106,6 +107,19 @@ const LiveRoom = () => {
     liveId: id || "",
     streamerId: live?.streamer_id || "",
     isStreamer,
+  });
+
+  // WebRTC for stage video connection
+  const {
+    guestStream,
+    localStream: guestLocalStream,
+    isConnected: stageConnected,
+    isConnecting: stageConnecting,
+  } = useStageWebRTC({
+    liveId: id || "",
+    guestId: currentGuest?.user_id || null,
+    isStreamer,
+    isOnStage,
   });
 
   useEffect(() => {
@@ -327,8 +341,11 @@ const LiveRoom = () => {
             guestName={currentGuest.profile?.display_name || null}
             guestAvatar={currentGuest.profile?.avatar_url || null}
             guestId={currentGuest.user_id}
+            guestStream={guestStream}
             isStreamer={isStreamer}
             onRemoveGuest={removeFromStage}
+            isConnecting={stageConnecting}
+            isConnected={stageConnected}
           />
         ) : (
           <LocalVideoPlayer
