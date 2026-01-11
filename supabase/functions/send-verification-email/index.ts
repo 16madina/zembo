@@ -137,6 +137,54 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Fetch app settings for email footer
+    const { data: settingsData } = await supabaseAdmin
+      .from('app_settings')
+      .select('key, value')
+      .in('category', ['social', 'legal']);
+
+    const settings: Record<string, string> = {};
+    (settingsData || []).forEach((s: { key: string; value: string }) => {
+      settings[s.key] = s.value;
+    });
+
+    // Build social links HTML
+    const socialLinks = [];
+    if (settings.social_instagram) {
+      socialLinks.push(`<a href="${settings.social_instagram}" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+        <img src="https://cdn-icons-png.flaticon.com/32/174/174855.png" alt="Instagram" style="width: 28px; height: 28px; opacity: 0.7;" />
+      </a>`);
+    }
+    if (settings.social_tiktok) {
+      socialLinks.push(`<a href="${settings.social_tiktok}" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+        <img src="https://cdn-icons-png.flaticon.com/32/3046/3046121.png" alt="TikTok" style="width: 28px; height: 28px; opacity: 0.7;" />
+      </a>`);
+    }
+    if (settings.social_twitter) {
+      socialLinks.push(`<a href="${settings.social_twitter}" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+        <img src="https://cdn-icons-png.flaticon.com/32/733/733579.png" alt="Twitter" style="width: 28px; height: 28px; opacity: 0.7;" />
+      </a>`);
+    }
+    if (settings.social_facebook) {
+      socialLinks.push(`<a href="${settings.social_facebook}" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+        <img src="https://cdn-icons-png.flaticon.com/32/733/733547.png" alt="Facebook" style="width: 28px; height: 28px; opacity: 0.7;" />
+      </a>`);
+    }
+    if (settings.social_youtube) {
+      socialLinks.push(`<a href="${settings.social_youtube}" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+        <img src="https://cdn-icons-png.flaticon.com/32/1384/1384060.png" alt="YouTube" style="width: 28px; height: 28px; opacity: 0.7;" />
+      </a>`);
+    }
+    if (settings.social_linkedin) {
+      socialLinks.push(`<a href="${settings.social_linkedin}" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+        <img src="https://cdn-icons-png.flaticon.com/32/174/174857.png" alt="LinkedIn" style="width: 28px; height: 28px; opacity: 0.7;" />
+      </a>`);
+    }
+
+    const privacyUrl = settings.legal_privacy_url || 'https://zemboapp.com/privacy';
+    const termsUrl = settings.legal_terms_url || 'https://zemboapp.com/terms';
+    const unsubscribeUrl = settings.legal_unsubscribe_url || 'https://zemboapp.com/unsubscribe';
+
     // Send verification email
     const emailResponse = await resend.emails.send({
       from: fromEmail,
@@ -186,18 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
               
               <!-- Social Media Links -->
               <div style="text-align: center; margin-bottom: 20px;">
-                <a href="https://instagram.com/zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
-                  <img src="https://cdn-icons-png.flaticon.com/32/174/174855.png" alt="Instagram" style="width: 28px; height: 28px; opacity: 0.7;" />
-                </a>
-                <a href="https://tiktok.com/@zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
-                  <img src="https://cdn-icons-png.flaticon.com/32/3046/3046121.png" alt="TikTok" style="width: 28px; height: 28px; opacity: 0.7;" />
-                </a>
-                <a href="https://twitter.com/zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
-                  <img src="https://cdn-icons-png.flaticon.com/32/733/733579.png" alt="Twitter" style="width: 28px; height: 28px; opacity: 0.7;" />
-                </a>
-                <a href="https://facebook.com/zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
-                  <img src="https://cdn-icons-png.flaticon.com/32/733/733547.png" alt="Facebook" style="width: 28px; height: 28px; opacity: 0.7;" />
-                </a>
+                ${socialLinks.join('')}
               </div>
               
               <p style="color: #555; font-size: 11px; text-align: center; margin-bottom: 10px;">
@@ -205,11 +242,11 @@ const handler = async (req: Request): Promise<Response> => {
               </p>
               
               <p style="color: #444; font-size: 10px; text-align: center;">
-                <a href="https://zemboapp.com/privacy" style="color: #888; text-decoration: none;">Politique de confidentialité</a>
+                <a href="${privacyUrl}" style="color: #888; text-decoration: none;">Politique de confidentialité</a>
                 &nbsp;•&nbsp;
-                <a href="https://zemboapp.com/terms" style="color: #888; text-decoration: none;">Conditions d'utilisation</a>
+                <a href="${termsUrl}" style="color: #888; text-decoration: none;">Conditions d'utilisation</a>
                 &nbsp;•&nbsp;
-                <a href="https://zemboapp.com/unsubscribe" style="color: #888; text-decoration: none;">Se désabonner</a>
+                <a href="${unsubscribeUrl}" style="color: #888; text-decoration: none;">Se désabonner</a>
               </p>
             </div>
           </div>
