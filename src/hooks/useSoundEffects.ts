@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { haptics, isNative } from "@/lib/capacitor";
 
 // Import static audio files
 import diceRollSound from "@/assets/sounds/dice-roll.mp3";
@@ -46,7 +47,10 @@ export const useSoundEffects = () => {
           console.warn("Failed to play zembo voice:", err);
         });
         
-        // Play success chime after ZEMBO voice
+        // Trigger haptic feedback on mobile when ZEMBO plays
+        if (isNative) {
+          haptics.notification('success');
+        }
         setTimeout(() => {
           setIsDrumrollPlaying(false);
           const success = new Audio(successChimeSound);
