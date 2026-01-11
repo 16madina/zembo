@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export interface FilterValues {
   ageMin: number;
@@ -24,16 +25,17 @@ interface FilterSheetProps {
   onApply: (filters: FilterValues) => void;
 }
 
-const genderOptions = [
-  { id: "women", label: "Femmes", emoji: "👩" },
-  { id: "men", label: "Hommes", emoji: "👨" },
-  { id: "nonbinary", label: "Non-binaire", emoji: "🌈" },
-  { id: "trans", label: "Trans", emoji: "⚧️" },
-  { id: "all", label: "Tout le monde", emoji: "💫" },
-];
-
 const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) => {
+  const { t } = useLanguage();
   const [localFilters, setLocalFilters] = useState<FilterValues>(filters);
+
+  const genderOptions = [
+    { id: "women", label: t.women, emoji: "👩" },
+    { id: "men", label: t.men, emoji: "👨" },
+    { id: "nonbinary", label: t.nonBinary, emoji: "🌈" },
+    { id: "trans", label: t.trans, emoji: "⚧️" },
+    { id: "all", label: t.everyone, emoji: "💫" },
+  ];
 
   const handleAgeChange = (values: number[]) => {
     setLocalFilters((prev) => ({
@@ -52,14 +54,12 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
 
   const toggleGender = (genderId: string) => {
     if (genderId === "all") {
-      // If "all" is selected, toggle between all and none
       if (localFilters.genders.includes("all")) {
         setLocalFilters((prev) => ({ ...prev, genders: [] }));
       } else {
         setLocalFilters((prev) => ({ ...prev, genders: ["all"] }));
       }
     } else {
-      // Remove "all" if individual options are selected
       const newGenders = localFilters.genders.filter((g) => g !== "all");
       if (newGenders.includes(genderId)) {
         setLocalFilters((prev) => ({
@@ -102,14 +102,14 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
 
         <SheetHeader className="mb-4">
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-lg font-bold">Filtres</SheetTitle>
+            <SheetTitle className="text-lg font-bold">{t.filters}</SheetTitle>
             <motion.button
               onClick={handleReset}
               whileTap={{ scale: 0.95 }}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
-              Réinitialiser
+              {t.reset}
             </motion.button>
           </div>
         </SheetHeader>
@@ -118,9 +118,9 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
           {/* Age Range */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">Âge</span>
+              <span className="text-xs font-medium text-foreground">{t.age}</span>
               <span className="text-xs text-primary font-semibold">
-                {localFilters.ageMin} - {localFilters.ageMax} ans
+                {localFilters.ageMin} - {localFilters.ageMax} {t.years}
               </span>
             </div>
             <Slider
@@ -136,9 +136,9 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
           {/* Distance */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">Distance max</span>
+              <span className="text-xs font-medium text-foreground">{t.maxDistance}</span>
               <span className="text-xs text-primary font-semibold">
-                {localFilters.distance} km
+                {localFilters.distance} {t.km}
               </span>
             </div>
             <Slider
@@ -153,7 +153,7 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
 
           {/* Gender Selection */}
           <div className="space-y-2">
-            <span className="text-xs font-medium text-foreground">Je recherche</span>
+            <span className="text-xs font-medium text-foreground">{t.lookingFor}</span>
             <div className="flex flex-wrap gap-1.5">
               {genderOptions.map((gender) => {
                 const isSelected = localFilters.genders.includes(gender.id);
@@ -190,7 +190,7 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
             onClick={handleApply}
             className="w-full btn-gold py-4 text-sm font-semibold rounded-xl"
           >
-            Appliquer les filtres
+            {t.applyFilters}
           </Button>
         </motion.div>
       </SheetContent>
