@@ -357,30 +357,49 @@ const LiveRoom = () => {
           </div>
         </div>
 
-        {/* Side Actions */}
-        <div className="absolute right-4 bottom-32 flex flex-col gap-4">
+        {/* Side Actions - Always visible */}
+        <div className="absolute right-4 bottom-56 flex flex-col gap-4 z-20">
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="w-12 h-12 rounded-full glass flex items-center justify-center"
+            onClick={() => toast.success("❤️ Vous aimez ce live !")}
+            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-destructive/80 transition-colors"
           >
             <Heart className="w-6 h-6 text-foreground" />
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="w-12 h-12 rounded-full glass flex items-center justify-center"
+            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
             onClick={() => setShowGiftPanel(true)}
           >
             <Gift className="w-6 h-6 text-primary" />
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="w-12 h-12 rounded-full glass flex items-center justify-center"
+            onClick={async () => {
+              if (navigator.share) {
+                try {
+                  await navigator.share({
+                    title: live.title,
+                    text: `Regardez le live de ${live.streamer?.display_name || "ce streamer"} !`,
+                    url: window.location.href,
+                  });
+                } catch (e) {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.success("Lien copié !");
+                }
+              } else {
+                navigator.clipboard.writeText(window.location.href);
+                toast.success("Lien copié !");
+              }
+            }}
+            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
           >
             <Share2 className="w-6 h-6 text-foreground" />
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="w-12 h-12 rounded-full glass flex items-center justify-center"
+            onClick={() => toast.info("Plus d'options bientôt disponibles")}
+            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
           >
             <MoreVertical className="w-6 h-6 text-foreground" />
           </motion.button>
