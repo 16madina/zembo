@@ -10,6 +10,9 @@ interface GuestPipViewProps {
   guestId: string;
   guestStream?: MediaStream | null;
   isStreamer: boolean;
+  isGuest: boolean;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
   onRemoveGuest?: () => void;
   isConnecting?: boolean;
   isConnected?: boolean;
@@ -21,6 +24,9 @@ const GuestPipView = ({
   guestId,
   guestStream,
   isStreamer,
+  isGuest,
+  isMuted = false,
+  onToggleMute,
   onRemoveGuest,
   isConnecting = false,
   isConnected = false,
@@ -102,10 +108,28 @@ const GuestPipView = ({
         <span className="text-[10px] font-medium text-foreground truncate">
           {guestName || "Invité"}
         </span>
+        {isMuted && <MicOff className="w-2.5 h-2.5 text-destructive" />}
       </div>
 
       {/* Controls */}
       <div className="absolute top-1 right-1 flex gap-1">
+        {/* Mute button (guest only) */}
+        {isGuest && onToggleMute && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onToggleMute}
+            className={`w-6 h-6 rounded-full backdrop-blur-sm flex items-center justify-center ${
+              isMuted ? "bg-destructive/80" : "bg-background/60"
+            }`}
+          >
+            {isMuted ? (
+              <MicOff className="w-3 h-3 text-white" />
+            ) : (
+              <Mic className="w-3 h-3 text-foreground" />
+            )}
+          </motion.button>
+        )}
+
         {/* Expand/Collapse */}
         <motion.button
           whileTap={{ scale: 0.9 }}
