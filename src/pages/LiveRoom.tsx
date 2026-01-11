@@ -11,20 +11,21 @@ import {
   Send,
   Flag,
   Coins,
+  Wifi,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLives, type Live } from "@/hooks/useLives";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
-import { useLiveStream } from "@/hooks/useLiveStream";
+import { useLiveKit } from "@/hooks/useLiveKit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
-import VideoPlayer from "@/components/live/VideoPlayer";
+import LiveKitVideo from "@/components/live/LiveKitVideo";
 import StreamControls from "@/components/live/StreamControls";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -54,14 +55,25 @@ const LiveRoom = () => {
     senderName: string;
   } | null>(null);
 
-  // Live stream controls (demo mode)
+  // LiveKit connection (uses room name from live data)
+  const roomName = live?.livekit_room_name || id || "";
   const {
+    isConnected,
+    isConnecting,
     isMuted,
     isVideoOff,
+    remoteVideoTrack,
+    connect,
+    disconnect,
     toggleMute,
     toggleVideo,
     switchCamera,
-  } = useLiveStream({ isStreamer, demoMode: true });
+    setLocalVideoRef,
+    setRemoteVideoRef,
+  } = useLiveKit({
+    roomName,
+    isStreamer,
+  });
 
   // Fetch live data
   useEffect(() => {
@@ -104,13 +116,21 @@ const LiveRoom = () => {
 
     fetchLive();
 
-    // Cleanup: decrement viewer count
+    // Cleanup: decrement viewer count and disconnect LiveKit
     return () => {
       if (id && user && !isStreamer) {
         updateViewerCount(id, false);
       }
+      disconnect();
     };
   }, [id, user]);
+
+  // Auto-connect to LiveKit when live data is loaded
+  useEffect(() => {
+    if (live && !isConnected && !isConnecting && roomName) {
+      connect();
+    }
+  }, [live, isConnected, isConnecting, roomName, connect]);
 
   // Fetch and subscribe to messages
   useEffect(() => {
@@ -264,13 +284,17 @@ const LiveRoom = () => {
     <div className="fixed inset-0 bg-background flex flex-col">
       {/* Video Area */}
       <div className="flex-1 relative">
-        <VideoPlayer
+        <LiveKitVideo
           isStreamer={isStreamer}
           isVideoOff={isVideoOff}
+          isConnected={isConnected}
+          isConnecting={isConnecting}
           streamerId={live.streamer_id}
           streamerName={live.streamer?.display_name}
           streamerAvatar={live.streamer?.avatar_url}
-          demoMode={true}
+          remoteVideoTrack={remoteVideoTrack}
+          setLocalVideoRef={setLocalVideoRef}
+          setRemoteVideoRef={setRemoteVideoRef}
         />
 
         {/* Stream Controls for Streamer */}

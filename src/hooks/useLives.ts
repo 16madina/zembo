@@ -75,6 +75,9 @@ export const useLives = () => {
       return { data: null, error: new Error("Not authenticated") };
     }
 
+    // Generate unique room name for LiveKit
+    const roomName = `live_${user.id}_${Date.now()}`;
+
     const liveData: TablesInsert<"lives"> = {
       streamer_id: user.id,
       title,
@@ -82,6 +85,7 @@ export const useLives = () => {
       tags,
       status: "live",
       started_at: new Date().toISOString(),
+      livekit_room_name: roomName,
     };
 
     const { data, error } = await supabase
