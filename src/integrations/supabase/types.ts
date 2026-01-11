@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      gift_transactions: {
+        Row: {
+          coin_amount: number
+          created_at: string
+          gift_id: string
+          id: string
+          live_id: string | null
+          message: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          coin_amount: number
+          created_at?: string
+          gift_id: string
+          id?: string
+          live_id?: string | null
+          message?: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          coin_amount?: number
+          created_at?: string
+          gift_id?: string
+          id?: string
+          live_id?: string | null
+          message?: string | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_transactions_gift_id_fkey"
+            columns: ["gift_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_gifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_transactions_live_id_fkey"
+            columns: ["live_id"]
+            isOneToOne: false
+            referencedRelation: "lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       likes: {
         Row: {
           created_at: string
@@ -35,6 +83,95 @@ export type Database = {
           is_super_like?: boolean
           liked_id?: string
           liker_id?: string
+        }
+        Relationships: []
+      }
+      live_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          live_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          live_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          live_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_messages_live_id_fkey"
+            columns: ["live_id"]
+            isOneToOne: false
+            referencedRelation: "lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lives: {
+        Row: {
+          created_at: string
+          description: string | null
+          ended_at: string | null
+          id: string
+          livekit_room_name: string | null
+          max_viewers: number
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["live_status"]
+          streamer_id: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          viewer_count: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          livekit_room_name?: string | null
+          max_viewers?: number
+          scheduled_for?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["live_status"]
+          streamer_id: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          viewer_count?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          livekit_room_name?: string | null
+          max_viewers?: number
+          scheduled_for?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["live_status"]
+          streamer_id?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          viewer_count?: number
         }
         Relationships: []
       }
@@ -203,6 +340,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_coins: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          total_earned: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_earned?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_reports: {
         Row: {
           created_at: string
@@ -271,6 +438,75 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          is_active: boolean
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          is_active?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          is_active?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      virtual_gifts: {
+        Row: {
+          animation_type: string | null
+          created_at: string
+          emoji: string
+          id: string
+          is_active: boolean
+          name: string
+          price_coins: number
+        }
+        Insert: {
+          animation_type?: string | null
+          created_at?: string
+          emoji: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_coins: number
+        }
+        Update: {
+          animation_type?: string | null
+          created_at?: string
+          emoji?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_coins?: number
+        }
+        Relationships: []
+      }
       webrtc_signals: {
         Row: {
           created_at: string
@@ -319,6 +555,7 @@ export type Database = {
         Args: { user_a: string; user_b: string }
         Returns: boolean
       }
+      can_go_live: { Args: { p_user_id: string }; Returns: boolean }
       find_random_call_match: {
         Args: {
           p_looking_for: string
@@ -341,6 +578,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      live_status: "scheduled" | "live" | "ended"
+      subscription_tier: "free" | "premium" | "vip"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -469,6 +708,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      live_status: ["scheduled", "live", "ended"],
+      subscription_tier: ["free", "premium", "vip"],
     },
   },
 } as const
