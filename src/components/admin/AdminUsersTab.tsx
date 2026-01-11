@@ -6,12 +6,13 @@ import {
   Ban,
   Eye,
   Mail,
-  Bell,
   Loader2,
   CheckCircle,
-  XCircle,
   Shield,
   ShieldOff,
+  Crown,
+  Coins,
+  Gift,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,18 +70,42 @@ interface BanData {
   duration: string;
 }
 
+interface GrantAccessData {
+  tier: "premium" | "vip";
+  duration: string;
+  coins: number;
+}
+
+interface UserSubscription {
+  tier: "free" | "premium" | "vip";
+  is_active: boolean;
+  current_period_end: string | null;
+}
+
+interface UserCoins {
+  balance: number;
+}
+
 const AdminUsersTab = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [bannedUserIds, setBannedUserIds] = useState<Set<string>>(new Set());
+  const [userSubscriptions, setUserSubscriptions] = useState<Record<string, UserSubscription>>({});
+  const [userCoins, setUserCoins] = useState<Record<string, UserCoins>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showBanDialog, setShowBanDialog] = useState(false);
+  const [showGrantAccessDialog, setShowGrantAccessDialog] = useState(false);
   const [banData, setBanData] = useState<BanData>({
     reason: "",
     description: "",
     duration: "permanent",
+  });
+  const [grantAccessData, setGrantAccessData] = useState<GrantAccessData>({
+    tier: "premium",
+    duration: "30",
+    coins: 0,
   });
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -107,8 +132,36 @@ const AdminUsersTab = () => {
 
       if (bansError) throw bansError;
 
+      // Fetch all subscriptions
+      const { data: subsData } = await supabase
+        .from("user_subscriptions")
+        .select("user_id, tier, is_active, current_period_end");
+
+      // Fetch all coins
+      const { data: coinsData } = await supabase
+        .from("user_coins")
+        .select("user_id, balance");
+
       const bannedIds = new Set((bansData || []).map((b) => b.user_id));
       setBannedUserIds(bannedIds);
+
+      // Build subscriptions map
+      const subsMap: Record<string, UserSubscription> = {};
+      (subsData || []).forEach((s) => {
+        subsMap[s.user_id] = {
+          tier: s.tier,
+          is_active: s.is_active,
+          current_period_end: s.current_period_end,
+        };
+      });
+      setUserSubscriptions(subsMap);
+
+      // Build coins map
+      const coinsMap: Record<string, UserCoins> = {};
+      (coinsData || []).forEach((c) => {
+        coinsMap[c.user_id] = { balance: c.balance };
+      });
+      setUserCoins(coinsMap);
 
       setUsers(
         (profilesData || []).map((p) => ({
@@ -203,6 +256,137 @@ const AdminUsersTab = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleGrantAccess = async () => {
+    if (!selectedUser || !currentUser) return;
+
+    setIsProcessing(true);
+    try {
+      const durationDays = parseInt(grantAccessData.duration);
+      const periodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+      // Check if subscription exists
+      const existingSub = userSubscriptions[selectedUser.user_id];
+
+      if (existingSub) {
+        // Update existing subscription
+        const { error } = await supabase
+          .from("user_subscriptions")
+          .update({
+            tier: grantAccessData.tier,
+            is_active: true,
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd,
+          })
+          .eq("user_id", selectedUser.user_id);
+
+        if (error) throw error;
+      } else {
+        // Insert new subscription
+        const { error } = await supabase.from("user_subscriptions").insert({
+          user_id: selectedUser.user_id,
+          tier: grantAccessData.tier,
+          is_active: true,
+          current_period_start: new Date().toISOString(),
+          current_period_end: periodEnd,
+        });
+
+        if (error) throw error;
+      }
+
+      // Update local state
+      setUserSubscriptions((prev) => ({
+        ...prev,
+        [selectedUser.user_id]: {
+          tier: grantAccessData.tier,
+          is_active: true,
+          current_period_end: periodEnd,
+        },
+      }));
+
+      // Handle coins if amount > 0
+      if (grantAccessData.coins > 0) {
+        const existingCoins = userCoins[selectedUser.user_id];
+
+        if (existingCoins) {
+          const { error } = await supabase
+            .from("user_coins")
+            .update({
+              balance: existingCoins.balance + grantAccessData.coins,
+              total_earned: grantAccessData.coins,
+            })
+            .eq("user_id", selectedUser.user_id);
+
+          if (error) throw error;
+
+          setUserCoins((prev) => ({
+            ...prev,
+            [selectedUser.user_id]: {
+              balance: existingCoins.balance + grantAccessData.coins,
+            },
+          }));
+        } else {
+          const { error } = await supabase.from("user_coins").insert({
+            user_id: selectedUser.user_id,
+            balance: grantAccessData.coins,
+            total_earned: grantAccessData.coins,
+          });
+
+          if (error) throw error;
+
+          setUserCoins((prev) => ({
+            ...prev,
+            [selectedUser.user_id]: { balance: grantAccessData.coins },
+          }));
+        }
+      }
+
+      toast.success(
+        `Accès ${grantAccessData.tier.toUpperCase()} accordé à ${selectedUser.display_name || "l'utilisateur"} pour ${durationDays} jours${grantAccessData.coins > 0 ? ` + ${grantAccessData.coins} coins` : ""}`
+      );
+
+      setShowGrantAccessDialog(false);
+      setGrantAccessData({ tier: "premium", duration: "30", coins: 0 });
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Error granting access:", error);
+      toast.error("Erreur lors de l'attribution de l'accès");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getSubscriptionBadge = (userId: string) => {
+    const sub = userSubscriptions[userId];
+    if (!sub || !sub.is_active || sub.tier === "free") return null;
+
+    const isExpired = sub.current_period_end && new Date(sub.current_period_end) < new Date();
+    if (isExpired) return null;
+
+    const daysLeft = sub.current_period_end
+      ? Math.ceil((new Date(sub.current_period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    return (
+      <Badge className={sub.tier === "vip" ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"}>
+        <Crown className="w-3 h-3 mr-1" />
+        {sub.tier.toUpperCase()}
+        {daysLeft !== null && ` (${daysLeft}j)`}
+      </Badge>
+    );
+  };
+
+  const getCoinsBadge = (userId: string) => {
+    const coins = userCoins[userId];
+    if (!coins || coins.balance === 0) return null;
+
+    return (
+      <Badge className="bg-amber-500/20 text-amber-400">
+        <Coins className="w-3 h-3 mr-1" />
+        {coins.balance}
+      </Badge>
+    );
   };
 
   const filteredUsers = users.filter((user) => {
@@ -315,6 +499,8 @@ const AdminUsersTab = () => {
                             Vérifié
                           </Badge>
                         )}
+                        {getSubscriptionBadge(profile.user_id)}
+                        {getCoinsBadge(profile.user_id)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -324,8 +510,21 @@ const AdminUsersTab = () => {
                           variant="ghost"
                           className="h-8 w-8 p-0"
                           onClick={() => setSelectedUser(profile)}
+                          title="Voir détails"
                         >
                           <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-purple-500 hover:text-purple-400"
+                          onClick={() => {
+                            setSelectedUser(profile);
+                            setShowGrantAccessDialog(true);
+                          }}
+                          title="Accorder accès Premium/VIP"
+                        >
+                          <Gift className="w-4 h-4" />
                         </Button>
                         {profile.is_banned ? (
                           <Button
@@ -334,6 +533,7 @@ const AdminUsersTab = () => {
                             className="h-8 w-8 p-0 text-green-500 hover:text-green-400"
                             onClick={() => handleUnbanUser(profile)}
                             disabled={isProcessing}
+                            title="Débannir"
                           >
                             <ShieldOff className="w-4 h-4" />
                           </Button>
@@ -346,6 +546,7 @@ const AdminUsersTab = () => {
                               setSelectedUser(profile);
                               setShowBanDialog(true);
                             }}
+                            title="Bannir"
                           >
                             <Ban className="w-4 h-4" />
                           </Button>
@@ -430,7 +631,47 @@ const AdminUsersTab = () => {
                 )}
               </div>
 
+              {/* Subscription Info */}
+              {userSubscriptions[selectedUser.user_id] && userSubscriptions[selectedUser.user_id].tier !== "free" && (
+                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="w-4 h-4 text-purple-400" />
+                    <span className="font-medium text-purple-400">
+                      Abonnement {userSubscriptions[selectedUser.user_id].tier.toUpperCase()}
+                    </span>
+                  </div>
+                  {userSubscriptions[selectedUser.user_id].current_period_end && (
+                    <p className="text-sm text-muted-foreground">
+                      Expire le:{" "}
+                      {new Date(userSubscriptions[selectedUser.user_id].current_period_end!).toLocaleDateString("fr-FR")}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Coins Info */}
+              {userCoins[selectedUser.user_id] && (
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <div className="flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-400" />
+                    <span className="font-medium text-amber-400">
+                      {userCoins[selectedUser.user_id].balance} coins
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowGrantAccessDialog(true);
+                  }}
+                >
+                  <Gift className="w-4 h-4 mr-2" />
+                  Accorder accès
+                </Button>
                 {!selectedUser.is_banned && (
                   <Button
                     variant="destructive"
@@ -529,6 +770,140 @@ const AdminUsersTab = () => {
                 <Ban className="w-4 h-4 mr-2" />
               )}
               Confirmer le ban
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Grant Access Dialog */}
+      <Dialog open={showGrantAccessDialog} onOpenChange={setShowGrantAccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5 text-purple-400" />
+              Accorder un accès Premium/VIP
+            </DialogTitle>
+            <DialogDescription>
+              Donnez un accès illimité à {selectedUser?.display_name || "cet utilisateur"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Type d'abonnement</Label>
+              <Select
+                value={grantAccessData.tier}
+                onValueChange={(value: "premium" | "vip") =>
+                  setGrantAccessData((prev) => ({ ...prev, tier: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="premium">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-purple-400" />
+                      Premium
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="vip">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-yellow-400" />
+                      VIP
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Durée (en jours)</Label>
+              <Select
+                value={grantAccessData.duration}
+                onValueChange={(value) =>
+                  setGrantAccessData((prev) => ({ ...prev, duration: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 jours</SelectItem>
+                  <SelectItem value="30">30 jours</SelectItem>
+                  <SelectItem value="90">90 jours</SelectItem>
+                  <SelectItem value="180">6 mois (180 jours)</SelectItem>
+                  <SelectItem value="365">1 an (365 jours)</SelectItem>
+                  <SelectItem value="3650">Illimité (10 ans)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Bonus de coins (optionnel)</Label>
+              <Input
+                type="number"
+                placeholder="0"
+                min="0"
+                value={grantAccessData.coins || ""}
+                onChange={(e) =>
+                  setGrantAccessData((prev) => ({
+                    ...prev,
+                    coins: parseInt(e.target.value) || 0,
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Ces coins seront ajoutés au solde de l'utilisateur
+              </p>
+            </div>
+
+            {/* Current Status */}
+            {selectedUser && (
+              <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                <p className="text-sm font-medium">Statut actuel :</p>
+                <div className="flex flex-wrap gap-2">
+                  {userSubscriptions[selectedUser.user_id] ? (
+                    <Badge
+                      className={
+                        userSubscriptions[selectedUser.user_id].tier === "vip"
+                          ? "bg-yellow-500/20 text-yellow-400"
+                          : userSubscriptions[selectedUser.user_id].tier === "premium"
+                          ? "bg-purple-500/20 text-purple-400"
+                          : "bg-muted"
+                      }
+                    >
+                      {userSubscriptions[selectedUser.user_id].tier.toUpperCase()}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">FREE</Badge>
+                  )}
+                  {userCoins[selectedUser.user_id] && (
+                    <Badge className="bg-amber-500/20 text-amber-400">
+                      <Coins className="w-3 h-3 mr-1" />
+                      {userCoins[selectedUser.user_id].balance} coins
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGrantAccessDialog(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleGrantAccess}
+              disabled={isProcessing}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Gift className="w-4 h-4 mr-2" />
+              )}
+              Accorder l'accès
             </Button>
           </DialogFooter>
         </DialogContent>
