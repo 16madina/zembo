@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Phone } from "lucide-react";
+import Dice3D from "./Dice3D";
 
 interface PreferenceSelectorProps {
   onSelect: (preference: string) => void;
@@ -45,19 +46,18 @@ const PreferenceSelector = ({ onSelect, onStartCall, isShaking = false }: Prefer
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-6"
         >
+          {/* 3D Animated Dice */}
           <motion.div
             animate={{ 
-              scale: [1, 1.2, 1],
-              rotate: [0, -5, 5, -5, 0]
+              scale: [1, 1.1, 1],
             }}
             transition={{ 
-              duration: 0.5, 
+              duration: 0.8, 
               repeat: Infinity,
               repeatType: "reverse"
             }}
-            className="text-8xl"
           >
-            🎲
+            <Dice3D isAnimating={true} />
           </motion.div>
           <motion.h2 
             className="text-2xl font-bold text-primary"
