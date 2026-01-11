@@ -34,7 +34,7 @@ import StreamControls from "@/components/live/StreamControls";
 import BeautyFilterPanel from "@/components/live/BeautyFilterPanel";
 import StageRequestButton from "@/components/live/StageRequestButton";
 import StageRequestQueue from "@/components/live/StageRequestQueue";
-import SplitScreenView from "@/components/live/SplitScreenView";
+import GuestPipView from "@/components/live/GuestPipView";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -328,63 +328,44 @@ const LiveRoom = () => {
 
   return (
     <div className="fixed inset-0 bg-black">
-      {/* Video Area - Full Screen or Split Screen */}
+      {/* Video Area - Full Screen */}
       <div className="absolute inset-0">
-        {currentGuest ? (
-          <SplitScreenView
-            streamerStream={stream}
-            streamerName={live.streamer?.display_name || null}
-            streamerAvatar={live.streamer?.avatar_url || null}
-            streamerId={live.streamer_id}
-            isVideoOff={isVideoOff}
-            filterString={isStreamer ? filterString : undefined}
-            guestName={currentGuest.profile?.display_name || null}
-            guestAvatar={currentGuest.profile?.avatar_url || null}
-            guestId={currentGuest.user_id}
-            guestStream={guestStream}
-            isStreamer={isStreamer}
-            onRemoveGuest={removeFromStage}
-            isConnecting={stageConnecting}
-            isConnected={stageConnected}
-          />
-        ) : (
-          <LocalVideoPlayer
-            isStreamer={isStreamer}
-            isVideoOff={isVideoOff}
-            isInitialized={isInitialized}
-            stream={stream}
-            streamerId={live.streamer_id}
-            streamerName={live.streamer?.display_name}
-            streamerAvatar={live.streamer?.avatar_url}
-            setVideoRef={setVideoRef}
-            filterString={isStreamer ? filterString : undefined}
-          />
-        )}
+        <LocalVideoPlayer
+          isStreamer={isStreamer}
+          isVideoOff={isVideoOff}
+          isInitialized={isInitialized}
+          stream={stream}
+          streamerId={live.streamer_id}
+          streamerName={live.streamer?.display_name}
+          streamerAvatar={live.streamer?.avatar_url}
+          setVideoRef={setVideoRef}
+          filterString={isStreamer ? filterString : undefined}
+        />
+
+        {/* Guest PiP View (Picture-in-Picture) */}
+        <AnimatePresence>
+          {currentGuest && (
+            <GuestPipView
+              guestName={currentGuest.profile?.display_name || null}
+              guestAvatar={currentGuest.profile?.avatar_url || null}
+              guestId={currentGuest.user_id}
+              guestStream={guestStream}
+              isStreamer={isStreamer}
+              onRemoveGuest={removeFromStage}
+              isConnecting={stageConnecting}
+              isConnected={stageConnected}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Beauty Filter Button for Streamer */}
-        {isStreamer && !currentGuest && (
+        {isStreamer && (
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowBeautyPanel(true)}
             className="absolute top-16 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
           >
             <Sparkles className="w-5 h-5 text-primary" />
-          </motion.button>
-        )}
-
-        {/* Stage Queue Button for Streamer */}
-        {isStreamer && (
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowStageQueue(true)}
-            className="absolute top-28 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30 relative"
-          >
-            <Hand className="w-5 h-5 text-primary" />
-            {stageRequests.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-xs text-white font-bold">
-                {stageRequests.length}
-              </span>
-            )}
           </motion.button>
         )}
 
@@ -498,15 +479,24 @@ const LiveRoom = () => {
           >
             <Share2 className="w-6 h-6 text-foreground" />
           </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => toast.info("Plus d'options bientôt disponibles")}
-            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
-          >
-            <MoreVertical className="w-6 h-6 text-foreground" />
-          </motion.button>
-          
-          {/* Stage Request Button for Viewers */}
+
+          {/* Stage Queue Button for Streamer (après Share) */}
+          {isStreamer && (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowStageQueue(true)}
+              className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors relative"
+            >
+              <Hand className="w-6 h-6 text-primary" />
+              {stageRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-xs text-white font-bold">
+                  {stageRequests.length}
+                </span>
+              )}
+            </motion.button>
+          )}
+
+          {/* Stage Request Button for Viewers (après Share) */}
           {!isStreamer && (
             <StageRequestButton
               hasRequest={!!myRequest}
@@ -517,6 +507,14 @@ const LiveRoom = () => {
               onLeave={leaveStage}
             />
           )}
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => toast.info("Plus d'options bientôt disponibles")}
+            className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
+          >
+            <MoreVertical className="w-6 h-6 text-foreground" />
+          </motion.button>
         </div>
       </div>
 
