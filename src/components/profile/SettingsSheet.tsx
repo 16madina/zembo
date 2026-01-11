@@ -19,6 +19,15 @@ import {
   Check,
   Info,
   Smartphone,
+  Users,
+  Heart,
+  Eye,
+  Ban,
+  Flag,
+  ShieldCheck,
+  ShieldAlert,
+  Baby,
+  UserX,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -81,6 +90,16 @@ const translations = {
     cancel: "Annuler",
     delete: "Supprimer",
     saved: "Paramètres sauvegardés",
+    communityGuidelines: "Règles de la communauté",
+    safetyTips: "Conseils de sécurité",
+    contentModeration: "Modération du contenu",
+    userSafety: "Sécurité des utilisateurs",
+    childSafety: "Protection des mineurs",
+    contentPolicy: "Politique de contenu",
+    userProtection: "Protection des utilisateurs",
+    dataPrivacy: "Confidentialité des données",
+    consequences: "Sanctions",
+    reportingAndBlocking: "Signalement & blocage",
   },
   en: {
     settings: "Settings",
@@ -111,6 +130,16 @@ const translations = {
     cancel: "Cancel",
     delete: "Delete",
     saved: "Settings saved",
+    communityGuidelines: "Community Guidelines",
+    safetyTips: "Safety Tips",
+    contentModeration: "Content Moderation",
+    userSafety: "User Safety",
+    childSafety: "Child Safety",
+    contentPolicy: "Content Policy",
+    userProtection: "User Protection",
+    dataPrivacy: "Data Privacy",
+    consequences: "Consequences",
+    reportingAndBlocking: "Reporting & Blocking",
   },
 };
 
@@ -161,37 +190,280 @@ const dataCollectionInfo = {
   ],
 };
 
+// Comprehensive App Store & Play Store Guidelines for Dating Apps
 const appGuidelines = {
   ios: {
-    fr: [
-      "Vous pouvez demander la suppression de votre compte directement depuis l'application",
-      "Toutes vos données personnelles seront supprimées dans un délai de 90 jours",
-      "Vous pouvez exporter vos données avant la suppression",
-      "Les achats intégrés ne sont pas remboursables après utilisation",
-      "Conformité avec les règles de l'App Store concernant la protection des données",
-    ],
-    en: [
-      "You can request account deletion directly from the app",
-      "All your personal data will be deleted within 90 days",
-      "You can export your data before deletion",
-      "In-app purchases are non-refundable after use",
-      "Compliance with App Store rules regarding data protection",
-    ],
+    fr: {
+      accountManagement: [
+        "Suppression de compte accessible directement dans l'application (Guideline 5.1.1)",
+        "Toutes vos données personnelles seront supprimées dans un délai de 90 jours",
+        "Possibilité d'exporter vos données personnelles (RGPD)",
+        "Les achats intégrés ne sont pas remboursables après utilisation",
+        "Option 'Sign in with Apple' disponible pour la connexion",
+      ],
+      contentModeration: [
+        "Système de modération actif 24h/24 pour le contenu inapproprié (Guideline 1.2)",
+        "Filtrage automatique des contenus à caractère sexuel explicite (Guideline 1.1.4)",
+        "Signalement des utilisateurs abusifs avec traitement sous 24h",
+        "Blocage immédiat des utilisateurs indésirables",
+        "Interdiction stricte des contenus pornographiques ou prostitution",
+      ],
+      userSafety: [
+        "Vérification de l'âge obligatoire (18+ ans)",
+        "Protection contre le harcèlement et les comportements abusifs",
+        "Politique de tolérance zéro pour les discours haineux",
+        "Photos modérées pour prévenir le contenu inapproprié",
+        "Messagerie sécurisée avec signalement intégré",
+      ],
+      dataPrivacy: [
+        "Politique de confidentialité transparente et accessible",
+        "Consentement explicite pour la collecte de données",
+        "Localisation utilisée uniquement avec votre permission",
+        "Données chiffrées en transit et au repos",
+        "Aucun partage de données avec des tiers sans consentement",
+      ],
+    },
+    en: {
+      accountManagement: [
+        "Account deletion accessible directly in the app (Guideline 5.1.1)",
+        "All personal data deleted within 90 days",
+        "Option to export your personal data (GDPR)",
+        "In-app purchases are non-refundable after use",
+        "'Sign in with Apple' option available for login",
+      ],
+      contentModeration: [
+        "24/7 active content moderation system (Guideline 1.2)",
+        "Automatic filtering of sexually explicit content (Guideline 1.1.4)",
+        "User abuse reports processed within 24 hours",
+        "Immediate blocking of unwanted users",
+        "Strict prohibition of pornographic content or prostitution",
+      ],
+      userSafety: [
+        "Mandatory age verification (18+ years)",
+        "Protection against harassment and abusive behavior",
+        "Zero tolerance policy for hate speech",
+        "Photos moderated to prevent inappropriate content",
+        "Secure messaging with integrated reporting",
+      ],
+      dataPrivacy: [
+        "Transparent and accessible privacy policy",
+        "Explicit consent for data collection",
+        "Location used only with your permission",
+        "Data encrypted in transit and at rest",
+        "No data sharing with third parties without consent",
+      ],
+    },
   },
   android: {
-    fr: [
-      "Suppression de compte disponible dans les paramètres",
-      "Les données sont supprimées conformément au RGPD (90 jours max)",
-      "Possibilité de télécharger vos données personnelles",
-      "Les abonnements doivent être annulés séparément via Google Play",
-      "Conformité avec les politiques Google Play sur les données utilisateur",
+    fr: {
+      accountManagement: [
+        "Suppression de compte disponible dans les paramètres",
+        "Les données sont supprimées conformément au RGPD (90 jours max)",
+        "Possibilité de télécharger toutes vos données personnelles",
+        "Les abonnements doivent être annulés via Google Play Store",
+        "Processus de suppression simple et clairement documenté",
+      ],
+      childSafety: [
+        "Interdiction stricte du contenu CSAM (Child Safety Standards)",
+        "Signalement obligatoire au NCMEC en cas de contenu illégal détecté",
+        "Mécanisme de feedback intégré pour signaler les violations",
+        "Conformité avec les lois sur la protection des mineurs",
+        "Point de contact dédié pour les signalements de sécurité enfants",
+      ],
+      contentPolicy: [
+        "Interdiction des services de 'sugar dating' ou compensés",
+        "Aucune nudité sexuelle ou poses suggestives autorisées",
+        "Modération proactive par IA des contenus téléchargés",
+        "Standards de contenu publiés dans nos conditions d'utilisation",
+        "Action rapide contre les violateurs (suspension/bannissement)",
+      ],
+      userProtection: [
+        "Mécanisme de blocage et signalement facile d'accès",
+        "Équipe de modération dédiée pour les signalements",
+        "Retrait de contenu problématique sous 24h",
+        "Protection contre les arnaques et profils frauduleux",
+        "Vérification des profils pour une communauté authentique",
+      ],
+    },
+    en: {
+      accountManagement: [
+        "Account deletion available in settings",
+        "Data deleted in accordance with GDPR (90 days max)",
+        "Option to download all your personal data",
+        "Subscriptions must be cancelled via Google Play Store",
+        "Simple and clearly documented deletion process",
+      ],
+      childSafety: [
+        "Strict prohibition of CSAM content (Child Safety Standards)",
+        "Mandatory reporting to NCMEC if illegal content detected",
+        "Integrated feedback mechanism to report violations",
+        "Compliance with child protection laws",
+        "Dedicated contact point for child safety reports",
+      ],
+      contentPolicy: [
+        "Prohibition of 'sugar dating' or compensated services",
+        "No sexual nudity or suggestive poses allowed",
+        "Proactive AI moderation of uploaded content",
+        "Content standards published in our terms of service",
+        "Swift action against violators (suspension/ban)",
+      ],
+      userProtection: [
+        "Easy-access blocking and reporting mechanism",
+        "Dedicated moderation team for reports",
+        "Problematic content removal within 24h",
+        "Protection against scams and fraudulent profiles",
+        "Profile verification for an authentic community",
+      ],
+    },
+  },
+};
+
+// Community Guidelines for Dating Apps
+const communityGuidelines = {
+  fr: {
+    title: "Règles de la communauté",
+    description: "Pour garantir un environnement sûr et respectueux pour tous nos utilisateurs.",
+    rules: [
+      {
+        title: "Respect mutuel",
+        description: "Traitez tous les utilisateurs avec respect et dignité. Le harcèlement, les insultes et les comportements intimidants sont strictement interdits.",
+        icon: "🤝",
+      },
+      {
+        title: "Authenticité",
+        description: "Utilisez uniquement vos propres photos récentes. Les faux profils et l'usurpation d'identité entraînent un bannissement immédiat.",
+        icon: "✅",
+      },
+      {
+        title: "Contenu approprié",
+        description: "Aucun contenu sexuellement explicite, nudité, ou matériel illégal. Cela inclut les photos et les messages.",
+        icon: "🚫",
+      },
+      {
+        title: "Sécurité",
+        description: "Ne partagez jamais d'informations financières. Signalez immédiatement tout comportement suspect ou demande d'argent.",
+        icon: "🛡️",
+      },
+      {
+        title: "Âge minimum",
+        description: "Vous devez avoir au moins 18 ans pour utiliser Zembo. La vérification de l'âge est obligatoire.",
+        icon: "🔞",
+      },
+      {
+        title: "Signalement",
+        description: "Signalez tout comportement inapproprié. Nos équipes examinent chaque signalement dans les 24 heures.",
+        icon: "🚨",
+      },
     ],
-    en: [
-      "Account deletion available in settings",
-      "Data is deleted in accordance with GDPR (90 days max)",
-      "Option to download your personal data",
-      "Subscriptions must be cancelled separately via Google Play",
-      "Compliance with Google Play policies on user data",
+    consequences: [
+      "Premier avertissement : Rappel des règles",
+      "Deuxième avertissement : Suspension temporaire (7 jours)",
+      "Troisième violation : Bannissement permanent",
+      "Contenu illégal : Bannissement immédiat et signalement aux autorités",
+    ],
+  },
+  en: {
+    title: "Community Guidelines",
+    description: "To ensure a safe and respectful environment for all our users.",
+    rules: [
+      {
+        title: "Mutual Respect",
+        description: "Treat all users with respect and dignity. Harassment, insults, and intimidating behavior are strictly prohibited.",
+        icon: "🤝",
+      },
+      {
+        title: "Authenticity",
+        description: "Use only your own recent photos. Fake profiles and identity theft result in immediate ban.",
+        icon: "✅",
+      },
+      {
+        title: "Appropriate Content",
+        description: "No sexually explicit content, nudity, or illegal material. This includes photos and messages.",
+        icon: "🚫",
+      },
+      {
+        title: "Safety",
+        description: "Never share financial information. Immediately report any suspicious behavior or money requests.",
+        icon: "🛡️",
+      },
+      {
+        title: "Minimum Age",
+        description: "You must be at least 18 years old to use Zembo. Age verification is mandatory.",
+        icon: "🔞",
+      },
+      {
+        title: "Reporting",
+        description: "Report any inappropriate behavior. Our teams review each report within 24 hours.",
+        icon: "🚨",
+      },
+    ],
+    consequences: [
+      "First warning: Reminder of rules",
+      "Second warning: Temporary suspension (7 days)",
+      "Third violation: Permanent ban",
+      "Illegal content: Immediate ban and report to authorities",
+    ],
+  },
+};
+
+// Safety Tips for Dating Apps
+const safetyTips = {
+  fr: {
+    title: "Conseils de sécurité",
+    tips: [
+      {
+        title: "Restez sur l'application",
+        description: "Gardez vos conversations sur Zembo jusqu'à ce que vous fassiez confiance à la personne.",
+      },
+      {
+        title: "Premier rendez-vous public",
+        description: "Rencontrez toujours dans un lieu public et fréquenté pour votre premier rendez-vous.",
+      },
+      {
+        title: "Informez un proche",
+        description: "Prévenez quelqu'un de confiance de l'heure et du lieu de votre rendez-vous.",
+      },
+      {
+        title: "Vérifiez le profil",
+        description: "Recherchez les profils vérifiés et les photos authentiques.",
+      },
+      {
+        title: "Faites confiance à votre instinct",
+        description: "Si quelque chose vous semble suspect, n'hésitez pas à bloquer et signaler.",
+      },
+      {
+        title: "Ne partagez jamais vos informations financières",
+        description: "N'envoyez jamais d'argent à quelqu'un que vous n'avez pas rencontré en personne.",
+      },
+    ],
+  },
+  en: {
+    title: "Safety Tips",
+    tips: [
+      {
+        title: "Stay on the app",
+        description: "Keep your conversations on Zembo until you trust the person.",
+      },
+      {
+        title: "Meet in public",
+        description: "Always meet in a public, busy place for your first date.",
+      },
+      {
+        title: "Tell someone",
+        description: "Let a trusted person know the time and place of your date.",
+      },
+      {
+        title: "Verify the profile",
+        description: "Look for verified profiles and authentic photos.",
+      },
+      {
+        title: "Trust your instincts",
+        description: "If something feels off, don't hesitate to block and report.",
+      },
+      {
+        title: "Never share financial information",
+        description: "Never send money to someone you haven't met in person.",
+      },
     ],
   },
 };
@@ -520,26 +792,86 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
               </div>
             </div>
 
-            {/* App Guidelines Section */}
+            {/* Community Guidelines Section */}
             <div className="glass-strong rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
-                <Smartphone className="w-4 h-4" />
-                {t.appGuidelines}
+                <Users className="w-4 h-4" />
+                {communityGuidelines[language].title}
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                {communityGuidelines[language].description}
+              </p>
+              
+              <div className="space-y-3">
+                {communityGuidelines[language].rules.map((rule, index) => (
+                  <div key={index} className="flex gap-3 p-3 bg-muted/30 rounded-lg">
+                    <span className="text-xl">{rule.icon}</span>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">{rule.title}</p>
+                      <p className="text-xs text-muted-foreground">{rule.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <h4 className="font-semibold text-sm text-destructive flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  {t.consequences}
+                </h4>
+                <ul className="space-y-1">
+                  {communityGuidelines[language].consequences.map((consequence, index) => (
+                    <li key={index} className="text-xs text-muted-foreground flex items-start gap-2">
+                      <span className="text-destructive">•</span>
+                      <span>{consequence}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Safety Tips Section */}
+            <div className="glass-strong rounded-2xl p-4">
+              <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
+                <Heart className="w-4 h-4" />
+                {safetyTips[language].title}
+              </h3>
+              
+              <div className="space-y-3">
+                {safetyTips[language].tips.map((tip, index) => (
+                  <div key={index} className="flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-primary">{index + 1}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">{tip.title}</p>
+                      <p className="text-xs text-muted-foreground">{tip.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* App Guidelines Section - iOS */}
+            <div className="glass-strong rounded-2xl p-4">
+              <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
+                <span className="text-lg">🍎</span>
+                {t.iosGuidelines}
               </h3>
               
               <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="ios" className="border-none">
-                  <AccordionTrigger className="py-3 hover:no-underline">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">🍎</span>
-                      <span>{t.iosGuidelines}</span>
+                <AccordionItem value="ios-account" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-primary" />
+                      <span>{t.accountManagement}</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-4">
                     <ul className="space-y-2">
-                      {appGuidelines.ios[language].map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                      {appGuidelines.ios[language].accountManagement.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Check className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -547,18 +879,142 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem value="android" className="border-none">
-                  <AccordionTrigger className="py-3 hover:no-underline">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">🤖</span>
-                      <span>{t.androidGuidelines}</span>
+                <AccordionItem value="ios-moderation" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-primary" />
+                      <span>{t.contentModeration}</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-4">
                     <ul className="space-y-2">
-                      {appGuidelines.android[language].map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                      {appGuidelines.ios[language].contentModeration.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <ShieldCheck className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="ios-safety" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <span>{t.userSafety}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4">
+                    <ul className="space-y-2">
+                      {appGuidelines.ios[language].userSafety.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <ShieldAlert className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="ios-privacy" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-primary" />
+                      <span>{t.dataPrivacy}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4">
+                    <ul className="space-y-2">
+                      {appGuidelines.ios[language].dataPrivacy.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Lock className="w-3 h-3 text-blue-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            {/* App Guidelines Section - Android */}
+            <div className="glass-strong rounded-2xl p-4">
+              <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
+                <span className="text-lg">🤖</span>
+                {t.androidGuidelines}
+              </h3>
+              
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="android-account" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-primary" />
+                      <span>{t.accountManagement}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4">
+                    <ul className="space-y-2">
+                      {appGuidelines.android[language].accountManagement.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Check className="w-3 h-3 text-green-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="android-child" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Baby className="w-4 h-4 text-primary" />
+                      <span>{t.childSafety}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4">
+                    <ul className="space-y-2">
+                      {appGuidelines.android[language].childSafety.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <ShieldCheck className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="android-content" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Ban className="w-4 h-4 text-primary" />
+                      <span>{t.contentPolicy}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4">
+                    <ul className="space-y-2">
+                      {appGuidelines.android[language].contentPolicy.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Ban className="w-3 h-3 text-orange-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="android-protection" className="border-none">
+                  <AccordionTrigger className="py-2 hover:no-underline text-sm">
+                    <div className="flex items-center gap-2">
+                      <Flag className="w-4 h-4 text-primary" />
+                      <span>{t.userProtection}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4">
+                    <ul className="space-y-2">
+                      {appGuidelines.android[language].userProtection.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <UserX className="w-3 h-3 text-purple-500 shrink-0 mt-0.5" />
                           <span>{item}</span>
                         </li>
                       ))}
