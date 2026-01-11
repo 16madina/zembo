@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
+import ProfileCompletionRing from "@/components/profile/ProfileCompletionRing";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -355,18 +356,16 @@ const Profile = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
         >
-          {/* Avatar with ring */}
-          <div className="relative">
-            <div className="w-40 h-40 rounded-full p-1 bg-gradient-to-b from-primary to-primary/50">
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="w-full h-full rounded-full object-cover border-4 border-background"
-              />
-            </div>
+          {/* Avatar with completion ring */}
+          <ProfileCompletionRing
+            profile={profile}
+            photos={photos}
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+          >
             {/* Camera button */}
             <motion.button
-              className="absolute bottom-2 right-2 p-3 bg-primary rounded-full shadow-lg"
+              className="absolute bottom-2 right-2 p-3 bg-primary rounded-full shadow-lg z-10"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() =>
@@ -375,7 +374,7 @@ const Profile = () => {
             >
               <Camera className="w-5 h-5 text-primary-foreground" />
             </motion.button>
-          </div>
+          </ProfileCompletionRing>
 
           {/* Name - Editable */}
           <button 
