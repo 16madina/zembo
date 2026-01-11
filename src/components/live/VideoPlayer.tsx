@@ -82,11 +82,6 @@ const VideoPlayer = ({
             className="w-full h-full object-cover"
             style={{ transform: "scaleX(-1)" }}
           />
-          {/* Live indicator */}
-          <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-white">EN DIRECT</span>
-          </div>
         </div>
       );
     }

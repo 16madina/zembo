@@ -60,16 +60,6 @@ const LocalVideoPlayer = ({
               filter: filterString,
             }}
           />
-          {/* Live indicator */}
-          <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm z-10">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-white">EN DIRECT</span>
-          </div>
-          {/* Status */}
-          <div className="absolute top-16 right-16 flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 backdrop-blur-sm z-10">
-            <Wifi className="w-3 h-3 text-green-500" />
-            <span className="text-xs text-green-500">Connecté</span>
-          </div>
         </div>
       );
     }
@@ -88,11 +78,6 @@ const LocalVideoPlayer = ({
             </div>
             <p className="text-muted-foreground">Caméra désactivée</p>
           </motion.div>
-          {/* Still show live indicator */}
-          <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-white">EN DIRECT</span>
-          </div>
         </div>
       );
     }
@@ -137,11 +122,6 @@ const LocalVideoPlayer = ({
         </motion.div>
       </div>
 
-      {/* Live indicator */}
-      <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
-        <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-        <span className="text-xs font-bold text-white">EN DIRECT</span>
-      </div>
 
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

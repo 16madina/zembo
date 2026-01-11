@@ -115,25 +115,6 @@ const LiveKitVideo = ({
             className="w-full h-full object-cover"
             style={{ transform: "scaleX(-1)" }}
           />
-          {/* Live indicator */}
-          <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm z-10">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-white">EN DIRECT</span>
-          </div>
-          {/* Connection status */}
-          <div className="absolute top-16 right-16 flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/20 backdrop-blur-sm z-10">
-            {isConnected ? (
-              <>
-                <Wifi className="w-3 h-3 text-green-500" />
-                <span className="text-xs text-green-500">LiveKit</span>
-              </>
-            ) : (
-              <>
-                <Camera className="w-3 h-3 text-yellow-500" />
-                <span className="text-xs text-yellow-500">Local</span>
-              </>
-            )}
-          </div>
         </div>
       );
     }
@@ -152,11 +133,6 @@ const LiveKitVideo = ({
             </div>
             <p className="text-muted-foreground">Caméra désactivée</p>
           </motion.div>
-          {/* Still show live indicator */}
-          <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-white">EN DIRECT</span>
-          </div>
         </div>
       );
     }
