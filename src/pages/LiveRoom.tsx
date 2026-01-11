@@ -464,9 +464,9 @@ const LiveRoom = () => {
             )}
             {isStreamer ? (
               <Button
-                size="sm"
                 variant="destructive"
                 onClick={handleEndLive}
+                className="h-7 px-2 text-xs"
               >
                 Terminer
               </Button>
@@ -534,7 +534,8 @@ const LiveRoom = () => {
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-destructive rounded-full flex items-center justify-center text-[11px] text-white font-bold shadow-lg"
+                  key={stageRequests.length}
+                  className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-destructive rounded-full flex items-center justify-center text-[11px] text-white font-bold shadow-lg animate-pulse"
                 >
                   {stageRequests.length > 9 ? "9+" : stageRequests.length}
                 </motion.span>
