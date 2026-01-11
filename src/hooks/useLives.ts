@@ -69,7 +69,8 @@ export const useLives = () => {
   const createLive = async (
     title: string,
     description?: string,
-    tags?: string[]
+    tags?: string[],
+    thumbnailUrl?: string
   ): Promise<{ data: Tables<"lives"> | null; error: Error | null }> => {
     if (!user) {
       return { data: null, error: new Error("Not authenticated") };
@@ -86,6 +87,7 @@ export const useLives = () => {
       status: "live",
       started_at: new Date().toISOString(),
       livekit_room_name: roomName,
+      thumbnail_url: thumbnailUrl,
     };
 
     const { data, error } = await supabase
