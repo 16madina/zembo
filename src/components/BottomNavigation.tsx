@@ -1,8 +1,9 @@
-import { Home, Video, Shuffle, MessageCircle, User } from "lucide-react";
+import { Home, Video, MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 import { useLanguage } from "@/contexts/LanguageContext";
+import zIcon from "@/assets/z-icon.png";
 
 const BottomNavigation = () => {
   const location = useLocation();
@@ -11,7 +12,7 @@ const BottomNavigation = () => {
   const navItems = [
     { path: "/", icon: Home, label: t.home },
     { path: "/live", icon: Video, label: t.live },
-    { path: "/random", icon: Shuffle, label: t.random },
+    { path: "/random", icon: null, customIcon: zIcon, label: t.random },
     { path: "/messages", icon: MessageCircle, label: t.messages },
     { path: "/profile", icon: User, label: t.profile },
   ];
@@ -45,12 +46,22 @@ const BottomNavigation = () => {
                       transition={{ type: "spring", stiffness: 500, damping: 35 }}
                     />
                   )}
-                  <Icon 
-                    className={`w-5 h-5 relative z-10 transition-colors duration-200 ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
+                  {item.customIcon ? (
+                    <img 
+                      src={item.customIcon} 
+                      alt={item.label}
+                      className={`w-5 h-5 relative z-10 transition-all duration-200 ${
+                        isActive ? "brightness-110 drop-shadow-[0_0_6px_rgba(212,175,55,0.6)]" : "brightness-75 grayscale-[30%]"
+                      }`}
+                    />
+                  ) : (
+                    <Icon 
+                      className={`w-5 h-5 relative z-10 transition-colors duration-200 ${
+                        isActive ? "text-primary" : "text-muted-foreground"
+                      }`}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  )}
                   <span className={`text-[10px] font-medium relative z-10 transition-colors duration-200 ${
                     isActive ? "text-primary" : "text-muted-foreground"
                   }`}>
