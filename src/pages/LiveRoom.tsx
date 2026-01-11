@@ -17,12 +17,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLives, type Live } from "@/hooks/useLives";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
+import { useLiveStream } from "@/hooks/useLiveStream";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
+import VideoPlayer from "@/components/live/VideoPlayer";
+import StreamControls from "@/components/live/StreamControls";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -50,6 +53,15 @@ const LiveRoom = () => {
     gift: VirtualGift;
     senderName: string;
   } | null>(null);
+
+  // Live stream controls (demo mode)
+  const {
+    isMuted,
+    isVideoOff,
+    toggleMute,
+    toggleVideo,
+    switchCamera,
+  } = useLiveStream({ isStreamer, demoMode: true });
 
   // Fetch live data
   useEffect(() => {
@@ -250,22 +262,27 @@ const LiveRoom = () => {
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col">
-      {/* Video Area - Placeholder for LiveKit integration */}
-      <div className="flex-1 relative bg-gradient-to-br from-muted to-background">
-        {/* Placeholder Video */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary">
-              <AvatarImage src={live.streamer?.avatar_url || defaultAvatar} />
-              <AvatarFallback>
-                {live.streamer?.display_name?.[0] || "?"}
-              </AvatarFallback>
-            </Avatar>
-            <p className="text-muted-foreground">
-              Streaming vidéo (LiveKit à intégrer)
-            </p>
-          </div>
-        </div>
+      {/* Video Area */}
+      <div className="flex-1 relative">
+        <VideoPlayer
+          isStreamer={isStreamer}
+          isVideoOff={isVideoOff}
+          streamerId={live.streamer_id}
+          streamerName={live.streamer?.display_name}
+          streamerAvatar={live.streamer?.avatar_url}
+          demoMode={true}
+        />
+
+        {/* Stream Controls for Streamer */}
+        <StreamControls
+          isMuted={isMuted}
+          isVideoOff={isVideoOff}
+          onToggleMute={toggleMute}
+          onToggleVideo={toggleVideo}
+          onSwitchCamera={switchCamera}
+          onEndStream={handleEndLive}
+          isStreamer={isStreamer}
+        />
 
         {/* Top Bar */}
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between bg-gradient-to-b from-background/80 to-transparent">
