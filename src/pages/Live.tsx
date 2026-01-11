@@ -158,11 +158,11 @@ const Live = () => {
           ))}
         </motion.div>
       )}
-
-      {/* Premium Required Modal */}
-      {showPremiumModal && (
-        <motion.div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        
+       {/* Premium Required Modal */}
+       {showPremiumModal && (
+         <motion.div
+           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={() => setShowPremiumModal(false)}
