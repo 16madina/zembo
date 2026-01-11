@@ -14,6 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          created_at: string
+          email_sent_at: string | null
+          id: string
+          is_email: boolean
+          is_push: boolean
+          message: string
+          notification_type: string
+          push_sent_at: string | null
+          recipient_id: string | null
+          recipient_type: string
+          sender_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          is_email?: boolean
+          is_push?: boolean
+          message: string
+          notification_type?: string
+          push_sent_at?: string | null
+          recipient_id?: string | null
+          recipient_type?: string
+          sender_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          is_email?: boolean
+          is_push?: boolean
+          message?: string
+          notification_type?: string
+          push_sent_at?: string | null
+          recipient_id?: string | null
+          recipient_type?: string
+          sender_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      banned_users: {
+        Row: {
+          banned_at: string
+          banned_by: string
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_permanent: boolean
+          reason: string
+          unbanned_at: string | null
+          unbanned_by: string | null
+          user_id: string
+        }
+        Insert: {
+          banned_at?: string
+          banned_by: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_permanent?: boolean
+          reason: string
+          unbanned_at?: string | null
+          unbanned_by?: string | null
+          user_id: string
+        }
+        Update: {
+          banned_at?: string
+          banned_by?: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_permanent?: boolean
+          reason?: string
+          unbanned_at?: string | null
+          unbanned_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           coin_amount: number
@@ -269,6 +359,39 @@ export type Database = {
           id?: string
           user1_id?: string
           user2_id?: string
+        }
+        Relationships: []
+      }
+      predefined_messages: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          message: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          message: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -647,6 +770,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_user_banned: { Args: { p_user_id: string }; Returns: boolean }
       submit_random_call_decision: {
         Args: { p_decision: string; p_session_id: string; p_user_id: string }
         Returns: Json
