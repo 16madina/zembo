@@ -72,6 +72,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { recipientType, recipientId, title, message, notificationType }: AdminEmailRequest = await req.json();
+    
+    // Get base URL for logo
+    const baseUrl = req.headers.get('origin') || 'https://zemboapp.com';
+    const logoUrl = `${baseUrl}/images/zembo-logo-email.png`;
 
     let recipients: { email: string; displayName: string }[] = [];
 
@@ -151,9 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
               <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
                 <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; padding: 40px; border: 1px solid rgba(255,255,255,0.1);">
                   <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="color: #fff; font-size: 32px; margin: 0; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                      Zembo
-                    </h1>
+                    <img src="${logoUrl}" alt="ZEMBO" style="max-width: 180px; height: auto;" />
                   </div>
                   
                   <div style="background: ${style.color}20; border-left: 4px solid ${style.color}; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">
