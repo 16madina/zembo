@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -21,6 +21,7 @@ import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { useLocalStream } from "@/hooks/useLocalStream";
 import { useSnapchatFilters } from "@/hooks/useSnapchatFilters";
+import { useFaceTracking } from "@/hooks/useFaceTracking";
 import { useLiveStage } from "@/hooks/useLiveStage";
 import { useStageWebRTC } from "@/hooks/useStageWebRTC";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import GiftAnimation from "@/components/live/GiftAnimation";
 import LocalVideoPlayer from "@/components/live/LocalVideoPlayer";
 import StreamControls from "@/components/live/StreamControls";
 import SnapchatFilterPanel from "@/components/live/SnapchatFilterPanel";
-import FilterOverlay from "@/components/live/FilterOverlay";
+import FaceTrackingOverlay from "@/components/live/FaceTrackingOverlay";
 import StageRequestButton from "@/components/live/StageRequestButton";
 import StageRequestQueue from "@/components/live/StageRequestQueue";
 import GuestPipView from "@/components/live/GuestPipView";
@@ -99,7 +100,18 @@ const LiveRoom = () => {
     toggleVideo,
     switchCamera,
     setVideoRef,
+    videoRef,
   } = useLocalStream();
+
+  // Face tracking for AR overlays
+  const {
+    isLoading: faceTrackingLoading,
+    isTracking,
+    landmarks: faceLandmarks,
+  } = useFaceTracking({
+    videoRef,
+    enabled: isStreamer && isInitialized && !isVideoOff && filterState.activeOverlay !== null,
+  });
 
   // Live stage (bring viewer on stage)
   const {
@@ -413,10 +425,12 @@ const LiveRoom = () => {
           </>
         )}
 
-        {/* Filter Overlays (vignette, grain, AR masks) */}
+        {/* Filter Overlays (vignette, grain, AR masks with face tracking) */}
         {isStreamer && (
-          <FilterOverlay
+          <FaceTrackingOverlay
             overlay={filterState.activeOverlay}
+            landmarks={faceLandmarks}
+            isTracking={isTracking}
             vignetteStyle={vignetteStyle}
             grainStyle={grainStyle}
           />
