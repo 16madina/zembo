@@ -1,253 +1,82 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
-// Avoid "Rendered more hooks than during the previous render" during Vite Fast Refresh
-if (import.meta.hot) {
-  import.meta.hot.accept(() => {
-    window.location.reload();
-  });
-}
-
-type AudioUrls = {
-  dice: string | null;
-  drumroll: string | null;
-  zembo: string | null;
-  reveal: string | null;
-};
-
-type LoadingState = {
-  dice: boolean;
-  drumroll: boolean;
-  zembo: boolean;
-  reveal: boolean;
-};
+// Import static audio files
+import diceRollSound from "@/assets/sounds/dice-roll.mp3";
+import drumrollSound from "@/assets/sounds/drumroll.mp3";
+import revealMagicSound from "@/assets/sounds/reveal-magic.mp3";
+import successChimeSound from "@/assets/sounds/success-chime.mp3";
 
 export const useSoundEffects = () => {
   const [isDrumrollPlaying, setIsDrumrollPlaying] = useState(false);
+  
+  // Audio refs to manage playback
+  const diceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const drumrollAudioRef = useRef<HTMLAudioElement | null>(null);
+  const revealAudioRef = useRef<HTMLAudioElement | null>(null);
+  const successAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Single source of truth for what the voice must say
-  const zemboTtsTextRef = useRef<string>("ZEMMBO");
-
-  const audioUrlsRef = useRef<AudioUrls>({
-    dice: null,
-    drumroll: null,
-    zembo: null,
-    reveal: null,
-  });
-
-  const loadingRef = useRef<LoadingState>({
-    dice: false,
-    drumroll: false,
-    zembo: false,
-    reveal: false,
-  });
-
-  // Track which exact text our cached zembo URL corresponds to
-  const zemboCachedTextRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const loadSfx = async (
-      key: keyof AudioUrls,
-      prompt: string,
-      duration: number
-    ) => {
-      if (audioUrlsRef.current[key] || loadingRef.current[key]) return;
-
-      loadingRef.current = { ...loadingRef.current, [key]: true };
-
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({ prompt, duration }),
-          }
-        );
-
-        if (!response.ok) return;
-
-        const audioBlob = await response.blob();
-        audioUrlsRef.current = {
-          ...audioUrlsRef.current,
-          [key]: URL.createObjectURL(audioBlob),
-        };
-      } catch (error) {
-        console.error(`Error preloading ${key} sound:`, error);
-      } finally {
-        loadingRef.current = { ...loadingRef.current, [key]: false };
-      }
-    };
-
-    const loadTts = async (text: string) => {
-      const normalized = text.trim();
-      const alreadyHaveExact =
-        !!audioUrlsRef.current.zembo && zemboCachedTextRef.current === normalized;
-
-      if (alreadyHaveExact || loadingRef.current.zembo) return;
-
-      // If we have a cached URL but for a different text, revoke it and regenerate
-      if (audioUrlsRef.current.zembo && zemboCachedTextRef.current !== normalized) {
-        try {
-          URL.revokeObjectURL(audioUrlsRef.current.zembo);
-        } catch {
-          // ignore
-        }
-        audioUrlsRef.current = { ...audioUrlsRef.current, zembo: null };
-        zemboCachedTextRef.current = null;
-      }
-
-      loadingRef.current = { ...loadingRef.current, zembo: true };
-
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({ text: normalized }),
-          }
-        );
-
-        if (!response.ok) return;
-
-        const audioBlob = await response.blob();
-        const url = URL.createObjectURL(audioBlob);
-
-        audioUrlsRef.current = {
-          ...audioUrlsRef.current,
-          zembo: url,
-        };
-        zemboCachedTextRef.current = normalized;
-      } catch (error) {
-        console.error("Error preloading Zembo voice:", error);
-      } finally {
-        loadingRef.current = { ...loadingRef.current, zembo: false };
-      }
-    };
-
-    // Sequential loading to avoid ElevenLabs 429 rate limit (max 4 concurrent requests)
-    const loadAllSequentially = async () => {
-      await loadSfx(
-        "dice",
-        "Dice rolling and bouncing on wooden table, casino game sound effect",
-        2
-      );
-
-      await loadSfx(
-        "drumroll",
-        "Intense dramatic drumroll building suspense, theatrical drum roll crescendo, epic anticipation",
-        3
-      );
-
-      await loadSfx(
-        "reveal",
-        "Magical sparkle reveal sound, mystical unveiling shimmer, enchanting discovery chime",
-        2
-      );
-
-      await loadTts(zemboTtsTextRef.current);
-    };
-
-    void loadAllSequentially();
-  }, []);
-
-  const playDiceSound = useCallback(async () => {
+  const playDiceSound = useCallback(() => {
     try {
-      const url = audioUrlsRef.current.dice;
-      if (!url) return;
-
-      const audio = new Audio(url);
-      audio.volume = 0.6;
-      await audio.play();
+      // Create new audio instance for each play to allow overlapping
+      const audio = new Audio(diceRollSound);
+      audio.volume = 0.7;
+      audio.play().catch((err) => {
+        console.warn("Failed to play dice sound:", err);
+      });
+      diceAudioRef.current = audio;
     } catch (error) {
       console.error("Error playing dice sound:", error);
     }
   }, []);
 
-  const playZemboVoice = useCallback(async () => {
-    const playZemboNow = async () => {
-      try {
-        const url = audioUrlsRef.current.zembo;
-        if (url) {
-          const zemboAudio = new Audio(url);
-          zemboAudio.volume = 1.0;
-          await zemboAudio.play();
-          return;
-        }
-
-        // Fallback: generate on-the-fly
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({ text: zemboTtsTextRef.current }),
-          }
-        );
-
-        if (!response.ok) return;
-
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audioUrlsRef.current = { ...audioUrlsRef.current, zembo: audioUrl };
-
-        const audio = new Audio(audioUrl);
-        audio.volume = 1.0;
-        await audio.play();
-      } catch (error) {
-        console.error("Error playing Zembo voice:", error);
-      }
-    };
-
+  const playZemboVoice = useCallback(() => {
     try {
-      const drumUrl = audioUrlsRef.current.drumroll;
-      if (!drumUrl) {
-        await playZemboNow();
-        return;
-      }
-
-      const drumAudio = new Audio(drumUrl);
-      drumAudio.volume = 0.75;
-      
       setIsDrumrollPlaying(true);
-
-      drumAudio.onended = () => {
+      
+      // Play drumroll with success chime at the end
+      const drumroll = new Audio(drumrollSound);
+      drumroll.volume = 0.8;
+      
+      drumroll.onended = () => {
         setIsDrumrollPlaying(false);
-        void playZemboNow();
+        // Play success chime after drumroll
+        const success = new Audio(successChimeSound);
+        success.volume = 0.6;
+        success.play().catch((err) => {
+          console.warn("Failed to play success sound:", err);
+        });
+        successAudioRef.current = success;
       };
-
-      await drumAudio.play();
+      
+      drumroll.play().catch((err) => {
+        console.warn("Failed to play drumroll sound:", err);
+        setIsDrumrollPlaying(false);
+      });
+      
+      drumrollAudioRef.current = drumroll;
     } catch (error) {
-      console.error("Error playing drumroll:", error);
+      console.error("Error playing zembo voice:", error);
       setIsDrumrollPlaying(false);
-      await playZemboNow();
     }
   }, []);
 
-  const playRevealSound = useCallback(async () => {
+  const playRevealSound = useCallback(() => {
     try {
-      const url = audioUrlsRef.current.reveal;
-      if (!url) return;
-
-      const audio = new Audio(url);
+      const audio = new Audio(revealMagicSound);
       audio.volume = 0.7;
-      await audio.play();
+      audio.play().catch((err) => {
+        console.warn("Failed to play reveal sound:", err);
+      });
+      revealAudioRef.current = audio;
     } catch (error) {
       console.error("Error playing reveal sound:", error);
     }
   }, []);
 
-  return { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying };
+  return {
+    playDiceSound,
+    playZemboVoice,
+    playRevealSound,
+    isDrumrollPlaying,
+  };
 };
