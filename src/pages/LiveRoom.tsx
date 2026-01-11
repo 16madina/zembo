@@ -13,6 +13,7 @@ import {
   Coins,
   Sparkles,
   Hand,
+  Settings2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,8 @@ import BeautyFilterPanel from "@/components/live/BeautyFilterPanel";
 import StageRequestButton from "@/components/live/StageRequestButton";
 import StageRequestQueue from "@/components/live/StageRequestQueue";
 import GuestPipView from "@/components/live/GuestPipView";
+import SplitScreenView from "@/components/live/SplitScreenView";
+import GuestViewModeSelector, { type GuestViewMode } from "@/components/live/GuestViewModeSelector";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -59,6 +62,8 @@ const LiveRoom = () => {
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [showBeautyPanel, setShowBeautyPanel] = useState(false);
   const [showStageQueue, setShowStageQueue] = useState(false);
+  const [showViewModeSelector, setShowViewModeSelector] = useState(false);
+  const [guestViewMode, setGuestViewMode] = useState<GuestViewMode>("pip");
   const [isStreamer, setIsStreamer] = useState(false);
   const [activeGift, setActiveGift] = useState<{
     gift: VirtualGift;
@@ -328,35 +333,56 @@ const LiveRoom = () => {
 
   return (
     <div className="fixed inset-0 bg-black">
-      {/* Video Area - Full Screen */}
+      {/* Video Area - Full Screen or Split Screen */}
       <div className="absolute inset-0">
-        <LocalVideoPlayer
-          isStreamer={isStreamer}
-          isVideoOff={isVideoOff}
-          isInitialized={isInitialized}
-          stream={stream}
-          streamerId={live.streamer_id}
-          streamerName={live.streamer?.display_name}
-          streamerAvatar={live.streamer?.avatar_url}
-          setVideoRef={setVideoRef}
-          filterString={isStreamer ? filterString : undefined}
-        />
-
-        {/* Guest PiP View (Picture-in-Picture) */}
-        <AnimatePresence>
-          {currentGuest && (
-            <GuestPipView
-              guestName={currentGuest.profile?.display_name || null}
-              guestAvatar={currentGuest.profile?.avatar_url || null}
-              guestId={currentGuest.user_id}
-              guestStream={guestStream}
+        {currentGuest && guestViewMode === "split" ? (
+          <SplitScreenView
+            streamerStream={stream}
+            streamerName={live.streamer?.display_name || null}
+            streamerAvatar={live.streamer?.avatar_url || null}
+            streamerId={live.streamer_id}
+            isVideoOff={isVideoOff}
+            filterString={isStreamer ? filterString : undefined}
+            guestName={currentGuest.profile?.display_name || null}
+            guestAvatar={currentGuest.profile?.avatar_url || null}
+            guestId={currentGuest.user_id}
+            guestStream={guestStream}
+            isStreamer={isStreamer}
+            onRemoveGuest={removeFromStage}
+            isConnecting={stageConnecting}
+            isConnected={stageConnected}
+          />
+        ) : (
+          <>
+            <LocalVideoPlayer
               isStreamer={isStreamer}
-              onRemoveGuest={removeFromStage}
-              isConnecting={stageConnecting}
-              isConnected={stageConnected}
+              isVideoOff={isVideoOff}
+              isInitialized={isInitialized}
+              stream={stream}
+              streamerId={live.streamer_id}
+              streamerName={live.streamer?.display_name}
+              streamerAvatar={live.streamer?.avatar_url}
+              setVideoRef={setVideoRef}
+              filterString={isStreamer ? filterString : undefined}
             />
-          )}
-        </AnimatePresence>
+
+            {/* Guest PiP View (Picture-in-Picture) */}
+            <AnimatePresence>
+              {currentGuest && (
+                <GuestPipView
+                  guestName={currentGuest.profile?.display_name || null}
+                  guestAvatar={currentGuest.profile?.avatar_url || null}
+                  guestId={currentGuest.user_id}
+                  guestStream={guestStream}
+                  isStreamer={isStreamer}
+                  onRemoveGuest={removeFromStage}
+                  isConnecting={stageConnecting}
+                  isConnected={stageConnected}
+                />
+              )}
+            </AnimatePresence>
+          </>
+        )}
 
         {/* Beauty Filter Button for Streamer */}
         {isStreamer && (
@@ -366,6 +392,17 @@ const LiveRoom = () => {
             className="absolute top-16 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
           >
             <Sparkles className="w-5 h-5 text-primary" />
+          </motion.button>
+        )}
+
+        {/* Guest View Mode Button for Streamer */}
+        {isStreamer && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowViewModeSelector(true)}
+            className="absolute top-28 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
+          >
+            <Settings2 className="w-5 h-5 text-primary" />
           </motion.button>
         )}
 
@@ -612,6 +649,14 @@ const LiveRoom = () => {
         requests={stageRequests}
         onAccept={acceptRequest}
         onReject={rejectRequest}
+      />
+
+      {/* Guest View Mode Selector for Streamer */}
+      <GuestViewModeSelector
+        isOpen={showViewModeSelector}
+        onClose={() => setShowViewModeSelector(false)}
+        currentMode={guestViewMode}
+        onModeChange={setGuestViewMode}
       />
 
       {/* Recent Gifts Display */}
