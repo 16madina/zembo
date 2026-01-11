@@ -174,9 +174,37 @@ ${message}
                   
                   <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 30px 0;">
                   
-                  <p style="color: #666; font-size: 12px; text-align: center;">
+                  <p style="color: #666; font-size: 12px; text-align: center; margin-bottom: 20px;">
                     Cet email vous a été envoyé par l'équipe Zembo.<br>
                     Si vous avez des questions, répondez directement à cet email.
+                  </p>
+                  
+                  <!-- Social Media Links -->
+                  <div style="text-align: center; margin-bottom: 20px;">
+                    <a href="https://instagram.com/zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/32/174/174855.png" alt="Instagram" style="width: 28px; height: 28px; opacity: 0.7;" />
+                    </a>
+                    <a href="https://tiktok.com/@zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/32/3046/3046121.png" alt="TikTok" style="width: 28px; height: 28px; opacity: 0.7;" />
+                    </a>
+                    <a href="https://twitter.com/zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/32/733/733579.png" alt="Twitter" style="width: 28px; height: 28px; opacity: 0.7;" />
+                    </a>
+                    <a href="https://facebook.com/zemboapp" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                      <img src="https://cdn-icons-png.flaticon.com/32/733/733547.png" alt="Facebook" style="width: 28px; height: 28px; opacity: 0.7;" />
+                    </a>
+                  </div>
+                  
+                  <p style="color: #555; font-size: 11px; text-align: center; margin-bottom: 10px;">
+                    © ${new Date().getFullYear()} Zembo. Tous droits réservés.
+                  </p>
+                  
+                  <p style="color: #444; font-size: 10px; text-align: center;">
+                    <a href="https://zemboapp.com/privacy" style="color: #888; text-decoration: none;">Politique de confidentialité</a>
+                    &nbsp;•&nbsp;
+                    <a href="https://zemboapp.com/terms" style="color: #888; text-decoration: none;">Conditions d'utilisation</a>
+                    &nbsp;•&nbsp;
+                    <a href="https://zemboapp.com/unsubscribe" style="color: #888; text-decoration: none;">Se désabonner</a>
                   </p>
                 </div>
               </div>
