@@ -5,20 +5,24 @@ import {
   X,
   Users,
   Heart,
-  MessageCircle,
   Gift,
   Share2,
   MoreVertical,
   Send,
   Flag,
+  Coins,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLives, type Live } from "@/hooks/useLives";
+import { useGifts, type VirtualGift } from "@/hooks/useGifts";
+import { useCoins } from "@/hooks/useCoins";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import GiftPanel from "@/components/live/GiftPanel";
+import GiftAnimation from "@/components/live/GiftAnimation";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -33,6 +37,8 @@ const LiveRoom = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { endLive, updateViewerCount } = useLives();
+  const { recentGifts } = useGifts(id);
+  const { balance } = useCoins();
 
   const [live, setLive] = useState<Live | null>(null);
   const [messages, setMessages] = useState<LiveMessage[]>([]);
@@ -40,6 +46,10 @@ const LiveRoom = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [isStreamer, setIsStreamer] = useState(false);
+  const [activeGift, setActiveGift] = useState<{
+    gift: VirtualGift;
+    senderName: string;
+  } | null>(null);
 
   // Fetch live data
   useEffect(() => {
@@ -284,8 +294,14 @@ const LiveRoom = () => {
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Coin Balance & Actions */}
           <div className="flex items-center gap-2">
+            {!isStreamer && (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20">
+                <Coins className="w-4 h-4 text-primary" />
+                <span className="font-semibold text-primary text-sm">{balance}</span>
+              </div>
+            )}
             {isStreamer ? (
               <Button
                 size="sm"
@@ -391,26 +407,55 @@ const LiveRoom = () => {
         </div>
       </div>
 
-      {/* Gift Panel - To be implemented */}
+      {/* Gift Panel */}
+      <GiftPanel
+        isOpen={showGiftPanel}
+        onClose={() => setShowGiftPanel(false)}
+        streamerId={live.streamer_id}
+        liveId={id!}
+        onGiftSent={(gift) => {
+          setShowGiftPanel(false);
+          // Trigger animation locally for sender
+          setActiveGift({
+            gift,
+            senderName: "Vous",
+          });
+        }}
+      />
+
+      {/* Gift Animation Overlay */}
+      <GiftAnimation
+        gift={activeGift?.gift || null}
+        senderName={activeGift?.senderName}
+        onComplete={() => setActiveGift(null)}
+      />
+
+      {/* Recent Gifts Display */}
       <AnimatePresence>
-        {showGiftPanel && (
+        {recentGifts.slice(0, 3).map((transaction, index) => (
           <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            className="absolute bottom-0 left-0 right-0 h-72 glass rounded-t-3xl p-4"
+            key={transaction.id}
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ delay: index * 0.1 }}
+            className="absolute left-4 z-30"
+            style={{ bottom: `${320 + index * 50}px` }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-foreground">Envoyer un cadeau</h3>
-              <button onClick={() => setShowGiftPanel(false)}>
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border">
+              <span className="text-lg">{transaction.gift?.emoji}</span>
+              <span className="text-xs">
+                <span className="font-semibold text-primary">
+                  {transaction.sender_name}
+                </span>{" "}
+                <span className="text-muted-foreground">a envoyé</span>{" "}
+                <span className="font-medium text-foreground">
+                  {transaction.gift?.name}
+                </span>
+              </span>
             </div>
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Fonctionnalité bientôt disponible
-            </p>
           </motion.div>
-        )}
+        ))}
       </AnimatePresence>
     </div>
   );
