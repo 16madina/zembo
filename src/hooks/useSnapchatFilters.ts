@@ -50,7 +50,10 @@ export type ColorPreset =
   | "sunset" 
   | "noir"
   | "pastel"
-  | "vivid";
+  | "vivid"
+  | "golden"
+  | "moody"
+  | "fresh";
 
 export type FacePreset = 
   | "none" 
@@ -58,7 +61,8 @@ export type FacePreset =
   | "soft" 
   | "glamour" 
   | "porcelain"
-  | "doll";
+  | "doll"
+  | "clear";
 
 export type OverlayType = 
   | "hearts" 
@@ -201,6 +205,39 @@ const COLOR_PRESETS: Record<ColorPreset, ColorFilterSettings> = {
     vignette: 0,
     grain: 0,
   },
+  golden: {
+    brightness: 54,
+    contrast: 52,
+    saturation: 55,
+    warmth: 68,
+    exposure: 54,
+    shadows: 42,
+    highlights: 60,
+    vignette: 12,
+    grain: 0,
+  },
+  moody: {
+    brightness: 46,
+    contrast: 62,
+    saturation: 42,
+    warmth: 45,
+    exposure: 46,
+    shadows: 25,
+    highlights: 45,
+    vignette: 35,
+    grain: 8,
+  },
+  fresh: {
+    brightness: 54,
+    contrast: 50,
+    saturation: 58,
+    warmth: 48,
+    exposure: 54,
+    shadows: 55,
+    highlights: 65,
+    vignette: 0,
+    grain: 0,
+  },
   vivid: {
     brightness: 52,
     contrast: 60,
@@ -261,6 +298,15 @@ const FACE_PRESETS: Record<FacePreset, FaceFilterSettings> = {
     lipColor: 40,
     blush: 35,
     eyeBright: 40,
+  },
+  clear: {
+    smoothness: 35,
+    eyeSize: 0,
+    faceSlim: 0,
+    jawline: 0,
+    lipColor: 0,
+    blush: 0,
+    eyeBright: 30,
   },
 };
 
@@ -451,10 +497,13 @@ export const COLOR_PRESET_DATA: { id: ColorPreset; label: string; emoji: string;
   { id: "natural", label: "Naturel", emoji: "🌿", color: "#7CB342" },
   { id: "warm", label: "Chaud", emoji: "🔥", color: "#FF7043" },
   { id: "cool", label: "Froid", emoji: "❄️", color: "#42A5F5" },
+  { id: "golden", label: "Doré", emoji: "✨", color: "#FFD54F" },
   { id: "vintage", label: "Vintage", emoji: "📷", color: "#8D6E63" },
   { id: "cinema", label: "Cinéma", emoji: "🎬", color: "#546E7A" },
+  { id: "moody", label: "Moody", emoji: "🌙", color: "#5C6BC0" },
   { id: "neon", label: "Néon", emoji: "💜", color: "#E040FB" },
   { id: "sunset", label: "Coucher", emoji: "🌅", color: "#FF9800" },
+  { id: "fresh", label: "Fresh", emoji: "💧", color: "#4DD0E1" },
   { id: "noir", label: "Noir", emoji: "🖤", color: "#37474F" },
   { id: "pastel", label: "Pastel", emoji: "🍬", color: "#F8BBD9" },
   { id: "vivid", label: "Vif", emoji: "🌈", color: "#00BCD4" },
@@ -464,6 +513,7 @@ export const FACE_PRESET_DATA: { id: FacePreset; label: string; emoji: string }[
   { id: "none", label: "Aucun", emoji: "🚫" },
   { id: "natural", label: "Naturel", emoji: "🌿" },
   { id: "soft", label: "Doux", emoji: "☁️" },
+  { id: "clear", label: "Net", emoji: "💎" },
   { id: "glamour", label: "Glamour", emoji: "✨" },
   { id: "porcelain", label: "Porcelaine", emoji: "🪷" },
   { id: "doll", label: "Poupée", emoji: "🎀" },
