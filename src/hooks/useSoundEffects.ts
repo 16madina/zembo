@@ -6,6 +6,34 @@ import drumrollSound from "@/assets/sounds/drumroll.mp3";
 import revealMagicSound from "@/assets/sounds/reveal-magic.mp3";
 import successChimeSound from "@/assets/sounds/success-chime.mp3";
 
+// Function to speak "ZEMBO" using Web Speech API
+const speakZembo = () => {
+  if ('speechSynthesis' in window) {
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance("ZEMBOO");
+    utterance.rate = 0.6; // Slower for dramatic effect
+    utterance.pitch = 0.3; // Very deep voice
+    utterance.volume = 1.0;
+    
+    // Try to find a deep male voice
+    const voices = window.speechSynthesis.getVoices();
+    const deepVoice = voices.find(v => 
+      v.name.toLowerCase().includes('male') || 
+      v.name.toLowerCase().includes('daniel') ||
+      v.name.toLowerCase().includes('thomas') ||
+      v.lang.startsWith('fr')
+    ) || voices[0];
+    
+    if (deepVoice) {
+      utterance.voice = deepVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  }
+};
+
 export const useSoundEffects = () => {
   const [isDrumrollPlaying, setIsDrumrollPlaying] = useState(false);
   
@@ -33,19 +61,24 @@ export const useSoundEffects = () => {
     try {
       setIsDrumrollPlaying(true);
       
-      // Play drumroll with success chime at the end
+      // Play drumroll
       const drumroll = new Audio(drumrollSound);
       drumroll.volume = 0.8;
       
       drumroll.onended = () => {
-        setIsDrumrollPlaying(false);
-        // Play success chime after drumroll
-        const success = new Audio(successChimeSound);
-        success.volume = 0.6;
-        success.play().catch((err) => {
-          console.warn("Failed to play success sound:", err);
-        });
-        successAudioRef.current = success;
+        // Speak "ZEMBO" with dramatic voice after drumroll
+        speakZembo();
+        
+        // Play success chime after a short delay
+        setTimeout(() => {
+          setIsDrumrollPlaying(false);
+          const success = new Audio(successChimeSound);
+          success.volume = 0.6;
+          success.play().catch((err) => {
+            console.warn("Failed to play success sound:", err);
+          });
+          successAudioRef.current = success;
+        }, 800); // Wait for ZEMBO speech to complete
       };
       
       drumroll.play().catch((err) => {
