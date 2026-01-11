@@ -52,10 +52,11 @@ const Live = () => {
   const handleCreateLive = async (
     title: string,
     description?: string,
-    tags?: string[]
+    tags?: string[],
+    thumbnailUrl?: string
   ) => {
     setIsCreatingLive(true);
-    const { data, error } = await createLive(title, description, tags);
+    const { data, error } = await createLive(title, description, tags, thumbnailUrl);
     setIsCreatingLive(false);
 
     if (error) {

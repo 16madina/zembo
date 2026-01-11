@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Radio, Hash, FileText } from "lucide-react";
+import { X, Radio, Hash, FileText, ImagePlus, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CreateLiveModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateLive: (title: string, description?: string, tags?: string[]) => Promise<void>;
+  onCreateLive: (title: string, description?: string, tags?: string[], thumbnailUrl?: string) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -30,10 +32,37 @@ const CreateLiveModal = ({
   onCreateLive,
   isLoading,
 }: CreateLiveModalProps) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [useProfilePhoto, setUseProfilePhoto] = useState(true);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch user's profile avatar
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data?.avatar_url) {
+        setProfileAvatarUrl(data.avatar_url);
+      }
+    };
+    
+    if (isOpen) {
+      fetchProfile();
+    }
+  }, [user, isOpen]);
 
   const handleAddTag = (tag: string) => {
     if (!tags.includes(tag) && tags.length < 5) {
@@ -57,13 +86,86 @@ const CreateLiveModal = ({
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("La vignette ne doit pas dépasser 5 Mo");
+        return;
+      }
+      setThumbnailFile(file);
+      setThumbnailPreview(URL.createObjectURL(file));
+      setUseProfilePhoto(false);
+    }
+  };
+
+  const handleRemoveThumbnail = () => {
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    setUseProfilePhoto(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadThumbnail = async (): Promise<string | null> => {
+    if (!thumbnailFile || !user) return null;
+    
+    setUploadingThumbnail(true);
+    try {
+      const fileExt = thumbnailFile.name.split('.').pop();
+      const fileName = `${user.id}/live-thumbnail-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(fileName, thumbnailFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(fileName);
+      
+      return data.publicUrl;
+    } catch (error) {
+      console.error("Error uploading thumbnail:", error);
+      return null;
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) return;
-    await onCreateLive(title.trim(), description.trim() || undefined, tags.length > 0 ? tags : undefined);
+    
+    let thumbnailUrl: string | undefined;
+    
+    if (!useProfilePhoto && thumbnailFile) {
+      const uploadedUrl = await uploadThumbnail();
+      if (uploadedUrl) {
+        thumbnailUrl = uploadedUrl;
+      }
+    } else if (useProfilePhoto && profileAvatarUrl) {
+      thumbnailUrl = profileAvatarUrl;
+    }
+    
+    await onCreateLive(
+      title.trim(), 
+      description.trim() || undefined, 
+      tags.length > 0 ? tags : undefined,
+      thumbnailUrl
+    );
+    
+    // Reset form
     setTitle("");
     setDescription("");
     setTags([]);
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    setUseProfilePhoto(true);
   };
+
+  const currentThumbnail = thumbnailPreview || (useProfilePhoto ? profileAvatarUrl : null);
 
   return (
     <AnimatePresence>
@@ -77,7 +179,7 @@ const CreateLiveModal = ({
             onClick={onClose}
           />
           <motion.div
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-md mx-auto"
+            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-md mx-auto max-h-[90vh] overflow-y-auto"
             initial={{ opacity: 0, scale: 0.95, y: "-45%" }}
             animate={{ opacity: 1, scale: 1, y: "-50%" }}
             exit={{ opacity: 0, scale: 0.95, y: "-45%" }}
@@ -108,6 +210,88 @@ const CreateLiveModal = ({
 
               {/* Form */}
               <div className="space-y-4">
+                {/* Thumbnail Section */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    <ImagePlus className="w-4 h-4 inline mr-1" />
+                    Vignette du live
+                  </label>
+                  
+                  <div className="flex gap-3">
+                    {/* Thumbnail Preview */}
+                    <div className="relative w-24 h-32 rounded-xl overflow-hidden bg-muted border-2 border-dashed border-border flex-shrink-0">
+                      {currentThumbnail ? (
+                        <>
+                          <img 
+                            src={currentThumbnail} 
+                            alt="Vignette" 
+                            className="w-full h-full object-cover"
+                          />
+                          {thumbnailPreview && (
+                            <button
+                              onClick={handleRemoveThumbnail}
+                              className="absolute top-1 right-1 p-1 bg-destructive rounded-full"
+                            >
+                              <Trash2 className="w-3 h-3 text-white" />
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ImagePlus className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Thumbnail Options */}
+                    <div className="flex-1 space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUseProfilePhoto(true);
+                          setThumbnailFile(null);
+                          setThumbnailPreview(null);
+                        }}
+                        className={`w-full flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                          useProfilePhoto 
+                            ? 'border-primary bg-primary/10 text-primary' 
+                            : 'border-border bg-background/50 text-muted-foreground hover:border-primary/50'
+                        }`}
+                      >
+                        <User className="w-4 h-4" />
+                        <span className="text-xs font-medium">Photo de profil</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`w-full flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                          !useProfilePhoto && thumbnailPreview
+                            ? 'border-primary bg-primary/10 text-primary' 
+                            : 'border-border bg-background/50 text-muted-foreground hover:border-primary/50'
+                        }`}
+                      >
+                        <ImagePlus className="w-4 h-4" />
+                        <span className="text-xs font-medium">
+                          {thumbnailPreview ? 'Changer l\'image' : 'Importer une image'}
+                        </span>
+                      </button>
+                      
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      
+                      <p className="text-[10px] text-muted-foreground">
+                        Format: JPG, PNG • Max: 5 Mo
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Title */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
@@ -204,19 +388,19 @@ const CreateLiveModal = ({
                   variant="outline"
                   className="flex-1"
                   onClick={onClose}
-                  disabled={isLoading}
+                  disabled={isLoading || uploadingThumbnail}
                 >
                   Annuler
                 </Button>
                 <Button
                   className="flex-1 btn-gold"
                   onClick={handleSubmit}
-                  disabled={!title.trim() || isLoading}
+                  disabled={!title.trim() || isLoading || uploadingThumbnail}
                 >
-                  {isLoading ? (
+                  {isLoading || uploadingThumbnail ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      Lancement...
+                      {uploadingThumbnail ? "Upload..." : "Lancement..."}
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
