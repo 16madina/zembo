@@ -1,17 +1,19 @@
 // Check if running on native platform - only check when needed
-export const isNative = typeof window !== 'undefined' && 
+export const isNative = typeof window !== 'undefined' &&
   (window as any).Capacitor?.isNativePlatform?.() === true;
 
-export const isIOS = typeof window !== 'undefined' && 
+export const isIOS = typeof window !== 'undefined' &&
   (window as any).Capacitor?.getPlatform?.() === 'ios';
 
-export const isAndroid = typeof window !== 'undefined' && 
+export const isAndroid = typeof window !== 'undefined' &&
   (window as any).Capacitor?.getPlatform?.() === 'android';
+
+let _capacitorInitialized = false;
 
 // Lazy load Capacitor plugins only when needed
 const getCapacitorPlugins = async () => {
   if (!isNative) return null;
-  
+
   const [
     { StatusBar, Style },
     { Keyboard },
@@ -25,18 +27,20 @@ const getCapacitorPlugins = async () => {
     import('@capacitor/haptics'),
     import('@capacitor/camera')
   ]);
-  
+
   return { StatusBar, Style, Keyboard, SplashScreen, Haptics, ImpactStyle, NotificationType, Camera, CameraResultType, CameraSource };
 };
 
 // Initialize Capacitor plugins - call this after React mounts
 export const initializeCapacitor = async () => {
   if (!isNative) return;
+  if (_capacitorInitialized) return;
+  _capacitorInitialized = true;
 
   try {
     const plugins = await getCapacitorPlugins();
     if (!plugins) return;
-    
+
     const { StatusBar, Style, Keyboard, SplashScreen } = plugins;
 
     // Hide splash screen
@@ -44,13 +48,12 @@ export const initializeCapacitor = async () => {
 
     // Configure status bar
     await StatusBar.setStyle({ style: Style.Dark });
-    
+
     if (isAndroid) {
       await StatusBar.setBackgroundColor({ color: '#0a0c14' });
     }
 
     // Setup keyboard listeners and configuration
-    // Set keyboard accessory bar to show (iOS) and resize mode
     try {
       await Keyboard.setAccessoryBarVisible({ isVisible: true });
       await Keyboard.setScroll({ isDisabled: false });
@@ -58,14 +61,27 @@ export const initializeCapacitor = async () => {
       // Some methods might not be available on all platforms
     }
 
+    const setKeyboardState = (height: number) => {
+      document.documentElement.style.setProperty('--keyboard-height', `${height}px`);
+      if (height > 0) document.body.classList.add('keyboard-open');
+      else document.body.classList.remove('keyboard-open');
+    };
+
+    // iOS typically emits *Will* events; some Android setups prefer *Did* events.
     Keyboard.addListener('keyboardWillShow', (info: { keyboardHeight: number }) => {
-      document.documentElement.style.setProperty('--keyboard-height', `${info.keyboardHeight}px`);
-      document.body.classList.add('keyboard-open');
+      setKeyboardState(info.keyboardHeight);
+    });
+
+    Keyboard.addListener('keyboardDidShow', (info: { keyboardHeight: number }) => {
+      setKeyboardState(info.keyboardHeight);
     });
 
     Keyboard.addListener('keyboardWillHide', () => {
-      document.documentElement.style.setProperty('--keyboard-height', '0px');
-      document.body.classList.remove('keyboard-open');
+      setKeyboardState(0);
+    });
+
+    Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardState(0);
     });
 
   } catch (error) {
