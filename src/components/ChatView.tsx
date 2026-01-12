@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Flag, UserX } from "lucide-react";
 import data from "@emoji-mart/data";
@@ -9,8 +9,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useVoiceCall } from "@/hooks/useVoiceCall";
 import { useIdentityVerification } from "@/hooks/useIdentityVerification";
+import { useMessageReactions } from "@/hooks/useMessageReactions";
 import VoiceCallModal from "@/components/VoiceCallModal";
 import ChatRestrictionBanner from "@/components/chat/ChatRestrictionBanner";
+import MessageReactionPicker from "@/components/chat/MessageReactionPicker";
+import MessageReactions from "@/components/chat/MessageReactions";
 import { isNative } from "@/lib/capacitor";
 import {
   DropdownMenu,
@@ -59,6 +62,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null);
 
   // Keyboard handling (native) + viewport-resize compensation (iOS)
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -80,6 +84,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Transform DB messages to display format
   const displayMessages = dbMessages.map((m) => ({
@@ -92,6 +97,35 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     isMe: m.sender_id === currentUser?.id,
     status: m.is_read ? "read" as const : "delivered" as const,
   }));
+
+  // Message reactions hook
+  const messageIds = displayMessages.map((m) => m.id);
+  const { toggleReaction, getReactionSummary } = useMessageReactions(messageIds);
+
+  // Long press handler for reactions
+  const handleLongPressStart = useCallback((messageId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setActiveReactionMessageId(messageId);
+      // Haptic feedback on native
+      if (isNative && navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+    }, 500);
+  }, []);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleReactionSelect = useCallback((emoji: string) => {
+    if (activeReactionMessageId) {
+      toggleReaction(activeReactionMessageId, emoji);
+      setActiveReactionMessageId(null);
+    }
+  }, [activeReactionMessageId, toggleReaction]);
 
   // Real-time online status subscription
   useEffect(() => {
@@ -545,54 +579,85 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
             </div>
           ) : (
             <AnimatePresence initial={false}>
-              {displayMessages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className={`flex ${message.isMe ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] ${
-                      message.isMe
-                        ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                        : "glass rounded-2xl rounded-bl-md"
-                    } ${message.image ? "p-1.5" : "px-4 py-2.5"}`}
+              {displayMessages.map((message) => {
+                const reactionSummary = getReactionSummary(message.id);
+                return (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex flex-col ${message.isMe ? "items-end" : "items-start"}`}
                   >
-                    {message.image && (
-                      <motion.img
-                        src={message.image}
-                        alt="Shared"
-                        className="rounded-xl max-w-full max-h-60 object-cover cursor-pointer"
-                        onClick={() => setPreviewImage(message.image!)}
-                        whileTap={{ scale: 0.98 }}
+                    <div className="relative max-w-[80%]">
+                      {/* Reaction Picker */}
+                      <MessageReactionPicker
+                        isOpen={activeReactionMessageId === message.id}
+                        onSelect={handleReactionSelect}
+                        onClose={() => setActiveReactionMessageId(null)}
+                        position={message.isMe ? "right" : "left"}
                       />
-                    )}
-                    {message.audioUrl && (
-                      <div className="flex items-center gap-3 min-w-[180px]">
-                        <audio
-                          src={message.audioUrl}
-                          controls
-                          className="h-8 w-full max-w-[200px]"
-                          style={{ filter: message.isMe ? "invert(1)" : "none" }}
-                        />
+                      
+                      {/* Message Bubble */}
+                      <div
+                        className={`${
+                          message.isMe
+                            ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
+                            : "glass rounded-2xl rounded-bl-md"
+                        } ${message.image ? "p-1.5" : "px-4 py-2.5"} select-none touch-none`}
+                        onTouchStart={() => handleLongPressStart(message.id)}
+                        onTouchEnd={handleLongPressEnd}
+                        onTouchCancel={handleLongPressEnd}
+                        onMouseDown={() => handleLongPressStart(message.id)}
+                        onMouseUp={handleLongPressEnd}
+                        onMouseLeave={handleLongPressEnd}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setActiveReactionMessageId(message.id);
+                        }}
+                      >
+                        {message.image && (
+                          <motion.img
+                            src={message.image}
+                            alt="Shared"
+                            className="rounded-xl max-w-full max-h-60 object-cover cursor-pointer"
+                            onClick={() => setPreviewImage(message.image!)}
+                            whileTap={{ scale: 0.98 }}
+                          />
+                        )}
+                        {message.audioUrl && (
+                          <div className="flex items-center gap-3 min-w-[180px]">
+                            <audio
+                              src={message.audioUrl}
+                              controls
+                              className="h-8 w-full max-w-[200px]"
+                              style={{ filter: message.isMe ? "invert(1)" : "none" }}
+                            />
+                          </div>
+                        )}
+                        {message.text && (
+                          <p className={`text-sm leading-relaxed ${message.image ? "px-2.5 pt-2 pb-1" : ""}`}>
+                            {message.text}
+                          </p>
+                        )}
+                        <div className={`flex items-center justify-end gap-1 ${message.image || message.audioUrl ? "px-2.5 pb-1.5" : "mt-1"} ${
+                          message.isMe ? "text-primary-foreground/70" : "text-muted-foreground"
+                        }`}>
+                          <span className="text-[10px]">{message.time}</span>
+                          {message.isMe && <MessageStatus status={message.status} />}
+                        </div>
                       </div>
-                    )}
-                    {message.text && (
-                      <p className={`text-sm leading-relaxed ${message.image ? "px-2.5 pt-2 pb-1" : ""}`}>
-                        {message.text}
-                      </p>
-                    )}
-                    <div className={`flex items-center justify-end gap-1 ${message.image || message.audioUrl ? "px-2.5 pb-1.5" : "mt-1"} ${
-                      message.isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}>
-                      <span className="text-[10px]">{message.time}</span>
-                      {message.isMe && <MessageStatus status={message.status} />}
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                    
+                    {/* Reactions Display */}
+                    <MessageReactions
+                      reactions={reactionSummary}
+                      onReactionClick={(emoji) => toggleReaction(message.id, emoji)}
+                      isMe={message.isMe}
+                    />
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           )}
 
