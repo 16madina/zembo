@@ -734,13 +734,6 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                           </div>
                         </div>
                       )}
-                      {/* Debug panel - visible on screen for iOS diagnosis */}
-                      <div className="absolute bottom-1 left-1 right-1 bg-black/70 rounded px-2 py-1 text-[9px] font-mono text-white/80 leading-tight">
-                        <div>cs={currentStep} en={String(isVerificationActive)} vr={String(isVideoReady)}</div>
-                        <div>cam={String(cameraStartedRef.current)} stream={String(!!streamRef.current)}</div>
-                        <div>ai={String(isFaceDetectionLoading)} cmp={String(isComparisonLoading)}</div>
-                        <div>{debugInfo || "no-data"}</div>
-                      </div>
                       {/* Comparing overlay */}
                       {currentStep === "comparing" && (
                         <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
