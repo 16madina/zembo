@@ -123,38 +123,98 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   // Perform face comparison after movement verification is complete
   const performFaceComparison = useCallback(async () => {
     if (!videoRef.current || comparisonAttemptedRef.current) return;
-    
+
+    const stopCameraNow = () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        try {
+          // @ts-ignore
+          videoRef.current.srcObject = null;
+        } catch {
+          // ignore
+        }
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    };
+
+    // If the recognition pipeline isn't ready, fail fast (avoid hanging in "comparing")
+    if (!isComparisonModelsLoaded) {
+      setCameraError("La reconnaissance faciale se charge encore. Réessayez dans quelques secondes.");
+      setCurrentStep("failed");
+      stopCameraNow();
+      return;
+    }
+
+    if (!hasPhotoDescriptors) {
+      setCameraError("Aucun visage détecté dans vos photos de profil. Modifiez vos photos puis réessayez.");
+      setCurrentStep("failed");
+      stopCameraNow();
+      return;
+    }
+
     comparisonAttemptedRef.current = true;
     setCurrentStep("comparing");
     setDetectionStatus("Comparaison avec vos photos...");
 
-    // Wait a moment for stable video frame
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          setTimeout(() => reject(new Error(label)), ms);
+        }),
+      ]);
+    };
 
-    // Perform multiple comparisons for better accuracy
-    const results: { similarity: number; isMatch: boolean }[] = [];
-    
-    for (let i = 0; i < 3; i++) {
-      const result = await compareFace(videoRef.current!);
-      results.push({ similarity: result.similarity, isMatch: result.isMatch });
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
+    try {
+      // Wait a moment for stable video frame
+      await withTimeout(new Promise<void>((resolve) => setTimeout(resolve, 500)), 2000, "Délai de préparation de la caméra");
 
-    // Take the best result
-    const bestResult = results.reduce((best, curr) => 
-      curr.similarity > best.similarity ? curr : best
-    , results[0]);
+      const results: { similarity: number; isMatch: boolean }[] = [];
+      const overallStart = Date.now();
+      const OVERALL_TIMEOUT_MS = 15000;
 
-    setFaceMatchResult(bestResult);
+      for (let i = 0; i < 3; i++) {
+        const remaining = OVERALL_TIMEOUT_MS - (Date.now() - overallStart);
+        if (remaining <= 0) throw new Error("La comparaison prend trop de temps");
 
-    if (bestResult.isMatch) {
-      stopCamera();
-      setCurrentStep("complete");
-      updateData({ faceVerified: true });
-    } else {
+        const result = await withTimeout(
+          compareFace(videoRef.current!),
+          Math.min(5000, remaining),
+          "Délai de comparaison (essayez de réessayer)"
+        );
+
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        results.push({ similarity: result.similarity, isMatch: result.isMatch });
+        await withTimeout(new Promise<void>((resolve) => setTimeout(resolve, 300)), 1000, "Délai interne");
+      }
+
+      const bestResult = results.reduce((best, curr) => (curr.similarity > best.similarity ? curr : best), results[0]);
+      setFaceMatchResult(bestResult);
+
+      stopCameraNow();
+
+      if (bestResult.isMatch) {
+        setCurrentStep("complete");
+        updateData({ faceVerified: true });
+      } else {
+        setCurrentStep("failed");
+      }
+    } catch (err: any) {
+      console.error("[FaceVerification] Face comparison failed:", err);
+      stopCameraNow();
+      setCameraError(err?.message || "Erreur pendant la comparaison");
       setCurrentStep("failed");
     }
-  }, [compareFace, updateData]);
+  }, [compareFace, updateData, isComparisonModelsLoaded, hasPhotoDescriptors]);
 
   const completeCurrentStep = useCallback(() => {
     setCompletedSteps(prev => [...prev, currentStep as VerificationStep]);
