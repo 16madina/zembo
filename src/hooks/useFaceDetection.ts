@@ -35,7 +35,11 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
   const faceLandmarkerRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastDetectionRef = useRef<FaceDetectionResult>(currentResult);
-  const initAttemptRef = useRef(0);
+  const isInitializedRef = useRef(false);
+  const isInitializingRef = useRef(false);
+  // Store callback in ref to avoid re-triggering useEffect
+  const onDetectionRef = useRef(onDetection);
+  onDetectionRef.current = onDetection;
 
   const calculateHeadPose = useCallback((landmarks: any[]) => {
     // Key landmark indices for head pose
@@ -78,27 +82,34 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    // Prevent re-initialization if already done or in progress
+    if (!enabled || isInitializedRef.current || isInitializingRef.current) {
+      return;
+    }
 
     let isMounted = true;
     const isMobile = isMobileDevice();
+    isInitializingRef.current = true;
 
     const initFaceLandmarker = async (useGPU: boolean = true) => {
       try {
         setIsLoading(true);
         setError(null);
-        initAttemptRef.current++;
-        const attemptNumber = initAttemptRef.current;
 
-        console.log(`[FaceDetection] Init attempt ${attemptNumber}, GPU: ${useGPU}, Mobile: ${isMobile}`);
+        console.log(`[FaceDetection] Init, GPU: ${useGPU}, Mobile: ${isMobile}`);
 
         const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
+
+        if (!isMounted) return;
 
         // Use a more compatible WASM version for mobile
         const wasmUrl = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
         
         console.log("[FaceDetection] Loading FilesetResolver...");
         const filesetResolver = await FilesetResolver.forVisionTasks(wasmUrl);
+        
+        if (!isMounted) return;
+        
         console.log("[FaceDetection] FilesetResolver loaded successfully");
 
         // Determine delegate based on device and retry attempt
@@ -124,6 +135,8 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         }
 
         faceLandmarkerRef.current = faceLandmarker;
+        isInitializedRef.current = true;
+        isInitializingRef.current = false;
         setIsLoading(false);
         setError(null);
 
@@ -157,7 +170,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
                 lastDetectionRef.current = newResult;
                 setCurrentResult(newResult);
-                onDetection?.(newResult);
+                onDetectionRef.current?.(newResult);
               } else {
                 const noFaceResult: FaceDetectionResult = {
                   isDetected: false,
@@ -168,7 +181,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
                 };
                 lastDetectionRef.current = noFaceResult;
                 setCurrentResult(noFaceResult);
-                onDetection?.(noFaceResult);
+                onDetectionRef.current?.(noFaceResult);
               }
             } catch (err) {
               // Log every 60 frames to avoid spam
@@ -214,6 +227,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         }
         
         if (isMounted) {
+          isInitializingRef.current = false;
           const errorMessage = err?.message || "Erreur inconnue";
           setError(`Erreur d'initialisation: ${errorMessage}`);
           setIsLoading(false);
@@ -223,10 +237,11 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
     // Add a loading timeout - if still loading after 15 seconds, show error
     const loadingTimeout = setTimeout(() => {
-      if (isLoading && isMounted) {
+      if (isLoading && isMounted && !isInitializedRef.current) {
         console.error("[FaceDetection] Loading timeout reached");
         setError("Le chargement de l'IA prend trop de temps. Veuillez réessayer.");
         setIsLoading(false);
+        isInitializingRef.current = false;
       }
     }, 15000);
 
@@ -246,8 +261,10 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         }
         faceLandmarkerRef.current = null;
       }
+      isInitializedRef.current = false;
+      isInitializingRef.current = false;
     };
-  }, [enabled, videoRef, calculateHeadPose, onDetection]);
+  }, [enabled, videoRef, calculateHeadPose]);
 
   return {
     isLoading,
