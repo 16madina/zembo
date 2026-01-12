@@ -22,7 +22,7 @@ const isMobileDevice = () => {
 };
 
 export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDetectionProps) => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
   const [currentResult, setCurrentResult] = useState<FaceDetectionResult>({
     isDetected: false,
@@ -31,7 +31,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
     yaw: 0,
     pitch: 0,
   });
-  
+
   const faceLandmarkerRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastDetectionRef = useRef<FaceDetectionResult>(currentResult);
@@ -54,11 +54,11 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
       x: (leftEyeOuter.x + rightEyeOuter.x) / 2,
       y: (leftEyeOuter.y + rightEyeOuter.y) / 2,
     };
-    
+
     // Distance from nose to eye center
     const noseOffset = noseTip.x - eyeCenter.x;
     const eyeDistance = Math.abs(rightEyeOuter.x - leftEyeOuter.x);
-    
+
     // Yaw calculation (inverted because video is mirrored)
     const yaw = -(noseOffset / (eyeDistance * 0.5)) * 45;
 
@@ -84,6 +84,19 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
   // Store videoRef in a stable ref to avoid triggering useEffect
   const videoRefStable = useRef(videoRef.current);
   videoRefStable.current = videoRef.current;
+
+  // Important: when disabled, don't report "loading" (prevents infinite UI spinners)
+  useEffect(() => {
+    if (enabled) return;
+
+    setIsLoading(false);
+    setError(null);
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, [enabled]);
 
   useEffect(() => {
     // Prevent re-initialization if already done or in progress
@@ -269,7 +282,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
     // Add a loading timeout - if still loading after 15 seconds, show error
     const loadingTimeout = setTimeout(() => {
-      if (isLoading && isMounted && !isInitializedRef.current) {
+      if (isMounted && enabled && !isInitializedRef.current) {
         console.error("[FaceDetection] Loading timeout reached");
         setError("Le chargement de l'IA prend trop de temps. Veuillez réessayer.");
         setIsLoading(false);
