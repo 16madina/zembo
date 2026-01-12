@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ZemboLogo from "@/components/ZemboLogo";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
+import { isNative } from "@/lib/capacitor";
 
 interface LoginFormProps {
   onSubmit: (email: string, password: string) => Promise<void>;
@@ -15,13 +17,47 @@ const LoginForm = ({ onSubmit, onBack, loading }: LoginFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+
+  const { 
+    isAvailable: biometricAvailable, 
+    isEnabled: biometricEnabled,
+    getCredentials,
+    getBiometryLabel,
+  } = useBiometricAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSubmit(email, password);
   };
 
+  const handleBiometricLogin = async () => {
+    if (!biometricAvailable || !biometricEnabled) return;
+    
+    setBiometricLoading(true);
+    try {
+      const credentials = await getCredentials();
+      if (credentials) {
+        await onSubmit(credentials.username, credentials.password);
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  // Auto-trigger biometric login on mount if available
+  useEffect(() => {
+    if (isNative && biometricAvailable && biometricEnabled && !loading) {
+      // Small delay to allow UI to render first
+      const timer = setTimeout(() => {
+        handleBiometricLogin();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [biometricAvailable, biometricEnabled]);
+
   const isValid = email.includes("@") && password.length >= 6;
+  const showBiometric = isNative && biometricAvailable && biometricEnabled;
 
   return (
     <div className="h-full fixed inset-0 flex flex-col px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -61,6 +97,45 @@ const LoginForm = ({ onSubmit, onBack, loading }: LoginFormProps) => {
           </p>
         </motion.div>
 
+        {/* Biometric Login Button */}
+        {showBiometric && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15 }}
+            className="mb-6"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBiometricLogin}
+              disabled={loading || biometricLoading}
+              className="w-full h-16 glass border-primary/30 rounded-2xl flex items-center justify-center gap-3"
+            >
+              {biometricLoading ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
+                />
+              ) : (
+                <>
+                  <Fingerprint className="w-8 h-8 text-primary" />
+                  <span className="text-base font-medium">
+                    Se connecter avec {getBiometryLabel()}
+                  </span>
+                </>
+              )}
+            </Button>
+            
+            <div className="flex items-center gap-4 my-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">ou</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+          </motion.div>
+        )}
+
         {/* Form */}
         <motion.form
           onSubmit={handleSubmit}
@@ -77,7 +152,7 @@ const LoginForm = ({ onSubmit, onBack, loading }: LoginFormProps) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="pl-12 h-14 glass border-0 rounded-2xl text-base"
-              autoFocus
+              autoFocus={!showBiometric}
             />
           </div>
 
