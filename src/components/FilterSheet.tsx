@@ -145,8 +145,8 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
               value={[localFilters.distance]}
               onValueChange={handleDistanceChange}
               min={1}
-              max={100}
-              step={1}
+              max={500}
+              step={5}
               className="w-full"
             />
           </div>

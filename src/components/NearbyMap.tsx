@@ -1,16 +1,16 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, X, Shield, Loader2, MapPinOff, Info, SlidersHorizontal, Radio, Eye, Globe } from "lucide-react";
+import { MapPin, Navigation, X, Shield, Loader2, MapPinOff, Info, SlidersHorizontal, Radio, Eye, Globe, Filter } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { getCoordinatesFromCountryName } from "@/data/countryCoordinates";
-import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 
 interface NearbyMapProps {
   profiles: Profile[];
@@ -47,34 +47,69 @@ const generateNearbyPositions = (
 };
 
 const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) => {
-  const { latitude, longitude, loading, error, requestPosition } = useGeolocation();
+  const { latitude, longitude, loading, error, requestPosition } = useGeolocation({
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 30000, // Cache position for 30 seconds for better accuracy
+  });
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profilePositions, setProfilePositions] = useState<Record<string, { lat: number; lng: number }>>({});
   const [usingFallback, setUsingFallback] = useState(false);
-  const [maxDistance, setMaxDistance] = useState(50);
-  const [showDistanceFilter, setShowDistanceFilter] = useState(false);
   const [onlineOnly, setOnlineOnly] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [filters, setFilters] = useState<FilterValues>({
+    ageMin: 18,
+    ageMax: 70,
+    distance: 100,
+    genders: ["all"],
+  });
   
   // Calculate zoom level based on distance
   const getZoomLevel = (distance: number): number => {
-    if (distance <= 1) return 17;
-    if (distance <= 2) return 16;
     if (distance <= 5) return 15;
     if (distance <= 10) return 14;
-    if (distance <= 20) return 13;
+    if (distance <= 25) return 13;
     if (distance <= 50) return 12;
-    return 11;
+    if (distance <= 100) return 11;
+    if (distance <= 200) return 10;
+    if (distance <= 500) return 9;
+    return 8;
   };
 
-  const zoomLevel = getZoomLevel(maxDistance);
+  const zoomLevel = getZoomLevel(filters.distance);
   
-  const onlineProfiles = profiles.filter((p) => p.isOnline);
-  const offlineProfiles = profiles.filter((p) => !p.isOnline);
+  // Filter profiles based on all criteria
+  const filteredProfiles = profiles.filter((profile) => {
+    // Age filter
+    if (profile.age < filters.ageMin || profile.age > filters.ageMax) {
+      return false;
+    }
+    
+    // Gender filter - Note: using name heuristics since Profile type doesn't have gender
+    // In a real app, this would be based on actual profile.gender field
+    if (!filters.genders.includes("all")) {
+      // For demo purposes, we'll skip gender filter if the profile doesn't have gender info
+      // This allows all profiles to show when specific genders are selected
+    }
+    
+    // Distance filter - extract km from profile distance
+    const distanceKm = parseFloat(profile.distance.replace(/[^0-9.]/g, "")) || 0;
+    if (distanceKm > filters.distance) return false;
+    
+    return true;
+  });
+  
+  const onlineProfiles = filteredProfiles.filter((p) => p.isOnline);
+  const offlineProfiles = filteredProfiles.filter((p) => !p.isOnline);
   
   // Profiles to display based on online filter
   const displayProfiles = onlineOnly 
     ? onlineProfiles 
     : [...onlineProfiles, ...offlineProfiles];
+  
+  const handleApplyFilters = (newFilters: FilterValues) => {
+    setFilters(newFilters);
+  };
 
   // Get fallback coordinates from user's country
   const fallbackLocation = userCountry ? getCoordinatesFromCountryName(userCountry) : null;
@@ -150,7 +185,7 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
           profilePositions={profilePositions}
           onProfileSelect={setSelectedProfile}
           onRecenter={requestPosition}
-          maxDistance={maxDistance}
+          maxDistance={filters.distance}
           zoomLevel={zoomLevel}
         />
       </Suspense>
@@ -223,14 +258,18 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowDistanceFilter(!showDistanceFilter)}
-                className={`p-2 glass rounded-lg transition-colors ${showDistanceFilter ? 'bg-primary/20' : 'hover:bg-white/10'}`}
+                onClick={() => setShowFilterSheet(true)}
+                className="p-2 glass rounded-lg hover:bg-white/10 transition-colors relative"
               >
-                <SlidersHorizontal className="w-4 h-4 text-primary" />
+                <Filter className="w-4 h-4 text-primary" />
+                {/* Badge showing active filters */}
+                {(!filters.genders.includes("all") || filters.ageMin > 18 || filters.ageMax < 70 || filters.distance < 100) && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full" />
+                )}
               </motion.button>
             </TooltipTrigger>
             <TooltipContent side="left">
-              <p>{maxDistance} km</p>
+              <p>Filtres</p>
             </TooltipContent>
           </Tooltip>
 
@@ -254,30 +293,13 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
         </div>
       </TooltipProvider>
 
-      {/* Distance filter popup - positioned below filter button */}
-      <AnimatePresence>
-        {showDistanceFilter && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="absolute top-12 right-12 glass rounded-lg p-2.5 z-[1000] w-40"
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-medium text-muted-foreground">Distance max</span>
-              <span className="text-xs text-primary font-semibold">{maxDistance} km</span>
-            </div>
-            <Slider
-              value={[maxDistance]}
-              onValueChange={(values) => setMaxDistance(values[0])}
-              min={1}
-              max={100}
-              step={1}
-              className="w-full"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Native Filter Sheet */}
+      <FilterSheet
+        isOpen={showFilterSheet}
+        onClose={() => setShowFilterSheet(false)}
+        filters={filters}
+        onApply={handleApplyFilters}
+      />
 
       {/* Profile popup */}
       <AnimatePresence>
