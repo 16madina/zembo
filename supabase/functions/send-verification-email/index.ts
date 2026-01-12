@@ -110,8 +110,8 @@ const handler = async (req: Request): Promise<Response> => {
     // ALWAYS use the production domain for verification links
     const baseUrl = 'https://zemboapp.com';
     const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
-    // Use a publicly hosted logo image
-    const logoUrl = 'https://i.ibb.co/pjXVg1pP/zembo-logo.png';
+    // Use the logo hosted in public folder via production URL
+    const logoUrl = 'https://zemboapp.com/images/zembo-logo-email.png';
 
     // Update profile with token and increment counter using admin client
     const updateData: Record<string, unknown> = {
