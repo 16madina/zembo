@@ -34,6 +34,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [faceMatchResult, setFaceMatchResult] = useState<{ similarity: number; isMatch: boolean } | null>(null);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [retryCount, setRetryCount] = useState(0);
+  const [showSkipOption, setShowSkipOption] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -442,6 +444,27 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     setFaceMatchResult(null);
     setIsVideoReady(false);
     setDebugInfo("");
+    setCameraError(null);
+  };
+
+  const handleRetry = () => {
+    const newRetryCount = retryCount + 1;
+    setRetryCount(newRetryCount);
+    
+    // After 3 failed attempts, show skip option
+    if (newRetryCount >= 3) {
+      setShowSkipOption(true);
+    }
+    
+    resetVerification();
+    setTimeout(() => startVerification(), 200);
+  };
+
+  const handleSkipVerification = () => {
+    // Allow user to skip after multiple failures
+    stopCamera();
+    updateData({ faceVerified: false });
+    onNext();
   };
 
   const currentStepIndex = verificationSteps.findIndex(s => s.id === currentStep);
@@ -663,22 +686,33 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                   {cameraError || faceDetectionError || comparisonError ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-center p-4">
                       <AlertCircle className="w-8 h-8 text-destructive mb-2" />
-                      <p className="text-xs text-muted-foreground mb-3 max-w-[180px]">
+                      <p className="text-xs text-muted-foreground mb-2 max-w-[180px]">
                         {cameraError || faceDetectionError || comparisonError}
                       </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setCameraError(null);
-                          resetVerification();
-                          setTimeout(() => startVerification(), 100);
-                        }}
-                        className="text-xs"
-                      >
-                        <RotateCcw className="w-3 h-3 mr-1" />
-                        Réessayer
-                      </Button>
+                      <p className="text-[10px] text-muted-foreground/70 mb-3">
+                        Tentative {retryCount + 1}
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRetry}
+                          className="text-xs"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Réessayer
+                        </Button>
+                        {showSkipOption && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSkipVerification}
+                            className="text-xs text-muted-foreground"
+                          >
+                            Passer cette étape
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <>
@@ -952,11 +986,11 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               className="w-full max-w-xs space-y-3"
             >
               <Button
-                onClick={resetVerification}
+                onClick={handleRetry}
                 className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
               >
                 <RotateCcw className="w-5 h-5 mr-2" />
-                Réessayer
+                Réessayer ({retryCount + 1})
               </Button>
               <Button
                 onClick={onBack}
@@ -965,6 +999,15 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               >
                 Modifier mes photos
               </Button>
+              {showSkipOption && (
+                <Button
+                  onClick={handleSkipVerification}
+                  variant="outline"
+                  className="w-full h-12 text-muted-foreground border-muted"
+                >
+                  Passer la vérification
+                </Button>
+              )}
             </motion.div>
           </motion.div>
         )}
