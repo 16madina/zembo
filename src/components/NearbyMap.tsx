@@ -155,54 +155,49 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
         />
       </Suspense>
 
-      {/* Fallback location notice */}
+      {/* Fallback location notice - repositioned to bottom left above legend */}
       {usingFallback && fallbackLocation && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-3 py-2 z-[1000] flex items-center gap-2"
+          className="absolute bottom-20 left-3 glass rounded-lg px-2.5 py-1.5 z-[1000] flex items-center gap-1.5 max-w-[180px]"
         >
-          <Info className="w-4 h-4 text-primary" />
-          <span className="text-xs text-foreground">
-            Position approximative : {fallbackLocation.city}
-          </span>
-          <button
-            onClick={requestPosition}
-            className="text-xs text-primary font-medium hover:underline"
-          >
-            Activer GPS
-          </button>
+          <Info className="w-3 h-3 text-primary flex-shrink-0" />
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground leading-tight">Position approximative</span>
+            <span className="text-xs text-foreground font-medium leading-tight">{fallbackLocation.city}</span>
+          </div>
         </motion.div>
       )}
 
-      {/* Legend with online filter */}
+      {/* Legend with online filter - compact version */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3 }}
-        className={`absolute ${usingFallback ? 'top-16' : 'top-4'} left-4 glass rounded-xl p-3 z-[1000]`}
+        className="absolute top-3 left-3 glass rounded-lg px-2 py-1.5 z-[1000]"
       >
-        <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-3">
           <button 
             onClick={() => setOnlineOnly(false)}
-            className={`flex items-center gap-2 text-sm transition-opacity ${!onlineOnly ? 'opacity-100' : 'opacity-50'}`}
+            className={`flex items-center gap-1 text-xs transition-opacity ${!onlineOnly ? 'opacity-100' : 'opacity-50'}`}
           >
-            <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-foreground font-medium">{onlineProfiles.length} en ligne</span>
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-foreground font-medium">{onlineProfiles.length}</span>
           </button>
           <button 
             onClick={() => setOnlineOnly(false)}
-            className={`flex items-center gap-2 text-sm transition-opacity ${!onlineOnly ? 'opacity-100' : 'opacity-30'}`}
+            className={`flex items-center gap-1 text-xs transition-opacity ${!onlineOnly ? 'opacity-100' : 'opacity-30'}`}
           >
-            <div className="w-3 h-3 rounded-full bg-gray-400" />
-            <span className="text-muted-foreground">{offlineProfiles.length} hors ligne</span>
+            <div className="w-2 h-2 rounded-full bg-gray-400" />
+            <span className="text-muted-foreground">{offlineProfiles.length}</span>
           </button>
         </div>
       </motion.div>
 
-      {/* Control buttons */}
+      {/* Control buttons - positioned with more spacing from top */}
       <TooltipProvider delayDuration={300}>
-        <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-[1000]">
           <Tooltip>
             <TooltipTrigger asChild>
               <motion.button
@@ -211,13 +206,13 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
                 transition={{ delay: 0.4 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={requestPosition}
-                className="p-2.5 glass rounded-xl hover:bg-white/10 transition-colors"
+                className="p-2 glass rounded-lg hover:bg-white/10 transition-colors"
               >
                 <Navigation className="w-4 h-4 text-primary" />
               </motion.button>
             </TooltipTrigger>
             <TooltipContent side="left">
-              <p>Recentrer sur ma position</p>
+              <p>Recentrer</p>
             </TooltipContent>
           </Tooltip>
 
@@ -229,13 +224,13 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
                 transition={{ delay: 0.5 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowDistanceFilter(!showDistanceFilter)}
-                className={`p-2.5 glass rounded-xl transition-colors ${showDistanceFilter ? 'bg-primary/20' : 'hover:bg-white/10'}`}
+                className={`p-2 glass rounded-lg transition-colors ${showDistanceFilter ? 'bg-primary/20' : 'hover:bg-white/10'}`}
               >
                 <SlidersHorizontal className="w-4 h-4 text-primary" />
               </motion.button>
             </TooltipTrigger>
             <TooltipContent side="left">
-              <p>Filtrer par distance ({maxDistance} km)</p>
+              <p>{maxDistance} km</p>
             </TooltipContent>
           </Tooltip>
 
@@ -247,29 +242,29 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
                 transition={{ delay: 0.6 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setOnlineOnly(!onlineOnly)}
-                className={`p-2.5 glass rounded-xl transition-colors ${onlineOnly ? 'bg-green-500/20' : 'hover:bg-white/10'}`}
+                className={`p-2 glass rounded-lg transition-colors ${onlineOnly ? 'bg-green-500/20' : 'hover:bg-white/10'}`}
               >
                 <Radio className={`w-4 h-4 ${onlineOnly ? 'text-green-400' : 'text-primary'}`} />
               </motion.button>
             </TooltipTrigger>
             <TooltipContent side="left">
-              <p>{onlineOnly ? 'Afficher tous les profils' : 'En ligne uniquement'}</p>
+              <p>{onlineOnly ? 'Tous' : 'En ligne'}</p>
             </TooltipContent>
           </Tooltip>
         </div>
       </TooltipProvider>
 
-      {/* Distance filter popup */}
+      {/* Distance filter popup - positioned below filter button */}
       <AnimatePresence>
         {showDistanceFilter && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="absolute top-4 right-16 glass rounded-xl p-3 z-[1000] w-48"
+            className="absolute top-12 right-12 glass rounded-lg p-2.5 z-[1000] w-40"
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-foreground">Distance</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-medium text-muted-foreground">Distance max</span>
               <span className="text-xs text-primary font-semibold">{maxDistance} km</span>
             </div>
             <Slider
