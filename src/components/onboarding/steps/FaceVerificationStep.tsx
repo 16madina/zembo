@@ -198,112 +198,132 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
       console.log("[FaceVerification] Requesting camera with constraints:", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
+
+      // Keep stream even if the video element isn't mounted yet (AnimatePresence can delay it)
       streamRef.current = stream;
-      
-      if (videoRef.current) {
-        const video = videoRef.current;
-        
-        // Set attributes programmatically for iOS WebView compatibility
-        video.muted = true;
-        video.playsInline = true;
-        video.autoplay = true;
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('webkit-playsinline', 'true');
-        
+
+      const waitForVideoElement = async (): Promise<HTMLVideoElement> => {
+        const start = Date.now();
+        while (!videoRef.current && Date.now() - start < 3000) {
+          setDebugInfo("waiting-video-el");
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        const v = videoRef.current;
+        if (!v) throw new Error("Élément vidéo indisponible (montage retardé)");
+        return v;
+      };
+
+      const video = await waitForVideoElement();
+
+      // Set attributes programmatically for iOS WebView compatibility
+      video.muted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("webkit-playsinline", "true");
+
+      // Attach stream
+      if (video.srcObject !== stream) {
         video.srcObject = stream;
-        
-        // Use robust video ready detection for WebView
-        await new Promise<void>((resolve, reject) => {
-          let resolved = false;
-          const timeoutId = setTimeout(() => {
-            if (!resolved) {
-              // Even if timeout, check if video has frames
-              if (video.videoWidth > 0 && video.videoHeight > 0) {
-                console.log("[FaceVerification] Timeout but video has frames, proceeding");
-                resolved = true;
-                resolve();
-              } else {
-                reject(new Error("Timeout de la caméra"));
-              }
-            }
-          }, 15000);
-          
-          const checkVideoReady = () => {
-            if (resolved) return;
-            const state = `rs=${video.readyState} w=${video.videoWidth} h=${video.videoHeight} p=${video.paused}`;
-            console.log(`[FaceVerification] Video state: ${state}`);
-            setDebugInfo(state);
-            
-            // More robust check: video has dimensions OR readyState >= 2
-            if ((video.videoWidth > 0 && video.videoHeight > 0) || video.readyState >= 2) {
-              clearTimeout(timeoutId);
-              resolved = true;
-              console.log("[FaceVerification] Video ready, dimensions:", video.videoWidth, "x", video.videoHeight);
-              resolve();
-            }
-          };
-          
-          // Listen to multiple events for WebView compatibility
-          video.onloadedmetadata = () => {
-            console.log("[FaceVerification] loadedmetadata event");
-            checkVideoReady();
-          };
-          
-          video.onloadeddata = () => {
-            console.log("[FaceVerification] loadeddata event");
-            checkVideoReady();
-          };
-          
-          video.oncanplay = () => {
-            console.log("[FaceVerification] canplay event");
-            checkVideoReady();
-          };
-          
-          video.onplaying = () => {
-            console.log("[FaceVerification] playing event");
-            checkVideoReady();
-          };
-          
-          video.onerror = () => {
-            clearTimeout(timeoutId);
-            reject(new Error("Erreur de chargement vidéo"));
-          };
-          
-          // Try to play and handle potential autoplay restrictions
-          video.play()
-            .then(() => {
-              console.log("[FaceVerification] video.play() succeeded");
-              // Check after play succeeds
-              setTimeout(checkVideoReady, 100);
-            })
-            .catch((playError) => {
-              console.warn("[FaceVerification] video.play() failed:", playError);
-              // Still check if video has frames despite play failure
-              setTimeout(checkVideoReady, 500);
-            });
-          
-          // Also poll for video dimensions (WebView fallback)
-          const pollInterval = setInterval(() => {
-            if (resolved) {
-              clearInterval(pollInterval);
-              return;
-            }
-            checkVideoReady();
-          }, 200);
-          
-          // Clear poll interval on resolve/reject
-          const originalResolve = resolve;
-          const originalReject = reject;
-          // @ts-ignore
-          resolve = () => { clearInterval(pollInterval); originalResolve(); };
-          // @ts-ignore
-          reject = (err: any) => { clearInterval(pollInterval); originalReject(err); };
-        });
-        
-        // Mark video as ready for face detection
-        setIsVideoReady(true);
       }
+
+      // Use robust video ready detection for WebView
+      await new Promise<void>((resolve, reject) => {
+        let resolved = false;
+        const timeoutId = setTimeout(() => {
+          if (!resolved) {
+            // Even if timeout, check if video has frames
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              console.log("[FaceVerification] Timeout but video has frames, proceeding");
+              resolved = true;
+              resolve();
+            } else {
+              reject(new Error("Timeout de la caméra"));
+            }
+          }
+        }, 15000);
+
+        const checkVideoReady = () => {
+          if (resolved) return;
+          const state = `rs=${video.readyState} w=${video.videoWidth} h=${video.videoHeight} p=${video.paused}`;
+          console.log(`[FaceVerification] Video state: ${state}`);
+          setDebugInfo(state);
+
+          // More robust check: video has dimensions OR readyState >= 2
+          if ((video.videoWidth > 0 && video.videoHeight > 0) || video.readyState >= 2) {
+            clearTimeout(timeoutId);
+            resolved = true;
+            console.log("[FaceVerification] Video ready, dimensions:", video.videoWidth, "x", video.videoHeight);
+            resolve();
+          }
+        };
+
+        // Listen to multiple events for WebView compatibility
+        video.onloadedmetadata = () => {
+          console.log("[FaceVerification] loadedmetadata event");
+          checkVideoReady();
+        };
+
+        video.onloadeddata = () => {
+          console.log("[FaceVerification] loadeddata event");
+          checkVideoReady();
+        };
+
+        video.oncanplay = () => {
+          console.log("[FaceVerification] canplay event");
+          checkVideoReady();
+        };
+
+        video.onplaying = () => {
+          console.log("[FaceVerification] playing event");
+          checkVideoReady();
+        };
+
+        video.onerror = () => {
+          clearTimeout(timeoutId);
+          reject(new Error("Erreur de chargement vidéo"));
+        };
+
+        // Try to play and handle potential autoplay restrictions
+        video
+          .play()
+          .then(() => {
+            console.log("[FaceVerification] video.play() succeeded");
+            // Check after play succeeds
+            setTimeout(checkVideoReady, 100);
+          })
+          .catch((playError) => {
+            console.warn("[FaceVerification] video.play() failed:", playError);
+            // Still check if video has frames despite play failure
+            setTimeout(checkVideoReady, 500);
+          });
+
+        // Also poll for video dimensions (WebView fallback)
+        const pollInterval = setInterval(() => {
+          if (resolved) {
+            clearInterval(pollInterval);
+            return;
+          }
+          checkVideoReady();
+        }, 200);
+
+        // Clear poll interval on resolve/reject
+        const originalResolve = resolve;
+        const originalReject = reject;
+        // @ts-ignore
+        resolve = () => {
+          clearInterval(pollInterval);
+          originalResolve();
+        };
+        // @ts-ignore
+        reject = (err: any) => {
+          clearInterval(pollInterval);
+          originalReject(err);
+        };
+      });
+
+      // Mark video as ready for face detection
+      setIsVideoReady(true);
       
       console.log("[FaceVerification] Camera started successfully, video ready for detection");
     } catch (error: any) {
@@ -323,6 +343,15 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         errorMessage = error.message;
       }
       
+      // Allow retry if mounting timing / permissions caused a failure
+      cameraStartedRef.current = false;
+
+      // Ensure we don't leak an open stream on errors
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+
       setCameraError(errorMessage);
       setIsVideoReady(false);
     }
@@ -330,12 +359,24 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+
+    // Detach stream from the element (helps iOS free the camera)
+    if (videoRef.current) {
+      try {
+        // @ts-ignore
+        videoRef.current.srcObject = null;
+      } catch {
+        // ignore
+      }
+    }
+
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
     }
+
     setIsVideoReady(false);
   }, []);
 
@@ -363,6 +404,22 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       setIsAILoading(false);
     }
   }, [isFaceDetectionLoading, isVerificationActive]);
+
+  // Always show live video state in the on-screen debug panel (useful when console isn't accessible)
+  useEffect(() => {
+    if (!isVerificationActive) return;
+
+    const id = setInterval(() => {
+      const v = videoRef.current;
+      if (!v) {
+        setDebugInfo("no-video-el");
+        return;
+      }
+      setDebugInfo(`rs=${v.readyState} w=${v.videoWidth} h=${v.videoHeight} p=${v.paused}`);
+    }, 250);
+
+    return () => clearInterval(id);
+  }, [isVerificationActive]);
 
   const startVerification = () => {
     setCurrentStep("center");
@@ -645,7 +702,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                       )}
                       {/* Debug panel - visible on screen for iOS diagnosis */}
                       <div className="absolute bottom-1 left-1 right-1 bg-black/70 rounded px-2 py-1 text-[9px] font-mono text-white/80 leading-tight">
-                        <div>en={String(isVerificationActive)} vr={String(isVideoReady)}</div>
+                        <div>cs={currentStep} en={String(isVerificationActive)} vr={String(isVideoReady)}</div>
+                        <div>cam={String(cameraStartedRef.current)} stream={String(!!streamRef.current)}</div>
                         <div>ai={String(isFaceDetectionLoading)} cmp={String(isComparisonLoading)}</div>
                         <div>{debugInfo || "no-data"}</div>
                       </div>
