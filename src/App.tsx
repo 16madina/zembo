@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { initializeCapacitor } from "@/lib/capacitor";
 import SplashScreen from "@/components/SplashScreen";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
@@ -94,6 +95,11 @@ const AppContent = () => {
 };
 
 const App = () => {
+  useEffect(() => {
+    // Enable native keyboard listeners (needed for keeping chat input visible)
+    void initializeCapacitor();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
