@@ -113,10 +113,25 @@ export const IdentityUploadScreen = ({ onComplete, onBack }: IdentityUploadScree
       if (insertError) throw insertError;
 
       // Update profile to mark pending manual verification
-      await supabase
+      const { data: profile } = await supabase
         .from("profiles")
         .update({ identity_verification_status: "pending" })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .select("display_name")
+        .single();
+
+      // Notify admins about new verification request
+      try {
+        await supabase.functions.invoke("notify-admin-new-verification", {
+          body: {
+            userId: user.id,
+            displayName: profile?.display_name || undefined,
+          },
+        });
+      } catch (notifyError) {
+        console.error("Error notifying admins:", notifyError);
+        // Don't fail if notification fails
+      }
 
       setCurrentStep("complete");
       toast.success("Demande envoyée avec succès");
