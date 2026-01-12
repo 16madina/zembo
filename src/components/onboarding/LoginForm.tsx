@@ -24,93 +24,96 @@ const LoginForm = ({ onSubmit, onBack, loading }: LoginFormProps) => {
   const isValid = email.includes("@") && password.length >= 6;
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-8">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-full glass flex items-center justify-center tap-highlight"
-        >
-          <ArrowLeft className="w-5 h-5 text-foreground" />
-        </button>
-      </div>
-
-      {/* Logo */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex justify-center mb-8"
-      >
-        <ZemboLogo />
-      </motion.div>
-
-      {/* Title */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="text-center mb-8"
-      >
-        <h1 className="text-2xl font-bold text-foreground mb-2">
-          Bon retour !
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Connectez-vous pour retrouver vos matchs
-        </p>
-      </motion.div>
-
-      {/* Form */}
-      <motion.form
-        onSubmit={handleSubmit}
-        className="space-y-4 flex-1"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="relative">
-          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="pl-12 h-14 glass border-0 rounded-2xl text-base"
-            autoFocus
-          />
-        </div>
-
-        <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            type={showPassword ? "text" : "password"}
-            placeholder="Mot de passe"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base"
-          />
+    <div className="h-full fixed inset-0 flex flex-col px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto overscroll-contain py-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
           <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+            onClick={onBack}
+            className="w-10 h-10 rounded-full glass flex items-center justify-center tap-highlight"
           >
-            {showPassword ? (
-              <EyeOff className="w-5 h-5" />
-            ) : (
-              <Eye className="w-5 h-5" />
-            )}
+            <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
         </div>
 
-        <button
-          type="button"
-          className="text-sm text-primary font-medium"
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-center mb-8"
         >
-          Mot de passe oublié ?
-        </button>
-      </motion.form>
+          <ZemboLogo />
+        </motion.div>
 
-      {/* Submit Button */}
-      <div className="pt-6">
+        {/* Title */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="text-center mb-8"
+        >
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            Bon retour !
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Connectez-vous pour retrouver vos matchs
+          </p>
+        </motion.div>
+
+        {/* Form */}
+        <motion.form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-12 h-14 glass border-0 rounded-2xl text-base"
+              autoFocus
+            />
+          </div>
+
+          <div className="relative">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Mot de passe"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="text-sm text-primary font-medium"
+          >
+            Mot de passe oublié ?
+          </button>
+        </motion.form>
+      </div>
+
+      {/* Submit Button - Fixed at bottom */}
+      <div className="flex-shrink-0 py-4 bg-background">
         <Button
           onClick={handleSubmit}
           disabled={!isValid || loading}
