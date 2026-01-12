@@ -40,6 +40,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartTimeRef = useRef<number | null>(null);
   const comparisonAttemptedRef = useRef(false);
+  const cameraStartedRef = useRef(false);
 
   const isVerificationActive = currentStep !== "intro" && currentStep !== "complete" && currentStep !== "comparing" && currentStep !== "failed";
   
@@ -339,12 +340,21 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   }, []);
 
   useEffect(() => {
-    if (currentStep !== "intro" && currentStep !== "complete" && currentStep !== "failed") {
+    const shouldHaveCamera = currentStep !== "intro" && currentStep !== "complete" && currentStep !== "failed";
+    
+    if (shouldHaveCamera && !cameraStartedRef.current && !streamRef.current) {
+      cameraStartedRef.current = true;
       startCamera();
+    } else if (!shouldHaveCamera && cameraStartedRef.current) {
+      cameraStartedRef.current = false;
+      stopCamera();
     }
     
     return () => {
-      stopCamera();
+      if (cameraStartedRef.current) {
+        cameraStartedRef.current = false;
+        stopCamera();
+      }
     };
   }, [currentStep, startCamera, stopCamera]);
 
@@ -364,6 +374,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   };
 
   const resetVerification = () => {
+    cameraStartedRef.current = false;
     stopCamera();
     setCurrentStep("intro");
     setProgress(0);
@@ -373,6 +384,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     comparisonAttemptedRef.current = false;
     setFaceMatchResult(null);
     setIsVideoReady(false);
+    setDebugInfo("");
   };
 
   const currentStepIndex = verificationSteps.findIndex(s => s.id === currentStep);
