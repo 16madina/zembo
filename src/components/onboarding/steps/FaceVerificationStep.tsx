@@ -33,6 +33,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [detectionStatus, setDetectionStatus] = useState<string>("");
   const [faceMatchResult, setFaceMatchResult] = useState<{ similarity: number; isMatch: boolean } | null>(null);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -229,7 +230,9 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           
           const checkVideoReady = () => {
             if (resolved) return;
-            console.log(`[FaceVerification] Video state: readyState=${video.readyState}, videoWidth=${video.videoWidth}, videoHeight=${video.videoHeight}, paused=${video.paused}`);
+            const state = `rs=${video.readyState} w=${video.videoWidth} h=${video.videoHeight} p=${video.paused}`;
+            console.log(`[FaceVerification] Video state: ${state}`);
+            setDebugInfo(state);
             
             // More robust check: video has dimensions OR readyState >= 2
             if ((video.videoWidth > 0 && video.videoHeight > 0) || video.readyState >= 2) {
@@ -628,6 +631,12 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                           </div>
                         </div>
                       )}
+                      {/* Debug panel - visible on screen for iOS diagnosis */}
+                      <div className="absolute bottom-1 left-1 right-1 bg-black/70 rounded px-2 py-1 text-[9px] font-mono text-white/80 leading-tight">
+                        <div>en={String(isVerificationActive)} vr={String(isVideoReady)}</div>
+                        <div>ai={String(isFaceDetectionLoading)} cmp={String(isComparisonLoading)}</div>
+                        <div>{debugInfo || "no-data"}</div>
+                      </div>
                       {/* Comparing overlay */}
                       {currentStep === "comparing" && (
                         <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
