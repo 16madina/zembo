@@ -314,7 +314,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed inset-0 z-50 bg-background flex flex-col pt-[env(safe-area-inset-top)]"
+        className="fixed inset-0 z-[100] bg-background flex flex-col pt-[env(safe-area-inset-top)]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 glass-strong border-b border-border/50 flex-shrink-0">
@@ -358,15 +358,33 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
           <div className="flex items-center gap-1">
             <motion.button
-              onClick={handleCall}
-              className="p-2.5 tap-highlight rounded-full active:bg-muted/50"
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCall();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCall();
+              }}
+              className="p-2.5 tap-highlight rounded-full active:bg-muted/50 touch-manipulation"
               whileTap={{ scale: 0.9 }}
             >
               <Phone className="w-5 h-5 text-muted-foreground" />
             </motion.button>
             <motion.button
-              onClick={handleVideoCall}
-              className="p-2.5 tap-highlight rounded-full active:bg-muted/50"
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleVideoCall();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleVideoCall();
+              }}
+              className="p-2.5 tap-highlight rounded-full active:bg-muted/50 touch-manipulation"
               whileTap={{ scale: 0.9 }}
             >
               <Video className="w-5 h-5 text-muted-foreground" />
@@ -374,13 +392,13 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <motion.button
-                  className="p-2.5 tap-highlight rounded-full active:bg-muted/50"
+                  className="p-2.5 tap-highlight rounded-full active:bg-muted/50 touch-manipulation"
                   whileTap={{ scale: 0.9 }}
                 >
                   <MoreVertical className="w-5 h-5 text-muted-foreground" />
                 </motion.button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48 z-[110]">
                 <DropdownMenuItem onClick={handleReport} className="gap-2 text-foreground">
                   <Flag className="w-4 h-4" />
                   Signaler
@@ -550,7 +568,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         )}
 
         {/* Input - Fixed at bottom with proper iOS safe area */}
-        <div className="px-4 py-3 glass-strong border-t border-border/50 flex-shrink-0" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+        <div className="px-4 py-3 glass-strong border-t border-border/50 flex-shrink-0" style={{ paddingBottom: 'calc(max(16px, env(safe-area-inset-bottom)) + 8px)' }}>
           {isRecording ? (
             <div className="flex items-center gap-3">
               <motion.button
