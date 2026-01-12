@@ -11,6 +11,7 @@ import { useVoiceCall } from "@/hooks/useVoiceCall";
 import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import VoiceCallModal from "@/components/VoiceCallModal";
 import ChatRestrictionBanner from "@/components/chat/ChatRestrictionBanner";
+import { isNative } from "@/lib/capacitor";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +59,9 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -103,6 +106,54 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       supabase.removeChannel(channel);
     };
   }, [user.id]);
+
+  // Keyboard height listener for native mobile
+  useEffect(() => {
+    if (!isNative) return;
+
+    const handleKeyboardShow = () => {
+      const height = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--keyboard-height') || '0');
+      setKeyboardHeight(height);
+      // Scroll to bottom when keyboard opens
+      setTimeout(() => {
+        messagesContainerRef.current?.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 100);
+    };
+
+    const handleKeyboardHide = () => {
+      setKeyboardHeight(0);
+    };
+
+    // Use MutationObserver to watch for CSS variable changes
+    const observer = new MutationObserver(() => {
+      const height = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--keyboard-height') || '0');
+      if (height > 0) {
+        handleKeyboardShow();
+      } else {
+        handleKeyboardHide();
+      }
+    });
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+    
+    // Also listen to body class changes
+    const bodyObserver = new MutationObserver(() => {
+      if (document.body.classList.contains('keyboard-open')) {
+        handleKeyboardShow();
+      } else {
+        handleKeyboardHide();
+      }
+    });
+    bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => {
+      observer.disconnect();
+      bodyObserver.disconnect();
+    };
+  }, []);
 
   const handleCall = () => {
     initiateCall(user.id, user.name, user.photo, "audio");
@@ -413,7 +464,11 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 scrollbar-hide">
+        <div 
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto px-4 py-4 space-y-3 scrollbar-hide"
+          style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 80}px` : undefined }}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -567,8 +622,17 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           <ChatRestrictionBanner status={identityStatus} />
         )}
 
-        {/* Input - Fixed at bottom with proper iOS safe area */}
-        <div className="px-4 py-3 glass-strong border-t border-border/50 flex-shrink-0" style={{ paddingBottom: 'calc(max(16px, env(safe-area-inset-bottom)) + 8px)' }}>
+        {/* Input - Fixed at bottom with proper iOS safe area and keyboard handling */}
+        <div 
+          className="px-4 py-3 glass-strong border-t border-border/50 flex-shrink-0 chat-input-container"
+          style={{ 
+            paddingBottom: keyboardHeight > 0 
+              ? '12px' 
+              : 'calc(max(16px, env(safe-area-inset-bottom)) + 8px)',
+            transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : undefined,
+            transition: 'transform 0.25s ease-out, padding-bottom 0.25s ease-out'
+          }}
+        >
           {isRecording ? (
             <div className="flex items-center gap-3">
               <motion.button

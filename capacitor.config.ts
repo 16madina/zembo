@@ -23,8 +23,8 @@ const config: CapacitorConfig = {
       backgroundColor: "#0a0c14"
     },
     Keyboard: {
-      resize: "body",
-      resizeOnFullScreen: true
+      resize: "none",
+      resizeOnFullScreen: false
     },
     Camera: {
       presentationStyle: "fullscreen"
