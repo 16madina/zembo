@@ -12,6 +12,7 @@ import {
   Settings,
   Mail,
   UserCheck,
+  Bell,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -27,6 +28,7 @@ import AdminBansTab from "@/components/admin/AdminBansTab";
 import AdminSettingsTab from "@/components/admin/AdminSettingsTab";
 import AdminEmailPreviewTab from "@/components/admin/AdminEmailPreviewTab";
 import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
+import AdminNotificationsTab from "@/components/admin/AdminNotificationsTab";
 
 interface Report {
   id: string;
@@ -172,7 +174,7 @@ const Admin = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-4">
+          <TabsList className="grid w-full grid-cols-8 mb-4">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden sm:inline">Signalements</span>
@@ -193,6 +195,10 @@ const Admin = () => {
             <TabsTrigger value="bans" className="flex items-center gap-2">
               <Ban className="w-4 h-4" />
               <span className="hidden sm:inline">Bans</span>
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              <span className="hidden sm:inline">Notifications</span>
             </TabsTrigger>
             <TabsTrigger value="communication" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
@@ -222,6 +228,10 @@ const Admin = () => {
 
           <TabsContent value="bans">
             <AdminBansTab />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <AdminNotificationsTab />
           </TabsContent>
 
           <TabsContent value="communication">
