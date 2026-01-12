@@ -135,7 +135,7 @@ const Admin = () => {
 
   if (roleLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -146,7 +146,7 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen pb-8">
+    <div className="h-full flex flex-col overflow-y-auto overflow-x-hidden">
       <motion.header
         className="flex items-center gap-4 px-6 py-4 border-b border-border/50"
         initial={{ opacity: 0, y: -20 }}

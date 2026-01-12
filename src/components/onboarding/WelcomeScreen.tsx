@@ -11,7 +11,7 @@ interface WelcomeScreenProps {
 
 const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative h-full flex flex-col overflow-hidden">
       {/* Background Image with gradient overlay */}
       <div className="absolute inset-0">
         <img
@@ -23,7 +23,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col h-full min-h-screen px-6 py-12">
+      <div className="relative z-10 flex flex-col h-full px-6 py-12 overflow-hidden">
         {/* Logo at top */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
