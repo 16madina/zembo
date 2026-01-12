@@ -4,7 +4,8 @@ import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2
 import { Button } from "@/components/ui/button";
 import { isNative } from "@/lib/capacitor";
 import { useFaceDetection, FaceDirection } from "@/hooks/useFaceDetection";
-import { useFaceComparison } from "@/hooks/useFaceComparison";
+import { useFaceRecognitionPreload } from "@/contexts/FaceRecognitionPreloadContext";
+import * as faceapi from 'face-api.js';
 
 interface FaceVerificationStepProps {
   onNext: () => void;
@@ -46,18 +47,52 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
   const isVerificationActive = currentStep !== "intro" && currentStep !== "complete" && currentStep !== "comparing" && currentStep !== "failed";
   
-  // Face comparison hook
+  // Use preloaded face recognition context (models + descriptors already loaded in PhotosStep)
   const { 
-    isLoading: isComparisonLoading, 
-    isModelsLoaded: isComparisonModelsLoaded,
-    error: comparisonError, 
-    compareFace,
-    hasPhotoDescriptors 
-  } = useFaceComparison({
-    photos: data.photos,
-    enabled: currentStep !== "intro",
-    threshold: FACE_MATCH_THRESHOLD,
-  });
+    isModelsLoaded: isComparisonModelsLoaded, 
+    isModelsLoading: isComparisonLoading,
+    modelsError: comparisonError,
+    photoDescriptors,
+    hasDescriptors: hasPhotoDescriptors,
+  } = useFaceRecognitionPreload();
+
+  // Fast face comparison using preloaded descriptors
+  const compareFaceWithPreloaded = useCallback(async (videoElement: HTMLVideoElement) => {
+    if (!isComparisonModelsLoaded || photoDescriptors.length === 0) {
+      return { isMatch: false, similarity: 0, error: 'Modèles non chargés ou descripteurs manquants' };
+    }
+
+    try {
+      const detection = await faceapi
+        .detectSingleFace(videoElement)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!detection) {
+        return { isMatch: false, similarity: 0, error: null };
+      }
+
+      const videoDescriptor = detection.descriptor;
+      let bestMatch = { index: -1, distance: Infinity };
+
+      for (let i = 0; i < photoDescriptors.length; i++) {
+        const distance = faceapi.euclideanDistance(videoDescriptor, photoDescriptors[i]);
+        if (distance < bestMatch.distance) {
+          bestMatch = { index: i, distance };
+        }
+      }
+
+      const similarity = Math.max(0, 1 - bestMatch.distance);
+      const isMatch = similarity >= FACE_MATCH_THRESHOLD;
+
+      console.log(`[FaceVerification] Match: ${isMatch}, similarity: ${(similarity * 100).toFixed(1)}%`);
+
+      return { isMatch, similarity, error: null };
+    } catch (err: any) {
+      console.error('[FaceVerification] Comparison error:', err);
+      return { isMatch: false, similarity: 0, error: err?.message || 'Erreur de comparaison' };
+    }
+  }, [isComparisonModelsLoaded, photoDescriptors]);
 
   const { isLoading: isFaceDetectionLoading, error: faceDetectionError, result: faceResult } = useFaceDetection({
     videoRef,
@@ -184,7 +219,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         if (remaining <= 0) throw new Error("La comparaison prend trop de temps");
 
         const result = await withTimeout(
-          compareFace(videoRef.current!),
+          compareFaceWithPreloaded(videoRef.current!),
           Math.min(5000, remaining),
           "Délai de comparaison (essayez de réessayer)"
         );
@@ -214,7 +249,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       setCameraError(err?.message || "Erreur pendant la comparaison");
       setCurrentStep("failed");
     }
-  }, [compareFace, updateData, isComparisonModelsLoaded, hasPhotoDescriptors]);
+  }, [compareFaceWithPreloaded, updateData, isComparisonModelsLoaded, hasPhotoDescriptors]);
 
   const completeCurrentStep = useCallback(() => {
     setCompletedSteps(prev => [...prev, currentStep as VerificationStep]);

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { isValidPhoneLength } from "@/data/countries";
+import { FaceRecognitionPreloadProvider } from "@/contexts/FaceRecognitionPreloadContext";
 import NameStep from "./steps/NameStep";
 import CountryStep from "./steps/CountryStep";
 import PhoneStep from "./steps/PhoneStep";
@@ -59,7 +60,7 @@ const steps = [
   { id: "faceVerification", title: "Vérification", bg: bgVerification, fullScreen: true },
 ];
 
-const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
+const OnboardingStepsInner = ({ onComplete, onBack }: OnboardingStepsProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData] = useState<OnboardingData>({
     firstName: "",
@@ -272,6 +273,15 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Wrapper with FaceRecognitionPreloadProvider to preload models early
+const OnboardingSteps = (props: OnboardingStepsProps) => {
+  return (
+    <FaceRecognitionPreloadProvider>
+      <OnboardingStepsInner {...props} />
+    </FaceRecognitionPreloadProvider>
   );
 };
 

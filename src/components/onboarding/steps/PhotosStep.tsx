@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Camera, Plus, X, Image, GripVertical } from "lucide-react";
+import { Camera, Plus, X, Image, GripVertical, Loader2, CheckCircle2 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { OnboardingData } from "../OnboardingSteps";
+import { useFaceRecognitionPreload } from "@/contexts/FaceRecognitionPreloadContext";
 
 interface PhotosStepProps {
   data: OnboardingData;
@@ -100,6 +101,22 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
   const [photoIds] = useState(() => 
     data.photos.map((_, i) => `photo-${i}-${Date.now()}`)
   );
+
+  // Preload face recognition models and extract descriptors
+  const { 
+    isModelsLoaded, 
+    isModelsLoading, 
+    isExtractingDescriptors, 
+    extractDescriptors, 
+    hasDescriptors 
+  } = useFaceRecognitionPreload();
+
+  // Extract descriptors when photos change and models are loaded
+  useEffect(() => {
+    if (isModelsLoaded && data.photos.length > 0) {
+      extractDescriptors(data.photos);
+    }
+  }, [isModelsLoaded, data.photos, extractDescriptors]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -229,16 +246,37 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
         </SortableContext>
       </DndContext>
 
-      {/* Photo count */}
+      {/* Photo count and preload status */}
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Camera className="w-4 h-4" />
           <span>{data.photos.length}/8 photos</span>
         </div>
-        {data.photos.length === 0 && (
+        {data.photos.length === 0 ? (
           <span className="text-xs text-amber-400">
             Ajoutez au moins 1 photo
           </span>
+        ) : (
+          <div className="flex items-center gap-1.5 text-xs">
+            {isModelsLoading ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                <span className="text-muted-foreground">Préparation IA...</span>
+              </>
+            ) : isExtractingDescriptors ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                <span className="text-muted-foreground">Analyse visages...</span>
+              </>
+            ) : hasDescriptors ? (
+              <>
+                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                <span className="text-green-500">Prêt pour vérification</span>
+              </>
+            ) : isModelsLoaded && data.photos.length > 0 ? (
+              <span className="text-amber-400">Aucun visage détecté</span>
+            ) : null}
+          </div>
         )}
       </div>
 
