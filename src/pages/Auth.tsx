@@ -6,6 +6,7 @@ import WelcomeScreen from "@/components/onboarding/WelcomeScreen";
 import OnboardingSteps, { type OnboardingData } from "@/components/onboarding/OnboardingSteps";
 import LoginForm from "@/components/onboarding/LoginForm";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneForStorage } from "@/lib/uniqueCheck";
 
 type AuthView = "welcome" | "signup" | "login";
 
@@ -93,8 +94,15 @@ const Auth = () => {
         // Upload photos to storage
         const avatarUrl = await uploadPhotos(user.id, data.photos);
 
+        // Format phone for storage
+        const fullPhone = data.phone && data.dialCode 
+          ? formatPhoneForStorage(data.phone, data.dialCode) 
+          : null;
+
         await supabase.from("profiles").update({
           display_name: displayName,
+          email: data.email.trim().toLowerCase(),
+          phone: fullPhone,
           age: data.birthday ? calculateAge(data.birthday) : null,
           gender: data.gender,
           looking_for: data.lookingFor,
