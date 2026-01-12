@@ -482,15 +482,38 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
   const isLoadingModels = isAILoading || isFaceDetectionLoading || isComparisonLoading;
 
+  // Animation variants for smoother transitions
+  const pageTransition = {
+    initial: { opacity: 0, scale: 0.95, y: 20 },
+    animate: { opacity: 1, scale: 1, y: 0 },
+    exit: { opacity: 0, scale: 0.95, y: -20 }
+  };
+
+  const verificationTransition = {
+    initial: { opacity: 0, x: 50 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -50 }
+  };
+
+  const resultTransition = {
+    initial: { opacity: 0, scale: 0.8 },
+    animate: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.9 }
+  };
+
+  const smoothSpring = { type: "spring" as const, stiffness: 200, damping: 25 };
+  const smoothEase = { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const };
+
   return (
     <div className="min-h-full flex flex-col">
       <AnimatePresence mode="wait">
         {currentStep === "intro" && (
           <motion.div
             key="intro"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            initial={pageTransition.initial}
+            animate={pageTransition.animate}
+            exit={pageTransition.exit}
+            transition={smoothEase}
             className="flex-1 flex flex-col items-center justify-center text-center px-6"
           >
             {/* Shield Icon */}
@@ -594,9 +617,10 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         {(currentStep !== "intro" && currentStep !== "complete" && currentStep !== "failed") && (
           <motion.div
             key="verification"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={verificationTransition.initial}
+            animate={verificationTransition.animate}
+            exit={verificationTransition.exit}
+            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="flex-1 flex flex-col"
           >
             {/* Progress Steps */}
@@ -799,12 +823,24 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                 </AnimatePresence>
               </div>
 
-              {/* Instructions */}
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-8 text-center"
+              {/* Instructions with smooth step transitions */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: 0, 
+                    scale: 1,
+                    transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }
+                  }}
+                  exit={{ 
+                    opacity: 0, 
+                    y: -10, 
+                    scale: 0.98,
+                    transition: { duration: 0.2 }
+                  }}
+                  className="mt-8 text-center"
               >
                 {currentStep === "comparing" ? (
                   <>
@@ -896,7 +932,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                     {detectionStatus}
                   </motion.p>
                 )}
-              </motion.div>
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Reset button */}
@@ -917,8 +954,10 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         {currentStep === "failed" && (
           <motion.div
             key="failed"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={resultTransition.initial}
+            animate={resultTransition.animate}
+            exit={resultTransition.exit}
+            transition={smoothSpring}
             className="flex-1 flex flex-col items-center justify-center text-center px-6"
           >
             {/* Failed animation */}
@@ -1008,8 +1047,10 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         {currentStep === "complete" && (
           <motion.div
             key="complete"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={resultTransition.initial}
+            animate={resultTransition.animate}
+            exit={resultTransition.exit}
+            transition={smoothSpring}
             className="flex-1 flex flex-col items-center justify-center text-center px-6"
           >
             {/* Success animation */}
