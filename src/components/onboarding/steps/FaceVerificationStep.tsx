@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2, UserCheck, XCircle } from "lucide-react";
+import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2, UserCheck, XCircle, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isNative } from "@/lib/capacitor";
 import { useFaceDetection, FaceDirection } from "@/hooks/useFaceDetection";
 import { useFaceRecognitionPreload } from "@/contexts/FaceRecognitionPreloadContext";
 import * as faceapi from 'face-api.js';
+import confetti from 'canvas-confetti';
 
 interface FaceVerificationStepProps {
   onNext: () => void;
@@ -24,6 +25,300 @@ const verificationSteps: { id: VerificationStep; instruction: string; subtext: s
 
 const REQUIRED_HOLD_TIME = 1500; // ms to hold position
 const FACE_MATCH_THRESHOLD = 0.45; // Similarity threshold for face matching
+
+// Elaborate success screen with confetti
+const SuccessScreen = ({ 
+  faceMatchResult, 
+  onNext,
+}: { 
+  faceMatchResult: { similarity: number; isMatch: boolean } | null;
+  onNext: () => void;
+}) => {
+  const confettiTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (confettiTriggeredRef.current) return;
+    confettiTriggeredRef.current = true;
+
+    // Fire multiple confetti bursts for an elaborate effect
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const colors = ['#D4AF37', '#FFD700', '#FFC107', '#22C55E', '#10B981', '#6366F1'];
+
+    // Initial big burst
+    confetti({
+      particleCount: 100,
+      spread: 100,
+      origin: { y: 0.6 },
+      colors,
+      startVelocity: 45,
+      gravity: 0.8,
+      ticks: 300,
+      shapes: ['circle', 'square'],
+      scalar: 1.2,
+    });
+
+    // Side cannons
+    setTimeout(() => {
+      confetti({
+        particleCount: 50,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.7 },
+        colors,
+      });
+      confetti({
+        particleCount: 50,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.7 },
+        colors,
+      });
+    }, 250);
+
+    // Continuous rain effect
+    const interval = setInterval(() => {
+      if (Date.now() > animationEnd) {
+        clearInterval(interval);
+        return;
+      }
+
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 40,
+        origin: { x: 0, y: 0.5 },
+        colors,
+        startVelocity: 30,
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 40,
+        origin: { x: 1, y: 0.5 },
+        colors,
+        startVelocity: 30,
+      });
+    }, 100);
+
+    // Final burst
+    setTimeout(() => {
+      confetti({
+        particleCount: 80,
+        spread: 120,
+        origin: { y: 0.5 },
+        colors,
+        startVelocity: 35,
+        gravity: 1,
+        scalar: 0.9,
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <motion.div
+      key="complete"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+      className="flex-1 flex flex-col items-center justify-center text-center px-6 relative overflow-hidden"
+    >
+      {/* Background glow effect */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, delay: 0.2 }}
+        className="absolute inset-0 pointer-events-none"
+      >
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-green-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/15 rounded-full blur-2xl" />
+      </motion.div>
+
+      {/* Success animation with rings */}
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", delay: 0.2 }}
+        className="relative mb-8 z-10"
+      >
+        {/* Outer pulsing ring */}
+        <motion.div
+          animate={{ 
+            scale: [1, 1.3, 1],
+            opacity: [0.3, 0, 0.3]
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-0 w-40 h-40 -m-4 rounded-full border-2 border-green-500/40"
+        />
+        
+        {/* Second pulsing ring */}
+        <motion.div
+          animate={{ 
+            scale: [1, 1.5, 1],
+            opacity: [0.2, 0, 0.2]
+          }}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+          className="absolute inset-0 w-40 h-40 -m-4 rounded-full border-2 border-primary/30"
+        />
+
+        <motion.div
+          initial={{ scale: 1 }}
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="w-32 h-32 rounded-full bg-gradient-to-br from-green-500/30 to-green-500/10 flex items-center justify-center backdrop-blur-sm border border-green-500/20"
+        >
+          <motion.div 
+            className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500/40 to-green-500/20 flex items-center justify-center"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", delay: 0.4, stiffness: 200 }}
+            >
+              <CheckCircle2 className="w-12 h-12 text-green-500" />
+            </motion.div>
+          </motion.div>
+        </motion.div>
+        
+        {/* Floating stars around the badge */}
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ 
+              scale: [0, 1.2, 1],
+              opacity: [0, 1, 0.8],
+              x: Math.cos((i * Math.PI * 2) / 6) * 70,
+              y: Math.sin((i * Math.PI * 2) / 6) * 70
+            }}
+            transition={{ 
+              duration: 0.6, 
+              delay: 0.7 + i * 0.1,
+              repeat: Infinity,
+              repeatType: "reverse",
+              repeatDelay: 2
+            }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          >
+            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+          </motion.div>
+        ))}
+
+        {/* Sparkle particles */}
+        {[...Array(12)].map((_, i) => (
+          <motion.div
+            key={`spark-${i}`}
+            initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+            animate={{ 
+              scale: [0, 1, 0],
+              x: Math.cos((i * Math.PI * 2) / 12) * (80 + Math.random() * 20),
+              y: Math.sin((i * Math.PI * 2) / 12) * (80 + Math.random() * 20),
+              opacity: [0, 1, 0]
+            }}
+            transition={{ 
+              duration: 1.2, 
+              delay: 0.5 + i * 0.08,
+              ease: "easeOut"
+            }}
+            className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full"
+            style={{
+              background: i % 3 === 0 ? '#22C55E' : i % 3 === 1 ? '#D4AF37' : '#6366F1'
+            }}
+          />
+        ))}
+      </motion.div>
+
+      <motion.h2
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, type: "spring" }}
+        className="text-2xl font-bold text-foreground mb-3 z-10"
+      >
+        🎉 Identité confirmée !
+      </motion.h2>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="text-muted-foreground mb-4 max-w-xs z-10"
+      >
+        Votre visage correspond à vos photos de profil. Vous obtiendrez le badge vérifié.
+      </motion.p>
+
+      {faceMatchResult && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.65, type: "spring" }}
+          className="mb-6 px-5 py-3 rounded-full bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30 backdrop-blur-sm z-10"
+        >
+          <p className="text-sm font-medium text-green-600 dark:text-green-400">
+            ✨ Similarité : {Math.round(faceMatchResult.similarity * 100)}%
+          </p>
+        </motion.div>
+      )}
+
+      {/* Verified badge preview with animation */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.7, type: "spring" }}
+        className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/25 mb-8 z-10"
+      >
+        <motion.div
+          animate={{ 
+            rotate: [0, 10, -10, 0],
+            scale: [1, 1.1, 1]
+          }}
+          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+        >
+          <CheckCircle2 className="w-6 h-6 text-primary" />
+        </motion.div>
+        <span className="text-base font-semibold text-primary">Profil Vérifié</span>
+        <motion.div
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          <Sparkles className="w-4 h-4 text-yellow-500" />
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.9 }}
+        className="w-full max-w-xs z-10"
+      >
+        <Button
+          onClick={onNext}
+          className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/30 transition-all hover:shadow-green-500/40 hover:scale-[1.02]"
+        >
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-2"
+          >
+            Continuer
+            <motion.span
+              animate={{ x: [0, 4, 0] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              →
+            </motion.span>
+          </motion.span>
+        </Button>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceVerificationStepProps) => {
   const [currentStep, setCurrentStep] = useState<VerificationStep>("intro");
@@ -1205,110 +1500,10 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         )}
 
         {currentStep === "complete" && (
-          <motion.div
-            key="complete"
-            initial={resultTransition.initial}
-            animate={resultTransition.animate}
-            exit={resultTransition.exit}
-            transition={smoothSpring}
-            className="flex-1 flex flex-col items-center justify-center text-center px-6"
-          >
-            {/* Success animation */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", delay: 0.2 }}
-              className="relative mb-8"
-            >
-              <motion.div
-                initial={{ scale: 1 }}
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="w-32 h-32 rounded-full bg-gradient-to-br from-green-500/20 to-green-500/5 flex items-center justify-center"
-              >
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500/30 to-green-500/10 flex items-center justify-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", delay: 0.4 }}
-                  >
-                    <CheckCircle2 className="w-12 h-12 text-green-500" />
-                  </motion.div>
-                </div>
-              </motion.div>
-              
-              {/* Confetti effect */}
-              {[...Array(8)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ scale: 0, x: 0, y: 0 }}
-                  animate={{ 
-                    scale: [0, 1, 0],
-                    x: Math.cos(i * Math.PI / 4) * 80,
-                    y: Math.sin(i * Math.PI / 4) * 80
-                  }}
-                  transition={{ duration: 0.8, delay: 0.6 + i * 0.05 }}
-                  className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full bg-primary"
-                />
-              ))}
-            </motion.div>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="text-2xl font-bold text-foreground mb-3"
-            >
-              Identité confirmée !
-            </motion.h2>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="text-muted-foreground mb-4 max-w-xs"
-            >
-              Votre visage correspond à vos photos de profil. Vous obtiendrez le badge vérifié.
-            </motion.p>
-
-            {faceMatchResult && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.65 }}
-                className="mb-6 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20"
-              >
-                <p className="text-xs text-green-600 dark:text-green-400">
-                  Similarité : {Math.round(faceMatchResult.similarity * 100)}%
-                </p>
-              </motion.div>
-            )}
-
-            {/* Verified badge preview */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8"
-            >
-              <CheckCircle2 className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium text-primary">Profil Vérifié</span>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="w-full max-w-xs"
-            >
-              <Button
-                onClick={onNext}
-                className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
-              >
-                Continuer
-              </Button>
-            </motion.div>
-          </motion.div>
+          <SuccessScreen 
+            faceMatchResult={faceMatchResult} 
+            onNext={onNext}
+          />
         )}
       </AnimatePresence>
     </div>
