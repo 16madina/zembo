@@ -11,6 +11,7 @@ import {
   Loader2,
   Settings,
   Mail,
+  UserCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -25,6 +26,7 @@ import AdminCommunicationTab from "@/components/admin/AdminCommunicationTab";
 import AdminBansTab from "@/components/admin/AdminBansTab";
 import AdminSettingsTab from "@/components/admin/AdminSettingsTab";
 import AdminEmailPreviewTab from "@/components/admin/AdminEmailPreviewTab";
+import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
 
 interface Report {
   id: string;
@@ -167,10 +169,14 @@ const Admin = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-4">
+          <TabsList className="grid w-full grid-cols-7 mb-4">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden sm:inline">Signalements</span>
+            </TabsTrigger>
+            <TabsTrigger value="identity" className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Identités</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
@@ -196,6 +202,10 @@ const Admin = () => {
 
           <TabsContent value="reports">
             <AdminReportsTab reports={reports} setReports={setReports} />
+          </TabsContent>
+
+          <TabsContent value="identity">
+            <AdminIdentityTab />
           </TabsContent>
 
           <TabsContent value="users">

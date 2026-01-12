@@ -7,6 +7,7 @@ import { useFaceDetection, FaceDirection } from "@/hooks/useFaceDetection";
 import { useFaceRecognitionPreload } from "@/contexts/FaceRecognitionPreloadContext";
 import * as faceapi from 'face-api.js';
 import confetti from 'canvas-confetti';
+import { IdentityUploadScreen } from "./IdentityUploadScreen";
 
 interface FaceVerificationStepProps {
   onNext: () => void;
@@ -15,7 +16,7 @@ interface FaceVerificationStepProps {
   updateData: (data: { faceVerified: boolean }) => void;
 }
 
-type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed";
+type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed" | "identity_upload";
 
 const verificationSteps: { id: VerificationStep; instruction: string; subtext: string; targetDirection: FaceDirection }[] = [
   { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre", targetDirection: "center" },
@@ -961,13 +962,30 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     const newRetryCount = retryCount + 1;
     setRetryCount(newRetryCount);
     
-    // After 3 failed attempts, show skip option
+    // After 3 failed attempts, show identity upload option
     if (newRetryCount >= 3) {
       setShowSkipOption(true);
     }
     
     resetVerification();
     setTimeout(() => startVerification(), 200);
+  };
+
+  const handleIdentityUpload = () => {
+    // Switch to identity upload mode after 3 failures
+    stopCamera();
+    setCurrentStep("identity_upload");
+  };
+
+  const handleIdentityUploadComplete = () => {
+    // User submitted identity for manual verification
+    // They can continue but with limited access
+    updateData({ faceVerified: false });
+    onNext();
+  };
+
+  const handleBackToFaceVerification = () => {
+    resetVerification();
   };
 
   const handleSkipVerification = () => {
@@ -1612,15 +1630,22 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               </Button>
               {showSkipOption && (
                 <Button
-                  onClick={handleSkipVerification}
+                  onClick={handleIdentityUpload}
                   variant="outline"
-                  className="w-full h-12 text-muted-foreground border-muted"
+                  className="w-full h-12 border-orange-500/50 text-orange-600 hover:bg-orange-500/10"
                 >
-                  Passer la vérification
+                  Vérification manuelle (pièce d'identité)
                 </Button>
               )}
             </motion.div>
           </motion.div>
+        )}
+
+        {currentStep === "identity_upload" && (
+          <IdentityUploadScreen
+            onComplete={handleIdentityUploadComplete}
+            onBack={handleBackToFaceVerification}
+          />
         )}
 
         {currentStep === "complete" && (

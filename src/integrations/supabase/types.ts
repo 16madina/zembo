@@ -256,6 +256,45 @@ export type Database = {
           },
         ]
       }
+      identity_verifications: {
+        Row: {
+          created_at: string
+          id: string
+          id_photo_url: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_url: string
+          status: Database["public"]["Enums"]["identity_verification_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_photo_url: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url: string
+          status?: Database["public"]["Enums"]["identity_verification_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_photo_url?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string
+          status?: Database["public"]["Enums"]["identity_verification_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -551,6 +590,7 @@ export type Database = {
           gender: string | null
           height: string | null
           id: string
+          identity_verification_status: string | null
           interests: string[] | null
           is_online: boolean | null
           is_verified: boolean | null
@@ -578,6 +618,7 @@ export type Database = {
           gender?: string | null
           height?: string | null
           id?: string
+          identity_verification_status?: string | null
           interests?: string[] | null
           is_online?: boolean | null
           is_verified?: boolean | null
@@ -605,6 +646,7 @@ export type Database = {
           gender?: string | null
           height?: string | null
           id?: string
+          identity_verification_status?: string | null
           interests?: string[] | null
           is_online?: boolean | null
           is_verified?: boolean | null
@@ -898,6 +940,7 @@ export type Database = {
         Returns: boolean
       }
       can_go_live: { Args: { p_user_id: string }; Returns: boolean }
+      can_user_interact: { Args: { p_user_id: string }; Returns: boolean }
       find_random_call_match: {
         Args: {
           p_looking_for: string
@@ -921,6 +964,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      identity_verification_status: "pending" | "approved" | "rejected"
       live_status: "scheduled" | "live" | "ended"
       subscription_tier: "free" | "premium" | "vip"
     }
@@ -1051,6 +1095,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      identity_verification_status: ["pending", "approved", "rejected"],
       live_status: ["scheduled", "live", "ended"],
       subscription_tier: ["free", "premium", "vip"],
     },
