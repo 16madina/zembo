@@ -278,7 +278,7 @@ const Profile = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -303,7 +303,7 @@ const Profile = () => {
   const birthDateDisplay = birthYear ? `${birthYear} (${age} ans)` : null;
 
   return (
-    <div className="min-h-screen pb-28 flex flex-col">
+    <div className="h-full flex flex-col overflow-y-auto overflow-x-hidden pb-[88px]">
       {/* Header with gradient background */}
       <div className="relative">
         {/* Gradient background */}

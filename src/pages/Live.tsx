@@ -76,19 +76,19 @@ const Live = () => {
   };
 
   return (
-    <div className="min-h-screen pb-44">
-      {/* Header */}
+    <div className="h-full flex flex-col overflow-hidden pb-[88px]">
+      {/* Fixed Header */}
       <motion.header
-        className="flex items-center justify-center px-6 py-4"
+        className="flex items-center justify-center px-6 py-4 flex-shrink-0"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <ZemboLogo />
       </motion.header>
 
-      {/* Go Live Button */}
+      {/* Fixed Go Live Button */}
       <motion.div
-        className="px-6 mb-6"
+        className="px-6 mb-6 flex-shrink-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
@@ -110,54 +110,57 @@ const Live = () => {
         </motion.button>
       </motion.div>
 
-      {/* Section Title */}
-      <motion.div
-        className="px-6 mb-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <h2 className="text-xl font-bold text-foreground">Lives en cours</h2>
-        <p className="text-sm text-muted-foreground">Rejoignez une diffusion</p>
-      </motion.div>
-
-      {/* Live Streams Grid */}
-      {loading ? (
-        <div className="px-4 grid grid-cols-2 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
-          ))}
-        </div>
-      ) : lives.length === 0 ? (
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+        {/* Section Title */}
         <motion.div
-          className="px-6 py-12 text-center"
+          className="px-6 mb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
         >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-            <Radio className="w-8 h-8 text-muted-foreground" />
+          <h2 className="text-xl font-bold text-foreground">Lives en cours</h2>
+          <p className="text-sm text-muted-foreground">Rejoignez une diffusion</p>
+        </motion.div>
+
+        {/* Live Streams Grid */}
+        {loading ? (
+          <div className="px-4 grid grid-cols-2 gap-3 pb-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
+            ))}
           </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Aucun live en cours
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Soyez le premier à lancer un live !
-          </p>
-        </motion.div>
-      ) : (
-        <motion.div
-          className="px-4 grid grid-cols-2 gap-3"
-          variants={container}
-          initial="hidden"
-          animate="show"
-        >
-          {lives.map((live) => (
-            <motion.div key={live.id} variants={item}>
-              <LiveCard live={live} onClick={() => handleJoinLive(live.id)} />
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
+        ) : lives.length === 0 ? (
+          <motion.div
+            className="px-6 py-12 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <Radio className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Aucun live en cours
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Soyez le premier à lancer un live !
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="px-4 grid grid-cols-2 gap-3 pb-4"
+            variants={container}
+            initial="hidden"
+            animate="show"
+          >
+            {lives.map((live) => (
+              <motion.div key={live.id} variants={item}>
+                <LiveCard live={live} onClick={() => handleJoinLive(live.id)} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </div>
         
        {/* Premium Required Modal */}
        {showPremiumModal && (

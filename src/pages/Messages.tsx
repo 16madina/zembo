@@ -137,9 +137,10 @@ const Messages = () => {
   };
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="h-full flex flex-col overflow-hidden pb-[88px]">
+      {/* Fixed Header */}
       <motion.header 
-        className="flex items-center justify-between px-4 py-3"
+        className="flex items-center justify-between px-4 py-3 flex-shrink-0"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -148,7 +149,7 @@ const Messages = () => {
       </motion.header>
 
       <motion.div 
-        className="px-4 mb-4"
+        className="px-4 mb-4 flex-shrink-0"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
@@ -157,68 +158,70 @@ const Messages = () => {
         <p className="text-sm text-muted-foreground">{mockConversations.length + mockNewMatches.length} matchs</p>
       </motion.div>
 
-      {/* New Matches Section */}
-      {mockNewMatches.length > 0 && (
-        <motion.div
-          className="px-4 mb-4"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Nouveaux matchs</h3>
-          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {mockNewMatches.map((match) => (
-              <motion.button
-                key={match.id}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleOpenChat({
-                  id: match.id,
-                  user: { name: match.name, photo: match.photo, isOnline: match.isOnline },
-                  lastMessage: "",
-                  time: "",
-                  unread: 0,
-                  status: "sent",
-                  isTyping: false
-                })}
-                className="flex flex-col items-center gap-1.5 flex-shrink-0"
-              >
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-br from-primary via-primary/80 to-primary/60">
-                    <img
-                      src={match.photo}
-                      alt={match.name}
-                      className="w-full h-full rounded-full object-cover border-2 border-background"
-                    />
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+        {/* New Matches Section */}
+        {mockNewMatches.length > 0 && (
+          <motion.div
+            className="px-4 mb-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Nouveaux matchs</h3>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {mockNewMatches.map((match) => (
+                <motion.button
+                  key={match.id}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleOpenChat({
+                    id: match.id,
+                    user: { name: match.name, photo: match.photo, isOnline: match.isOnline },
+                    lastMessage: "",
+                    time: "",
+                    unread: 0,
+                    status: "sent",
+                    isTyping: false
+                  })}
+                  className="flex flex-col items-center gap-1.5 flex-shrink-0"
+                >
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-br from-primary via-primary/80 to-primary/60">
+                      <img
+                        src={match.photo}
+                        alt={match.name}
+                        className="w-full h-full rounded-full object-cover border-2 border-background"
+                      />
+                    </div>
+                    {match.isOnline && (
+                      <span className="absolute bottom-0 right-0 w-4 h-4 bg-success border-[3px] border-background rounded-full" />
+                    )}
                   </div>
-                  {match.isOnline && (
-                    <span className="absolute bottom-0 right-0 w-4 h-4 bg-success border-[3px] border-background rounded-full" />
-                  )}
-                </div>
-                <span className="text-xs font-medium text-foreground">{match.name}</span>
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-      )}
+                  <span className="text-xs font-medium text-foreground">{match.name}</span>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-      {/* Conversations Section */}
-      <motion.div 
-        className="px-4 mb-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <h3 className="text-sm font-medium text-muted-foreground">Conversations</h3>
-      </motion.div>
-
-      {mockConversations.length > 0 ? (
+        {/* Conversations Section */}
         <motion.div 
-          className="px-4 space-y-2"
-          variants={container}
-          initial="hidden"
-          animate="show"
+          className="px-4 mb-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
         >
-          {mockConversations.map((conv) => (
+          <h3 className="text-sm font-medium text-muted-foreground">Conversations</h3>
+        </motion.div>
+
+        {mockConversations.length > 0 ? (
+          <motion.div 
+            className="px-4 space-y-2 pb-4"
+            variants={container}
+            initial="hidden"
+            animate="show"
+          >
+            {mockConversations.map((conv) => (
             <motion.div
               key={conv.id}
               variants={item}
@@ -268,20 +271,21 @@ const Messages = () => {
               )}
             </motion.div>
           ))}
-        </motion.div>
-      ) : (
-        <motion.div 
-          className="flex-1 flex flex-col items-center justify-center px-6 text-center mt-20"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="w-20 h-20 mb-6 rounded-full glass flex items-center justify-center">
-            <MessageCircle className="w-10 h-10 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">Pas encore de messages</h3>
-          <p className="text-muted-foreground">Vos conversations apparaîtront ici</p>
-        </motion.div>
-      )}
+          </motion.div>
+        ) : (
+          <motion.div 
+            className="flex-1 flex flex-col items-center justify-center px-6 text-center py-20"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="w-20 h-20 mb-6 rounded-full glass flex items-center justify-center">
+              <MessageCircle className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Pas encore de messages</h3>
+            <p className="text-muted-foreground">Vos conversations apparaîtront ici</p>
+          </motion.div>
+        )}
+      </div>
 
       {/* Chat View */}
       <AnimatePresence>
