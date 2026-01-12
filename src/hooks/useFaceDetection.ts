@@ -213,22 +213,34 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
           videoCheckCount++;
           const video = videoRefStable.current;
           
-          // More robust check: video has dimensions OR readyState >= 2
-          const hasFrames = video && video.videoWidth > 0 && video.videoHeight > 0;
-          const hasReadyState = video && video.readyState >= 2;
+          if (!video) {
+            if (videoCheckCount < maxVideoChecks) {
+              setTimeout(checkVideoReady, 100);
+            }
+            return;
+          }
           
-          if (hasFrames || hasReadyState) {
-            console.log(`[FaceDetection] Video ready (hasFrames=${hasFrames}, readyState=${video?.readyState}), starting detection loop`);
+          // More robust check: video has dimensions OR readyState >= 2
+          const hasFrames = (video.videoWidth ?? 0) > 0 && (video.videoHeight ?? 0) > 0;
+          const isReady = hasFrames || (video.readyState ?? 0) >= 2;
+          
+          // Try to play if video is paused but has a stream
+          if (!isReady && video.srcObject && video.paused) {
+            video.play().catch(() => {});
+          }
+          
+          if (isReady) {
+            console.log(`[FaceDetection] Video ready (hasFrames=${hasFrames}, readyState=${video.readyState}), starting detection loop`);
             detectFace();
           } else if (videoCheckCount < maxVideoChecks) {
             // Log periodically for debugging
             if (videoCheckCount % 10 === 0) {
-              console.log(`[FaceDetection] Waiting for video... check ${videoCheckCount}, readyState=${video?.readyState}, dimensions=${video?.videoWidth}x${video?.videoHeight}`);
+              console.log(`[FaceDetection] Waiting for video... check ${videoCheckCount}, readyState=${video.readyState}, dimensions=${video.videoWidth}x${video.videoHeight}, paused=${video.paused}`);
             }
             setTimeout(checkVideoReady, 100);
           } else {
             const elapsed = Date.now() - checkStartTime;
-            console.warn(`[FaceDetection] Video not ready after ${elapsed}ms, readyState=${video?.readyState}, dimensions=${video?.videoWidth}x${video?.videoHeight}`);
+            console.warn(`[FaceDetection] Video not ready after ${elapsed}ms, readyState=${video.readyState}, dimensions=${video.videoWidth}x${video.videoHeight}`);
             setError("La caméra met trop de temps à démarrer");
             setIsLoading(false);
             isInitializingRef.current = false;
