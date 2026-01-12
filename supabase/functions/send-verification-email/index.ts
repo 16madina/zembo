@@ -187,82 +187,196 @@ const handler = async (req: Request): Promise<Response> => {
     const termsUrl = settings.legal_terms_url || 'https://zemboapp.com/terms';
     const unsubscribeUrl = settings.legal_unsubscribe_url || 'https://zemboapp.com/unsubscribe';
 
-    // Send verification email with ZEMBO branding (dark theme + gold accents)
+    // Send verification email with modern ZEMBO branding
     const emailResponse = await resend.emails.send({
       from: fromEmail,
       to: [email],
-      subject: "Vérifiez votre adresse email - ZEMBO",
+      subject: "✨ Vérifiez votre email - ZEMBO",
       html: `
         <!DOCTYPE html>
-        <html>
+        <html lang="fr">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="X-UA-Compatible" content="IE=edge">
+          <title>Vérification Email - ZEMBO</title>
         </head>
-        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #0a0a0f;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-            <div style="background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%); border-radius: 20px; padding: 50px 40px; border: 1px solid rgba(212, 175, 55, 0.2); box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
-              
-              <!-- Logo -->
-              <div style="text-align: center; margin-bottom: 40px;">
-                <img src="${logoUrl}" alt="ZEMBO" style="max-width: 200px; height: auto;" />
-              </div>
-              
-              <!-- Greeting -->
-              <h1 style="color: #ffffff; font-size: 28px; text-align: center; margin-bottom: 16px; font-weight: 600;">
-                Bonjour ${displayName} ! 👋
-              </h1>
-              
-              <!-- Message -->
-              <p style="color: #b8b8c8; font-size: 16px; line-height: 1.8; text-align: center; margin-bottom: 35px;">
-                Merci de vous être inscrit sur <span style="color: #d4af37; font-weight: 600;">ZEMBO</span> ! Pour finaliser votre inscription et vérifier votre profil, cliquez sur le bouton ci-dessous.
-              </p>
-              
-              <!-- CTA Button with golden gradient -->
-              <div style="text-align: center; margin-bottom: 35px;">
-                <a href="${verificationLink}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #f4d03f 50%, #d4af37 100%); color: #0a0a0f; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4); text-transform: uppercase; letter-spacing: 1px;">
-                  Vérifier mon email
-                </a>
-              </div>
-              
-              <!-- Alternative link -->
-              <p style="color: #6b6b7b; font-size: 13px; text-align: center; margin-bottom: 15px;">
-                Ou copiez ce lien dans votre navigateur :
-              </p>
-              
-              <p style="color: #d4af37; font-size: 12px; text-align: center; word-break: break-all; margin-bottom: 40px; background: rgba(212, 175, 55, 0.1); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(212, 175, 55, 0.2);">
-                ${verificationLink}
-              </p>
-              
-              <!-- Divider -->
-              <hr style="border: none; border-top: 1px solid rgba(212, 175, 55, 0.2); margin: 35px 0;">
-              
-              <!-- Disclaimer -->
-              <p style="color: #6b6b7b; font-size: 12px; text-align: center; margin-bottom: 30px;">
-                Si vous n'avez pas créé de compte sur ZEMBO, ignorez cet email.
-              </p>
-              
-              <!-- Social Media Links -->
-              ${socialLinks.length > 0 ? `
-              <div style="text-align: center; margin-bottom: 25px;">
-                ${socialLinks.join('')}
-              </div>
-              ` : ''}
-              
-              <!-- Footer -->
-              <p style="color: #d4af37; font-size: 12px; text-align: center; margin-bottom: 15px; font-weight: 500;">
-                © ${new Date().getFullYear()} ZEMBO. Tous droits réservés.
-              </p>
-              
-              <p style="color: #6b6b7b; font-size: 11px; text-align: center;">
-                <a href="${privacyUrl}" style="color: #8b8b9b; text-decoration: none;">Politique de confidentialité</a>
-                <span style="color: #4b4b5b; margin: 0 8px;">•</span>
-                <a href="${termsUrl}" style="color: #8b8b9b; text-decoration: none;">Conditions d'utilisation</a>
-                <span style="color: #4b4b5b; margin: 0 8px;">•</span>
-                <a href="${unsubscribeUrl}" style="color: #8b8b9b; text-decoration: none;">Se désabonner</a>
-              </p>
-            </div>
-          </div>
+        <body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #000000; min-height: 100vh;">
+            <tr>
+              <td align="center" style="padding: 40px 16px;">
+                
+                <!-- Main Card -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; background: linear-gradient(165deg, #0d0d14 0%, #12121f 50%, #0a0a10 100%); border-radius: 32px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.15); box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 120px rgba(212, 175, 55, 0.08);">
+                  
+                  <!-- Top Gradient Bar -->
+                  <tr>
+                    <td style="height: 4px; background: linear-gradient(90deg, #d4af37, #f4e4a6, #d4af37);"></td>
+                  </tr>
+                  
+                  <!-- Logo Section -->
+                  <tr>
+                    <td align="center" style="padding: 48px 40px 24px;">
+                      <img src="${logoUrl}" alt="ZEMBO" width="140" style="display: block; max-width: 140px; height: auto;" />
+                    </td>
+                  </tr>
+                  
+                  <!-- Welcome Icon -->
+                  <tr>
+                    <td align="center" style="padding: 0 40px 16px;">
+                      <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.05) 100%); border-radius: 50%; display: inline-block; line-height: 72px; font-size: 32px; border: 2px solid rgba(212, 175, 55, 0.3);">
+                        ✉️
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  <!-- Greeting -->
+                  <tr>
+                    <td style="padding: 8px 40px 0;">
+                      <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; text-align: center; letter-spacing: -0.5px;">
+                        Bienvenue, ${displayName} !
+                      </h1>
+                    </td>
+                  </tr>
+                  
+                  <!-- Subheading -->
+                  <tr>
+                    <td style="padding: 12px 40px 0;">
+                      <p style="margin: 0; color: #d4af37; font-size: 15px; text-align: center; font-weight: 500;">
+                        Plus qu'une étape pour rejoindre l'aventure
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Message -->
+                  <tr>
+                    <td style="padding: 24px 40px 32px;">
+                      <p style="margin: 0; color: #9494a8; font-size: 15px; line-height: 1.7; text-align: center;">
+                        Confirmez votre adresse email pour activer votre compte et découvrir des connexions authentiques.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- CTA Button -->
+                  <tr>
+                    <td align="center" style="padding: 0 40px 40px;">
+                      <table role="presentation" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td style="border-radius: 16px; background: linear-gradient(135deg, #d4af37 0%, #c9a430 100%); box-shadow: 0 8px 32px rgba(212, 175, 55, 0.35), 0 2px 8px rgba(212, 175, 55, 0.2);">
+                            <a href="${verificationLink}" style="display: inline-block; padding: 18px 48px; color: #0a0a0f; text-decoration: none; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
+                              Vérifier mon email →
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Link Box -->
+                  <tr>
+                    <td style="padding: 0 40px 40px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                        <tr>
+                          <td style="padding: 16px;">
+                            <p style="margin: 0 0 8px; color: #6b6b7b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; text-align: center;">
+                              Ou copiez ce lien
+                            </p>
+                            <p style="margin: 0; color: #d4af37; font-size: 11px; text-align: center; word-break: break-all; line-height: 1.5;">
+                              ${verificationLink}
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Features Preview -->
+                  <tr>
+                    <td style="padding: 0 24px 32px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td align="center" width="33%" style="padding: 12px 8px;">
+                            <div style="background: rgba(212, 175, 55, 0.08); border-radius: 16px; padding: 16px 8px; border: 1px solid rgba(212, 175, 55, 0.1);">
+                              <p style="margin: 0 0 4px; font-size: 24px;">🎲</p>
+                              <p style="margin: 0; color: #ffffff; font-size: 11px; font-weight: 600;">Random</p>
+                            </div>
+                          </td>
+                          <td align="center" width="33%" style="padding: 12px 8px;">
+                            <div style="background: rgba(212, 175, 55, 0.08); border-radius: 16px; padding: 16px 8px; border: 1px solid rgba(212, 175, 55, 0.1);">
+                              <p style="margin: 0 0 4px; font-size: 24px;">💫</p>
+                              <p style="margin: 0; color: #ffffff; font-size: 11px; font-weight: 600;">Match</p>
+                            </div>
+                          </td>
+                          <td align="center" width="33%" style="padding: 12px 8px;">
+                            <div style="background: rgba(212, 175, 55, 0.08); border-radius: 16px; padding: 16px 8px; border: 1px solid rgba(212, 175, 55, 0.1);">
+                              <p style="margin: 0 0 4px; font-size: 24px;">📺</p>
+                              <p style="margin: 0; color: #ffffff; font-size: 11px; font-weight: 600;">Lives</p>
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Divider -->
+                  <tr>
+                    <td style="padding: 0 40px;">
+                      <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);"></div>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="padding: 32px 40px;">
+                      
+                      <!-- Social Links -->
+                      ${socialLinks.length > 0 ? `
+                      <table role="presentation" align="center" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                        <tr>
+                          ${socialLinks.join('')}
+                        </tr>
+                      </table>
+                      ` : ''}
+                      
+                      <!-- Copyright -->
+                      <p style="margin: 0 0 16px; color: #d4af37; font-size: 13px; text-align: center; font-weight: 600;">
+                        ZEMBO
+                      </p>
+                      <p style="margin: 0 0 16px; color: #4a4a5a; font-size: 11px; text-align: center;">
+                        L'app de rencontres premium
+                      </p>
+                      
+                      <!-- Legal Links -->
+                      <p style="margin: 0; color: #3a3a4a; font-size: 10px; text-align: center; line-height: 2;">
+                        <a href="${privacyUrl}" style="color: #5a5a6a; text-decoration: none;">Confidentialité</a>
+                        <span style="color: #2a2a3a; margin: 0 8px;">•</span>
+                        <a href="${termsUrl}" style="color: #5a5a6a; text-decoration: none;">Conditions</a>
+                        <span style="color: #2a2a3a; margin: 0 8px;">•</span>
+                        <a href="${unsubscribeUrl}" style="color: #5a5a6a; text-decoration: none;">Désabonnement</a>
+                      </p>
+                      <p style="margin: 16px 0 0; color: #2a2a3a; font-size: 10px; text-align: center;">
+                        © ${new Date().getFullYear()} ZEMBO. Tous droits réservés.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+                
+                <!-- Disclaimer -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px;">
+                  <tr>
+                    <td style="padding: 24px 16px;">
+                      <p style="margin: 0; color: #3a3a4a; font-size: 11px; text-align: center; line-height: 1.6;">
+                        Vous recevez cet email car vous avez créé un compte ZEMBO.<br>
+                        Si ce n'était pas vous, ignorez simplement ce message.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+                
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `,
