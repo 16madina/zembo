@@ -49,6 +49,11 @@ const DEFAULT_LANDMARKS: FaceLandmarks = {
   roll: 0,
 };
 
+// Check if we're on mobile
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): UseFaceTrackingResult => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,11 +192,14 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
     }
 
     let isMounted = true;
+    const isMobile = isMobileDevice();
 
-    const initFaceLandmarker = async () => {
+    const initFaceLandmarker = async (useGPU: boolean = true) => {
       try {
         setIsLoading(true);
         setError(null);
+
+        console.log(`[FaceTracking] Init, GPU: ${useGPU}, Mobile: ${isMobile}`);
 
         const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
 
@@ -199,10 +207,14 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
         );
 
+        // On mobile, prefer CPU as GPU WebGL support is inconsistent
+        const delegate = (isMobile || !useGPU) ? "CPU" : "GPU";
+        console.log(`[FaceTracking] Using delegate: ${delegate}`);
+
         const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
           baseOptions: {
             modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-            delegate: "GPU"
+            delegate: delegate as "GPU" | "CPU"
           },
           outputFaceBlendshapes: false,
           runningMode: "VIDEO",
@@ -216,6 +228,7 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
 
         faceLandmarkerRef.current = faceLandmarker;
         setIsLoading(false);
+        console.log("[FaceTracking] Initialized successfully");
 
         // Start tracking loop
         let lastVideoTime = -1;
@@ -244,7 +257,7 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
                 setLandmarks(null);
               }
             } catch (err) {
-              console.error("Face tracking error:", err);
+              console.error("[FaceTracking] Error:", err);
             }
           }
 
@@ -252,34 +265,66 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
         };
 
         // Wait for video to be ready
+        let videoCheckCount = 0;
+        const maxVideoChecks = 100;
+
         const checkVideoReady = () => {
           if (!isMounted) return;
+          videoCheckCount++;
+          
           if (videoRef.current && videoRef.current.readyState >= 2) {
+            console.log("[FaceTracking] Video ready, starting tracking");
             trackFace();
-          } else {
+          } else if (videoCheckCount < maxVideoChecks) {
             setTimeout(checkVideoReady, 100);
+          } else {
+            console.warn("[FaceTracking] Video not ready after timeout");
+            setError("La caméra met trop de temps à démarrer");
+            setIsLoading(false);
           }
         };
 
         checkVideoReady();
-      } catch (err) {
-        console.error("Face tracking init error:", err);
+      } catch (err: any) {
+        console.error("[FaceTracking] Init error:", err);
+        
+        // Retry with CPU if GPU failed
+        if (useGPU && !isMobile && isMounted) {
+          console.log("[FaceTracking] GPU failed, retrying with CPU...");
+          await initFaceLandmarker(false);
+          return;
+        }
+        
         if (isMounted) {
-          setError("Erreur lors de l'initialisation du tracking facial");
+          setError(`Erreur d'initialisation: ${err?.message || "Erreur inconnue"}`);
           setIsLoading(false);
         }
       }
     };
 
-    initFaceLandmarker();
+    // Loading timeout
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading && isMounted) {
+        console.error("[FaceTracking] Loading timeout");
+        setError("Le chargement prend trop de temps");
+        setIsLoading(false);
+      }
+    }, 15000);
+
+    initFaceLandmarker(!isMobile);
 
     return () => {
       isMounted = false;
+      clearTimeout(loadingTimeout);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
       if (faceLandmarkerRef.current) {
-        faceLandmarkerRef.current.close();
+        try {
+          faceLandmarkerRef.current.close();
+        } catch (e) {
+          console.error("[FaceTracking] Error closing:", e);
+        }
         faceLandmarkerRef.current = null;
       }
     };
