@@ -364,12 +364,13 @@
   }
 }
 
-/* iMessage-style chat layout with keyboard handling */
+/* iMessage-style chat layout - Simple approach without transforms */
 .chat-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   position: relative;
+  overflow: hidden;
 }
 
 .chat-messages-area {
@@ -385,17 +386,9 @@
   position: relative;
   z-index: 10;
   background: hsl(var(--background));
-  will-change: transform;
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* When keyboard is open, move input up smoothly */
-.keyboard-open .chat-input-wrapper {
-  transform: translateY(calc(-1 * var(--keyboard-height)));
-}
-
-/* Adjust messages scroll area when keyboard is visible */
-.keyboard-open .chat-messages-area {
-  padding-bottom: var(--keyboard-height);
-  transition: padding-bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+/* Remove body padding on keyboard open - we handle it in the component */
+body.keyboard-open {
+  padding-bottom: 0 !important;
 }

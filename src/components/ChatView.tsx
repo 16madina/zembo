@@ -355,7 +355,10 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed inset-0 z-[100] bg-background flex flex-col pt-[env(safe-area-inset-top)] chat-container"
+        className="fixed inset-0 z-[100] bg-background flex flex-col pt-[env(safe-area-inset-top)]"
+        style={{
+          paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'env(safe-area-inset-bottom)'
+        }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 glass-strong border-b border-border/50 flex-shrink-0">
@@ -456,10 +459,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         {/* Messages - iMessage style scrolling area */}
         <div 
           ref={messagesContainerRef}
-          className="chat-messages-area px-4 py-4 space-y-3 scrollbar-hide"
-          style={{ 
-            paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 100}px` : '100px'
-          }}
+          className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 space-y-3 scrollbar-hide"
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
@@ -616,10 +616,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
         {/* Input - iMessage style anchored at bottom */}
         <div 
-          className="chat-input-wrapper px-4 py-3 glass-strong border-t border-border/50"
-          style={{ 
-            paddingBottom: 'calc(max(16px, env(safe-area-inset-bottom)) + 8px)'
-          }}
+          className="flex-shrink-0 px-4 py-3 glass-strong border-t border-border/50"
         >
           {isRecording ? (
             <div className="flex items-center gap-3">
