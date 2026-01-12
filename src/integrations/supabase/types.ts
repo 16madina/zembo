@@ -598,6 +598,7 @@ export type Database = {
           location: string | null
           looking_for: string[] | null
           occupation: string | null
+          phone: string | null
           updated_at: string
           user_id: string
           verification_email_count: number | null
@@ -626,6 +627,7 @@ export type Database = {
           location?: string | null
           looking_for?: string[] | null
           occupation?: string | null
+          phone?: string | null
           updated_at?: string
           user_id: string
           verification_email_count?: number | null
@@ -654,6 +656,7 @@ export type Database = {
           location?: string | null
           looking_for?: string[] | null
           occupation?: string | null
+          phone?: string | null
           updated_at?: string
           user_id?: string
           verification_email_count?: number | null

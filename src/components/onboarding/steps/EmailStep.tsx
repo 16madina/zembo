@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { validateEmail } from "@/lib/validation";
+import { isEmailTaken } from "@/lib/uniqueCheck";
 import type { OnboardingData } from "../OnboardingSteps";
 
 interface EmailStepProps {
@@ -13,17 +14,68 @@ const EmailStep = ({ data, updateData }: EmailStepProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [isTaken, setIsTaken] = useState(false);
+  const [lastCheckedEmail, setLastCheckedEmail] = useState("");
+
+  // Debounced uniqueness check
+  const checkEmailUniqueness = useCallback(async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // Skip if not a valid email format or already checked
+    const validation = validateEmail(normalizedEmail);
+    if (!validation.isValid || normalizedEmail === lastCheckedEmail) {
+      return;
+    }
+
+    setIsChecking(true);
+    try {
+      const taken = await isEmailTaken(normalizedEmail);
+      setIsTaken(taken);
+      setLastCheckedEmail(normalizedEmail);
+      if (taken) {
+        setEmailError("Cette adresse email est déjà associée à un compte");
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+      setIsTaken(false);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [lastCheckedEmail]);
 
   // Validate email on blur or when data changes (after touch)
   useEffect(() => {
     if (emailTouched && data.email.trim().length > 0) {
       const result = validateEmail(data.email);
-      setEmailError(result.error);
+      if (result.isValid && !isTaken) {
+        setEmailError(null);
+      } else if (!result.isValid) {
+        setEmailError(result.error);
+      }
     }
-  }, [data.email, emailTouched]);
+  }, [data.email, emailTouched, isTaken]);
+
+  // Check uniqueness after validation passes
+  useEffect(() => {
+    const email = data.email.trim().toLowerCase();
+    const validation = validateEmail(email);
+    
+    if (validation.isValid && emailTouched) {
+      const timeoutId = setTimeout(() => {
+        checkEmailUniqueness(email);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [data.email, emailTouched, checkEmailUniqueness]);
 
   const handleEmailChange = (value: string) => {
     updateData({ email: value });
+    // Reset taken state when typing
+    if (isTaken) {
+      setIsTaken(false);
+      setEmailError(null);
+    }
     // Clear error while typing if email becomes valid
     if (emailError && value.trim().length > 0) {
       const result = validateEmail(value);
@@ -34,14 +86,19 @@ const EmailStep = ({ data, updateData }: EmailStepProps) => {
   const handleEmailBlur = () => {
     setEmailTouched(true);
     if (data.email.trim().length > 0) {
-      const result = validateEmail(data.email.trim().toLowerCase());
-      setEmailError(result.error);
-      // Normalize email to lowercase
-      updateData({ email: data.email.trim().toLowerCase() });
+      const normalizedEmail = data.email.trim().toLowerCase();
+      const result = validateEmail(normalizedEmail);
+      if (!result.isValid) {
+        setEmailError(result.error);
+      } else {
+        setEmailError(null);
+        // Normalize email to lowercase
+        updateData({ email: normalizedEmail });
+      }
     }
   };
 
-  const emailValid = emailTouched && !emailError && data.email.includes("@");
+  const emailValid = emailTouched && !emailError && !isTaken && data.email.includes("@") && !isChecking;
   const passwordValid = data.password.length >= 6;
 
   return (
@@ -60,16 +117,17 @@ const EmailStep = ({ data, updateData }: EmailStepProps) => {
             onChange={(e) => handleEmailChange(e.target.value)}
             onBlur={handleEmailBlur}
             className={`pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
-              emailError ? "ring-2 ring-destructive" : emailValid ? "ring-2 ring-green-500" : ""
+              emailError || isTaken ? "ring-2 ring-destructive" : emailValid ? "ring-2 ring-green-500" : ""
             }`}
             autoFocus
           />
-          {emailValid && (
+          {isChecking ? (
+            <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground animate-spin" />
+          ) : emailValid ? (
             <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
-          )}
-          {emailError && (
+          ) : (emailError || isTaken) ? (
             <AlertCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive" />
-          )}
+          ) : null}
         </div>
         {emailError && (
           <p className="text-xs text-destructive px-2 flex items-center gap-1">
