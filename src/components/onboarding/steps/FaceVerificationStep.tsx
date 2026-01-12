@@ -8,7 +8,7 @@ import { useFaceRecognitionPreload } from "@/contexts/FaceRecognitionPreloadCont
 import * as faceapi from 'face-api.js';
 import confetti from 'canvas-confetti';
 import { IdentityUploadScreen } from "./IdentityUploadScreen";
-
+import { CameraPermissionTutorial } from "./CameraPermissionTutorial";
 interface FaceVerificationStepProps {
   onNext: () => void;
   onBack: () => void;
@@ -16,7 +16,7 @@ interface FaceVerificationStepProps {
   updateData: (data: { faceVerified: boolean }) => void;
 }
 
-type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed" | "identity_upload";
+type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed" | "identity_upload" | "permission_tutorial";
 
 const verificationSteps: { id: VerificationStep; instruction: string; subtext: string; targetDirection: FaceDirection }[] = [
   { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre", targetDirection: "center" },
@@ -701,7 +701,12 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           console.log("[FaceVerification] Camera permission status:", permissionStatus);
           
           if (permissionStatus.camera === 'denied') {
-            throw new Error("Accès caméra refusé. Veuillez autoriser l'accès dans les paramètres de votre téléphone.");
+            // Show the permission tutorial instead of just an error message
+            console.log("[FaceVerification] Camera permission denied, showing tutorial");
+            setCameraError("Accès caméra refusé");
+            setCurrentStep("permission_tutorial");
+            setIsAILoading(false);
+            return;
           }
         } catch (permError: any) {
           console.error("[FaceVerification] Native permission request failed:", permError);
@@ -857,9 +862,11 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       console.error("[FaceVerification] Camera error:", error);
       
       let errorMessage = "Impossible d'accéder à la caméra.";
+      let isPermissionDenied = false;
       
       if (error.name === "NotAllowedError") {
-        errorMessage = "Accès caméra refusé. Veuillez autoriser l'accès dans les paramètres.";
+        errorMessage = "Accès caméra refusé";
+        isPermissionDenied = true;
       } else if (error.name === "NotFoundError") {
         errorMessage = "Aucune caméra détectée sur cet appareil.";
       } else if (error.name === "NotReadableError") {
@@ -881,6 +888,12 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
       setCameraError(errorMessage);
       setIsVideoReady(false);
+      
+      // Show permission tutorial for permission denied errors on native
+      if (isPermissionDenied && isNative) {
+        console.log("[FaceVerification] Permission denied, showing tutorial");
+        setCurrentStep("permission_tutorial");
+      }
     }
   }, []);
 
@@ -908,7 +921,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   }, []);
 
   useEffect(() => {
-    const shouldHaveCamera = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed";
+    const shouldHaveCamera = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed" && currentStep !== "permission_tutorial";
     
     if (shouldHaveCamera && !cameraStartedRef.current && !streamRef.current) {
       cameraStartedRef.current = true;
@@ -925,6 +938,19 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       }
     };
   }, [currentStep, startCamera, stopCamera]);
+
+  // Handler for retrying camera from permission tutorial
+  const handleRetryFromTutorial = useCallback(() => {
+    console.log("[FaceVerification] Retrying camera access from tutorial");
+    setCameraError(null);
+    cameraStartedRef.current = false;
+    setCurrentStep("preparing");
+  }, []);
+
+  // Handler for opening settings (placeholder - actual implementation is in the tutorial component)
+  const handleOpenSettings = useCallback(() => {
+    console.log("[FaceVerification] Open settings requested");
+  }, []);
 
   useEffect(() => {
     if (!isFaceDetectionLoading && isVerificationActive) {
@@ -1663,6 +1689,13 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           <IdentityUploadScreen
             onComplete={handleIdentityUploadComplete}
             onBack={handleBackToFaceVerification}
+          />
+        )}
+
+        {currentStep === "permission_tutorial" && (
+          <CameraPermissionTutorial
+            onRetry={handleRetryFromTutorial}
+            onOpenSettings={handleOpenSettings}
           />
         )}
 
