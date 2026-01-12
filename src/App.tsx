@@ -73,7 +73,7 @@ const AppRoutes = () => (
   </Routes>
 );
 
-const App = () => {
+const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   if (showSplash) {
@@ -81,16 +81,24 @@ const App = () => {
   }
 
   return (
+    <>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AuthProvider>
-              <AppRoutes />
-            </AuthProvider>
-          </BrowserRouter>
+          <AppContent />
         </TooltipProvider>
       </LanguageProvider>
     </QueryClientProvider>
