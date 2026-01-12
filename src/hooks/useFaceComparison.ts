@@ -15,7 +15,11 @@ interface UseFaceComparisonOptions {
   threshold?: number; // Similarity threshold (0-1), default 0.5
 }
 
-const MODELS_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+const MODEL_URL_CANDIDATES = [
+  "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/",
+  "https://unpkg.com/@vladmandic/face-api/model/",
+  "https://justadudewhohacks.github.io/face-api.js/models/",
+] as const;
 
 // Check if we're on mobile
 const isMobileDevice = () => {
@@ -54,26 +58,40 @@ export const useFaceComparison = ({
         
         console.log(`[FaceComparison] Loading models, attempt ${loadAttemptRef.current}, mobile: ${isMobile}`);
 
-        // Load required models for face detection and recognition
-        // Use a timeout to prevent hanging
-        const loadPromise = Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
-        ]);
+        let lastErr: unknown = null;
 
-        // Add timeout for mobile devices
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Model loading timeout')), 30000);
-        });
+        for (const baseUrl of MODEL_URL_CANDIDATES) {
+          try {
+            console.log(`[FaceComparison] Trying models from: ${baseUrl}`);
 
-        await Promise.race([loadPromise, timeoutPromise]);
+            // Load required models for face detection and recognition
+            // Use a timeout to prevent hanging
+            const loadPromise = Promise.all([
+              faceapi.nets.ssdMobilenetv1.loadFromUri(baseUrl),
+              faceapi.nets.faceLandmark68Net.loadFromUri(baseUrl),
+              faceapi.nets.faceRecognitionNet.loadFromUri(baseUrl),
+            ]);
 
-        if (!isMounted) return;
+            // Add timeout for mobile devices
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Model loading timeout')), 30000);
+            });
 
-        modelsLoadedRef.current = true;
-        setIsModelsLoaded(true);
-        console.log('[FaceComparison] Models loaded successfully');
+            await Promise.race([loadPromise, timeoutPromise]);
+
+            if (!isMounted) return;
+
+            modelsLoadedRef.current = true;
+            setIsModelsLoaded(true);
+            console.log('[FaceComparison] Models loaded successfully');
+            return;
+          } catch (err) {
+            lastErr = err;
+            console.warn('[FaceComparison] Model source failed:', baseUrl, err);
+          }
+        }
+
+        throw lastErr ?? new Error('Model loading failed');
       } catch (err: any) {
         console.error('[FaceComparison] Error loading models:', err);
         if (isMounted) {

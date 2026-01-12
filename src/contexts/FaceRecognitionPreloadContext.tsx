@@ -13,7 +13,12 @@ interface FaceRecognitionPreloadContextType {
 
 const FaceRecognitionPreloadContext = createContext<FaceRecognitionPreloadContextType | null>(null);
 
-const MODELS_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+const MODEL_URL_CANDIDATES = [
+  "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/",
+  "https://unpkg.com/@vladmandic/face-api/model/",
+  // Fallback (older, sometimes flaky on Android WebView)
+  "https://justadudewhohacks.github.io/face-api.js/models/",
+] as const;
 
 export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNode }) => {
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
@@ -27,7 +32,7 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
 
   // Load models on mount
   useEffect(() => {
-    if (modelsLoadedRef.current || isModelsLoading) return;
+    if (modelsLoadedRef.current) return;
 
     let isMounted = true;
 
@@ -36,29 +41,43 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
       setModelsError(null);
 
       try {
-        console.log('[FacePreload] Starting model loading...');
+        console.log("[FacePreload] Starting model loading...");
 
-        const loadPromise = Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
-        ]);
+        let lastErr: unknown = null;
 
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Model loading timeout (30s)')), 30000);
-        });
+        for (const baseUrl of MODEL_URL_CANDIDATES) {
+          try {
+            console.log(`[FacePreload] Trying models from: ${baseUrl}`);
 
-        await Promise.race([loadPromise, timeoutPromise]);
+            const loadPromise = Promise.all([
+              faceapi.nets.ssdMobilenetv1.loadFromUri(baseUrl),
+              faceapi.nets.faceLandmark68Net.loadFromUri(baseUrl),
+              faceapi.nets.faceRecognitionNet.loadFromUri(baseUrl),
+            ]);
 
-        if (!isMounted) return;
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error("Model loading timeout (30s)")), 30000);
+            });
 
-        modelsLoadedRef.current = true;
-        setIsModelsLoaded(true);
-        console.log('[FacePreload] Models loaded successfully');
+            await Promise.race([loadPromise, timeoutPromise]);
+
+            if (!isMounted) return;
+
+            modelsLoadedRef.current = true;
+            setIsModelsLoaded(true);
+            console.log("[FacePreload] Models loaded successfully");
+            return;
+          } catch (err) {
+            lastErr = err;
+            console.warn("[FacePreload] Model source failed:", baseUrl, err);
+          }
+        }
+
+        throw lastErr ?? new Error("Impossible de charger les modèles");
       } catch (err: any) {
-        console.error('[FacePreload] Error loading models:', err);
+        console.error("[FacePreload] Error loading models:", err);
         if (isMounted) {
-          setModelsError(err?.message || 'Erreur de chargement des modèles');
+          setModelsError(err?.message || "Erreur de chargement des modèles");
         }
       } finally {
         if (isMounted) {
@@ -72,7 +91,7 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
     return () => {
       isMounted = false;
     };
-  }, [isModelsLoading]);
+  }, []);
 
   // Extract descriptors from photos
   const extractDescriptors = useCallback(async (photos: string[]) => {
