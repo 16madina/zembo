@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Flag, UserX } from "lucide-react";
 import data from "@emoji-mart/data";
@@ -6,7 +6,7 @@ import Picker from "@emoji-mart/react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useChatMessages } from "@/hooks/useChatMessages";
+import { useChatMessages, ChatMessage } from "@/hooks/useChatMessages";
 import { useVoiceCall } from "@/hooks/useVoiceCall";
 import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import { useMessageReactions } from "@/hooks/useMessageReactions";
@@ -15,6 +15,9 @@ import ChatRestrictionBanner from "@/components/chat/ChatRestrictionBanner";
 import MessageReactionPicker from "@/components/chat/MessageReactionPicker";
 import MessageReactions from "@/components/chat/MessageReactions";
 import VoiceRecorder from "@/components/chat/VoiceRecorder";
+import SwipeableMessage from "@/components/chat/SwipeableMessage";
+import ReplyPreview from "@/components/chat/ReplyPreview";
+import QuotedMessage from "@/components/chat/QuotedMessage";
 import { isNative } from "@/lib/capacitor";
 import {
   DropdownMenu,
@@ -63,6 +66,14 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<{
+    id: string;
+    text?: string;
+    image?: string;
+    audioUrl?: string;
+    senderName: string;
+    isMe: boolean;
+  } | null>(null);
 
   // Keyboard handling (native) + viewport-resize compensation (iOS)
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -83,21 +94,55 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Create a map for quick lookup of messages by ID
+  const messagesMap = useMemo(() => {
+    const map = new Map<string, ChatMessage>();
+    dbMessages.forEach(m => map.set(m.id, m));
+    return map;
+  }, [dbMessages]);
+
   // Transform DB messages to display format
-  const displayMessages = dbMessages.map((m) => ({
-    id: m.id,
-    text: m.content || "",
-    image: m.image_url || undefined,
-    audioUrl: m.audio_url || undefined,
-    audioDuration: m.audio_duration || undefined,
-    time: new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-    isMe: m.sender_id === currentUser?.id,
-    status: m.is_read ? "read" as const : "delivered" as const,
-  }));
+  const displayMessages = dbMessages.map((m) => {
+    const replyTo = m.reply_to_message_id ? messagesMap.get(m.reply_to_message_id) : null;
+    return {
+      id: m.id,
+      text: m.content || "",
+      image: m.image_url || undefined,
+      audioUrl: m.audio_url || undefined,
+      audioDuration: m.audio_duration || undefined,
+      time: new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      isMe: m.sender_id === currentUser?.id,
+      status: m.is_read ? "read" as const : "delivered" as const,
+      replyToMessageId: m.reply_to_message_id,
+      replyTo: replyTo ? {
+        id: replyTo.id,
+        text: replyTo.content || "",
+        image: replyTo.image_url || undefined,
+        audioUrl: replyTo.audio_url || undefined,
+        isMe: replyTo.sender_id === currentUser?.id,
+      } : null,
+    };
+  });
 
   // Message reactions hook
   const messageIds = displayMessages.map((m) => m.id);
   const { toggleReaction, getReactionSummary } = useMessageReactions(messageIds);
+
+  // Handle swipe to reply
+  const handleSwipeReply = useCallback((message: typeof displayMessages[0]) => {
+    setReplyToMessage({
+      id: message.id,
+      text: message.text || undefined,
+      image: message.image,
+      audioUrl: message.audioUrl,
+      senderName: message.isMe ? "Vous" : user.name,
+      isMe: message.isMe,
+    });
+    // Haptic feedback
+    if (isNative && navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+  }, [user.name]);
 
   // Long press handler for reactions
   const handleLongPressStart = useCallback((messageId: string) => {
@@ -318,10 +363,11 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         imageUrl = await uploadImage(selectedFile) || undefined;
       }
       
-      await sendMessage(newMessage, imageUrl);
+      await sendMessage(newMessage, imageUrl, undefined, undefined, replyToMessage?.id);
       setNewMessage("");
       setSelectedImage(null);
       setSelectedFile(null);
+      setReplyToMessage(null);
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -370,7 +416,8 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           data: { publicUrl },
         } = supabase.storage.from("profile-photos").getPublicUrl(fileName);
 
-        await sendMessage("", undefined, publicUrl, duration);
+        await sendMessage("", undefined, publicUrl, duration, replyToMessage?.id);
+        setReplyToMessage(null);
       }
       setShowVoiceRecorder(false);
     } catch (error) {
@@ -530,74 +577,93 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
                     initial={{ opacity: 0, y: 20, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex flex-col ${message.isMe ? "items-end" : "items-start"}`}
+                    className="w-full"
                   >
-                    <div className="relative max-w-[80%]">
-                      {/* Reaction Picker */}
-                      <MessageReactionPicker
-                        isOpen={activeReactionMessageId === message.id}
-                        onSelect={handleReactionSelect}
-                        onClose={() => setActiveReactionMessageId(null)}
-                        position={message.isMe ? "right" : "left"}
-                      />
-                      
-                      {/* Message Bubble */}
-                      <div
-                        className={`${
-                          message.isMe
-                            ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
-                            : "glass rounded-2xl rounded-bl-md"
-                        } ${message.image ? "p-1.5" : "px-4 py-2.5"} select-none touch-none`}
-                        onTouchStart={() => handleLongPressStart(message.id)}
-                        onTouchEnd={handleLongPressEnd}
-                        onTouchCancel={handleLongPressEnd}
-                        onMouseDown={() => handleLongPressStart(message.id)}
-                        onMouseUp={handleLongPressEnd}
-                        onMouseLeave={handleLongPressEnd}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setActiveReactionMessageId(message.id);
-                        }}
-                      >
-                        {message.image && (
-                          <motion.img
-                            src={message.image}
-                            alt="Shared"
-                            className="rounded-xl max-w-full max-h-60 object-cover cursor-pointer"
-                            onClick={() => setPreviewImage(message.image!)}
-                            whileTap={{ scale: 0.98 }}
-                          />
-                        )}
-                        {message.audioUrl && (
-                          <div className="flex items-center gap-3 min-w-[180px]">
-                            <audio
-                              src={message.audioUrl}
-                              controls
-                              className="h-8 w-full max-w-[200px]"
-                              style={{ filter: message.isMe ? "invert(1)" : "none" }}
-                            />
-                          </div>
-                        )}
-                        {message.text && (
-                          <p className={`text-sm leading-relaxed ${message.image ? "px-2.5 pt-2 pb-1" : ""}`}>
-                            {message.text}
-                          </p>
-                        )}
-                        <div className={`flex items-center justify-end gap-1 ${message.image || message.audioUrl ? "px-2.5 pb-1.5" : "mt-1"} ${
-                          message.isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                        }`}>
-                          <span className="text-[10px]">{message.time}</span>
-                          {message.isMe && <MessageStatus status={message.status} />}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Reactions Display */}
-                    <MessageReactions
-                      reactions={reactionSummary}
-                      onReactionClick={(emoji) => toggleReaction(message.id, emoji)}
+                    <SwipeableMessage 
+                      onSwipeReply={() => handleSwipeReply(message)}
                       isMe={message.isMe}
-                    />
+                    >
+                      <div className={`flex flex-col ${message.isMe ? "items-end" : "items-start"}`}>
+                        <div className="relative">
+                          {/* Reaction Picker */}
+                          <MessageReactionPicker
+                            isOpen={activeReactionMessageId === message.id}
+                            onSelect={handleReactionSelect}
+                            onClose={() => setActiveReactionMessageId(null)}
+                            position={message.isMe ? "right" : "left"}
+                          />
+                          
+                          {/* Message Bubble */}
+                          <div
+                            className={`${
+                              message.isMe
+                                ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
+                                : "glass rounded-2xl rounded-bl-md"
+                            } ${message.image ? "p-1.5" : "px-4 py-2.5"} select-none`}
+                            onTouchStart={() => handleLongPressStart(message.id)}
+                            onTouchEnd={handleLongPressEnd}
+                            onTouchCancel={handleLongPressEnd}
+                            onMouseDown={() => handleLongPressStart(message.id)}
+                            onMouseUp={handleLongPressEnd}
+                            onMouseLeave={handleLongPressEnd}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              setActiveReactionMessageId(message.id);
+                            }}
+                          >
+                            {/* Quoted Message */}
+                            {message.replyTo && (
+                              <QuotedMessage
+                                senderName={message.replyTo.isMe ? "Vous" : user.name}
+                                text={message.replyTo.text}
+                                image={message.replyTo.image}
+                                audioUrl={message.replyTo.audioUrl}
+                                isMe={message.replyTo.isMe}
+                                isOwnMessage={message.isMe}
+                              />
+                            )}
+                            
+                            {message.image && (
+                              <motion.img
+                                src={message.image}
+                                alt="Shared"
+                                className="rounded-xl max-w-full max-h-60 object-cover cursor-pointer"
+                                onClick={() => setPreviewImage(message.image!)}
+                                whileTap={{ scale: 0.98 }}
+                              />
+                            )}
+                            {message.audioUrl && (
+                              <div className="flex items-center gap-3 min-w-[180px]">
+                                <audio
+                                  src={message.audioUrl}
+                                  controls
+                                  className="h-8 w-full max-w-[200px]"
+                                  style={{ filter: message.isMe ? "invert(1)" : "none" }}
+                                />
+                              </div>
+                            )}
+                            {message.text && (
+                              <p className={`text-sm leading-relaxed ${message.image ? "px-2.5 pt-2 pb-1" : ""}`}>
+                                {message.text}
+                              </p>
+                            )}
+                            <div className={`flex items-center justify-end gap-1 ${message.image || message.audioUrl ? "px-2.5 pb-1.5" : "mt-1"} ${
+                              message.isMe ? "text-primary-foreground/70" : "text-muted-foreground"
+                            }`}>
+                              <span className="text-[10px]">{message.time}</span>
+                              {message.isMe && <MessageStatus status={message.status} />}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Reactions Display */}
+                        <MessageReactions
+                          reactions={reactionSummary}
+                          onReactionClick={(emoji) => toggleReaction(message.id, emoji)}
+                          isMe={message.isMe}
+                        />
+                      </div>
+                    </SwipeableMessage>
                   </motion.div>
                 );
               })}
@@ -696,6 +762,16 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           <ChatRestrictionBanner status={identityStatus} />
         )}
 
+        {/* Reply Preview */}
+        <AnimatePresence>
+          {replyToMessage && (
+            <ReplyPreview
+              replyTo={replyToMessage}
+              onCancel={() => setReplyToMessage(null)}
+            />
+          )}
+        </AnimatePresence>
+
         {/* Input - iMessage style anchored at bottom */}
         <div 
           ref={inputBarRef}
@@ -704,7 +780,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
             transform: keyboardShift > 0 ? `translateY(-${keyboardShift}px)` : undefined,
             transition: "transform 220ms cubic-bezier(0.2, 0, 0, 1)",
             // Zero padding when keyboard is open to stick directly to keyboard, safe-area padding when closed
-            paddingTop: "12px",
+            paddingTop: replyToMessage ? "8px" : "12px",
             paddingBottom: keyboardHeight > 0 ? "0px" : "calc(env(safe-area-inset-bottom) + 12px)",
             willChange: keyboardShift > 0 ? "transform" : undefined,
             zIndex: 120,

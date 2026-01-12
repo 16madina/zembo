@@ -12,6 +12,8 @@ export interface ChatMessage {
   audio_duration: number | null;
   is_read: boolean;
   created_at: string;
+  reply_to_message_id: string | null;
+  reply_to?: ChatMessage | null;
 }
 
 export const useChatMessages = (otherUserId: string) => {
@@ -134,7 +136,13 @@ export const useChatMessages = (otherUserId: string) => {
     }
   }, [user?.id, otherUserId]);
 
-  const sendMessage = useCallback(async (content: string, imageUrl?: string, audioUrl?: string, audioDuration?: number) => {
+  const sendMessage = useCallback(async (
+    content: string, 
+    imageUrl?: string, 
+    audioUrl?: string, 
+    audioDuration?: number,
+    replyToMessageId?: string
+  ) => {
     if (!user?.id || !otherUserId) return null;
 
     const { data, error } = await (supabase as any)
@@ -146,6 +154,7 @@ export const useChatMessages = (otherUserId: string) => {
         image_url: imageUrl || null,
         audio_url: audioUrl || null,
         audio_duration: audioDuration || null,
+        reply_to_message_id: replyToMessageId || null,
       })
       .select()
       .single();
