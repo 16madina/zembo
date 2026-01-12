@@ -15,7 +15,7 @@ interface FaceVerificationStepProps {
   updateData: (data: { faceVerified: boolean }) => void;
 }
 
-type VerificationStep = "intro" | "center" | "left" | "right" | "comparing" | "complete" | "failed";
+type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed";
 
 const verificationSteps: { id: VerificationStep; instruction: string; subtext: string; targetDirection: FaceDirection }[] = [
   { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre", targetDirection: "center" },
@@ -320,6 +320,122 @@ const SuccessScreen = ({
   );
 };
 
+// Preparing screen with countdown and instructions
+const PreparingScreen = ({ onStart }: { onStart: () => void }) => {
+  const [countdown, setCountdown] = useState(3);
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      onStart();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown, onStart]);
+
+  return (
+    <motion.div
+      key="preparing"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="flex-1 flex flex-col items-center justify-center px-6"
+    >
+      {/* Instructions card */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="bg-muted/50 backdrop-blur-sm rounded-3xl p-6 mb-8 max-w-sm w-full"
+      >
+        <h3 className="text-lg font-semibold text-foreground mb-4 text-center">
+          Préparez-vous
+        </h3>
+        
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-primary">1</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Regardez la caméra</p>
+              <p className="text-xs text-muted-foreground">Centrez votre visage dans le cercle</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-primary">2</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Tournez lentement la tête</p>
+              <p className="text-xs text-muted-foreground">Gauche puis droite quand demandé</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-primary">3</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Maintenez chaque position</p>
+              <p className="text-xs text-muted-foreground">Jusqu'à ce que le cercle soit rempli</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Countdown */}
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", delay: 0.3 }}
+        className="relative"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+          className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center backdrop-blur-sm border border-primary/20"
+        >
+          <motion.div
+            key={countdown}
+            initial={{ scale: 1.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.5, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            {countdown > 0 ? (
+              <span className="text-5xl font-bold text-primary">{countdown}</span>
+            ) : (
+              <Camera className="w-12 h-12 text-primary" />
+            )}
+          </motion.div>
+        </motion.div>
+        
+        {/* Pulsing ring */}
+        <motion.div
+          animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
+          transition={{ duration: 1, repeat: Infinity }}
+          className="absolute inset-0 rounded-full border-2 border-primary/40"
+        />
+      </motion.div>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="mt-6 text-sm text-muted-foreground"
+      >
+        {countdown > 0 ? "La vérification démarre dans..." : "Démarrage..."}
+      </motion.p>
+    </motion.div>
+  );
+};
+
 export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceVerificationStepProps) => {
   const [currentStep, setCurrentStep] = useState<VerificationStep>("intro");
   const [progress, setProgress] = useState(0);
@@ -340,7 +456,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const comparisonAttemptedRef = useRef(false);
   const cameraStartedRef = useRef(false);
 
-  const isVerificationActive = currentStep !== "intro" && currentStep !== "complete" && currentStep !== "comparing" && currentStep !== "failed";
+  const isVerificationActive = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "comparing" && currentStep !== "failed";
   
   // Use preloaded face recognition context (models + descriptors already loaded in PhotosStep)
   const { 
@@ -773,7 +889,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   }, []);
 
   useEffect(() => {
-    const shouldHaveCamera = currentStep !== "intro" && currentStep !== "complete" && currentStep !== "failed";
+    const shouldHaveCamera = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed";
     
     if (shouldHaveCamera && !cameraStartedRef.current && !streamRef.current) {
       cameraStartedRef.current = true;
@@ -814,12 +930,16 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   }, [isVerificationActive]);
 
   const startVerification = () => {
-    setCurrentStep("center");
+    setCurrentStep("preparing");
     setProgress(0);
     setCompletedSteps([]);
     setDetectionStatus("");
     comparisonAttemptedRef.current = false;
     setFaceMatchResult(null);
+  };
+
+  const startActualVerification = () => {
+    setCurrentStep("center");
   };
 
   const resetVerification = () => {
@@ -1069,7 +1189,11 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           </motion.div>
         )}
 
-        {(currentStep !== "intro" && currentStep !== "complete" && currentStep !== "failed") && (
+        {currentStep === "preparing" && (
+          <PreparingScreen onStart={startActualVerification} />
+        )}
+
+        {(currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed") && (
           <motion.div
             key="verification"
             initial={verificationTransition.initial}
