@@ -4,10 +4,11 @@ const config: CapacitorConfig = {
   appId: 'com.zembo.app',
   appName: 'Zembo',
   webDir: 'dist',
-  server: {
-    url: 'https://6edefc5e-f7d2-465f-b971-263eccd91309.lovableproject.com?forceHideBadge=true',
-    cleartext: true
-  },
+  // Pour le développement avec hot-reload, décommentez le bloc server ci-dessous
+  // server: {
+  //   url: 'https://6edefc5e-f7d2-465f-b971-263eccd91309.lovableproject.com?forceHideBadge=true',
+  //   cleartext: true
+  // },
   plugins: {
     SplashScreen: {
       launchShowDuration: 0,
