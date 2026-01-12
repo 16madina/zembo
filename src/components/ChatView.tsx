@@ -59,9 +59,22 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // Keyboard handling (native) + viewport-resize compensation (iOS)
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState<number>(() =>
+    (typeof window !== "undefined" ? window.visualViewport?.height ?? window.innerHeight : 0)
+  );
+  const [baselineViewportHeight, setBaselineViewportHeight] = useState<number>(() =>
+    (typeof window !== "undefined" ? window.visualViewport?.height ?? window.innerHeight : 0)
+  );
+  const [keyboardShift, setKeyboardShift] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputBarRef = useRef<HTMLDivElement>(null);
+  const [inputBarHeight, setInputBarHeight] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -120,9 +133,11 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   // Keyboard height listener for native mobile - iMessage style
   useEffect(() => {
     const updateKeyboardHeight = () => {
-      const height = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--keyboard-height') || '0');
+      const height = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue("--keyboard-height") || "0"
+      );
       setKeyboardHeight(height);
-      
+
       // When keyboard opens, scroll to bottom after layout adjusts
       if (height > 0) {
         requestAnimationFrame(() => {
@@ -133,16 +148,66 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
     // Watch for CSS variable changes via MutationObserver
     const observer = new MutationObserver(updateKeyboardHeight);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-    
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+
     // Also watch body class for keyboard-open
     const bodyObserver = new MutationObserver(updateKeyboardHeight);
-    bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
     return () => {
       observer.disconnect();
       bodyObserver.disconnect();
     };
+  }, []);
+
+  // Track dynamic viewport height (changes when iOS resizes the webview)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const vv = window.visualViewport;
+    const update = () => {
+      setViewportHeight(vv?.height ?? window.innerHeight);
+    };
+
+    update();
+
+    if (!vv) {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
+
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  // Compute the effective shift to apply: avoid double-compensation when the webview already resized
+  useEffect(() => {
+    if (keyboardHeight === 0) {
+      setBaselineViewportHeight(viewportHeight);
+      setKeyboardShift(0);
+      return;
+    }
+
+    const viewportDelta = Math.max(0, baselineViewportHeight - viewportHeight);
+    setKeyboardShift(Math.max(0, keyboardHeight - viewportDelta));
+  }, [keyboardHeight, viewportHeight, baselineViewportHeight]);
+
+  // Measure input bar height so we can pad the scroll area precisely
+  useEffect(() => {
+    if (!inputBarRef.current) return;
+
+    const el = inputBarRef.current;
+    const update = () => setInputBarHeight(el.getBoundingClientRect().height);
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+
+    return () => ro.disconnect();
   }, []);
 
   const handleCall = () => {
@@ -263,6 +328,12 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
   const startRecording = async () => {
     try {
+      // If the text input is focused, blur it so the keyboard closes and doesn't interfere with recording
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      setShowEmojiPicker(false);
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -276,7 +347,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        
+
         // Upload audio to storage
         const fileName = `${currentUser?.id}/${Date.now()}.webm`;
         const { error: uploadError } = await supabase.storage
@@ -284,10 +355,10 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           .upload(fileName, audioBlob);
 
         if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
-            .from("profile-photos")
-            .getPublicUrl(fileName);
-          
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("profile-photos").getPublicUrl(fileName);
+
           await sendMessage("", undefined, publicUrl, recordingDuration);
         }
 
@@ -335,7 +406,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const showSendButton = newMessage.trim() || selectedImage || isFocused;
+  const showSendButton = Boolean(newMessage.trim() || selectedImage);
   const isInputDisabled = identityStatus === "pending";
 
   const MessageStatus = ({ status }: { status: "sent" | "delivered" | "read" }) => {
@@ -356,9 +427,6 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         exit={{ x: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="fixed inset-0 z-[100] bg-background flex flex-col pt-[env(safe-area-inset-top)]"
-        style={{
-          paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'env(safe-area-inset-bottom)'
-        }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 glass-strong border-b border-border/50 flex-shrink-0">
@@ -460,6 +528,12 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         <div 
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 space-y-3 scrollbar-hide"
+          style={{
+            paddingBottom:
+              keyboardHeight > 0
+                ? `${Math.max(0, inputBarHeight) + Math.max(0, keyboardShift) + 16}px`
+                : `calc(${Math.max(0, inputBarHeight)}px + env(safe-area-inset-bottom) + 16px)`,
+          }}
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
@@ -616,7 +690,16 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
         {/* Input - iMessage style anchored at bottom */}
         <div 
+          ref={inputBarRef}
           className="flex-shrink-0 px-4 py-3 glass-strong border-t border-border/50"
+          style={{
+            transform: keyboardShift > 0 ? `translateY(-${keyboardShift}px)` : undefined,
+            transition: "transform 220ms cubic-bezier(0.2, 0, 0, 1)",
+            // Avoid a visible gap above the keyboard on iOS by removing safe-area padding while the keyboard is open
+            paddingBottom: keyboardHeight > 0 ? "12px" : "calc(env(safe-area-inset-bottom) + 12px)",
+            willChange: keyboardShift > 0 ? "transform" : undefined,
+            zIndex: 120,
+          }}
         >
           {isRecording ? (
             <div className="flex items-center gap-3">
@@ -715,7 +798,8 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.8, opacity: 0 }}
                     onClick={startRecording}
-                    className="p-3 rounded-full flex-shrink-0 btn-gold"
+                    disabled={isInputDisabled}
+                    className={`p-3 rounded-full flex-shrink-0 btn-gold ${isInputDisabled ? "opacity-50" : ""}`}
                     whileTap={{ scale: 0.9 }}
                   >
                     <Mic className="w-5 h-5 text-primary-foreground" />
