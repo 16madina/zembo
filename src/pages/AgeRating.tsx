@@ -9,8 +9,8 @@ const AgeRating = () => {
   const { t } = useLanguage();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="h-[100dvh] bg-background overflow-y-auto overscroll-contain scroll-smooth scrollbar-hide">
+      <div className="container mx-auto px-4 py-8 pb-16 max-w-3xl">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
