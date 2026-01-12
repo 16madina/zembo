@@ -708,6 +708,13 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
             setIsAILoading(false);
             return;
           }
+          
+          // Important: On Android, wait a moment after granting permission before getUserMedia
+          // This allows the system to fully register the permission change
+          if (permissionStatus.camera === 'granted') {
+            console.log("[FaceVerification] Permission granted, waiting for system to sync...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         } catch (permError: any) {
           console.error("[FaceVerification] Native permission request failed:", permError);
           // Continue anyway - getUserMedia will also prompt for permission
@@ -729,7 +736,35 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       }
 
       console.log("[FaceVerification] Requesting camera with constraints:", constraints);
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // On Android, try multiple times with delays if first attempt fails
+      let stream: MediaStream | null = null;
+      let lastError: any = null;
+      
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          console.log(`[FaceVerification] getUserMedia attempt ${attempt + 1}/3`);
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          break; // Success, exit loop
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[FaceVerification] Attempt ${attempt + 1} failed:`, err.name, err.message);
+          
+          // If it's a permission error, don't retry - show tutorial
+          if (err.name === "NotAllowedError") {
+            throw err;
+          }
+          
+          // Wait before retry (increasing delay)
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+          }
+        }
+      }
+      
+      if (!stream) {
+        throw lastError || new Error("Impossible d'obtenir le flux caméra");
+      }
 
       // Keep stream even if the video element isn't mounted yet (AnimatePresence can delay it)
       streamRef.current = stream;
