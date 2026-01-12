@@ -63,6 +63,11 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
   const faceLandmarkerRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
   const smoothedLandmarksRef = useRef<FaceLandmarks>(DEFAULT_LANDMARKS);
+  const isInitializedRef = useRef(false);
+  const isInitializingRef = useRef(false);
+  // Store videoRef in a stable ref to avoid triggering useEffect
+  const videoRefStable = useRef(videoRef.current);
+  videoRefStable.current = videoRef.current;
 
   // Smooth landmarks to reduce jitter
   const smoothLandmarks = useCallback((newLandmarks: FaceLandmarks, factor: number = 0.3): FaceLandmarks => {
@@ -185,14 +190,18 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
-      setIsTracking(false);
-      setLandmarks(null);
+    // Prevent re-initialization if already done or in progress
+    if (!enabled || isInitializedRef.current || isInitializingRef.current) {
+      if (!enabled) {
+        setIsTracking(false);
+        setLandmarks(null);
+      }
       return;
     }
 
     let isMounted = true;
     const isMobile = isMobileDevice();
+    isInitializingRef.current = true;
 
     const initFaceLandmarker = async (useGPU: boolean = true) => {
       try {
@@ -203,9 +212,13 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
 
         const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
 
+        if (!isMounted) return;
+
         const filesetResolver = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
         );
+
+        if (!isMounted) return;
 
         // On mobile, prefer CPU as GPU WebGL support is inconsistent
         const delegate = (isMobile || !useGPU) ? "CPU" : "GPU";
@@ -227,6 +240,8 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
         }
 
         faceLandmarkerRef.current = faceLandmarker;
+        isInitializedRef.current = true;
+        isInitializingRef.current = false;
         setIsLoading(false);
         console.log("[FaceTracking] Initialized successfully");
 
@@ -234,9 +249,9 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
         let lastVideoTime = -1;
 
         const trackFace = () => {
-          if (!isMounted || !videoRef.current || !faceLandmarkerRef.current) return;
+          if (!isMounted || !videoRefStable.current || !faceLandmarkerRef.current) return;
 
-          const video = videoRef.current;
+          const video = videoRefStable.current;
 
           if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
             lastVideoTime = video.currentTime;
@@ -272,7 +287,7 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
           if (!isMounted) return;
           videoCheckCount++;
           
-          if (videoRef.current && videoRef.current.readyState >= 2) {
+          if (videoRefStable.current && videoRefStable.current.readyState >= 2) {
             console.log("[FaceTracking] Video ready, starting tracking");
             trackFace();
           } else if (videoCheckCount < maxVideoChecks) {
@@ -281,6 +296,7 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
             console.warn("[FaceTracking] Video not ready after timeout");
             setError("La caméra met trop de temps à démarrer");
             setIsLoading(false);
+            isInitializingRef.current = false;
           }
         };
 
@@ -296,6 +312,7 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
         }
         
         if (isMounted) {
+          isInitializingRef.current = false;
           setError(`Erreur d'initialisation: ${err?.message || "Erreur inconnue"}`);
           setIsLoading(false);
         }
@@ -304,10 +321,11 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
 
     // Loading timeout
     const loadingTimeout = setTimeout(() => {
-      if (isLoading && isMounted) {
+      if (isLoading && isMounted && !isInitializedRef.current) {
         console.error("[FaceTracking] Loading timeout");
         setError("Le chargement prend trop de temps");
         setIsLoading(false);
+        isInitializingRef.current = false;
       }
     }, 15000);
 
@@ -327,8 +345,10 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
         }
         faceLandmarkerRef.current = null;
       }
+      isInitializedRef.current = false;
+      isInitializingRef.current = false;
     };
-  }, [enabled, videoRef, extractLandmarks, smoothLandmarks]);
+  }, [enabled]); // Removed unstable dependencies
 
   return {
     isLoading,
