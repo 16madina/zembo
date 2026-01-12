@@ -176,24 +176,65 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       setCameraError(null);
       setIsAILoading(true);
       
-      if (isNative) {
-        // For native, we'll use a different approach
-        return;
+      console.log("[FaceVerification] Starting camera, isNative:", isNative);
+      
+      // For native Capacitor apps, still try getUserMedia as it works in WebView
+      const constraints: MediaStreamConstraints = {
+        video: { 
+          facingMode: "user", 
+          width: { ideal: 640, max: 1280 }, 
+          height: { ideal: 640, max: 1280 } 
+        }
+      };
+
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("getUserMedia n'est pas disponible sur cet appareil");
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 720 } }
-      });
+      console.log("[FaceVerification] Requesting camera with constraints:", constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        // Wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
+          const video = videoRef.current!;
+          video.onloadedmetadata = () => {
+            video.play()
+              .then(() => {
+                console.log("[FaceVerification] Video playing, dimensions:", video.videoWidth, "x", video.videoHeight);
+                resolve();
+              })
+              .catch(reject);
+          };
+          video.onerror = () => reject(new Error("Erreur de chargement vidéo"));
+          // Timeout
+          setTimeout(() => reject(new Error("Timeout de la caméra")), 10000);
+        });
       }
-    } catch (error) {
-      console.error("Camera error:", error);
-      setCameraError("Impossible d'accéder à la caméra. Veuillez autoriser l'accès.");
+      
+      console.log("[FaceVerification] Camera started successfully");
+    } catch (error: any) {
+      console.error("[FaceVerification] Camera error:", error);
+      
+      let errorMessage = "Impossible d'accéder à la caméra.";
+      
+      if (error.name === "NotAllowedError") {
+        errorMessage = "Accès caméra refusé. Veuillez autoriser l'accès dans les paramètres.";
+      } else if (error.name === "NotFoundError") {
+        errorMessage = "Aucune caméra détectée sur cet appareil.";
+      } else if (error.name === "NotReadableError") {
+        errorMessage = "La caméra est utilisée par une autre application.";
+      } else if (error.name === "OverconstrainedError") {
+        errorMessage = "Configuration caméra non supportée.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setCameraError(errorMessage);
     }
   }, []);
 
@@ -462,7 +503,22 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                   {cameraError || faceDetectionError || comparisonError ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-center p-4">
                       <AlertCircle className="w-8 h-8 text-destructive mb-2" />
-                      <p className="text-xs text-muted-foreground">{cameraError || faceDetectionError || comparisonError}</p>
+                      <p className="text-xs text-muted-foreground mb-3 max-w-[180px]">
+                        {cameraError || faceDetectionError || comparisonError}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setCameraError(null);
+                          resetVerification();
+                          setTimeout(() => startVerification(), 100);
+                        }}
+                        className="text-xs"
+                      >
+                        <RotateCcw className="w-3 h-3 mr-1" />
+                        Réessayer
+                      </Button>
                     </div>
                   ) : (
                     <>
