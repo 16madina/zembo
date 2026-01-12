@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Search, Phone, Mail, X, Check, Share2, Loader2, UserPlus } from 'lucide-react';
+import { Users, Search, Phone, Mail, Check, Share2, Loader2, UserPlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useContacts, Contact } from '@/hooks/useContacts';
+import { useContacts } from '@/hooks/useContacts';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { isNative } from '@/lib/capacitor';
 
@@ -23,10 +25,12 @@ interface InviteFriendsModalProps {
 
 export const InviteFriendsModal = ({ open, onOpenChange }: InviteFriendsModalProps) => {
   const { language } = useLanguage();
-  const { contacts, isLoading, hasPermission, error, fetchContacts, requestPermission } = useContacts();
+  const { user } = useAuth();
+  const { contacts, isLoading, hasPermission, fetchContacts, requestPermission } = useContacts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isSending, setIsSending] = useState(false);
+  const [senderName, setSenderName] = useState('');
 
   const t = {
     fr: {
@@ -68,6 +72,23 @@ export const InviteFriendsModal = ({ open, onOpenChange }: InviteFriendsModalPro
   };
 
   const texts = t[language];
+
+  // Fetch sender name
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', user.id)
+          .single();
+        if (data?.display_name) {
+          setSenderName(data.display_name);
+        }
+      }
+    };
+    if (open) fetchProfile();
+  }, [open, user]);
 
   useEffect(() => {
     if (open && isNative && hasPermission === null) {
@@ -116,13 +137,39 @@ export const InviteFriendsModal = ({ open, onOpenChange }: InviteFriendsModalPro
 
     setIsSending(true);
     
-    // Simulate sending invitations
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast.success(texts.success);
-    setSelectedContacts(new Set());
-    setIsSending(false);
-    onOpenChange(false);
+    try {
+      // Get emails from selected contacts
+      const selectedContactsList = contacts.filter(c => selectedContacts.has(c.contactId));
+      const emails = selectedContactsList
+        .flatMap(c => c.emails.map(e => e.address))
+        .filter(Boolean);
+
+      if (emails.length === 0) {
+        toast.error(language === 'fr' 
+          ? 'Aucun email trouvé pour les contacts sélectionnés' 
+          : 'No email found for selected contacts');
+        setIsSending(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-invite', {
+        body: {
+          emails,
+          senderName: senderName || 'Un ami',
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success(`${texts.success} (${data.sent} ${language === 'fr' ? 'envoyés' : 'sent'})`);
+      setSelectedContacts(new Set());
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error('Error sending invites:', err);
+      toast.error(language === 'fr' ? 'Erreur lors de l\'envoi' : 'Error sending invitations');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleWebShare = async () => {
