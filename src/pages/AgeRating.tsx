@@ -2,9 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Shield, UserCheck, Ban, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const AgeRating = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-background">
@@ -15,15 +17,15 @@ const AgeRating = () => {
           className="mb-6"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Retour
+          {t.back}
         </Button>
 
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Adéquation à l'âge
+            {t.ageAdequacy}
           </h1>
           <p className="text-muted-foreground">
-            Informations sur la classification d'âge de Zembo
+            {t.ageRatingInfo}
           </p>
         </div>
 
@@ -32,16 +34,12 @@ const AgeRating = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary" />
-                Classification 18+
+                {t.classification18}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-muted-foreground">
-              <p>
-                Zembo est une application de rencontres exclusivement réservée aux personnes majeures (18 ans et plus).
-              </p>
-              <p>
-                Cette restriction d'âge est imposée pour garantir un environnement sûr et approprié pour tous les utilisateurs.
-              </p>
+              <p>{t.classification18Desc1}</p>
+              <p>{t.classification18Desc2}</p>
             </CardContent>
           </Card>
 
@@ -49,21 +47,17 @@ const AgeRating = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-primary" />
-                Vérification obligatoire
+                {t.mandatoryVerification}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-muted-foreground">
-              <p>
-                Pour utiliser Zembo, chaque utilisateur doit :
-              </p>
+              <p>{t.verificationRequirements}</p>
               <ul className="list-disc list-inside space-y-2 ml-2">
-                <li>Déclarer sa date de naissance lors de l'inscription</li>
-                <li>Confirmer qu'il a 18 ans ou plus</li>
-                <li>Soumettre une vérification d'identité (pièce d'identité + selfie)</li>
+                <li>{t.verificationReq1}</li>
+                <li>{t.verificationReq2}</li>
+                <li>{t.verificationReq3}</li>
               </ul>
-              <p>
-                La vérification d'identité permet de s'assurer que l'utilisateur correspond à la photo de sa pièce d'identité et qu'il respecte l'âge minimum requis.
-              </p>
+              <p>{t.verificationExplanation}</p>
             </CardContent>
           </Card>
 
@@ -71,21 +65,19 @@ const AgeRating = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Ban className="w-5 h-5 text-destructive" />
-                Contenus interdits
+                {t.prohibitedContent}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-muted-foreground">
-              <p>
-                Les contenus suivants sont strictement interdits sur Zembo :
-              </p>
+              <p>{t.prohibitedContentIntro}</p>
               <ul className="list-disc list-inside space-y-2 ml-2">
-                <li>Contenu sexuellement explicite ou pornographique</li>
-                <li>Nudité ou images suggestives</li>
-                <li>Violence, harcèlement ou intimidation</li>
-                <li>Discours haineux ou discriminatoire</li>
-                <li>Contenu illégal ou frauduleux</li>
-                <li>Spam ou publicité non sollicitée</li>
-                <li>Usurpation d'identité</li>
+                <li>{t.prohibitedContent1}</li>
+                <li>{t.prohibitedContent2}</li>
+                <li>{t.prohibitedContent3}</li>
+                <li>{t.prohibitedContent4}</li>
+                <li>{t.prohibitedContent5}</li>
+                <li>{t.prohibitedContent6}</li>
+                <li>{t.prohibitedContent7}</li>
               </ul>
             </CardContent>
           </Card>
@@ -94,29 +86,25 @@ const AgeRating = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-warning" />
-                Modération et signalement
+                {t.moderationAndReporting}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-muted-foreground">
-              <p>
-                Zembo dispose d'un système de modération actif incluant :
-              </p>
+              <p>{t.moderationIntro}</p>
               <ul className="list-disc list-inside space-y-2 ml-2">
-                <li>Vérification manuelle des identités par notre équipe</li>
-                <li>Système de signalement accessible à tous les utilisateurs</li>
-                <li>Examen des signalements par des modérateurs</li>
-                <li>Sanctions (avertissement, suspension, bannissement)</li>
+                <li>{t.moderation1}</li>
+                <li>{t.moderation2}</li>
+                <li>{t.moderation3}</li>
+                <li>{t.moderation4}</li>
               </ul>
-              <p>
-                Tout utilisateur ne respectant pas nos règles peut être banni définitivement de la plateforme.
-              </p>
+              <p>{t.moderationConclusion}</p>
             </CardContent>
           </Card>
 
           <div className="text-center text-sm text-muted-foreground pt-4 border-t">
-            <p>Dernière mise à jour : Janvier 2026</p>
+            <p>{t.lastUpdated}</p>
             <p className="mt-2">
-              Pour toute question, contactez-nous à{" "}
+              {t.contactUs}{" "}
               <a href="mailto:support@zembo.app" className="text-primary hover:underline">
                 support@zembo.app
               </a>
