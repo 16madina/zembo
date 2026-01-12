@@ -186,7 +186,7 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <div className="h-full fixed inset-0 flex flex-col relative overflow-hidden">
       {/* Background Image with Animation */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -208,9 +208,9 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+      <div className="relative z-10 flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 flex items-center gap-4 py-6">
           <button
             onClick={handleBack}
             className="w-10 h-10 rounded-full glass flex items-center justify-center tap-highlight"
@@ -230,13 +230,13 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
           key={currentStep}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="text-2xl font-bold text-foreground mb-6"
+          className="flex-shrink-0 text-2xl font-bold text-foreground mb-4"
         >
           {currentStepConfig.title}
         </motion.h1>
 
-        {/* Step Content */}
-        <div className="flex-1">
+        {/* Step Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -250,8 +250,8 @@ const OnboardingSteps = ({ onComplete, onBack }: OnboardingStepsProps) => {
           </AnimatePresence>
         </div>
 
-        {/* Next Button */}
-        <div className="pt-6">
+        {/* Next Button - Fixed at bottom */}
+        <div className="flex-shrink-0 py-4 bg-gradient-to-t from-background via-background to-transparent">
           <Button
             onClick={handleNext}
             disabled={!isStepValid()}
