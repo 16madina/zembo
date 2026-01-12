@@ -2,6 +2,7 @@ export interface Profile {
   id: string;
   name: string;
   age: number;
+  gender: 'male' | 'female';
   location: string;
   distance: string;
   bio: string;
@@ -16,6 +17,7 @@ export const mockProfiles: Profile[] = [
     id: "1",
     name: "Sophie",
     age: 24,
+    gender: "female",
     location: "Paris, France",
     distance: "2 km",
     bio: "Passionnée de voyage et de photographie 📸 J'adore découvrir de nouveaux cafés et explorer la ville. À la recherche de quelqu'un pour partager des aventures !",
@@ -32,6 +34,7 @@ export const mockProfiles: Profile[] = [
     id: "2",
     name: "Emma",
     age: 26,
+    gender: "female",
     location: "Lyon, France",
     distance: "5 km",
     bio: "Foodie assumée 🍕 Développeuse le jour, chef amateur la nuit. Si tu aimes les bons restos et les discussions profondes, on va s'entendre !",
@@ -48,6 +51,7 @@ export const mockProfiles: Profile[] = [
     id: "3",
     name: "Léa",
     age: 23,
+    gender: "female",
     location: "Marseille, France",
     distance: "3 km",
     bio: "Sportive dans l'âme 🏃‍♀️ Quand je ne cours pas, je suis probablement à la plage ou en train de lire. Cherche quelqu'un d'actif et positif !",
@@ -64,6 +68,7 @@ export const mockProfiles: Profile[] = [
     id: "4",
     name: "Camille",
     age: 28,
+    gender: "female",
     location: "Bordeaux, France",
     distance: "8 km",
     bio: "Artiste dans l'âme 🎨 Je peins, je dessine, je crée. La vie est trop courte pour être ordinaire. Viens créer des souvenirs avec moi !",
@@ -80,6 +85,7 @@ export const mockProfiles: Profile[] = [
     id: "5",
     name: "Chloé",
     age: 25,
+    gender: "female",
     location: "Nice, France",
     distance: "1 km",
     bio: "Amoureuse de la mer 🌊 Kitesurf, plongée, paddle... Si tu aimes l'océan autant que moi, swipe right ! On pourrait partager un coucher de soleil.",

@@ -85,11 +85,11 @@ const NearbyMap = ({ profiles, onProfileClick, userCountry }: NearbyMapProps) =>
       return false;
     }
     
-    // Gender filter - Note: using name heuristics since Profile type doesn't have gender
-    // In a real app, this would be based on actual profile.gender field
+    // Gender filter
     if (!filters.genders.includes("all")) {
-      // For demo purposes, we'll skip gender filter if the profile doesn't have gender info
-      // This allows all profiles to show when specific genders are selected
+      if (!filters.genders.includes(profile.gender)) {
+        return false;
+      }
     }
     
     // Distance filter - extract km from profile distance
