@@ -109,6 +109,31 @@ export const useChatMessages = (otherUserId: string) => {
       .eq("is_read", false);
   }, [user?.id, otherUserId]);
 
+  const sendNotification = useCallback(async (messageId: string, content: string | null, isAudio: boolean, isImage: boolean) => {
+    if (!user?.id || !otherUserId) return;
+
+    try {
+      const response = await supabase.functions.invoke("notify-message", {
+        body: {
+          sender_id: user.id,
+          receiver_id: otherUserId,
+          message_id: messageId,
+          content: content,
+          is_audio: isAudio,
+          is_image: isImage,
+        },
+      });
+
+      if (response.error) {
+        console.error("Error sending notification:", response.error);
+      } else {
+        console.log("Message notification sent:", response.data);
+      }
+    } catch (err) {
+      console.error("Error invoking notify-message function:", err);
+    }
+  }, [user?.id, otherUserId]);
+
   const sendMessage = useCallback(async (content: string, imageUrl?: string, audioUrl?: string, audioDuration?: number) => {
     if (!user?.id || !otherUserId) return null;
 
@@ -130,8 +155,13 @@ export const useChatMessages = (otherUserId: string) => {
       return null;
     }
 
+    // Send push notification to receiver
+    if (data) {
+      sendNotification(data.id, content, !!audioUrl, !!imageUrl);
+    }
+
     return data;
-  }, [user?.id, otherUserId]);
+  }, [user?.id, otherUserId, sendNotification]);
 
   const uploadImage = useCallback(async (file: File): Promise<string | null> => {
     if (!user?.id) return null;

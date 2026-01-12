@@ -7,10 +7,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface MatchNotificationRequest {
-  user1_id: string;
-  user2_id: string;
-  match_id: string;
+interface LiveNotificationRequest {
+  streamer_id: string;
+  live_id: string;
+  live_title: string;
 }
 
 interface ServiceAccountKey {
@@ -104,136 +104,120 @@ serve(async (req) => {
     const serviceAccount: ServiceAccountKey = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { user1_id, user2_id, match_id }: MatchNotificationRequest = await req.json();
+    const { streamer_id, live_id, live_title }: LiveNotificationRequest = await req.json();
 
-    if (!user1_id || !user2_id) {
+    if (!streamer_id || !live_id) {
       return new Response(
-        JSON.stringify({ error: "Missing user IDs" }),
+        JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch both users' profiles with FCM tokens and display names
+    // Fetch streamer's profile
+    const { data: streamerProfile } = await supabase
+      .from("profiles")
+      .select("display_name, avatar_url")
+      .eq("user_id", streamer_id)
+      .single();
+
+    const streamerName = streamerProfile?.display_name || "Un utilisateur";
+
+    // Fetch all matches of the streamer to notify them
+    const { data: matches, error: matchesError } = await supabase
+      .from("matches")
+      .select("user1_id, user2_id")
+      .or(`user1_id.eq.${streamer_id},user2_id.eq.${streamer_id}`);
+
+    if (matchesError) {
+      console.error("Error fetching matches:", matchesError);
+      throw matchesError;
+    }
+
+    // Get all matched user IDs (excluding the streamer)
+    const matchedUserIds = matches?.map(m => 
+      m.user1_id === streamer_id ? m.user2_id : m.user1_id
+    ) || [];
+
+    if (matchedUserIds.length === 0) {
+      console.log("No matched users to notify");
+      return new Response(
+        JSON.stringify({ success: true, message: "No users to notify" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch FCM tokens for all matched users
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
-      .select("user_id, display_name, fcm_token, avatar_url")
-      .in("user_id", [user1_id, user2_id]);
+      .select("user_id, fcm_token")
+      .in("user_id", matchedUserIds)
+      .not("fcm_token", "is", null);
 
     if (profilesError) {
       console.error("Error fetching profiles:", profilesError);
       throw profilesError;
     }
 
-    const user1Profile = profiles?.find(p => p.user_id === user1_id);
-    const user2Profile = profiles?.find(p => p.user_id === user2_id);
-
-    // Get OAuth2 access token
-    const accessToken = await getAccessToken(serviceAccount);
-
-    const notifications: Promise<Response>[] = [];
-
-    // Send notification to user1 about user2
-    if (user1Profile?.fcm_token) {
-      const notifPromise = fetch(
-        `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            message: {
-              token: user1Profile.fcm_token,
-              notification: {
-                title: "💕 Nouveau Match !",
-                body: `${user2Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
-              },
-              apns: {
-                payload: {
-                  aps: {
-                    sound: "default",
-                    badge: 1,
-                  },
-                },
-              },
-              android: {
-                priority: "high",
-                notification: {
-                  sound: "default",
-                },
-              },
-              data: {
-                type: "match",
-                match_id: match_id || "",
-                matched_user_id: user2_id,
-                matched_user_name: user2Profile?.display_name || "",
-                matched_user_avatar: user2Profile?.avatar_url || "",
-              },
-            },
-          }),
-        }
-      );
-      notifications.push(notifPromise);
-    }
-
-    // Send notification to user2 about user1
-    if (user2Profile?.fcm_token) {
-      const notifPromise = fetch(
-        `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            message: {
-              token: user2Profile.fcm_token,
-              notification: {
-                title: "💕 Nouveau Match !",
-                body: `${user1Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
-              },
-              apns: {
-                payload: {
-                  aps: {
-                    sound: "default",
-                    badge: 1,
-                  },
-                },
-              },
-              android: {
-                priority: "high",
-                notification: {
-                  sound: "default",
-                },
-              },
-              data: {
-                type: "match",
-                match_id: match_id || "",
-                matched_user_id: user1_id,
-                matched_user_name: user1Profile?.display_name || "",
-                matched_user_avatar: user1Profile?.avatar_url || "",
-              },
-            },
-          }),
-        }
-      );
-      notifications.push(notifPromise);
-    }
-
-    if (notifications.length === 0) {
-      console.log("No FCM tokens found for users, skipping notifications");
+    if (!profiles || profiles.length === 0) {
+      console.log("No FCM tokens found for matched users");
       return new Response(
         JSON.stringify({ success: true, message: "No FCM tokens available" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Get OAuth2 access token
+    const accessToken = await getAccessToken(serviceAccount);
+
+    // Send notifications to all matched users
+    const notifications = profiles.map(profile => 
+      fetch(
+        `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            message: {
+              token: profile.fcm_token,
+              notification: {
+                title: "🔴 Live en cours !",
+                body: `${streamerName} est en live${live_title ? `: "${live_title}"` : ""} ! Rejoins maintenant.`,
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    sound: "default",
+                    badge: 1,
+                  },
+                },
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                },
+              },
+              data: {
+                type: "live",
+                live_id: live_id,
+                live_title: live_title || "",
+                streamer_id: streamer_id,
+                streamer_name: streamerName,
+                streamer_avatar: streamerProfile?.avatar_url || "",
+              },
+            },
+          }),
+        }
+      )
+    );
+
     const results = await Promise.allSettled(notifications);
     const successCount = results.filter(r => r.status === "fulfilled").length;
 
-    console.log(`Match notifications sent: ${successCount}/${notifications.length}`);
+    console.log(`Live notifications sent: ${successCount}/${notifications.length}`);
 
     return new Response(
       JSON.stringify({ 
@@ -245,7 +229,7 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error sending match notifications:", error);
+    console.error("Error sending live notification:", error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

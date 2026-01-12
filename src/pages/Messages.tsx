@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, CheckCheck, Check } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
@@ -20,6 +20,13 @@ interface Conversation {
 }
 
 interface NewMatch {
+  id: string;
+  name: string;
+  photo: string;
+  isOnline: boolean;
+}
+
+interface OpenChatData {
   id: string;
   name: string;
   photo: string;
@@ -127,6 +134,36 @@ const MessageStatus = ({ status }: { status: Conversation["status"] }) => {
 
 const Messages = () => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+
+  // Check for notification deep link on mount
+  useEffect(() => {
+    const openChatData = sessionStorage.getItem("openChatWith");
+    if (openChatData) {
+      try {
+        const chatData: OpenChatData = JSON.parse(openChatData);
+        sessionStorage.removeItem("openChatWith");
+        
+        // Create a conversation object from the notification data
+        const conversation: Conversation = {
+          id: chatData.id,
+          user: {
+            name: chatData.name,
+            photo: chatData.photo || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+            isOnline: chatData.isOnline,
+          },
+          lastMessage: "",
+          time: "",
+          unread: 0,
+          status: "read",
+          isTyping: false,
+        };
+        
+        setSelectedConversation(conversation);
+      } catch (e) {
+        console.error("Error parsing openChatWith data:", e);
+      }
+    }
+  }, []);
 
   const handleOpenChat = (conv: Conversation) => {
     setSelectedConversation(conv);
