@@ -364,17 +364,38 @@
   }
 }
 
-/* Keyboard handling for native mobile */
-.keyboard-open {
-  --safe-area-bottom: 0px;
+/* iMessage-style chat layout with keyboard handling */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
 }
 
-.keyboard-open .chat-input-container {
+.chat-messages-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chat-input-wrapper {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  background: hsl(var(--background));
+  will-change: transform;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* When keyboard is open, move input up smoothly */
+.keyboard-open .chat-input-wrapper {
   transform: translateY(calc(-1 * var(--keyboard-height)));
-  transition: transform 0.25s ease-out;
 }
 
-.keyboard-open .chat-messages-container {
-  padding-bottom: calc(var(--keyboard-height) + 80px);
-  transition: padding-bottom 0.25s ease-out;
+/* Adjust messages scroll area when keyboard is visible */
+.keyboard-open .chat-messages-area {
+  padding-bottom: var(--keyboard-height);
+  transition: padding-bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
