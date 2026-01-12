@@ -18,6 +18,7 @@ import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import VerifyEmail from "./pages/VerifyEmail";
 import NotFound from "./pages/NotFound";
+import AgeRating from "./pages/AgeRating";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+    <Route path="/age-rating" element={<AgeRating />} />
     <Route path="/verify-email" element={<VerifyEmail />} />
     <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
     <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
