@@ -650,20 +650,85 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               Notre IA va vérifier que vous êtes la même personne que sur vos photos de profil.
             </motion.p>
 
-            {/* Info box about face matching */}
+            {/* AI Preload Status Indicator */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
-              className="w-full max-w-xs mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20"
+              className="w-full max-w-xs mb-6 p-4 rounded-2xl bg-card/80 border border-border"
             >
-              <div className="flex items-center gap-3 mb-2">
-                <UserCheck className="w-5 h-5 text-primary" />
-                <span className="font-medium text-foreground text-sm">Reconnaissance faciale</span>
+              <div className="space-y-3">
+                {/* Models Loading Status */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {isComparisonLoading ? (
+                      <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                    ) : isComparisonModelsLoaded ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : comparisonError ? (
+                      <XCircle className="w-4 h-4 text-destructive" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-muted" />
+                    )}
+                    <span className="text-sm text-muted-foreground">Modèles IA</span>
+                  </div>
+                  <span className={`text-xs font-medium ${
+                    isComparisonLoading ? 'text-primary' : 
+                    isComparisonModelsLoaded ? 'text-green-500' : 
+                    comparisonError ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {isComparisonLoading ? 'Chargement...' : 
+                     isComparisonModelsLoaded ? 'Prêt' : 
+                     comparisonError ? 'Erreur' : 'En attente'}
+                  </span>
+                </div>
+
+                {/* Photo Descriptors Status */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {isComparisonModelsLoaded && !hasPhotoDescriptors && photoDescriptors.length === 0 ? (
+                      <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                    ) : hasPhotoDescriptors ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-muted" />
+                    )}
+                    <span className="text-sm text-muted-foreground">Analyse photos</span>
+                  </div>
+                  <span className={`text-xs font-medium ${
+                    hasPhotoDescriptors ? 'text-green-500' : 
+                    isComparisonModelsLoaded && !hasPhotoDescriptors ? 'text-primary' : 'text-muted-foreground'
+                  }`}>
+                    {hasPhotoDescriptors ? `${photoDescriptors.length} visage${photoDescriptors.length > 1 ? 's' : ''} détecté${photoDescriptors.length > 1 ? 's' : ''}` : 
+                     isComparisonModelsLoaded && !hasPhotoDescriptors ? 'Extraction...' : 'En attente'}
+                  </span>
+                </div>
+
+                {/* Overall Progress Bar */}
+                <div className="pt-2">
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <motion.div
+                      initial={{ width: '0%' }}
+                      animate={{ 
+                        width: isComparisonModelsLoaded && hasPhotoDescriptors ? '100%' : 
+                               isComparisonModelsLoaded ? '50%' : 
+                               isComparisonLoading ? '25%' : '0%' 
+                      }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                      className={`h-full rounded-full ${
+                        isComparisonModelsLoaded && hasPhotoDescriptors 
+                          ? 'bg-green-500' 
+                          : 'bg-primary'
+                      }`}
+                    />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    {isComparisonModelsLoaded && hasPhotoDescriptors 
+                      ? '✓ Prêt pour la vérification instantanée'
+                      : 'Préparation de la reconnaissance faciale...'}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Votre visage sera comparé avec vos {data.photos.length} photo{data.photos.length > 1 ? 's' : ''} uploadée{data.photos.length > 1 ? 's' : ''} pour confirmer votre identité.
-              </p>
             </motion.div>
 
             {/* Steps Preview */}
