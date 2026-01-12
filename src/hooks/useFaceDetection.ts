@@ -21,6 +21,11 @@ const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
+// Check if we're on Android specifically
+const isAndroidDevice = () => {
+  return /Android/i.test(navigator.userAgent);
+};
+
 export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDetectionProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +111,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
     let isMounted = true;
     const isMobile = isMobileDevice();
+    const isAndroid = isAndroidDevice();
     isInitializingRef.current = true;
 
     const initFaceLandmarker = async (useGPU: boolean = true) => {
@@ -113,25 +119,28 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         setIsLoading(true);
         setError(null);
 
-        console.log(`[FaceDetection] Init, GPU: ${useGPU}, Mobile: ${isMobile}`);
+        console.log(`[FaceDetection] Init, GPU: ${useGPU}, Mobile: ${isMobile}, Android: ${isAndroid}`);
 
         const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
 
         if (!isMounted) return;
 
         // Use a more compatible WASM version for mobile
-        const wasmUrl = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
+        // For Android, use an older more stable version
+        const wasmUrl = isAndroid 
+          ? "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+          : "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
         
-        console.log("[FaceDetection] Loading FilesetResolver...");
+        console.log(`[FaceDetection] Loading FilesetResolver from ${wasmUrl}...`);
         const filesetResolver = await FilesetResolver.forVisionTasks(wasmUrl);
         
         if (!isMounted) return;
         
         console.log("[FaceDetection] FilesetResolver loaded successfully");
 
-        // Determine delegate based on device and retry attempt
-        // On mobile, prefer CPU as GPU WebGL support is inconsistent
-        const delegate = (isMobile || !useGPU) ? "CPU" : "GPU";
+        // On Android and mobile, always use CPU for stability
+        // GPU WebGL support is very inconsistent on Android WebViews
+        const delegate = (isAndroid || isMobile || !useGPU) ? "CPU" : "GPU";
         console.log(`[FaceDetection] Creating FaceLandmarker with delegate: ${delegate}`);
 
         const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
@@ -280,15 +289,17 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
       }
     };
 
-    // Add a loading timeout - if still loading after 15 seconds, show error
+    // Add a loading timeout - if still loading after timeout, show error
+    // Extended timeout for Android (25s) vs iOS/desktop (15s)
+    const timeoutMs = isAndroidDevice() ? 25000 : 15000;
     const loadingTimeout = setTimeout(() => {
       if (isMounted && enabled && !isInitializedRef.current) {
-        console.error("[FaceDetection] Loading timeout reached");
+        console.error(`[FaceDetection] Loading timeout reached (${timeoutMs}ms)`);
         setError("Le chargement de l'IA prend trop de temps. Veuillez réessayer.");
         setIsLoading(false);
         isInitializingRef.current = false;
       }
-    }, 15000);
+    }, timeoutMs);
 
     initFaceLandmarker(!isMobile); // Start with GPU on desktop, CPU on mobile
 
