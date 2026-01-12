@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { create, getNumericDate } from "https://deno.land/x/djwt@v2.8/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,81 @@ interface PushNotificationRequest {
   data?: Record<string, string>;
 }
 
+interface ServiceAccountKey {
+  type: string;
+  project_id: string;
+  private_key_id: string;
+  private_key: string;
+  client_email: string;
+  client_id: string;
+  auth_uri: string;
+  token_uri: string;
+  auth_provider_x509_cert_url: string;
+  client_x509_cert_url: string;
+}
+
+// Generate OAuth2 access token from Service Account
+async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  
+  // Create JWT for Google OAuth2
+  const jwtPayload = {
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  // Import the private key
+  const pemHeader = "-----BEGIN PRIVATE KEY-----";
+  const pemFooter = "-----END PRIVATE KEY-----";
+  const pemContents = serviceAccount.private_key
+    .replace(pemHeader, "")
+    .replace(pemFooter, "")
+    .replace(/\n/g, "");
+  
+  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryKey,
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"]
+  );
+
+  // Create JWT
+  const jwt = await create(
+    { alg: "RS256", typ: "JWT" },
+    jwtPayload,
+    cryptoKey
+  );
+
+  // Exchange JWT for access token
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+
+  const tokenResult = await tokenResponse.json();
+  
+  if (!tokenResponse.ok) {
+    throw new Error(`Failed to get access token: ${JSON.stringify(tokenResult)}`);
+  }
+
+  return tokenResult.access_token;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -19,12 +95,13 @@ serve(async (req) => {
   }
 
   try {
-    const FIREBASE_SERVER_KEY = Deno.env.get("FIREBASE_SERVER_KEY");
+    const FIREBASE_SERVICE_ACCOUNT = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
     
-    if (!FIREBASE_SERVER_KEY) {
-      throw new Error("FIREBASE_SERVER_KEY is not configured");
+    if (!FIREBASE_SERVICE_ACCOUNT) {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT is not configured");
     }
 
+    const serviceAccount: ServiceAccountKey = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
     const { token, title, body, data }: PushNotificationRequest = await req.json();
 
     if (!token || !title || !body) {
@@ -37,25 +114,44 @@ serve(async (req) => {
       );
     }
 
-    // Send push notification via FCM HTTP v1 API (Legacy)
-    const fcmResponse = await fetch("https://fcm.googleapis.com/fcm/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `key=${FIREBASE_SERVER_KEY}`,
-      },
-      body: JSON.stringify({
-        to: token,
-        notification: {
-          title,
-          body,
-          sound: "default",
-          badge: 1,
+    // Get OAuth2 access token
+    const accessToken = await getAccessToken(serviceAccount);
+
+    // Send push notification via FCM HTTP v1 API
+    const fcmResponse = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
         },
-        data: data || {},
-        priority: "high",
-      }),
-    });
+        body: JSON.stringify({
+          message: {
+            token,
+            notification: {
+              title,
+              body,
+            },
+            apns: {
+              payload: {
+                aps: {
+                  sound: "default",
+                  badge: 1,
+                },
+              },
+            },
+            android: {
+              priority: "high",
+              notification: {
+                sound: "default",
+              },
+            },
+            data: data || {},
+          },
+        }),
+      }
+    );
 
     const fcmResult = await fcmResponse.json();
 
