@@ -107,46 +107,36 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     };
   }, [user.id]);
 
-  // Keyboard height listener for native mobile
-  useEffect(() => {
-    if (!isNative) return;
+  // Smooth scroll to bottom helper
+  const scrollToBottomSmooth = (instant = false) => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: instant ? 'auto' : 'smooth'
+      });
+    }
+  };
 
-    const handleKeyboardShow = () => {
+  // Keyboard height listener for native mobile - iMessage style
+  useEffect(() => {
+    const updateKeyboardHeight = () => {
       const height = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--keyboard-height') || '0');
       setKeyboardHeight(height);
-      // Scroll to bottom when keyboard opens
-      setTimeout(() => {
-        messagesContainerRef.current?.scrollTo({
-          top: messagesContainerRef.current.scrollHeight,
-          behavior: 'smooth'
-        });
-      }, 100);
-    };
-
-    const handleKeyboardHide = () => {
-      setKeyboardHeight(0);
-    };
-
-    // Use MutationObserver to watch for CSS variable changes
-    const observer = new MutationObserver(() => {
-      const height = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--keyboard-height') || '0');
+      
+      // When keyboard opens, scroll to bottom after layout adjusts
       if (height > 0) {
-        handleKeyboardShow();
-      } else {
-        handleKeyboardHide();
+        requestAnimationFrame(() => {
+          scrollToBottomSmooth();
+        });
       }
-    });
+    };
 
+    // Watch for CSS variable changes via MutationObserver
+    const observer = new MutationObserver(updateKeyboardHeight);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
     
-    // Also listen to body class changes
-    const bodyObserver = new MutationObserver(() => {
-      if (document.body.classList.contains('keyboard-open')) {
-        handleKeyboardShow();
-      } else {
-        handleKeyboardHide();
-      }
-    });
+    // Also watch body class for keyboard-open
+    const bodyObserver = new MutationObserver(updateKeyboardHeight);
     bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     return () => {
@@ -179,13 +169,13 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     onBack();
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Auto-scroll when new messages arrive
   useEffect(() => {
-    scrollToBottom();
-  }, [displayMessages]);
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      scrollToBottomSmooth();
+    });
+  }, [displayMessages.length]);
 
   // Simulate typing indicator
   useEffect(() => {
@@ -365,7 +355,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed inset-0 z-[100] bg-background flex flex-col pt-[env(safe-area-inset-top)]"
+        className="fixed inset-0 z-[100] bg-background flex flex-col pt-[env(safe-area-inset-top)] chat-container"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 glass-strong border-b border-border/50 flex-shrink-0">
@@ -463,11 +453,13 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           </div>
         </div>
 
-        {/* Messages */}
+        {/* Messages - iMessage style scrolling area */}
         <div 
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-3 scrollbar-hide"
-          style={{ paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 80}px` : undefined }}
+          className="chat-messages-area px-4 py-4 space-y-3 scrollbar-hide"
+          style={{ 
+            paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 100}px` : '100px'
+          }}
         >
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
@@ -622,15 +614,11 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           <ChatRestrictionBanner status={identityStatus} />
         )}
 
-        {/* Input - Fixed at bottom with proper iOS safe area and keyboard handling */}
+        {/* Input - iMessage style anchored at bottom */}
         <div 
-          className="px-4 py-3 glass-strong border-t border-border/50 flex-shrink-0 chat-input-container"
+          className="chat-input-wrapper px-4 py-3 glass-strong border-t border-border/50"
           style={{ 
-            paddingBottom: keyboardHeight > 0 
-              ? '12px' 
-              : 'calc(max(16px, env(safe-area-inset-bottom)) + 8px)',
-            transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : undefined,
-            transition: 'transform 0.25s ease-out, padding-bottom 0.25s ease-out'
+            paddingBottom: 'calc(max(16px, env(safe-area-inset-bottom)) + 8px)'
           }}
         >
           {isRecording ? (
