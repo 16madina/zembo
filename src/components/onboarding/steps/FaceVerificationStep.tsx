@@ -691,6 +691,24 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       
       console.log("[FaceVerification] Starting camera, isNative:", isNative);
       
+      // For native Capacitor apps, request camera permission via Capacitor first
+      // This ensures the native permission dialog is shown on Android/iOS
+      if (isNative) {
+        try {
+          console.log("[FaceVerification] Requesting native camera permission via Capacitor...");
+          const { Camera } = await import('@capacitor/camera');
+          const permissionStatus = await Camera.requestPermissions({ permissions: ['camera'] });
+          console.log("[FaceVerification] Camera permission status:", permissionStatus);
+          
+          if (permissionStatus.camera === 'denied') {
+            throw new Error("Accès caméra refusé. Veuillez autoriser l'accès dans les paramètres de votre téléphone.");
+          }
+        } catch (permError: any) {
+          console.error("[FaceVerification] Native permission request failed:", permError);
+          // Continue anyway - getUserMedia will also prompt for permission
+        }
+      }
+      
       // For native Capacitor apps, still try getUserMedia as it works in WebView
       const constraints: MediaStreamConstraints = {
         video: { 
