@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { isValidPhoneLength } from "@/data/countries";
+import { validateName, validateEmail } from "@/lib/validation";
 import { FaceRecognitionPreloadProvider } from "@/contexts/FaceRecognitionPreloadContext";
 import NameStep from "./steps/NameStep";
 import CountryStep from "./steps/CountryStep";
@@ -104,13 +105,16 @@ const OnboardingStepsInner = ({ onComplete, onBack }: OnboardingStepsProps) => {
   const isStepValid = () => {
     switch (steps[currentStep].id) {
       case "name":
-        return data.firstName.trim().length >= 2 && data.lastName.trim().length >= 2;
+        const firstNameValid = validateName(data.firstName).isValid;
+        const lastNameValid = validateName(data.lastName).isValid;
+        return firstNameValid && lastNameValid;
       case "country":
         return data.country.length > 0;
       case "phone":
         return isValidPhoneLength(data.phone, data.countryCode);
       case "email":
-        return data.email.includes("@") && data.password.length >= 6;
+        const emailValid = validateEmail(data.email).isValid;
+        return emailValid && data.password.length >= 6;
       case "birthday":
         return data.birthday !== null;
       case "genderAndPreference":
