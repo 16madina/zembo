@@ -137,7 +137,7 @@ const Messages = () => {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden pb-[88px]">
+    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       {/* Fixed Header */}
       <motion.header 
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"

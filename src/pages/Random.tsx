@@ -212,7 +212,7 @@ const Random = () => {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden pb-[88px]">
+    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       <motion.header 
         className="flex items-center justify-center px-6 py-4 flex-shrink-0"
         initial={{ opacity: 0, y: -20 }}

@@ -241,10 +241,10 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="fixed inset-0 z-50 bg-background flex flex-col"
+      className="fixed inset-0 z-50 bg-background flex flex-col pt-[env(safe-area-inset-top)]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 glass-strong border-b border-border/50 safe-area-top">
+      <div className="flex items-center justify-between px-4 py-3 glass-strong border-b border-border/50 flex-shrink-0">
         <div className="flex items-center gap-3">
           <motion.button
             onClick={onBack}
@@ -439,7 +439,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       </AnimatePresence>
 
       {/* Input */}
-      <div className="px-4 py-3 mb-20 glass-strong border-t border-border/50">
+      <div className="px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] glass-strong border-t border-border/50 flex-shrink-0">
         {isRecording ? (
           <div className="flex items-center gap-3">
             <motion.button

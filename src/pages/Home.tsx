@@ -141,7 +141,7 @@ const Home = () => {
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden pb-[88px]">
+    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       {/* Header */}
       <motion.header 
         className="flex items-center justify-between px-3 py-1.5 flex-shrink-0"
