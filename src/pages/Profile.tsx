@@ -29,9 +29,11 @@ import PhotoGallery from "@/components/profile/PhotoGallery";
 import ProfileCompletionRing from "@/components/profile/ProfileCompletionRing";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import SettingsSheet from "@/components/profile/SettingsSheet";
+import IdentityVerificationBanner from "@/components/profile/IdentityVerificationBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -103,6 +105,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
+  const { status: identityStatus, rejectionReason: identityRejectionReason, refetch: refetchIdentity } = useIdentityVerification();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -473,6 +476,13 @@ const Profile = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Identity Verification Banner */}
+      <IdentityVerificationBanner 
+        status={identityStatus} 
+        rejectionReason={identityRejectionReason}
+        onRetry={() => navigate("/")}
+      />
 
       {/* Profile Content */}
       <motion.div

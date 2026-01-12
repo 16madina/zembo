@@ -95,12 +95,14 @@ const AdminIdentityTab = () => {
 
     setIsProcessing(true);
     try {
+      const reasonText = approved ? null : rejectionReason || "Document non conforme";
+      
       // Update verification status
       const { error: verificationError } = await supabase
         .from("identity_verifications")
         .update({
           status: approved ? "approved" : "rejected",
-          rejection_reason: approved ? null : rejectionReason || "Document non conforme",
+          rejection_reason: reasonText,
           reviewed_by: user.id,
           reviewed_at: new Date().toISOString(),
         })
@@ -118,6 +120,20 @@ const AdminIdentityTab = () => {
         .eq("user_id", selectedVerification.user_id);
 
       if (profileError) throw profileError;
+
+      // Send push notification to user
+      try {
+        await supabase.functions.invoke("notify-identity-verification", {
+          body: {
+            userId: selectedVerification.user_id,
+            status: approved ? "approved" : "rejected",
+            rejectionReason: reasonText,
+          },
+        });
+      } catch (notifyError) {
+        console.error("Error sending notification:", notifyError);
+        // Don't fail the whole operation if notification fails
+      }
 
       toast.success(
         approved

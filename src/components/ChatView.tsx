@@ -8,7 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useVoiceCall } from "@/hooks/useVoiceCall";
+import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import VoiceCallModal from "@/components/VoiceCallModal";
+import ChatRestrictionBanner from "@/components/chat/ChatRestrictionBanner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +35,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const { messages: dbMessages, isLoading, sendMessage, uploadImage } = useChatMessages(user.id);
+  const { status: identityStatus, canInteract } = useIdentityVerification();
   const { 
     callState, 
     initiateCall, 
@@ -158,6 +161,16 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
   const handleSend = async () => {
     if ((!newMessage.trim() && !selectedFile) || isSending) return;
+    
+    // Check if user can interact
+    if (!canInteract) {
+      toast({
+        title: "Accès limité",
+        description: "Vous devez compléter la vérification d'identité pour envoyer des messages.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSending(true);
     
@@ -282,6 +295,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   };
 
   const showSendButton = newMessage.trim() || selectedImage || isFocused;
+  const isInputDisabled = identityStatus === "pending";
 
   const MessageStatus = ({ status }: { status: "sent" | "delivered" | "read" }) => {
     if (status === "sent") {
@@ -530,6 +544,11 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           )}
         </AnimatePresence>
 
+        {/* Restriction Banner */}
+        {identityStatus !== "approved" && (
+          <ChatRestrictionBanner status={identityStatus} />
+        )}
+
         {/* Input - Fixed at bottom with proper iOS safe area */}
         <div className="px-4 py-3 glass-strong border-t border-border/50 flex-shrink-0" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
           {isRecording ? (
@@ -578,7 +597,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
                 <Image className="w-5 h-5 text-muted-foreground" />
               </motion.button>
               
-              <div className="flex-1 flex items-center gap-2 glass rounded-full px-4 py-2.5">
+              <div className={`flex-1 flex items-center gap-2 glass rounded-full px-4 py-2.5 ${isInputDisabled ? 'opacity-50' : ''}`}>
                 <input
                   type="text"
                   value={newMessage}
@@ -586,8 +605,9 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
                   onKeyPress={handleKeyPress}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  placeholder="Écris ton message..."
-                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0"
+                  placeholder={isInputDisabled ? "Vérification en attente..." : "Écris ton message..."}
+                  disabled={isInputDisabled}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-w-0 disabled:cursor-not-allowed"
                 />
                 <motion.button
                   ref={emojiButtonRef}
