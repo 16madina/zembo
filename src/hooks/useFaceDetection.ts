@@ -81,6 +81,10 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
     return { yaw, pitch, direction, confidence };
   }, []);
 
+  // Store videoRef in a stable ref to avoid triggering useEffect
+  const videoRefStable = useRef(videoRef.current);
+  videoRefStable.current = videoRef.current;
+
   useEffect(() => {
     // Prevent re-initialization if already done or in progress
     if (!enabled || isInitializedRef.current || isInitializingRef.current) {
@@ -145,11 +149,15 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         let frameCount = 0;
         
         const detectFace = () => {
-          if (!isMounted || !videoRef.current || !faceLandmarkerRef.current) return;
+          if (!isMounted || !videoRefStable.current || !faceLandmarkerRef.current) return;
           
-          const video = videoRef.current;
+          const video = videoRefStable.current;
           
-          if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+          // More robust video ready check for WebView
+          const hasFrames = video.videoWidth > 0 && video.videoHeight > 0;
+          const isReady = hasFrames || video.readyState >= 2;
+          
+          if (isReady && video.currentTime !== lastVideoTime) {
             lastVideoTime = video.currentTime;
             frameCount++;
             
@@ -194,24 +202,36 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
           animationFrameRef.current = requestAnimationFrame(detectFace);
         };
 
-        // Wait for video to be ready with timeout
+        // Wait for video to be ready with timeout - use robust check for WebView
         let videoCheckCount = 0;
-        const maxVideoChecks = 100; // 10 seconds max wait
+        const maxVideoChecks = 150; // 15 seconds max wait (150 * 100ms)
+        const checkStartTime = Date.now();
 
         const checkVideoReady = () => {
           if (!isMounted) return;
           
           videoCheckCount++;
+          const video = videoRefStable.current;
           
-          if (videoRef.current && videoRef.current.readyState >= 2) {
-            console.log("[FaceDetection] Video ready, starting detection loop");
+          // More robust check: video has dimensions OR readyState >= 2
+          const hasFrames = video && video.videoWidth > 0 && video.videoHeight > 0;
+          const hasReadyState = video && video.readyState >= 2;
+          
+          if (hasFrames || hasReadyState) {
+            console.log(`[FaceDetection] Video ready (hasFrames=${hasFrames}, readyState=${video?.readyState}), starting detection loop`);
             detectFace();
           } else if (videoCheckCount < maxVideoChecks) {
+            // Log periodically for debugging
+            if (videoCheckCount % 10 === 0) {
+              console.log(`[FaceDetection] Waiting for video... check ${videoCheckCount}, readyState=${video?.readyState}, dimensions=${video?.videoWidth}x${video?.videoHeight}`);
+            }
             setTimeout(checkVideoReady, 100);
           } else {
-            console.warn("[FaceDetection] Video not ready after timeout");
+            const elapsed = Date.now() - checkStartTime;
+            console.warn(`[FaceDetection] Video not ready after ${elapsed}ms, readyState=${video?.readyState}, dimensions=${video?.videoWidth}x${video?.videoHeight}`);
             setError("La caméra met trop de temps à démarrer");
             setIsLoading(false);
+            isInitializingRef.current = false;
           }
         };
 
@@ -264,7 +284,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
       isInitializedRef.current = false;
       isInitializingRef.current = false;
     };
-  }, [enabled, videoRef, calculateHeadPose]);
+  }, [enabled, calculateHeadPose]); // Removed videoRef from dependencies
 
   return {
     isLoading,
