@@ -24,8 +24,8 @@ const BottomNavigation = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-[var(--sab)]">
-      <div className="mx-4 mb-4">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-4 mb-2">
         <div className="glass-strong rounded-2xl">
           <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
             {navItems.map((item) => {

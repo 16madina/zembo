@@ -162,11 +162,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    padding-top: var(--sat);
-    padding-right: var(--sar);
-    padding-bottom: var(--sab);
-    padding-left: var(--sal);
-    /* Prevent pull-to-refresh on Android */
+    /* Safe areas handled by components, not body padding */
+    /* Prevent pull-to-refresh on Android/iOS */
     touch-action: pan-x pan-y;
   }
 

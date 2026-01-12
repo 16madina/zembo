@@ -470,7 +470,7 @@ const LiveRoom = () => {
         />
 
         {/* Top Bar */}
-        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between bg-gradient-to-b from-background/80 to-transparent">
+        <div className="absolute top-0 left-0 right-0 pt-[env(safe-area-inset-top)] px-4 pb-4 flex items-center justify-between bg-gradient-to-b from-background/80 to-transparent">
           {/* Streamer Info */}
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10 border-2 border-primary">
@@ -608,7 +608,7 @@ const LiveRoom = () => {
       </div>
 
       {/* Chat Area - Compact overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background/95 via-background/80 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t from-background/95 via-background/80 to-transparent">
         {/* Messages */}
         <div className="h-32 overflow-y-auto px-4 pt-4 space-y-2">
           {messages.map((msg) => (

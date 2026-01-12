@@ -303,7 +303,7 @@ const Profile = () => {
   const birthDateDisplay = birthYear ? `${birthYear} (${age} ans)` : null;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto overflow-x-hidden pb-[88px]">
+    <div className="fixed inset-0 flex flex-col overflow-y-auto overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       {/* Header with gradient background */}
       <div className="relative">
         {/* Gradient background */}
