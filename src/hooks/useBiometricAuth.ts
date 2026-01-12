@@ -1,9 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { isNative } from '@/lib/capacitor';
+import { isNative, isAndroid, isIOS } from '@/lib/capacitor';
+
+// BiometryType enum values from @capgo/capacitor-native-biometric
+const BiometryType = {
+  NONE: 0,
+  TOUCH_ID: 1,        // iOS Touch ID
+  FACE_ID: 2,         // iOS Face ID
+  FINGERPRINT: 3,     // Android Fingerprint
+  FACE_AUTHENTICATION: 4, // Android Face Unlock
+  IRIS_AUTHENTICATION: 5, // Android Iris
+  MULTIPLE: 6,        // Android Multiple biometrics available
+} as const;
 
 interface BiometricStatus {
   isAvailable: boolean;
-  biometryType: 'faceId' | 'touchId' | 'fingerprint' | 'iris' | 'none';
+  biometryType: 'faceId' | 'touchId' | 'fingerprint' | 'iris' | 'multiple' | 'none';
   isEnabled: boolean;
 }
 
@@ -31,25 +42,35 @@ export const useBiometricAuth = () => {
       
       const result = await NativeBiometric.isAvailable();
       
+      console.log('Biometric availability result:', result);
+      
       let biometryType: BiometricStatus['biometryType'] = 'none';
       
       if (result.isAvailable) {
-        // Map biometry types
+        // Map biometry types according to official documentation
+        // https://github.com/nicholasgriffen/capacitor-native-biometric#biometrytype
         switch (result.biometryType) {
-          case 1: // FACE_AUTHENTICATION (Android) or Face ID (iOS)
-            biometryType = 'faceId';
-            break;
-          case 2: // FINGERPRINT (Android) or Touch ID (iOS)
+          case BiometryType.TOUCH_ID: // 1 - iOS Touch ID
             biometryType = 'touchId';
             break;
-          case 3: // IRIS
+          case BiometryType.FACE_ID: // 2 - iOS Face ID
+            biometryType = 'faceId';
+            break;
+          case BiometryType.FINGERPRINT: // 3 - Android Fingerprint
+            biometryType = 'fingerprint';
+            break;
+          case BiometryType.FACE_AUTHENTICATION: // 4 - Android Face Unlock
+            biometryType = 'faceId';
+            break;
+          case BiometryType.IRIS_AUTHENTICATION: // 5 - Android Iris
             biometryType = 'iris';
             break;
-          case 4: // MULTIPLE (Android)
-            biometryType = 'fingerprint';
+          case BiometryType.MULTIPLE: // 6 - Android Multiple biometrics
+            biometryType = 'multiple';
             break;
           default:
-            biometryType = 'fingerprint';
+            // Fallback based on platform
+            biometryType = isAndroid ? 'fingerprint' : 'touchId';
         }
       }
       
@@ -85,13 +106,40 @@ export const useBiometricAuth = () => {
     try {
       const { NativeBiometric } = await import('@capgo/capacitor-native-biometric');
       
+      // Customize messages based on platform and biometry type
+      let subtitle = 'Utilisez la biométrie pour vous connecter';
+      let description = 'Authentification requise';
+      
+      if (isIOS) {
+        if (status.biometryType === 'faceId') {
+          subtitle = 'Utilisez Face ID pour vous connecter';
+          description = 'Regardez la caméra frontale';
+        } else {
+          subtitle = 'Utilisez Touch ID pour vous connecter';
+          description = 'Placez votre doigt sur le capteur';
+        }
+      } else if (isAndroid) {
+        if (status.biometryType === 'faceId') {
+          subtitle = 'Utilisez la reconnaissance faciale pour vous connecter';
+          description = 'Regardez la caméra frontale';
+        } else if (status.biometryType === 'fingerprint' || status.biometryType === 'multiple') {
+          subtitle = 'Utilisez votre empreinte digitale pour vous connecter';
+          description = 'Placez votre doigt sur le capteur';
+        } else if (status.biometryType === 'iris') {
+          subtitle = "Utilisez la reconnaissance d'iris pour vous connecter";
+          description = 'Regardez la caméra frontale';
+        }
+      }
+      
       await NativeBiometric.verifyIdentity({
         reason: reason || 'Authentification requise',
         title: 'Zembo',
-        subtitle: 'Utilisez Face ID ou Touch ID pour vous connecter',
-        description: 'Placez votre doigt sur le capteur ou regardez la caméra',
+        subtitle,
+        description,
         negativeButtonText: 'Annuler',
         maxAttempts: 3,
+        // Android specific: use device credential as fallback
+        useFallback: true,
       });
       
       // If verifyIdentity doesn't throw, authentication succeeded
@@ -100,7 +148,7 @@ export const useBiometricAuth = () => {
       console.error('Biometric authentication error:', error);
       return false;
     }
-  }, [status.isAvailable]);
+  }, [status.isAvailable, status.biometryType]);
 
   const saveCredentials = useCallback(async (username: string, password: string): Promise<boolean> => {
     if (!isNative || !status.isAvailable) {
@@ -193,18 +241,30 @@ export const useBiometricAuth = () => {
   }, [saveCredentials, deleteCredentials]);
 
   const getBiometryLabel = useCallback((): string => {
-    switch (status.biometryType) {
-      case 'faceId':
-        return 'Face ID';
-      case 'touchId':
-        return 'Touch ID';
-      case 'fingerprint':
-        return 'Empreinte digitale';
-      case 'iris':
-        return 'Iris';
-      default:
-        return 'Biométrie';
+    if (isIOS) {
+      switch (status.biometryType) {
+        case 'faceId':
+          return 'Face ID';
+        case 'touchId':
+          return 'Touch ID';
+        default:
+          return 'Biométrie';
+      }
+    } else if (isAndroid) {
+      switch (status.biometryType) {
+        case 'faceId':
+          return 'Reconnaissance faciale';
+        case 'fingerprint':
+          return 'Empreinte digitale';
+        case 'iris':
+          return 'Reconnaissance iris';
+        case 'multiple':
+          return 'Biométrie';
+        default:
+          return 'Biométrie';
+      }
     }
+    return 'Biométrie';
   }, [status.biometryType]);
 
   return {
