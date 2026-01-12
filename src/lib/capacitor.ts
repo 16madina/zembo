@@ -49,7 +49,15 @@ export const initializeCapacitor = async () => {
       await StatusBar.setBackgroundColor({ color: '#0a0c14' });
     }
 
-    // Setup keyboard listeners
+    // Setup keyboard listeners and configuration
+    // Set keyboard accessory bar to show (iOS) and resize mode
+    try {
+      await Keyboard.setAccessoryBarVisible({ isVisible: true });
+      await Keyboard.setScroll({ isDisabled: false });
+    } catch (e) {
+      // Some methods might not be available on all platforms
+    }
+
     Keyboard.addListener('keyboardWillShow', (info: { keyboardHeight: number }) => {
       document.documentElement.style.setProperty('--keyboard-height', `${info.keyboardHeight}px`);
       document.body.classList.add('keyboard-open');

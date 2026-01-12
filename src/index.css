@@ -69,6 +69,9 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 225 15% 20%;
     --sidebar-ring: 43 74% 49%;
+    
+    /* Keyboard */
+    --keyboard-height: 0px;
   }
 
   .dark {
@@ -359,4 +362,19 @@
   .leaflet-tile {
     filter: saturate(0.8) brightness(0.9);
   }
+}
+
+/* Keyboard handling for native mobile */
+.keyboard-open {
+  --safe-area-bottom: 0px;
+}
+
+.keyboard-open .chat-input-container {
+  transform: translateY(calc(-1 * var(--keyboard-height)));
+  transition: transform 0.25s ease-out;
+}
+
+.keyboard-open .chat-messages-container {
+  padding-bottom: calc(var(--keyboard-height) + 80px);
+  transition: padding-bottom 0.25s ease-out;
 }
