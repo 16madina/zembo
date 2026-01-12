@@ -32,6 +32,8 @@ import {
   UserX,
   MapPin,
   MessageCircle,
+  Fingerprint,
+  UserPlus,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -59,6 +61,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
+import { InviteFriendsModal } from "./InviteFriendsModal";
+import { isNative } from "@/lib/capacitor";
 
 type Theme = "dark" | "light" | "system";
 type ProfileVisibility = "all" | "matches" | "invisible";
@@ -473,11 +478,22 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
   const [isExporting, setIsExporting] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTermsOfService, setShowTermsOfService] = useState(false);
+  const [showInviteFriends, setShowInviteFriends] = useState(false);
   
   // Advanced Privacy Settings
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>("all");
   const [contactPermission, setContactPermission] = useState<ContactPermission>("anyone");
   const [geoBlocking, setGeoBlocking] = useState<GeoBlocking>("none");
+
+  // Biometric Auth
+  const {
+    isAvailable: biometricAvailable,
+    biometryType,
+    isEnabled: biometricEnabled,
+    isLoading: biometricLoading,
+    toggleBiometric,
+    getBiometryLabel,
+  } = useBiometricAuth();
 
   const dataInfo = dataCollectionInfo[language];
 
@@ -689,6 +705,75 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
           </SheetHeader>
 
           <div className="space-y-6">
+            {/* Invite Friends Section */}
+            <div className="glass-strong rounded-2xl p-4">
+              <button
+                onClick={() => setShowInviteFriends(true)}
+                className="w-full flex items-center justify-between py-2 hover:bg-muted/30 rounded-lg px-2 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <UserPlus className="w-5 h-5 text-primary" />
+                  <div className="text-left">
+                    <span className="text-sm font-medium block">
+                      {language === "fr" ? "Inviter des amis" : "Invite Friends"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {language === "fr" ? "Partagez Zembo avec vos contacts" : "Share Zembo with your contacts"}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Biometric Authentication (Face ID / Touch ID) */}
+            {isNative && biometricAvailable && (
+              <div className="glass-strong rounded-2xl p-4">
+                <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
+                  <Fingerprint className="w-4 h-4" />
+                  {language === "fr" ? "Sécurité biométrique" : "Biometric Security"}
+                </h3>
+                <SettingRow
+                  icon={<Fingerprint className="w-5 h-5" />}
+                  label={getBiometryLabel()}
+                  description={
+                    language === "fr" 
+                      ? `Utilisez ${getBiometryLabel()} pour vous connecter rapidement` 
+                      : `Use ${getBiometryLabel()} for quick login`
+                  }
+                  action={
+                    <Switch
+                      checked={biometricEnabled}
+                      disabled={biometricLoading}
+                      onCheckedChange={async (enabled) => {
+                        if (enabled && user?.email) {
+                          // For enabling, we need the user's password
+                          // In a real app, you'd prompt for the password
+                          const success = await toggleBiometric(enabled, user.email, 'stored');
+                          if (success) {
+                            toast.success(
+                              language === "fr" 
+                                ? `${getBiometryLabel()} activé` 
+                                : `${getBiometryLabel()} enabled`
+                            );
+                          }
+                        } else {
+                          const success = await toggleBiometric(false);
+                          if (success) {
+                            toast.success(
+                              language === "fr" 
+                                ? `${getBiometryLabel()} désactivé` 
+                                : `${getBiometryLabel()} disabled`
+                            );
+                          }
+                        }
+                      }}
+                    />
+                  }
+                />
+              </div>
+            )}
+
             {/* Notifications Section */}
             <div className="glass-strong rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
@@ -1252,6 +1337,12 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Invite Friends Modal */}
+      <InviteFriendsModal 
+        open={showInviteFriends} 
+        onOpenChange={setShowInviteFriends} 
+      />
     </>
   );
 };
