@@ -15,6 +15,11 @@ const FaceRecognitionPreloadContext = createContext<FaceRecognitionPreloadContex
 
 const MODELS_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
 
+// Check if we're on Android
+const isAndroidDevice = () => {
+  return /Android/i.test(navigator.userAgent);
+};
+
 export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNode }) => {
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [isModelsLoading, setIsModelsLoading] = useState(false);
@@ -30,25 +35,71 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
     if (modelsLoadedRef.current || isModelsLoading) return;
 
     let isMounted = true;
+    const isAndroid = isAndroidDevice();
 
     const loadModels = async () => {
       setIsModelsLoading(true);
       setModelsError(null);
 
       try {
-        console.log('[FacePreload] Starting model loading...');
+        console.log(`[FacePreload] Starting model loading... (Android: ${isAndroid})`);
 
-        const loadPromise = Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
-        ]);
+        // For Android, configure TensorFlow.js to use CPU backend for stability
+        if (isAndroid) {
+          try {
+            // @ts-ignore - TensorFlow.js may not have types
+            const tf = await import('@tensorflow/tfjs-core');
+            // Try to use CPU backend on Android for stability
+            await tf.setBackend('cpu');
+            await tf.ready();
+            console.log('[FacePreload] TensorFlow.js CPU backend ready for Android');
+          } catch (tfErr) {
+            console.log('[FacePreload] TensorFlow.js backend setup skipped:', tfErr);
+          }
+        }
 
+        // Load models with retry logic for Android
+        const loadWithRetry = async (attempt: number = 1): Promise<void> => {
+          try {
+            console.log(`[FacePreload] Load attempt ${attempt}`);
+            
+            // Load models one by one on Android for better stability
+            if (isAndroid) {
+              console.log('[FacePreload] Loading ssdMobilenetv1...');
+              await faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL);
+              
+              if (!isMounted) return;
+              console.log('[FacePreload] Loading faceLandmark68Net...');
+              await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL);
+              
+              if (!isMounted) return;
+              console.log('[FacePreload] Loading faceRecognitionNet...');
+              await faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL);
+            } else {
+              // On iOS/desktop, load in parallel
+              await Promise.all([
+                faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL),
+              ]);
+            }
+          } catch (err) {
+            if (attempt < 3 && isMounted) {
+              console.log(`[FacePreload] Attempt ${attempt} failed, retrying...`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              return loadWithRetry(attempt + 1);
+            }
+            throw err;
+          }
+        };
+
+        // Extended timeout for Android
+        const timeoutMs = isAndroid ? 60000 : 30000;
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Model loading timeout (30s)')), 30000);
+          setTimeout(() => reject(new Error(`Model loading timeout (${timeoutMs / 1000}s)`)), timeoutMs);
         });
 
-        await Promise.race([loadPromise, timeoutPromise]);
+        await Promise.race([loadWithRetry(), timeoutPromise]);
 
         if (!isMounted) return;
 
