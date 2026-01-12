@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Square } from "lucide-react";
+import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Flag, UserX } from "lucide-react";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Message {
   id: string;
@@ -38,9 +46,11 @@ const mockMessages: Message[] = [
 ];
 
 const ChatView = ({ user, onBack }: ChatViewProps) => {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(user.isTyping);
+  const [isOnline, setIsOnline] = useState(user.isOnline);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -53,6 +63,64 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Real-time online status subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel(`presence-${user.id}`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const userPresence = state[user.id];
+        setIsOnline(userPresence && userPresence.length > 0);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Also check initial online status from profiles
+          const { data } = await supabase
+            .from('profiles')
+            .select('is_online, last_seen')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (data) {
+            setIsOnline(data.is_online || false);
+          }
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user.id]);
+
+  const handleCall = () => {
+    toast({
+      title: "Appel vocal",
+      description: "Fonctionnalité bientôt disponible",
+    });
+  };
+
+  const handleVideoCall = () => {
+    toast({
+      title: "Appel vidéo",
+      description: "Fonctionnalité bientôt disponible",
+    });
+  };
+
+  const handleReport = () => {
+    toast({
+      title: "Signalement envoyé",
+      description: `Vous avez signalé ${user.name}. Notre équipe va examiner ce signalement.`,
+    });
+  };
+
+  const handleBlock = () => {
+    toast({
+      title: "Utilisateur bloqué",
+      description: `${user.name} a été bloqué. Vous ne recevrez plus de messages de cette personne.`,
+      variant: "destructive",
+    });
+    onBack();
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -260,8 +328,12 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
               alt={user.name}
               className="w-10 h-10 rounded-full object-cover"
             />
-            {user.isOnline && (
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-card rounded-full" />
+            {isOnline && (
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-card rounded-full" 
+              />
             )}
           </div>
           
@@ -270,8 +342,8 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
             <p className="text-xs text-muted-foreground">
               {isTyping ? (
                 <span className="text-success">écrit...</span>
-              ) : user.isOnline ? (
-                "En ligne"
+              ) : isOnline ? (
+                <span className="text-success">En ligne</span>
               ) : (
                 "Hors ligne"
               )}
@@ -281,23 +353,39 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
         <div className="flex items-center gap-1">
           <motion.button
-            className="p-2.5 tap-highlight rounded-full"
+            onClick={handleCall}
+            className="p-2.5 tap-highlight rounded-full active:bg-muted/50"
             whileTap={{ scale: 0.9 }}
           >
             <Phone className="w-5 h-5 text-muted-foreground" />
           </motion.button>
           <motion.button
-            className="p-2.5 tap-highlight rounded-full"
+            onClick={handleVideoCall}
+            className="p-2.5 tap-highlight rounded-full active:bg-muted/50"
             whileTap={{ scale: 0.9 }}
           >
             <Video className="w-5 h-5 text-muted-foreground" />
           </motion.button>
-          <motion.button
-            className="p-2.5 tap-highlight rounded-full"
-            whileTap={{ scale: 0.9 }}
-          >
-            <MoreVertical className="w-5 h-5 text-muted-foreground" />
-          </motion.button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <motion.button
+                className="p-2.5 tap-highlight rounded-full active:bg-muted/50"
+                whileTap={{ scale: 0.9 }}
+              >
+                <MoreVertical className="w-5 h-5 text-muted-foreground" />
+              </motion.button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={handleReport} className="gap-2 text-foreground">
+                <Flag className="w-4 h-4" />
+                Signaler
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleBlock} className="gap-2 text-destructive">
+                <UserX className="w-4 h-4" />
+                Bloquer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -438,8 +526,8 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         )}
       </AnimatePresence>
 
-      {/* Input */}
-      <div className="px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] glass-strong border-t border-border/50 flex-shrink-0">
+      {/* Input - Fixed at bottom with proper iOS safe area */}
+      <div className="px-4 py-3 glass-strong border-t border-border/50 flex-shrink-0" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         {isRecording ? (
           <div className="flex items-center gap-3">
             <motion.button
