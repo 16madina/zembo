@@ -547,6 +547,7 @@ export type Database = {
           image_url: string | null
           is_read: boolean
           receiver_id: string
+          reply_to_message_id: string | null
           sender_id: string
         }
         Insert: {
@@ -558,6 +559,7 @@ export type Database = {
           image_url?: string | null
           is_read?: boolean
           receiver_id: string
+          reply_to_message_id?: string | null
           sender_id: string
         }
         Update: {
@@ -569,9 +571,18 @@ export type Database = {
           image_url?: string | null
           is_read?: boolean
           receiver_id?: string
+          reply_to_message_id?: string | null
           sender_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       predefined_messages: {
         Row: {
