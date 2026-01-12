@@ -50,6 +50,7 @@ interface Stats {
   totalReports: number;
   totalUsers: number;
   bannedUsers: number;
+  pendingIdentityVerifications: number;
 }
 
 const Admin = () => {
@@ -104,11 +105,12 @@ const Admin = () => {
 
         setReports(reportsWithProfiles);
 
-        const [sessionsRes, matchesRes, usersRes, bansRes] = await Promise.all([
+        const [sessionsRes, matchesRes, usersRes, bansRes, identityRes] = await Promise.all([
           supabase.from("random_call_sessions").select("status"),
           supabase.from("matches").select("id", { count: "exact" }),
           supabase.from("profiles").select("id", { count: "exact" }),
           supabase.from("banned_users").select("id", { count: "exact" }).eq("is_active", true),
+          supabase.from("identity_verifications").select("id", { count: "exact" }).eq("status", "pending"),
         ]);
 
         const sessions = sessionsRes.data || [];
@@ -125,6 +127,7 @@ const Admin = () => {
           totalReports: (reportsData || []).length,
           totalUsers: usersRes.count || 0,
           bannedUsers: bansRes.count || 0,
+          pendingIdentityVerifications: identityRes.count || 0,
         });
       } catch (error) {
         console.error("Error fetching admin data:", error);
@@ -174,9 +177,14 @@ const Admin = () => {
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden sm:inline">Signalements</span>
             </TabsTrigger>
-            <TabsTrigger value="identity" className="flex items-center gap-2">
+            <TabsTrigger value="identity" className="flex items-center gap-2 relative">
               <UserCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Identités</span>
+              {stats && stats.pendingIdentityVerifications > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center px-1.5 text-xs font-bold bg-amber-500 text-white rounded-full">
+                  {stats.pendingIdentityVerifications}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
