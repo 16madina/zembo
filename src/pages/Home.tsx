@@ -89,11 +89,25 @@ const Home = () => {
     return profilesWhoLikedUser.has(profileId);
   };
 
-  const handleSwipe = (direction: "left" | "right" | "up") => {
+  const handleSwipe = async (direction: "left" | "right" | "up") => {
     const swipedProfile = currentProfile;
     
     if (direction === "right" || direction === "up") {
       setLikedProfiles((prev) => new Set([...prev, swipedProfile.id]));
+      
+      // Send like notification (in a real app, this would also save the like to database)
+      const isSuperLike = direction === "up";
+      try {
+        await supabase.functions.invoke("notify-like", {
+          body: {
+            liker_id: user?.id,
+            liked_id: swipedProfile.id,
+            is_super_like: isSuperLike,
+          },
+        });
+      } catch (err) {
+        console.error("Error sending like notification:", err);
+      }
       
       if (checkForMatch(swipedProfile.id)) {
         setMatchedProfile(swipedProfile);

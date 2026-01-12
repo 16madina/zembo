@@ -3,6 +3,7 @@ import { isNative } from "@/lib/capacitor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 // Dynamic import for Push Notifications to avoid errors on web
 let PushNotifications: any = null;
@@ -15,6 +16,20 @@ if (isNative) {
 
 export interface PushNotificationToken {
   value: string;
+}
+
+export interface NotificationData {
+  type?: string;
+  sender_id?: string;
+  sender_name?: string;
+  sender_avatar?: string;
+  message_id?: string;
+  match_id?: string;
+  matched_user_id?: string;
+  matched_user_name?: string;
+  matched_user_avatar?: string;
+  live_id?: string;
+  live_title?: string;
 }
 
 export const usePushNotifications = () => {
@@ -40,6 +55,65 @@ export const usePushNotifications = () => {
       console.error("Error registering token:", err);
     }
   }, [user]);
+
+  const handleNotificationNavigation = useCallback((data: NotificationData) => {
+    console.log("Handling notification navigation:", data);
+    
+    const type = data.type;
+    
+    switch (type) {
+      case "message":
+        // Navigate to messages with the sender's conversation
+        if (data.sender_id) {
+          // Store sender info in sessionStorage for the Messages page to use
+          sessionStorage.setItem("openChatWith", JSON.stringify({
+            id: data.sender_id,
+            name: data.sender_name || "Utilisateur",
+            photo: data.sender_avatar || "",
+            isOnline: true
+          }));
+        }
+        window.location.href = "/messages";
+        break;
+        
+      case "match":
+        // Navigate to messages with the matched user's conversation
+        if (data.matched_user_id) {
+          sessionStorage.setItem("openChatWith", JSON.stringify({
+            id: data.matched_user_id,
+            name: data.matched_user_name || "Nouveau Match",
+            photo: data.matched_user_avatar || "",
+            isOnline: true
+          }));
+        }
+        window.location.href = "/messages";
+        break;
+        
+      case "live":
+        // Navigate to the live room
+        if (data.live_id) {
+          window.location.href = `/live/${data.live_id}`;
+        } else {
+          window.location.href = "/live";
+        }
+        break;
+        
+      case "like":
+        // Navigate to home to see who liked
+        window.location.href = "/";
+        break;
+        
+      case "super_like":
+        // Navigate to home to see the super like
+        window.location.href = "/";
+        break;
+        
+      default:
+        // Default navigation
+        console.log("Unknown notification type:", type);
+        window.location.href = "/";
+    }
+  }, []);
 
   const requestPermissions = useCallback(async () => {
     if (!isNative || !PushNotifications) {
@@ -91,23 +165,28 @@ export const usePushNotifications = () => {
     // Listen for push notifications received while app is in foreground
     PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
       console.log("Push notification received:", notification);
+      
+      const data: NotificationData = notification.data || {};
+      
+      // Show in-app toast with action
       toast(notification.title, {
         description: notification.body,
+        action: {
+          label: "Voir",
+          onClick: () => handleNotificationNavigation(data),
+        },
+        duration: 5000,
       });
     });
 
     // Listen for push notification action (user tapped on notification)
     PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
       console.log("Push notification action performed:", notification);
-      // Handle navigation based on notification data
-      const data = notification.notification.data;
-      if (data?.type === "match") {
-        window.location.href = "/messages";
-      } else if (data?.type === "live") {
-        window.location.href = `/live/${data.liveId}`;
-      }
+      
+      const data: NotificationData = notification.notification?.data || {};
+      handleNotificationNavigation(data);
     });
-  }, [registerToken]);
+  }, [registerToken, handleNotificationNavigation]);
 
   useEffect(() => {
     if (isNative && user) {
