@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import zemboLogoGold from '@/assets/zembo-logo-gold.png';
+import zemboVoice from '@/assets/sounds/zembo-voice.mp3';
+import successChime from '@/assets/sounds/success-chime.mp3';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -9,8 +11,33 @@ interface SplashScreenProps {
 
 const SplashScreen = ({ onComplete, minDuration = 2500 }: SplashScreenProps) => {
   const [isVisible, setIsVisible] = useState(true);
+  const audioPlayedRef = useRef(false);
 
   useEffect(() => {
+    // Play audio sequence on mount
+    const playAudioSequence = async () => {
+      if (audioPlayedRef.current) return;
+      audioPlayedRef.current = true;
+
+      try {
+        // Play success chime first
+        const chime = new Audio(successChime);
+        chime.volume = 0.4;
+        await chime.play().catch(() => {});
+
+        // Play ZEMBO voice after a short delay
+        setTimeout(() => {
+          const voice = new Audio(zemboVoice);
+          voice.volume = 0.7;
+          voice.play().catch(() => {});
+        }, 800);
+      } catch (error) {
+        console.log('Audio playback not available');
+      }
+    };
+
+    playAudioSequence();
+
     const timer = setTimeout(() => {
       setIsVisible(false);
     }, minDuration);
