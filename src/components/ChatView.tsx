@@ -691,12 +691,13 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         {/* Input - iMessage style anchored at bottom */}
         <div 
           ref={inputBarRef}
-          className="flex-shrink-0 px-4 py-3 glass-strong border-t border-border/50"
+          className="flex-shrink-0 px-4 glass-strong border-t border-border/50"
           style={{
             transform: keyboardShift > 0 ? `translateY(-${keyboardShift}px)` : undefined,
             transition: "transform 220ms cubic-bezier(0.2, 0, 0, 1)",
-            // Avoid a visible gap above the keyboard on iOS by removing safe-area padding while the keyboard is open
-            paddingBottom: keyboardHeight > 0 ? "12px" : "calc(env(safe-area-inset-bottom) + 12px)",
+            // Zero padding when keyboard is open to stick directly to keyboard, safe-area padding when closed
+            paddingTop: "12px",
+            paddingBottom: keyboardHeight > 0 ? "0px" : "calc(env(safe-area-inset-bottom) + 12px)",
             willChange: keyboardShift > 0 ? "transform" : undefined,
             zIndex: 120,
           }}
