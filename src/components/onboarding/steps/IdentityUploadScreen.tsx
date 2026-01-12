@@ -148,7 +148,7 @@ export const IdentityUploadScreen = ({ onComplete, onBack }: IdentityUploadScree
   const smoothEase = { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const };
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="min-h-full flex flex-col overflow-y-auto pb-safe">
       <AnimatePresence mode="wait">
         {currentStep === "intro" && (
           <motion.div

@@ -1211,7 +1211,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           <PreparingScreen onStart={startActualVerification} />
         )}
 
-        {(currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed") && (
+        {(currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed" && currentStep !== "identity_upload") && (
           <motion.div
             key="verification"
             initial={verificationTransition.initial}
