@@ -34,6 +34,8 @@ import {
   MessageCircle,
   Fingerprint,
   UserPlus,
+  Headphones,
+  ExternalLink,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -887,6 +889,23 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   <span className="text-sm font-medium">{t.termsOfService}</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+              
+              {/* Support / Assistance - Opens Email */}
+              <button
+                onClick={() => {
+                  window.location.href = "mailto:support@zemboapp.com?subject=" + 
+                    encodeURIComponent(language === "fr" ? "Demande d'assistance Zembo" : "Zembo Support Request");
+                }}
+                className="w-full flex items-center justify-between py-3 hover:bg-muted/30 rounded-lg px-2 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Headphones className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-medium">
+                    {language === "fr" ? "Assistance" : "Support"}
+                  </span>
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground" />
               </button>
               
               <Accordion type="single" collapsible className="w-full">
