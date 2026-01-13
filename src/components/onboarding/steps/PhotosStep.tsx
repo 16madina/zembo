@@ -18,6 +18,8 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Capacitor } from "@capacitor/core";
+import { toast } from "sonner";
 import type { OnboardingData } from "../OnboardingSteps";
 import { useFaceRecognitionPreload } from "@/contexts/FaceRecognitionPreloadContext";
 
@@ -121,7 +123,8 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        delay: 150,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -180,8 +183,38 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
     }
   };
 
-  const openFilePicker = () => {
-    fileInputRef.current?.click();
+  const openFilePicker = async (e?: React.MouseEvent | React.TouchEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
+    console.log("[Onboarding PhotosStep] openFilePicker, isNative:", Capacitor.isNativePlatform());
+    
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { Camera: CapCamera, CameraResultType, CameraSource } = await import("@capacitor/camera");
+        const image = await CapCamera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Prompt,
+          correctOrientation: true,
+        });
+        
+        if (image.dataUrl) {
+          updateData({ photos: [...data.photos, image.dataUrl] });
+        }
+      } catch (error: any) {
+        // User cancelled - don't show error
+        if (error?.message?.includes("cancelled") || error?.message?.includes("canceled")) {
+          console.log("[Onboarding PhotosStep] User cancelled photo selection");
+          return;
+        }
+        console.error("[Onboarding PhotosStep] Camera error:", error);
+        toast.error("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   const sortableIds = data.photos.map((_, i) => `photo-${i}`);
@@ -202,13 +235,13 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
       />
 
       {/* Photo Grid with Drag & Drop */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-3">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
             {/* Existing photos */}
             {data.photos.map((photo, index) => (
               <SortablePhoto
@@ -219,32 +252,33 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
                 onRemove={removePhoto}
               />
             ))}
+          </SortableContext>
+        </DndContext>
 
-            {/* Add photo button */}
-            {data.photos.length < 8 && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onClick={openFilePicker}
-                className="aspect-square rounded-xl glass border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-1 tap-highlight hover:border-primary/60 transition-colors"
-              >
-                <Plus className="w-6 h-6 text-primary" />
-                <span className="text-[10px] text-muted-foreground">Ajouter</span>
-              </motion.button>
-            )}
+        {/* Add photo button - OUTSIDE dnd context for reliable touch */}
+        {data.photos.length < 8 && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={(e) => openFilePicker(e)}
+            onTouchEnd={(e) => openFilePicker(e)}
+            className="aspect-square rounded-xl glass border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-1 tap-highlight hover:border-primary/60 transition-colors touch-manipulation"
+          >
+            <Plus className="w-6 h-6 text-primary" />
+            <span className="text-[10px] text-muted-foreground">Ajouter</span>
+          </motion.button>
+        )}
 
-            {/* Empty slots */}
-            {Array.from({ length: Math.max(0, 7 - data.photos.length) }).map((_, index) => (
-              <div
-                key={`empty-${index}`}
-                className="aspect-square rounded-xl glass border-2 border-dashed border-border/30 flex items-center justify-center opacity-30"
-              >
-                <Image className="w-5 h-5 text-muted-foreground" />
-              </div>
-            ))}
+        {/* Empty slots */}
+        {Array.from({ length: Math.max(0, 7 - data.photos.length) }).map((_, index) => (
+          <div
+            key={`empty-${index}`}
+            className="aspect-square rounded-xl glass border-2 border-dashed border-border/30 flex items-center justify-center opacity-30"
+          >
+            <Image className="w-5 h-5 text-muted-foreground" />
           </div>
-        </SortableContext>
-      </DndContext>
+        ))}
+      </div>
 
       {/* Photo count and preload status */}
       <div className="flex items-center justify-between text-sm">
