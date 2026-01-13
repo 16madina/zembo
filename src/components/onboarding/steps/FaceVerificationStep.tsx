@@ -473,7 +473,10 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [showSkipOption, setShowSkipOption] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
+  const [showDebugCanvas, setShowDebugCanvas] = useState(true); // Debug mode enabled
+  const [debugFrameInfo, setDebugFrameInfo] = useState<string>("");
   
+  const debugCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -1112,6 +1115,82 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
     return () => clearInterval(id);
   }, [isVerificationActive]);
+
+  // Debug canvas: draw video frames in real-time to verify camera capture
+  useEffect(() => {
+    if (!showDebugCanvas || !isVerificationActive) return;
+
+    let animationId: number;
+    let frameCount = 0;
+    let lastFaceCheck = 0;
+
+    const drawDebugFrame = async () => {
+      const video = videoRef.current;
+      const canvas = debugCanvasRef.current;
+      
+      if (!video || !canvas || video.videoWidth === 0) {
+        setDebugFrameInfo("Vidéo non prête");
+        animationId = requestAnimationFrame(drawDebugFrame);
+        return;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        animationId = requestAnimationFrame(drawDebugFrame);
+        return;
+      }
+
+      // Set canvas size to match video (scaled down for debug)
+      const scale = 0.3;
+      canvas.width = video.videoWidth * scale;
+      canvas.height = video.videoHeight * scale;
+
+      // Draw video frame (mirrored like the main view)
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      frameCount++;
+
+      // Check for face detection every 30 frames (~1 second at 30fps)
+      const now = Date.now();
+      if (now - lastFaceCheck > 1000) {
+        lastFaceCheck = now;
+        
+        try {
+          // Quick face detection check on the debug frame
+          const fullCanvas = captureVideoFrame(video);
+          if (fullCanvas) {
+            const detection = await faceapi.detectSingleFace(fullCanvas);
+            if (detection) {
+              setDebugFrameInfo(`✅ Visage détecté! (${video.videoWidth}x${video.videoHeight}) Frame #${frameCount}`);
+              // Draw green border on debug canvas
+              ctx.strokeStyle = '#22c55e';
+              ctx.lineWidth = 4;
+              ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+            } else {
+              setDebugFrameInfo(`❌ Pas de visage (${video.videoWidth}x${video.videoHeight}) Frame #${frameCount}`);
+              // Draw red border on debug canvas
+              ctx.strokeStyle = '#ef4444';
+              ctx.lineWidth = 4;
+              ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+            }
+          }
+        } catch (err) {
+          setDebugFrameInfo(`⚠️ Erreur détection: ${err}`);
+        }
+      }
+
+      animationId = requestAnimationFrame(drawDebugFrame);
+    };
+
+    drawDebugFrame();
+
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+  }, [showDebugCanvas, isVerificationActive]);
 
   const startVerification = () => {
     setCurrentStep("preparing");
@@ -1841,6 +1920,33 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                   <RotateCcw className="w-4 h-4" />
                   <span className="text-sm">Recommencer</span>
                 </button>
+              </div>
+            )}
+
+            {/* Debug Canvas Panel - shows real-time video capture */}
+            {showDebugCanvas && (
+              <div className="absolute bottom-4 left-4 z-50 bg-black/80 rounded-lg p-2 border border-white/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-[10px] text-white/80 font-mono">DEBUG</span>
+                  <button 
+                    onClick={() => setShowDebugCanvas(false)}
+                    className="ml-2 text-white/50 hover:text-white text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <canvas 
+                  ref={debugCanvasRef} 
+                  className="rounded border border-white/10"
+                  style={{ maxWidth: '150px', maxHeight: '150px' }}
+                />
+                <p className="text-[9px] text-white/70 mt-1 max-w-[150px] break-words font-mono">
+                  {debugFrameInfo || "Initialisation..."}
+                </p>
+                <p className="text-[8px] text-white/50 mt-0.5 font-mono">
+                  {debugInfo}
+                </p>
               </div>
             )}
           </motion.div>
