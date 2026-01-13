@@ -894,8 +894,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
               {/* Support / Assistance - Opens Email */}
               <button
                 onClick={() => {
-                  window.location.href = "mailto:support@zemboapp.com?subject=" + 
-                    encodeURIComponent(language === "fr" ? "Demande d'assistance Zembo" : "Zembo Support Request");
+                  window.location.href = "/support";
                 }}
                 className="w-full flex items-center justify-between py-3 hover:bg-muted/30 rounded-lg px-2 transition-colors"
               >
@@ -905,7 +904,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                     {language === "fr" ? "Assistance" : "Support"}
                   </span>
                 </div>
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
               
               <Accordion type="single" collapsible className="w-full">
