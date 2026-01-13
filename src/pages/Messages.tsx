@@ -12,6 +12,7 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useGifts } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { toast } from "@/hooks/use-toast";
+import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 interface Conversation {
   id: string;
   user: {
@@ -101,6 +102,7 @@ const Messages = () => {
   const [selectedProfile, setSelectedProfile] = useState<SelectedProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'like' | 'match'; name?: string } | null>(null);
+  const [showRosePetals, setShowRosePetals] = useState(false);
   const isFirstLoad = useRef(true);
 
   // Fetch all data
@@ -792,6 +794,7 @@ const Messages = () => {
           const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹");
           
           if (result.success) {
+            setShowRosePetals(true);
             toast({
               title: "Rose envoyée ! 🌹",
               description: `${selectedProfile.name} a reçu votre rose`,
@@ -805,6 +808,11 @@ const Messages = () => {
             });
           }
         }}
+      />
+
+      <RosePetalsAnimation 
+        isVisible={showRosePetals} 
+        onComplete={() => setShowRosePetals(false)} 
       />
 
       <BottomNavigation />
