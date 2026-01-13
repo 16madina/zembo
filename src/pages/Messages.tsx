@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useGifts } from "@/hooks/useGifts";
+import { useCoins } from "@/hooks/useCoins";
 import { toast } from "@/hooks/use-toast";
 interface Conversation {
   id: string;
@@ -90,6 +92,8 @@ const Messages = () => {
   const { user } = useAuth();
   const { isPremium } = useSubscription();
   const { playNotificationSound, playMatchSound } = useSoundEffects();
+  const { gifts, sendGift } = useGifts();
+  const { balance } = useCoins();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMatches, setNewMatches] = useState<NewMatch[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -761,6 +765,44 @@ const Messages = () => {
               setSelectedProfile(null);
               fetchData();
             }
+          }
+        }}
+        onSendRose={async () => {
+          if (!selectedProfile || !user) return;
+          
+          const roseGift = gifts.find(g => g.name === "Rose");
+          if (!roseGift) {
+            toast({
+              title: "Cadeau indisponible",
+              description: "La rose n'est pas disponible pour le moment",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          if (balance < roseGift.price_coins) {
+            toast({
+              title: "Solde insuffisant",
+              description: `Vous avez besoin de ${roseGift.price_coins} coins pour envoyer une rose`,
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹");
+          
+          if (result.success) {
+            toast({
+              title: "Rose envoyée ! 🌹",
+              description: `${selectedProfile.name} a reçu votre rose`,
+            });
+            setSelectedProfile(null);
+          } else {
+            toast({
+              title: "Erreur",
+              description: result.error || "Impossible d'envoyer la rose",
+              variant: "destructive",
+            });
           }
         }}
       />

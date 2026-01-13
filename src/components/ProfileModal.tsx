@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, MapPin, BadgeCheck, Heart, Star, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp } from "lucide-react";
+import { X, MapPin, BadgeCheck, Heart, Star, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp, Flower2 } from "lucide-react";
 import { useState } from "react";
 
 interface ProfileData {
@@ -26,6 +26,7 @@ interface ProfileModalProps {
   onClose: () => void;
   onLike: () => void;
   onSuperLike: () => void;
+  onSendRose?: () => void;
 }
 
 const interestColors = [
@@ -41,7 +42,7 @@ const interestColors = [
   'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
 ];
 
-const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: ProfileModalProps) => {
+const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRose }: ProfileModalProps) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -269,7 +270,7 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
 
             {/* Action buttons at bottom */}
             <motion.div 
-              className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center gap-6 p-6"
+              className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center gap-4 p-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
@@ -282,6 +283,22 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike }: Profile
               >
                 <Star className="w-7 h-7 text-accent" fill="currentColor" />
               </motion.button>
+              
+              {/* Rose button */}
+              <motion.button
+                onClick={onSendRose}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-4 bg-rose-500/20 backdrop-blur-md rounded-full border border-rose-500/50 relative overflow-hidden"
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-t from-rose-600/30 to-transparent"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                />
+                <Flower2 className="w-7 h-7 text-rose-400 relative z-10" fill="currentColor" />
+              </motion.button>
+              
               <motion.button
                 onClick={onLike}
                 whileHover={{ scale: 1.1 }}
