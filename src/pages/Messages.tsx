@@ -5,6 +5,8 @@ import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import ChatView from "@/components/ChatView";
 import ProfileModal from "@/components/ProfileModal";
+import RosePetalsAnimation from "@/components/RosePetalsAnimation";
+import RoseMessageModal from "@/components/RoseMessageModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -12,7 +14,6 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useGifts } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { toast } from "@/hooks/use-toast";
-import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 interface Conversation {
   id: string;
   user: {
@@ -104,6 +105,8 @@ const Messages = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'like' | 'match'; name?: string } | null>(null);
   const [showRosePetals, setShowRosePetals] = useState(false);
+  const [isRoseModalOpen, setIsRoseModalOpen] = useState(false);
+  const [isSendingRose, setIsSendingRose] = useState(false);
   const isFirstLoad = useRef(true);
 
   // Fetch all data
@@ -779,7 +782,7 @@ const Messages = () => {
             }
           }
         }}
-        onSendRose={async () => {
+        onSendRose={() => {
           if (!selectedProfile || !user) return;
           
           const roseGift = gifts.find(g => g.name === "Rose");
@@ -801,15 +804,39 @@ const Messages = () => {
             return;
           }
           
-          const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹");
+          setIsRoseModalOpen(true);
+        }}
+      />
+
+      <RoseMessageModal
+        isOpen={isRoseModalOpen}
+        onClose={() => setIsRoseModalOpen(false)}
+        onSend={async (message) => {
+          if (!selectedProfile || !user) return;
+          
+          setIsSendingRose(true);
+          const roseGift = gifts.find(g => g.name === "Rose");
+          if (!roseGift) {
+            setIsSendingRose(false);
+            return;
+          }
+          
+          const result = await sendGift(roseGift, selectedProfile.id, message, { 
+            createLike: true, 
+            sendNotification: true 
+          });
+          
+          setIsSendingRose(false);
+          setIsRoseModalOpen(false);
           
           if (result.success) {
             setShowRosePetals(true);
             toast({
               title: "Rose envoyée ! 🌹",
-              description: `${selectedProfile.name} a reçu votre rose`,
+              description: `${selectedProfile.name} a reçu votre rose et votre message`,
             });
             setSelectedProfile(null);
+            fetchData();
           } else {
             toast({
               title: "Erreur",
@@ -818,6 +845,8 @@ const Messages = () => {
             });
           }
         }}
+        recipientName={selectedProfile?.name || ""}
+        isLoading={isSendingRose}
       />
 
       <RosePetalsAnimation 
