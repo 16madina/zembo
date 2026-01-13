@@ -92,10 +92,48 @@ export const useSoundEffects = () => {
     }
   }, []);
 
+  const playNotificationSound = useCallback(() => {
+    try {
+      // Trigger haptic feedback on mobile
+      if (isNative) {
+        haptics.notification('success');
+      }
+      
+      // Play success chime as notification sound
+      const audio = new Audio(successChimeSound);
+      audio.volume = 0.8;
+      audio.play().catch((err) => {
+        console.warn("Failed to play notification sound:", err);
+      });
+    } catch (error) {
+      console.error("Error playing notification sound:", error);
+    }
+  }, []);
+
+  const playMatchSound = useCallback(() => {
+    try {
+      // Trigger strong haptic feedback on mobile for matches
+      if (isNative) {
+        haptics.notification('success');
+      }
+      
+      // Play reveal magic sound for matches - more exciting
+      const audio = new Audio(revealMagicSound);
+      audio.volume = 0.9;
+      audio.play().catch((err) => {
+        console.warn("Failed to play match sound:", err);
+      });
+    } catch (error) {
+      console.error("Error playing match sound:", error);
+    }
+  }, []);
+
   return {
     playDiceSound,
     playZemboVoice,
     playRevealSound,
+    playNotificationSound,
+    playMatchSound,
     isDrumrollPlaying,
   };
 };
