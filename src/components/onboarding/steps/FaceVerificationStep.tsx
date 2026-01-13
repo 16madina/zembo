@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2, UserCheck, XCircle, Star } from "lucide-react";
+import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2, UserCheck, XCircle, Star, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isNative } from "@/lib/capacitor";
 import { useFaceDetection, FaceDirection } from "@/hooks/useFaceDetection";
@@ -16,7 +16,7 @@ interface FaceVerificationStepProps {
   updateData: (data: { faceVerified: boolean }) => void;
 }
 
-type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed" | "identity_upload" | "permission_tutorial";
+type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed" | "identity_upload" | "permission_tutorial" | "android_camera_fallback";
 
 const verificationSteps: { id: VerificationStep; instruction: string; subtext: string; targetDirection: FaceDirection }[] = [
   { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre", targetDirection: "center" },
@@ -449,6 +449,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [retryCount, setRetryCount] = useState(0);
   const [showSkipOption, setShowSkipOption] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -910,8 +912,10 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     } catch (error: any) {
       console.error("[FaceVerification] Camera error:", error);
       
+      const isAndroidDevice = isNative && (window as any).Capacitor?.getPlatform?.() === 'android';
       let errorMessage = "Impossible d'accéder à la caméra.";
       let isPermissionDenied = false;
+      let shouldOfferCameraFallback = false;
       
       if (error.name === "NotAllowedError") {
         errorMessage = "Accès caméra refusé";
@@ -920,10 +924,21 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         errorMessage = "Aucune caméra détectée sur cet appareil.";
       } else if (error.name === "NotReadableError") {
         errorMessage = "La caméra est utilisée par une autre application.";
+        // On Android, this often means WebView camera access issues
+        if (isAndroidDevice) {
+          shouldOfferCameraFallback = true;
+        }
       } else if (error.name === "OverconstrainedError") {
         errorMessage = "Configuration caméra non supportée.";
+        if (isAndroidDevice) {
+          shouldOfferCameraFallback = true;
+        }
       } else if (error.message) {
         errorMessage = error.message;
+        // Generic errors on Android often mean WebView camera issues
+        if (isAndroidDevice) {
+          shouldOfferCameraFallback = true;
+        }
       }
       
       // Allow retry if mounting timing / permissions caused a failure
@@ -937,6 +952,13 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
 
       setCameraError(errorMessage);
       setIsVideoReady(false);
+      
+      // On Android, if WebView camera fails, offer Capacitor Camera fallback
+      if (shouldOfferCameraFallback) {
+        console.log("[FaceVerification] Android WebView camera failed, offering photo capture fallback");
+        setCurrentStep("android_camera_fallback");
+        return;
+      }
       
       // Show permission tutorial for permission denied errors on native
       if (isPermissionDenied && isNative) {
@@ -970,7 +992,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   }, []);
 
   useEffect(() => {
-    const shouldHaveCamera = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed" && currentStep !== "permission_tutorial";
+    const shouldHaveCamera = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed" && currentStep !== "permission_tutorial" && currentStep !== "android_camera_fallback" && currentStep !== "identity_upload";
     
     if (shouldHaveCamera && !cameraStartedRef.current && !streamRef.current) {
       cameraStartedRef.current = true;
@@ -1087,6 +1109,121 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     updateData({ faceVerified: false });
     onNext();
   };
+
+  // Capacitor Camera fallback for Android WebView camera issues
+  const capturePhotoWithCapacitor = useCallback(async () => {
+    setIsCapturingPhoto(true);
+    setCameraError(null);
+    
+    try {
+      const { Camera, CameraResultType, CameraSource, CameraDirection } = await import('@capacitor/camera');
+      
+      console.log("[FaceVerification] Capturing photo with Capacitor Camera...");
+      
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        direction: CameraDirection.Front,
+        width: 640,
+        height: 640,
+        correctOrientation: true,
+      });
+      
+      if (!image.dataUrl) {
+        throw new Error("Aucune image capturée");
+      }
+      
+      console.log("[FaceVerification] Photo captured successfully");
+      setCapturedPhoto(image.dataUrl);
+      
+      // Now compare the captured photo with profile photos
+      await compareCapturedPhoto(image.dataUrl);
+      
+    } catch (error: any) {
+      console.error("[FaceVerification] Capacitor Camera error:", error);
+      
+      let errorMessage = "Impossible de prendre la photo.";
+      if (error.message?.includes("User cancelled")) {
+        errorMessage = "Capture annulée.";
+      } else if (error.message?.includes("denied")) {
+        errorMessage = "Permission caméra refusée.";
+      }
+      
+      setCameraError(errorMessage);
+    } finally {
+      setIsCapturingPhoto(false);
+    }
+  }, []);
+
+  // Compare a captured photo (from Capacitor Camera) with profile photos
+  const compareCapturedPhoto = useCallback(async (photoDataUrl: string) => {
+    if (!isComparisonModelsLoaded || photoDescriptors.length === 0) {
+      setCameraError("La reconnaissance faciale n'est pas prête. Réessayez.");
+      return;
+    }
+
+    setCurrentStep("comparing");
+    setDetectionStatus("Comparaison avec vos photos...");
+
+    try {
+      // Create an image element from the captured photo
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Impossible de charger l'image"));
+        img.src = photoDataUrl;
+      });
+
+      // Detect face in the captured photo
+      const detection = await faceapi
+        .detectSingleFace(img)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!detection) {
+        throw new Error("Aucun visage détecté dans la photo. Réessayez en vous positionnant mieux.");
+      }
+
+      const capturedDescriptor = detection.descriptor;
+      let bestMatch = { index: -1, distance: Infinity };
+
+      for (let i = 0; i < photoDescriptors.length; i++) {
+        const distance = faceapi.euclideanDistance(capturedDescriptor, photoDescriptors[i]);
+        if (distance < bestMatch.distance) {
+          bestMatch = { index: i, distance };
+        }
+      }
+
+      const similarity = Math.max(0, 1 - bestMatch.distance);
+      const isMatch = similarity >= FACE_MATCH_THRESHOLD;
+
+      console.log(`[FaceVerification] Photo comparison - Match: ${isMatch}, similarity: ${(similarity * 100).toFixed(1)}%`);
+
+      setFaceMatchResult({ isMatch, similarity });
+
+      if (isMatch) {
+        setCurrentStep("complete");
+        updateData({ faceVerified: true });
+      } else {
+        setCurrentStep("failed");
+      }
+    } catch (error: any) {
+      console.error("[FaceVerification] Photo comparison failed:", error);
+      setCameraError(error.message || "Erreur pendant la comparaison");
+      setCurrentStep("android_camera_fallback");
+    }
+  }, [isComparisonModelsLoaded, photoDescriptors, updateData]);
+
+  const handleAndroidCameraFallbackRetry = useCallback(() => {
+    setCameraError(null);
+    setCapturedPhoto(null);
+    cameraStartedRef.current = false;
+    setCurrentStep("preparing");
+  }, []);
 
   const currentStepIndex = verificationSteps.findIndex(s => s.id === currentStep);
   const currentInstruction = verificationSteps.find(s => s.id === currentStep);
@@ -1731,6 +1868,119 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                 </Button>
               )}
             </motion.div>
+          </motion.div>
+        )}
+
+        {currentStep === "android_camera_fallback" && (
+          <motion.div
+            key="android_camera_fallback"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 200, damping: 25 }}
+            className="flex-1 flex flex-col items-center justify-center text-center px-6"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", delay: 0.1 }}
+              className="relative mb-8"
+            >
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500/30 to-orange-500/10 flex items-center justify-center">
+                  <Camera className="w-12 h-12 text-orange-500" />
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-2xl font-bold text-foreground mb-3"
+            >
+              Caméra alternative
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-muted-foreground mb-6 max-w-xs"
+            >
+              {cameraError 
+                ? cameraError 
+                : "La caméra en direct n'est pas disponible sur votre appareil. Utilisez la capture photo native à la place."
+              }
+            </motion.p>
+
+            {capturedPhoto && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 w-32 h-32 rounded-full overflow-hidden border-4 border-primary/50"
+              >
+                <img 
+                  src={capturedPhoto} 
+                  alt="Photo capturée" 
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
+            )}
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="w-full max-w-xs space-y-3"
+            >
+              <Button
+                onClick={capturePhotoWithCapacitor}
+                disabled={isCapturingPhoto || isComparisonLoading}
+                className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
+              >
+                {isCapturingPhoto ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Ouverture caméra...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="w-5 h-5 mr-2" />
+                    Prendre un selfie
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={handleAndroidCameraFallbackRetry}
+                variant="outline"
+                className="w-full h-12"
+                disabled={isCapturingPhoto}
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Réessayer la caméra en direct
+              </Button>
+              
+              <Button
+                onClick={handleIdentityUpload}
+                variant="ghost"
+                className="w-full h-12 text-muted-foreground"
+                disabled={isCapturingPhoto}
+              >
+                Vérification manuelle (pièce d'identité)
+              </Button>
+            </motion.div>
+
+            {isComparisonLoading && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-4 text-xs text-muted-foreground"
+              >
+                Chargement de la reconnaissance faciale...
+              </motion.p>
+            )}
           </motion.div>
         )}
 

@@ -39,8 +39,10 @@ const config: CapacitorConfig = {
     backgroundColor: "#0a0c14",
     allowMixedContent: true,
     webContentsDebuggingEnabled: true,
-    // Enable camera in WebView
-    appendUserAgent: "ZemboApp"
+    // Enable camera and microphone in WebView
+    appendUserAgent: "ZemboApp",
+    // Request WebView camera/microphone capture
+    captureInput: true
   }
 };
 
