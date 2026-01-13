@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SlidersHorizontal, SearchX, Loader2, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -9,11 +9,11 @@ import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 import NearbyMap from "@/components/NearbyMap";
+import SuperLikeExplosion from "@/components/SuperLikeExplosion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfilesWithDistance, ProfileWithDistance } from "@/hooks/useProfilesWithDistance";
-
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
@@ -44,6 +44,7 @@ const Home = () => {
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
+  const [showSuperLikeExplosion, setShowSuperLikeExplosion] = useState(false);
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
@@ -157,6 +158,10 @@ const Home = () => {
     if (direction === "right" || direction === "up") {
       const isSuperLike = direction === "up";
       
+      // Trigger super like explosion animation
+      if (isSuperLike) {
+        setShowSuperLikeExplosion(true);
+      }
       // Save like to database
       try {
         const { error: likeError } = await supabase
@@ -214,6 +219,10 @@ const Home = () => {
     if (isModalOpen) setIsModalOpen(false);
     handleSwipe("up");
   };
+
+  const handleSuperLikeExplosionComplete = useCallback(() => {
+    setShowSuperLikeExplosion(false);
+  }, []);
 
   const handleInfoClick = () => {
     setSelectedProfile(currentProfile);
@@ -460,6 +469,11 @@ const Home = () => {
         onClose={() => setIsFilterOpen(false)}
         filters={filters}
         onApply={setFilters}
+      />
+
+      <SuperLikeExplosion 
+        isVisible={showSuperLikeExplosion} 
+        onComplete={handleSuperLikeExplosionComplete} 
       />
 
       <BottomNavigation />
