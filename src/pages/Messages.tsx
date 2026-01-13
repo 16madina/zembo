@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, CheckCheck, Check, Loader2, Heart, Lock, Crown } from "lucide-react";
+import { MessageCircle, CheckCheck, Check, Loader2, Heart, Lock, Crown, Sparkles } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import ChatView from "@/components/ChatView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-
+import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { toast } from "@/hooks/use-toast";
 interface Conversation {
   id: string;
   user: {
@@ -71,11 +72,14 @@ const MessageStatus = ({ status }: { status: Conversation["status"] }) => {
 const Messages = () => {
   const { user } = useAuth();
   const { isPremium } = useSubscription();
+  const { playNotificationSound, playMatchSound } = useSoundEffects();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMatches, setNewMatches] = useState<NewMatch[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [likedByUsers, setLikedByUsers] = useState<LikedByUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState<{ type: 'like' | 'match'; name?: string } | null>(null);
+  const isFirstLoad = useRef(true);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -236,6 +240,16 @@ const Messages = () => {
   useEffect(() => {
     if (!user) return;
 
+    // Helper to fetch profile name
+    const fetchProfileName = async (userId: string): Promise<string> => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", userId)
+        .single();
+      return data?.display_name || "Quelqu'un";
+    };
+
     // Subscribe to new matches
     const matchesChannel = supabase
       .channel("realtime-matches")
@@ -246,11 +260,28 @@ const Messages = () => {
           schema: "public",
           table: "matches",
         },
-        (payload) => {
+        async (payload) => {
           const newMatch = payload.new as { user1_id: string; user2_id: string };
           // Check if current user is part of this match
           if (newMatch.user1_id === user.id || newMatch.user2_id === user.id) {
             console.log("New match detected!", newMatch);
+            
+            // Only play sound/show notification after initial load
+            if (!isFirstLoad.current) {
+              const otherUserId = newMatch.user1_id === user.id ? newMatch.user2_id : newMatch.user1_id;
+              const name = await fetchProfileName(otherUserId);
+              
+              playMatchSound();
+              setNotification({ type: 'match', name });
+              
+              toast({
+                title: "🎉 Nouveau Match !",
+                description: `Vous avez matché avec ${name} !`,
+              });
+              
+              setTimeout(() => setNotification(null), 3000);
+            }
+            
             fetchData(); // Refresh all data
           }
         }
@@ -302,11 +333,27 @@ const Messages = () => {
           schema: "public",
           table: "likes",
         },
-        (payload) => {
+        async (payload) => {
           const newLike = payload.new as { liker_id: string; liked_id: string };
           // Someone liked me
           if (newLike.liked_id === user.id) {
             console.log("Someone liked me!", newLike);
+            
+            // Only play sound/show notification after initial load
+            if (!isFirstLoad.current) {
+              const name = await fetchProfileName(newLike.liker_id);
+              
+              playNotificationSound();
+              setNotification({ type: 'like', name });
+              
+              toast({
+                title: "❤️ Nouveau Like !",
+                description: `${name} vous a liké !`,
+              });
+              
+              setTimeout(() => setNotification(null), 3000);
+            }
+            
             fetchData(); // Refresh to show in "Who liked me"
           }
         }
@@ -324,12 +371,18 @@ const Messages = () => {
       )
       .subscribe();
 
+    // Mark initial load as complete after a delay
+    const timer = setTimeout(() => {
+      isFirstLoad.current = false;
+    }, 2000);
+
     return () => {
+      clearTimeout(timer);
       supabase.removeChannel(matchesChannel);
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(likesChannel);
     };
-  }, [user, fetchData]);
+  }, [user, fetchData, playNotificationSound, playMatchSound]);
 
   // Check for notification deep link on mount
   useEffect(() => {
@@ -373,6 +426,63 @@ const Messages = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
+      {/* Notification Animation Overlay */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -100, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed top-[env(safe-area-inset-top)] left-0 right-0 z-50 flex justify-center px-4 pt-4"
+          >
+            <motion.div
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg backdrop-blur-md ${
+                notification.type === 'match' 
+                  ? 'bg-gradient-to-r from-primary/90 to-accent/90' 
+                  : 'bg-gradient-to-r from-destructive/90 to-pink-500/90'
+              }`}
+              animate={{ 
+                boxShadow: [
+                  "0 0 20px 0 rgba(var(--primary), 0.3)",
+                  "0 0 40px 10px rgba(var(--primary), 0.5)",
+                  "0 0 20px 0 rgba(var(--primary), 0.3)",
+                ]
+              }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              {notification.type === 'match' ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.5, repeat: 2 }}
+                  >
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </motion.div>
+                  <span className="text-white font-bold text-lg">Match avec {notification.name} !</span>
+                  <motion.div
+                    animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.5, repeat: 2 }}
+                  >
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </motion.div>
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 0.6, repeat: 2 }}
+                  >
+                    <Heart className="w-6 h-6 text-white fill-white" />
+                  </motion.div>
+                  <span className="text-white font-bold text-lg">{notification.name} vous a liké !</span>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Fixed Header */}
       <motion.header 
         className="flex items-center justify-between px-4 md:px-8 py-3 flex-shrink-0 max-w-4xl md:mx-auto w-full"
