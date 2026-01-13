@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2, UserCheck, XCircle, Star, ImageIcon } from "lucide-react";
+import { Camera, CheckCircle2, RotateCcw, Sparkles, Shield, AlertCircle, Loader2, UserCheck, XCircle, Star, ImageIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isNative } from "@/lib/capacitor";
 import { useFaceDetection, FaceDirection } from "@/hooks/useFaceDetection";
 import { useFaceRecognitionPreload } from "@/contexts/FaceRecognitionPreloadContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import * as faceapi from 'face-api.js';
 import confetti from 'canvas-confetti';
 import { IdentityUploadScreen } from "./IdentityUploadScreen";
@@ -16,7 +19,7 @@ interface FaceVerificationStepProps {
   updateData: (data: { faceVerified: boolean }) => void;
 }
 
-type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "failed" | "identity_upload" | "permission_tutorial" | "android_camera_fallback";
+type VerificationStep = "intro" | "preparing" | "center" | "left" | "right" | "comparing" | "complete" | "pending_review" | "failed" | "identity_upload" | "permission_tutorial" | "android_camera_fallback";
 
 const verificationSteps: { id: VerificationStep; instruction: string; subtext: string; targetDirection: FaceDirection }[] = [
   { id: "center", instruction: "Regardez la caméra", subtext: "Gardez votre visage au centre du cadre", targetDirection: "center" },
@@ -25,7 +28,8 @@ const verificationSteps: { id: VerificationStep; instruction: string; subtext: s
 ];
 
 const REQUIRED_HOLD_TIME = 1500; // ms to hold position
-const FACE_DISTANCE_THRESHOLD = 0.6; // Max distance for a match (0.55-0.65 is reasonable, lower = stricter)
+const FACE_DISTANCE_THRESHOLD = 0.6; // Max distance for auto-approve (distance <= this = match)
+const ADMIN_REVIEW_THRESHOLD = 0.85; // If distance > FACE_DISTANCE_THRESHOLD but <= this, send to admin for review
 const FACE_MATCH_THRESHOLD = 1 - FACE_DISTANCE_THRESHOLD; // For display purposes only
 
 // Detection options for better mobile compatibility
@@ -347,6 +351,135 @@ const SuccessScreen = ({
   );
 };
 
+// Pending review screen - when face is detected but similarity is borderline
+const PendingReviewScreen = ({ onNext }: { onNext: () => void }) => {
+  return (
+    <motion.div
+      key="pending-review"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+      className="flex-1 flex flex-col items-center justify-center text-center px-6 relative overflow-hidden"
+    >
+      {/* Background glow effect */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, delay: 0.2 }}
+        className="absolute inset-0 pointer-events-none"
+      >
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/15 rounded-full blur-2xl" />
+      </motion.div>
+
+      {/* Pending animation */}
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", delay: 0.2 }}
+        className="relative mb-8 z-10"
+      >
+        {/* Pulsing rings */}
+        <motion.div
+          animate={{ 
+            scale: [1, 1.3, 1],
+            opacity: [0.3, 0, 0.3]
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-0 w-40 h-40 -m-4 rounded-full border-2 border-orange-500/40"
+        />
+        
+        <motion.div
+          animate={{ 
+            scale: [1, 1.5, 1],
+            opacity: [0.2, 0, 0.2]
+          }}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+          className="absolute inset-0 w-40 h-40 -m-4 rounded-full border-2 border-primary/30"
+        />
+
+        <motion.div
+          className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-500/30 to-orange-500/10 flex items-center justify-center backdrop-blur-sm border border-orange-500/20"
+        >
+          <motion.div 
+            className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500/40 to-orange-500/20 flex items-center justify-center"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+          >
+            <Clock className="w-12 h-12 text-orange-500" />
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      {/* Title */}
+      <motion.h2
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="text-2xl font-bold text-foreground mb-3"
+      >
+        Vérification en cours
+      </motion.h2>
+
+      {/* Subtitle */}
+      <motion.p
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="text-muted-foreground max-w-xs mb-6"
+      >
+        Votre photo a été envoyée à notre équipe pour vérification. Vous serez notifié du résultat.
+      </motion.p>
+
+      {/* Info box */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="bg-muted/50 backdrop-blur-sm rounded-2xl p-4 max-w-sm w-full mb-8"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-5 h-5 text-orange-500" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-medium text-foreground mb-1">
+              Accès restreint temporaire
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Vous pouvez explorer l'application en attendant. Certaines fonctionnalités comme l'envoi de messages seront disponibles après validation.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Continue button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+        className="w-full max-w-sm"
+      >
+        <Button
+          onClick={onNext}
+          className="w-full h-14 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground text-lg font-semibold rounded-2xl shadow-lg shadow-primary/20"
+        >
+          <motion.span className="flex items-center gap-2">
+            Continuer
+            <motion.span
+              animate={{ x: [0, 4, 0] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              →
+            </motion.span>
+          </motion.span>
+        </Button>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 // Preparing screen with countdown and instructions
 const PreparingScreen = ({ onStart }: { onStart: () => void }) => {
   const [countdown, setCountdown] = useState(3);
@@ -464,6 +597,7 @@ const PreparingScreen = ({ onStart }: { onStart: () => void }) => {
 };
 
 export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceVerificationStepProps) => {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<VerificationStep>("intro");
   const [progress, setProgress] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<VerificationStep[]>([]);
@@ -480,6 +614,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [showDebugCanvas, setShowDebugCanvas] = useState(true); // Debug mode enabled
   const [debugFrameInfo, setDebugFrameInfo] = useState<string>("");
   const [comparisonDebug, setComparisonDebug] = useState<string>(""); // Debug info for comparison results
+  const [isSubmittingForReview, setIsSubmittingForReview] = useState(false);
   
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -490,7 +625,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const comparisonAttemptedRef = useRef(false);
   const cameraStartedRef = useRef(false);
 
-  const isVerificationActive = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "comparing" && currentStep !== "failed";
+  const isVerificationActive = currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "pending_review" && currentStep !== "comparing" && currentStep !== "failed";
   
   // Use preloaded face recognition context (models + descriptors already loaded in PhotosStep)
   const { 
@@ -691,6 +826,85 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     },
   });
 
+  // Helper: Upload captured frame to storage and submit for admin review
+  const submitForAdminReview = useCallback(async (capturedFrame: HTMLCanvasElement, similarity: number, distance: number) => {
+    if (!user) {
+      console.error("[FaceVerification] No user for admin review submission");
+      return false;
+    }
+
+    setIsSubmittingForReview(true);
+    setDetectionStatus("Envoi pour vérification manuelle...");
+
+    try {
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        capturedFrame.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error("Failed to convert frame to blob"));
+        }, "image/jpeg", 0.9);
+      });
+
+      // Upload to storage
+      const timestamp = Date.now();
+      const selfiePath = `${user.id}/selfie_ai_${timestamp}.jpg`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("identity-documents")
+        .upload(selfiePath, blob, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("identity-documents")
+        .getPublicUrl(uploadData.path);
+
+      const selfieUrl = urlData.publicUrl;
+
+      // Create identity verification request with similarity info
+      const { error: insertError } = await supabase
+        .from("identity_verifications")
+        .upsert({
+          user_id: user.id,
+          id_photo_url: data.photos[0] || "", // Use first profile photo as reference
+          selfie_url: selfieUrl,
+          status: "pending",
+          rejection_reason: `Score IA: ${(similarity * 100).toFixed(1)}% (distance: ${distance.toFixed(3)}) - Vérification manuelle requise`,
+        }, { onConflict: "user_id" });
+
+      if (insertError) throw insertError;
+
+      // Update profile to mark pending manual verification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .update({ identity_verification_status: "pending" })
+        .eq("user_id", user.id)
+        .select("display_name")
+        .single();
+
+      // Notify admins about new verification request
+      try {
+        await supabase.functions.invoke("notify-admin-new-verification", {
+          body: {
+            userId: user.id,
+            displayName: profile?.display_name || undefined,
+          },
+        });
+      } catch (notifyError) {
+        console.error("[FaceVerification] Error notifying admins:", notifyError);
+      }
+
+      console.log("[FaceVerification] Successfully submitted for admin review");
+      return true;
+    } catch (err: any) {
+      console.error("[FaceVerification] Failed to submit for admin review:", err);
+      toast.error("Erreur lors de l'envoi pour vérification");
+      return false;
+    } finally {
+      setIsSubmittingForReview(false);
+    }
+  }, [user, data.photos]);
+
   // Perform face comparison using captured frontal frames from "center" step
   const performFaceComparison = useCallback(async () => {
     if (comparisonAttemptedRef.current) return;
@@ -749,7 +963,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       
       if (centerFramesRef.current.length > 0) {
         console.log(`[FaceVerification] Using ${centerFramesRef.current.length} pre-captured frontal frames`);
-        framesToCompare = centerFramesRef.current;
+        framesToCompare = [...centerFramesRef.current]; // Copy array
       } else if (videoRef.current) {
         // Fallback: capture fresh frames now
         console.log('[FaceVerification] No pre-captured frames, capturing fresh frames...');
@@ -774,6 +988,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         usedFlip: boolean;
         photoIndex: number;
         frameIndex: number;
+        frame?: HTMLCanvasElement;
       }
       
       const results: ComparisonResult[] = [];
@@ -813,7 +1028,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           distance: result.distance,
           usedFlip: result.usedFlip,
           photoIndex: result.photoIndex,
-          frameIndex: i
+          frameIndex: i,
+          frame: framesToCompare[i]
         });
       }
 
@@ -843,7 +1059,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           curr.distance < best.distance ? curr : best, validResults[0]
         );
         
-        debugMessage = `Frame ${bestResult.frameIndex + 1} | Photo ${bestResult.photoIndex + 1} | Dist: ${bestResult.distance.toFixed(3)} (seuil: ${FACE_DISTANCE_THRESHOLD}) | Flip: ${bestResult.usedFlip ? 'oui' : 'non'}`;
+        debugMessage = `Frame ${bestResult.frameIndex + 1} | Photo ${bestResult.photoIndex + 1} | Dist: ${bestResult.distance.toFixed(3)} (seuil auto: ${FACE_DISTANCE_THRESHOLD}, seuil admin: ${ADMIN_REVIEW_THRESHOLD}) | Flip: ${bestResult.usedFlip ? 'oui' : 'non'}`;
         console.log(`[FaceVerification] Best result: ${debugMessage}`);
       }
       
@@ -851,12 +1067,36 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       setFaceMatchResult({ similarity: bestResult.similarity, isMatch: bestResult.isMatch });
 
       stopCameraNow();
-      centerFramesRef.current = []; // Clear captured frames
 
+      // Decision logic:
+      // 1. distance <= FACE_DISTANCE_THRESHOLD (0.6) → Auto approve
+      // 2. distance > FACE_DISTANCE_THRESHOLD but <= ADMIN_REVIEW_THRESHOLD (0.85) and face detected → Send to admin
+      // 3. distance > ADMIN_REVIEW_THRESHOLD or no face detected → Request ID document
+      
       if (bestResult.isMatch) {
+        // Case 1: Auto approve - face matches well enough
+        console.log('[FaceVerification] Auto-approved: face match confirmed');
+        centerFramesRef.current = [];
         setCurrentStep("complete");
         updateData({ faceVerified: true });
+      } else if (!bestResult.noFaceDetected && bestResult.distance <= ADMIN_REVIEW_THRESHOLD && bestResult.frame) {
+        // Case 2: Face detected but not confident enough - send to admin for review
+        console.log(`[FaceVerification] Borderline case (distance: ${bestResult.distance.toFixed(3)}) - submitting for admin review`);
+        setDetectionStatus("Envoi pour vérification manuelle...");
+        
+        const submitted = await submitForAdminReview(bestResult.frame, bestResult.similarity, bestResult.distance);
+        centerFramesRef.current = [];
+        
+        if (submitted) {
+          setCurrentStep("pending_review");
+        } else {
+          // If submission failed, go to identity upload as fallback
+          setCurrentStep("identity_upload");
+        }
       } else {
+        // Case 3: No face detected or very poor match - require ID document
+        console.log('[FaceVerification] Failed verification - requesting ID document');
+        centerFramesRef.current = [];
         setCurrentStep("failed");
       }
     } catch (err: any) {
@@ -868,7 +1108,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       setCameraError(err?.message || "Erreur pendant la comparaison");
       setCurrentStep("failed");
     }
-  }, [compareFaceWithPreloaded, updateData, isComparisonModelsLoaded, hasPhotoDescriptors]);
+  }, [compareFaceWithPreloaded, updateData, isComparisonModelsLoaded, hasPhotoDescriptors, submitForAdminReview]);
 
   // Capture frontal frames during the "center" step for later comparison
   const captureCenterFrame = useCallback(() => {
@@ -1744,7 +1984,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           <PreparingScreen onStart={startActualVerification} />
         )}
 
-        {(currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "failed" && currentStep !== "identity_upload") && (
+        {(currentStep !== "intro" && currentStep !== "preparing" && currentStep !== "complete" && currentStep !== "pending_review" && currentStep !== "failed" && currentStep !== "identity_upload") && (
           <motion.div
             key="verification"
             initial={verificationTransition.initial}
@@ -2341,6 +2581,10 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
             faceMatchResult={faceMatchResult} 
             onNext={onNext}
           />
+        )}
+
+        {currentStep === "pending_review" && (
+          <PendingReviewScreen onNext={onNext} />
         )}
       </AnimatePresence>
     </div>
