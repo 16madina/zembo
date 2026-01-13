@@ -638,7 +638,9 @@ export type Database = {
           is_online: boolean | null
           is_verified: boolean | null
           last_seen: string | null
+          latitude: number | null
           location: string | null
+          longitude: number | null
           looking_for: string[] | null
           occupation: string | null
           phone: string | null
@@ -667,7 +669,9 @@ export type Database = {
           is_online?: boolean | null
           is_verified?: boolean | null
           last_seen?: string | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           looking_for?: string[] | null
           occupation?: string | null
           phone?: string | null
@@ -696,7 +700,9 @@ export type Database = {
           is_online?: boolean | null
           is_verified?: boolean | null
           last_seen?: string | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           looking_for?: string[] | null
           occupation?: string | null
           phone?: string | null
