@@ -12,12 +12,14 @@ import NearbyMap from "@/components/NearbyMap";
 import SuperLikeExplosion from "@/components/SuperLikeExplosion";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import RoseMessageModal from "@/components/RoseMessageModal";
+import RoseReceivedModal from "@/components/RoseReceivedModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfilesWithDistance, ProfileWithDistance } from "@/hooks/useProfilesWithDistance";
 import { useGifts } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
+import { useRoseReceived } from "@/hooks/useRoseReceived";
 import { useToast } from "@/hooks/use-toast";
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
@@ -41,6 +43,11 @@ const Home = () => {
   const { toast } = useToast();
   const { gifts, sendGift } = useGifts();
   const { balance } = useCoins();
+  const { 
+    roseReceived, 
+    isModalOpen: isRoseReceivedModalOpen, 
+    closeModal: closeRoseReceivedModal 
+  } = useRoseReceived();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -599,6 +606,19 @@ const Home = () => {
         onSend={handleSendRoseWithMessage}
         recipientName={roseTargetProfile?.name || ""}
         isLoading={isSendingRose}
+      />
+
+      <RoseReceivedModal
+        isOpen={isRoseReceivedModalOpen}
+        onClose={closeRoseReceivedModal}
+        onViewProfile={() => {
+          closeRoseReceivedModal();
+          navigate("/messages");
+        }}
+        senderName={roseReceived?.name || ""}
+        senderPhoto={roseReceived?.photo || ""}
+        message={roseReceived?.message || ""}
+        senderId={roseReceived?.id}
       />
 
       <BottomNavigation />

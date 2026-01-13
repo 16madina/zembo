@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface RoseReceivedModalProps {
@@ -9,6 +9,7 @@ interface RoseReceivedModalProps {
   senderName: string;
   senderPhoto: string;
   message: string;
+  senderId?: string;
 }
 
 const RoseReceivedModal = ({
@@ -18,6 +19,7 @@ const RoseReceivedModal = ({
   senderName,
   senderPhoto,
   message,
+  senderId,
 }: RoseReceivedModalProps) => {
   return (
     <AnimatePresence>
@@ -70,6 +72,13 @@ const RoseReceivedModal = ({
 
             {/* Main Card */}
             <div className="relative bg-gradient-to-br from-rose-950/95 via-background/95 to-rose-900/90 backdrop-blur-xl rounded-3xl p-6 border border-rose-500/40 shadow-2xl">
+              {/* Close button */}
+              <button
+                onClick={onClose}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+              >
+                <X className="w-4 h-4 text-white/70" />
+              </button>
               {/* Sender Photo */}
               <motion.div
                 initial={{ scale: 0 }}
