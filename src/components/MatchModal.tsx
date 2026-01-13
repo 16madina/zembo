@@ -2,8 +2,10 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Heart, Sparkles } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MatchModalProps {
   profile: Profile | null;
@@ -13,6 +15,30 @@ interface MatchModalProps {
 }
 
 const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) => {
+  const { user } = useAuth();
+  const [currentUserPhoto, setCurrentUserPhoto] = useState<string | null>(null);
+
+  // Fetch current user's photo
+  useEffect(() => {
+    const fetchUserPhoto = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (data?.avatar_url) {
+        setCurrentUserPhoto(data.avatar_url);
+      }
+    };
+    
+    if (isOpen) {
+      fetchUserPhoto();
+    }
+  }, [user, isOpen]);
+
   useEffect(() => {
     if (isOpen) {
       const duration = 3000;
@@ -153,7 +179,7 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
               >
                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary glow-gold">
                   <img
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop"
+                    src={currentUserPhoto || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop"}
                     alt="Vous"
                     className="w-full h-full object-cover"
                   />
