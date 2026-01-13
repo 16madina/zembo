@@ -34,7 +34,7 @@ export const useGifts = (liveId?: string) => {
     gift: VirtualGift,
     receiverId: string,
     message?: string,
-    options?: { createLike?: boolean }
+    options?: { createLike?: boolean; sendNotification?: boolean }
   ): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return { success: false, error: "Non authentifié" };
@@ -80,6 +80,22 @@ export const useGifts = (liveId?: string) => {
       if (likeError) {
         console.error("Error creating like for rose:", likeError);
         // Don't fail the whole transaction, the gift was already sent
+      }
+
+      // Send push notification for rose
+      if (options?.sendNotification) {
+        try {
+          await supabase.functions.invoke("notify-rose", {
+            body: {
+              sender_id: user.id,
+              receiver_id: receiverId,
+              message: message,
+            },
+          });
+        } catch (notifError) {
+          console.error("Error sending rose notification:", notifError);
+          // Don't fail the transaction for notification errors
+        }
       }
     }
 

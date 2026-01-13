@@ -11,6 +11,7 @@ import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 import NearbyMap from "@/components/NearbyMap";
 import SuperLikeExplosion from "@/components/SuperLikeExplosion";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
+import RoseMessageModal from "@/components/RoseMessageModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +54,9 @@ const Home = () => {
   const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
   const [showSuperLikeExplosion, setShowSuperLikeExplosion] = useState(false);
   const [showRosePetals, setShowRosePetals] = useState(false);
+  const [isRoseModalOpen, setIsRoseModalOpen] = useState(false);
+  const [roseTargetProfile, setRoseTargetProfile] = useState<Profile | null>(null);
+  const [isSendingRose, setIsSendingRose] = useState(false);
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
@@ -256,7 +260,8 @@ const Home = () => {
     navigate("/messages");
   };
 
-  const handleSendRose = async () => {
+  // Open rose modal for selected profile (from ProfileModal)
+  const handleOpenRoseModal = () => {
     if (!selectedProfile || !user) return;
     
     const roseGift = gifts.find(g => g.name === "Rose");
@@ -278,25 +283,13 @@ const Home = () => {
       return;
     }
     
-    const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹", { createLike: true });
-    
-    if (result.success) {
-      setShowRosePetals(true);
-      toast({
-        title: "Rose envoyée ! 🌹",
-        description: `${selectedProfile.name} a reçu votre rose`,
-      });
-      setIsModalOpen(false);
-    } else {
-      toast({
-        title: "Erreur",
-        description: result.error || "Impossible d'envoyer la rose",
-        variant: "destructive",
-      });
-    }
+    setRoseTargetProfile(selectedProfile);
+    setIsModalOpen(false);
+    setIsRoseModalOpen(true);
   };
 
-  const handleSendRoseFromCard = async () => {
+  // Open rose modal for current card profile
+  const handleOpenRoseModalFromCard = () => {
     if (!currentProfile || !user) return;
     
     const roseGift = gifts.find(g => g.name === "Rose");
@@ -318,14 +311,37 @@ const Home = () => {
       return;
     }
     
-    const result = await sendGift(roseGift, currentProfile.id, "Une rose pour toi 🌹", { createLike: true });
+    setRoseTargetProfile(currentProfile);
+    setIsRoseModalOpen(true);
+  };
+
+  // Send rose with custom message
+  const handleSendRoseWithMessage = async (message: string) => {
+    if (!roseTargetProfile || !user) return;
+    
+    setIsSendingRose(true);
+    
+    const roseGift = gifts.find(g => g.name === "Rose");
+    if (!roseGift) {
+      setIsSendingRose(false);
+      return;
+    }
+    
+    const result = await sendGift(roseGift, roseTargetProfile.id, message, { 
+      createLike: true, 
+      sendNotification: true 
+    });
+    
+    setIsSendingRose(false);
+    setIsRoseModalOpen(false);
     
     if (result.success) {
       setShowRosePetals(true);
       toast({
         title: "Rose envoyée ! 🌹",
-        description: `${currentProfile.name} a reçu votre rose`,
+        description: `${roseTargetProfile.name} a reçu votre rose et votre message`,
       });
+      setRoseTargetProfile(null);
     } else {
       toast({
         title: "Erreur",
@@ -471,7 +487,7 @@ const Home = () => {
                     onLike={handleLike}
                     onPass={handlePass}
                     onSuperLike={handleSuperLike}
-                    onSendRose={handleSendRoseFromCard}
+                    onSendRose={handleOpenRoseModalFromCard}
                   />
                 ) : (
                   <motion.div
@@ -547,7 +563,7 @@ const Home = () => {
         onClose={handleCloseModal}
         onLike={handleLike}
         onSuperLike={handleSuperLike}
-        onSendRose={handleSendRose}
+        onSendRose={handleOpenRoseModal}
       />
 
       <MatchModal
@@ -572,6 +588,17 @@ const Home = () => {
       <RosePetalsAnimation 
         isVisible={showRosePetals} 
         onComplete={handleRosePetalsComplete} 
+      />
+
+      <RoseMessageModal
+        isOpen={isRoseModalOpen}
+        onClose={() => {
+          setIsRoseModalOpen(false);
+          setRoseTargetProfile(null);
+        }}
+        onSend={handleSendRoseWithMessage}
+        recipientName={roseTargetProfile?.name || ""}
+        isLoading={isSendingRose}
       />
 
       <BottomNavigation />
