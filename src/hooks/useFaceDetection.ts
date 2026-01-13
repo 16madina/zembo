@@ -21,6 +21,20 @@ const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
+// Check specifically for Android
+const isAndroidDevice = () => {
+  return /Android/i.test(navigator.userAgent);
+};
+
+// Check for low-end device based on hardware concurrency and memory
+const isLowEndDevice = () => {
+  const cores = navigator.hardwareConcurrency || 2;
+  const memory = (navigator as any).deviceMemory || 2; // GB, only available in some browsers
+  
+  // Consider low-end if <= 4 cores or <= 2GB RAM
+  return cores <= 4 || memory <= 2;
+};
+
 export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDetectionProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
@@ -106,20 +120,24 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
 
     let isMounted = true;
     const isMobile = isMobileDevice();
+    const isAndroid = isAndroidDevice();
+    const isLowEnd = isLowEndDevice();
     isInitializingRef.current = true;
+
+    console.log(`[FaceDetection] Device info: mobile=${isMobile}, android=${isAndroid}, lowEnd=${isLowEnd}, cores=${navigator.hardwareConcurrency}`);
 
     const initFaceLandmarker = async (useGPU: boolean = true) => {
       try {
         setIsLoading(true);
         setError(null);
 
-        console.log(`[FaceDetection] Init, GPU: ${useGPU}, Mobile: ${isMobile}`);
+        console.log(`[FaceDetection] Init, GPU: ${useGPU}, Mobile: ${isMobile}, Android: ${isAndroid}`);
 
         const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
 
         if (!isMounted) return;
 
-        // Use a more compatible WASM version for mobile
+        // Use a stable WASM version
         const wasmUrl = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
         
         console.log("[FaceDetection] Loading FilesetResolver...");
@@ -129,9 +147,9 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         
         console.log("[FaceDetection] FilesetResolver loaded successfully");
 
-        // Determine delegate based on device and retry attempt
-        // On mobile, prefer CPU as GPU WebGL support is inconsistent
-        const delegate = (isMobile || !useGPU) ? "CPU" : "GPU";
+        // Determine delegate - ALWAYS use CPU on Android for reliability
+        // GPU WebGL support is too inconsistent across Android devices
+        const delegate = (isAndroid || isMobile || !useGPU) ? "CPU" : "GPU";
         console.log(`[FaceDetection] Creating FaceLandmarker with delegate: ${delegate}`);
 
         const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
@@ -157,12 +175,33 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         setIsLoading(false);
         setError(null);
 
-        // Start detection loop
+        // Start detection loop with frame skipping for low-end devices
         let lastVideoTime = -1;
         let frameCount = 0;
+        let lastDetectionTime = 0;
+        
+        // Adaptive frame rate: process fewer frames on low-end devices
+        // High-end: ~30fps (33ms), Low-end Android: ~10fps (100ms), Other mobile: ~15fps (66ms)
+        const getMinFrameInterval = () => {
+          if (isAndroid && isLowEnd) return 100; // 10 fps for low-end Android
+          if (isAndroid) return 66; // 15 fps for Android
+          if (isMobile) return 50; // 20 fps for other mobile
+          return 33; // 30 fps for desktop
+        };
+        
+        const minFrameInterval = getMinFrameInterval();
+        console.log(`[FaceDetection] Using frame interval: ${minFrameInterval}ms (~${Math.round(1000/minFrameInterval)} fps)`);
         
         const detectFace = () => {
           if (!isMounted || !videoRefStable.current || !faceLandmarkerRef.current) return;
+          
+          const now = performance.now();
+          
+          // Frame skipping for performance - don't process every frame on slow devices
+          if (now - lastDetectionTime < minFrameInterval) {
+            animationFrameRef.current = requestAnimationFrame(detectFace);
+            return;
+          }
           
           const video = videoRefStable.current;
           
@@ -172,10 +211,11 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
           
           if (isReady && video.currentTime !== lastVideoTime) {
             lastVideoTime = video.currentTime;
+            lastDetectionTime = now;
             frameCount++;
             
             try {
-              const results = faceLandmarkerRef.current.detectForVideo(video, performance.now());
+              const results = faceLandmarkerRef.current.detectForVideo(video, now);
               
               if (results.faceLandmarks && results.faceLandmarks.length > 0) {
                 const landmarks = results.faceLandmarks[0];
@@ -265,7 +305,7 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         console.error("[FaceDetection] Init error:", err);
         
         // If GPU failed and we haven't tried CPU yet, retry with CPU
-        if (useGPU && !isMobile && isMounted) {
+        if (useGPU && !isMobile && !isAndroid && isMounted) {
           console.log("[FaceDetection] GPU init failed, retrying with CPU...");
           await initFaceLandmarker(false);
           return;
@@ -280,7 +320,8 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
       }
     };
 
-    // Add a loading timeout - if still loading after 15 seconds, show error
+    // Add a loading timeout - longer for Android due to slower initialization
+    const timeoutDuration = isAndroid ? 25000 : 15000;
     const loadingTimeout = setTimeout(() => {
       if (isMounted && enabled && !isInitializedRef.current) {
         console.error("[FaceDetection] Loading timeout reached");
@@ -288,9 +329,10 @@ export const useFaceDetection = ({ videoRef, enabled, onDetection }: UseFaceDete
         setIsLoading(false);
         isInitializingRef.current = false;
       }
-    }, 15000);
+    }, timeoutDuration);
 
-    initFaceLandmarker(!isMobile); // Start with GPU on desktop, CPU on mobile
+    // Always use CPU on Android for stability
+    initFaceLandmarker(!isMobile && !isAndroid);
 
     return () => {
       isMounted = false;
