@@ -14,6 +14,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfilesWithDistance, ProfileWithDistance } from "@/hooks/useProfilesWithDistance";
+import { useGifts } from "@/hooks/useGifts";
+import { useCoins } from "@/hooks/useCoins";
+import { useToast } from "@/hooks/use-toast";
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
@@ -33,6 +36,9 @@ const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const { gifts, sendGift } = useGifts();
+  const { balance } = useCoins();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -242,6 +248,45 @@ const Home = () => {
   const handleStartChat = () => {
     setIsMatchModalOpen(false);
     navigate("/messages");
+  };
+
+  const handleSendRose = async () => {
+    if (!selectedProfile || !user) return;
+    
+    const roseGift = gifts.find(g => g.name === "Rose");
+    if (!roseGift) {
+      toast({
+        title: "Cadeau indisponible",
+        description: "La rose n'est pas disponible pour le moment",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (balance < roseGift.price_coins) {
+      toast({
+        title: "Solde insuffisant",
+        description: `Vous avez besoin de ${roseGift.price_coins} coins pour envoyer une rose`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹");
+    
+    if (result.success) {
+      toast({
+        title: "Rose envoyée ! 🌹",
+        description: `${selectedProfile.name} a reçu votre rose`,
+      });
+      setIsModalOpen(false);
+    } else {
+      toast({
+        title: "Erreur",
+        description: result.error || "Impossible d'envoyer la rose",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -455,6 +500,7 @@ const Home = () => {
         onClose={handleCloseModal}
         onLike={handleLike}
         onSuperLike={handleSuperLike}
+        onSendRose={handleSendRose}
       />
 
       <MatchModal
