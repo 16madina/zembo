@@ -10,9 +10,10 @@ interface ProfileCardProps {
   onLike: () => void;
   onPass: () => void;
   onSuperLike: () => void;
+  onSendRose?: () => void;
 }
 
-const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLike }: ProfileCardProps) => {
+const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLike, onSendRose }: ProfileCardProps) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const isDragging = useRef(false);
@@ -192,6 +193,20 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
               <div className="absolute inset-0 rounded-full bg-accent/10" />
               <Star className="w-4 h-4 relative z-10" fill="currentColor" />
             </motion.button>
+
+            {/* Rose Button */}
+            {onSendRose && (
+              <motion.button
+                onClick={(e) => { e.stopPropagation(); onSendRose(); }}
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                className="relative p-2.5 glass rounded-full text-rose-500 transition-shadow"
+              >
+                <div className="absolute inset-0 rounded-full bg-rose-500/20 animate-pulse" />
+                <span className="text-lg relative z-10">🌹</span>
+              </motion.button>
+            )}
 
             {/* Like Button */}
             <motion.button

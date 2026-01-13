@@ -296,6 +296,45 @@ const Home = () => {
     }
   };
 
+  const handleSendRoseFromCard = async () => {
+    if (!currentProfile || !user) return;
+    
+    const roseGift = gifts.find(g => g.name === "Rose");
+    if (!roseGift) {
+      toast({
+        title: "Cadeau indisponible",
+        description: "La rose n'est pas disponible pour le moment",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (balance < roseGift.price_coins) {
+      toast({
+        title: "Solde insuffisant",
+        description: `Vous avez besoin de ${roseGift.price_coins} coins pour envoyer une rose`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const result = await sendGift(roseGift, currentProfile.id, "Une rose pour toi 🌹");
+    
+    if (result.success) {
+      setShowRosePetals(true);
+      toast({
+        title: "Rose envoyée ! 🌹",
+        description: `${currentProfile.name} a reçu votre rose`,
+      });
+    } else {
+      toast({
+        title: "Erreur",
+        description: result.error || "Impossible d'envoyer la rose",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       {/* Header */}
@@ -432,6 +471,7 @@ const Home = () => {
                     onLike={handleLike}
                     onPass={handlePass}
                     onSuperLike={handleSuperLike}
+                    onSendRose={handleSendRoseFromCard}
                   />
                 ) : (
                   <motion.div
