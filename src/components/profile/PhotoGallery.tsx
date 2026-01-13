@@ -265,19 +265,24 @@ const PhotoGallery = ({ userId, photos, onPhotosChange, onAvatarChange }: PhotoG
     toast.success("Photo supprimée");
   };
 
-  const openFilePicker = async (e?: React.MouseEvent) => {
+  const openFilePicker = async (e?: React.MouseEvent | React.TouchEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
+    
+    console.log("openFilePicker triggered, isNative:", Capacitor.isNativePlatform());
 
     // Use Capacitor Camera on native platforms
     if (Capacitor.isNativePlatform()) {
       try {
+        console.log("Calling Capacitor Camera...");
         const image = await CapCamera.getPhoto({
           quality: 90,
           allowEditing: false,
           resultType: CameraResultType.Base64,
           source: CameraSource.Prompt, // Let user choose camera or gallery
         });
+
+        console.log("Camera returned image:", !!image.base64String);
 
         if (image.base64String) {
           setIsUploading(true);
@@ -324,6 +329,12 @@ const PhotoGallery = ({ userId, photos, onPhotosChange, onAvatarChange }: PhotoG
     }
   };
 
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openFilePicker();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -354,43 +365,51 @@ const PhotoGallery = ({ userId, photos, onPhotosChange, onAvatarChange }: PhotoG
         className="hidden"
       />
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={photos} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-3 gap-3">
-            <AnimatePresence mode="popLayout">
-              {photos.map((photo, index) => (
-                <SortablePhoto
-                  key={photo}
-                  photo={photo}
-                  index={index}
-                  onSetAsMain={handleSetAsMain}
-                  onDelete={handleDeletePhoto}
-                />
-              ))}
+      {/* Photos sortables dans DndContext */}
+      {photos.length > 0 && (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={photos} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-3 gap-3">
+              <AnimatePresence mode="popLayout">
+                {photos.map((photo, index) => (
+                  <SortablePhoto
+                    key={photo}
+                    photo={photo}
+                    index={index}
+                    onSetAsMain={handleSetAsMain}
+                    onDelete={handleDeletePhoto}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
 
-              {/* Empty slots */}
-              {Array.from({ length: Math.min(3 - (photos.length % 3 || 3), maxPhotos - photos.length) }).map(
-                (_, index) => (
-                  <motion.button
-                    key={`empty-${index}`}
-                    onClick={openFilePicker}
-                    disabled={isUploading}
-                    className="aspect-[3/4] rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {isUploading && uploadingIndex === photos.length + index ? (
-                      <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    ) : (
-                      <Plus className="w-8 h-8 text-muted-foreground" />
-                    )}
-                  </motion.button>
-                )
-              )}
-            </AnimatePresence>
-          </div>
-        </SortableContext>
-      </DndContext>
+      {/* Empty slots - OUTSIDE DndContext to prevent touch interception */}
+      {photos.length < maxPhotos && (
+        <div className={`grid grid-cols-3 gap-3 ${photos.length > 0 ? 'mt-3' : ''}`}>
+          {Array.from({ length: Math.min(photos.length === 0 ? 3 : (3 - (photos.length % 3)) % 3 || 3, maxPhotos - photos.length) }).map(
+            (_, index) => (
+              <motion.button
+                key={`empty-${index}`}
+                onClick={openFilePicker}
+                onTouchEnd={handleTouchEnd}
+                disabled={isUploading}
+                className="aspect-[3/4] rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 active:border-primary active:bg-primary/5 transition-colors touch-manipulation"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {isUploading && uploadingIndex === photos.length + index ? (
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                ) : (
+                  <Plus className="w-8 h-8 text-muted-foreground" />
+                )}
+              </motion.button>
+            )
+          )}
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground text-center">
         Glissez pour réorganiser • Touchez pour définir comme principale ou supprimer
