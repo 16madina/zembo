@@ -22,6 +22,11 @@ Ouvrez `android/app/src/main/AndroidManifest.xml` et ajoutez ces permissions **a
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+<!-- Permissions stockage pour la galerie (Capacitor Camera plugin) -->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
 <!-- Déclarer les fonctionnalités caméra comme optionnelles -->
 <uses-feature android:name="android.hardware.camera" android:required="false" />
 <uses-feature android:name="android.hardware.camera.front" android:required="false" />
