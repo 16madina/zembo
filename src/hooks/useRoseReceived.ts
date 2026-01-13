@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface RoseSender {
   id: string;
@@ -46,6 +47,7 @@ export function sanitizeRoseMessage(message: string): string {
 
 export function useRoseReceived() {
   const { user } = useAuth();
+  const { playRoseSound } = useSoundEffects();
   const [roseReceived, setRoseReceived] = useState<RoseSender | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isFirstLoad = useRef(true);
@@ -140,6 +142,9 @@ export function useRoseReceived() {
             message,
           });
           setIsModalOpen(true);
+          
+          // Play romantic sound effect
+          playRoseSound();
         }
       )
       .subscribe();
@@ -153,7 +158,7 @@ export function useRoseReceived() {
       clearTimeout(timer);
       supabase.removeChannel(roseChannel);
     };
-  }, [user, fetchSenderProfile, fetchRoseMessage]);
+  }, [user, fetchSenderProfile, fetchRoseMessage, playRoseSound]);
 
   return {
     roseReceived,

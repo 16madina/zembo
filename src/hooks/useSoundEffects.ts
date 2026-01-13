@@ -16,6 +16,7 @@ export const useSoundEffects = () => {
   const drumrollAudioRef = useRef<HTMLAudioElement | null>(null);
   const revealAudioRef = useRef<HTMLAudioElement | null>(null);
   const successAudioRef = useRef<HTMLAudioElement | null>(null);
+  const roseSoundCacheRef = useRef<string | null>(null);
 
   const playDiceSound = useCallback(() => {
     try {
@@ -128,12 +129,81 @@ export const useSoundEffects = () => {
     }
   }, []);
 
+  // Romantic harp/chime sound for receiving a rose
+  const playRoseSound = useCallback(async () => {
+    try {
+      // Trigger gentle haptic feedback on mobile
+      if (isNative) {
+        haptics.notification('success');
+      }
+      
+      // Check if we have a cached rose sound
+      if (roseSoundCacheRef.current) {
+        const audio = new Audio(roseSoundCacheRef.current);
+        audio.volume = 0.8;
+        audio.play().catch((err) => {
+          console.warn("Failed to play cached rose sound:", err);
+        });
+        return;
+      }
+      
+      // Generate romantic sound via ElevenLabs
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            prompt: "Romantic magical sparkle harp glissando with soft chimes, dreamy love notification sound, gentle and enchanting",
+            duration: 3,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        // Fallback to reveal magic sound if ElevenLabs fails
+        console.warn("ElevenLabs failed, using fallback sound");
+        const audio = new Audio(revealMagicSound);
+        audio.volume = 0.8;
+        audio.play().catch((err) => {
+          console.warn("Failed to play fallback rose sound:", err);
+        });
+        return;
+      }
+      
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Cache the sound for future use
+      roseSoundCacheRef.current = audioUrl;
+      
+      const audio = new Audio(audioUrl);
+      audio.volume = 0.8;
+      audio.play().catch((err) => {
+        console.warn("Failed to play rose sound:", err);
+      });
+    } catch (error) {
+      console.error("Error playing rose sound:", error);
+      // Fallback to reveal magic sound
+      const audio = new Audio(revealMagicSound);
+      audio.volume = 0.7;
+      audio.play().catch((err) => {
+        console.warn("Failed to play fallback rose sound:", err);
+      });
+    }
+  }, []);
+
   return {
     playDiceSound,
     playZemboVoice,
     playRevealSound,
     playNotificationSound,
     playMatchSound,
+    playRoseSound,
     isDrumrollPlaying,
   };
 };
