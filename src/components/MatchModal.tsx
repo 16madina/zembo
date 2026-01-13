@@ -19,15 +19,31 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
       const end = Date.now() + duration;
       const colors = ['#D4A537', '#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#fff'];
 
+      // Create a custom canvas for confetti with high z-index
+      const canvas = document.createElement('canvas');
+      canvas.style.position = 'fixed';
+      canvas.style.top = '0';
+      canvas.style.left = '0';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = '9999';
+      document.body.appendChild(canvas);
+
+      const myConfetti = confetti.create(canvas, {
+        resize: true,
+        useWorker: true,
+      });
+
       const frame = () => {
-        confetti({
+        myConfetti({
           particleCount: 4,
           angle: 60,
           spread: 55,
           origin: { x: 0, y: 0.65 },
           colors: colors,
         });
-        confetti({
+        myConfetti({
           particleCount: 4,
           angle: 120,
           spread: 55,
@@ -43,13 +59,22 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
       frame();
 
       setTimeout(() => {
-        confetti({
+        myConfetti({
           particleCount: 150,
           spread: 100,
           origin: { x: 0.5, y: 0.4 },
           colors: colors,
         });
       }, 200);
+
+      // Cleanup canvas after animation
+      return () => {
+        setTimeout(() => {
+          if (canvas.parentNode) {
+            canvas.parentNode.removeChild(canvas);
+          }
+        }, duration + 2000);
+      };
     }
   }, [isOpen]);
 
