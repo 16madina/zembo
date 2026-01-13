@@ -322,6 +322,45 @@ export type Database = {
         }
         Relationships: []
       }
+      live_access: {
+        Row: {
+          gift_id: string | null
+          granted_at: string
+          id: string
+          live_id: string
+          user_id: string
+        }
+        Insert: {
+          gift_id?: string | null
+          granted_at?: string
+          id?: string
+          live_id: string
+          user_id: string
+        }
+        Update: {
+          gift_id?: string | null
+          granted_at?: string
+          id?: string
+          live_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_access_gift_id_fkey"
+            columns: ["gift_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_gifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_access_live_id_fkey"
+            columns: ["live_id"]
+            isOneToOne: false
+            referencedRelation: "lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_messages: {
         Row: {
           content: string
@@ -923,6 +962,7 @@ export type Database = {
           emoji: string
           id: string
           is_active: boolean
+          is_join_gift: boolean
           name: string
           price_coins: number
         }
@@ -932,6 +972,7 @@ export type Database = {
           emoji: string
           id?: string
           is_active?: boolean
+          is_join_gift?: boolean
           name: string
           price_coins: number
         }
@@ -941,6 +982,7 @@ export type Database = {
           emoji?: string
           id?: string
           is_active?: boolean
+          is_join_gift?: boolean
           name?: string
           price_coins?: number
         }
@@ -992,6 +1034,10 @@ export type Database = {
       add_admin_by_email: { Args: { p_email: string }; Returns: undefined }
       are_users_matched: {
         Args: { user_a: string; user_b: string }
+        Returns: boolean
+      }
+      can_access_live: {
+        Args: { p_live_id: string; p_user_id: string }
         Returns: boolean
       }
       can_go_live: { Args: { p_user_id: string }; Returns: boolean }

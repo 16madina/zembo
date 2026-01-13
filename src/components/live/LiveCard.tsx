@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
-import { Users, Play, Sparkles } from "lucide-react";
+import { Users, Play, Sparkles, Crown, Star } from "lucide-react";
 import type { Live } from "@/hooks/useLives";
 
 interface LiveCardProps {
-  live: Live;
+  live: Live & { isPremium?: boolean; isVip?: boolean };
   onClick?: () => void;
 }
 
@@ -63,9 +63,31 @@ const LiveCard = ({ live, onClick }: LiveCardProps) => {
             <span className="text-xs font-bold text-white tracking-wider">LIVE</span>
           </motion.div>
 
+          {/* Premium/VIP Badge */}
+          {(live.isPremium || live.isVip) && (
+            <motion.div 
+              className={`absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full backdrop-blur-md border ${
+                live.isVip 
+                  ? "bg-gradient-to-r from-primary/90 to-yellow-500/90 border-primary/50" 
+                  : "bg-purple-500/90 border-purple-400/50"
+              }`}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+            >
+              {live.isVip ? (
+                <Star className="w-3 h-3 text-white fill-white" />
+              ) : (
+                <Crown className="w-3 h-3 text-white" />
+              )}
+              <span className="text-[10px] font-bold text-white">
+                {live.isVip ? "VIP" : "PREMIUM"}
+              </span>
+            </motion.div>
+          )}
+
           {/* Viewers - Enhanced */}
           <motion.div 
-            className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-background/80 backdrop-blur-md rounded-full border border-border/50"
+            className={`absolute ${(live.isPremium || live.isVip) ? "top-12" : "top-3"} right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-background/80 backdrop-blur-md rounded-full border border-border/50`}
             whileHover={{ scale: 1.1 }}
           >
             <Users className="w-3.5 h-3.5 text-primary" />

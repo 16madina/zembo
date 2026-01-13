@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Radio, Crown } from "lucide-react";
+import { Radio } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import LiveCard from "@/components/live/LiveCard";
 import CreateLiveModal from "@/components/live/CreateLiveModal";
-import PremiumRequired from "@/components/live/PremiumRequired";
 import { useLives } from "@/hooks/useLives";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,9 +29,8 @@ const item = {
 const Live = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { lives, loading, canGoLive, createLive } = useLives();
+  const { lives, loading, createLive } = useLives();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isCreatingLive, setIsCreatingLive] = useState(false);
 
   const handleGoLive = () => {
@@ -42,11 +40,8 @@ const Live = () => {
       return;
     }
 
-    if (canGoLive) {
-      setShowCreateModal(true);
-    } else {
-      setShowPremiumModal(true);
-    }
+    // All authenticated users can now create lives
+    setShowCreateModal(true);
   };
 
   const handleCreateLive = async (
@@ -104,9 +99,6 @@ const Live = () => {
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
           </div>
           <span className="text-primary-foreground">Go Live</span>
-          {!canGoLive && user && (
-            <Crown className="w-4 h-4 text-primary-foreground ml-1" />
-          )}
         </motion.button>
       </motion.div>
 
@@ -161,29 +153,6 @@ const Live = () => {
           </motion.div>
         )}
       </div>
-        
-       {/* Premium Required Modal */}
-       {showPremiumModal && (
-         <motion.div
-           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          onClick={() => setShowPremiumModal(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <PremiumRequired
-              onUpgrade={() => {
-                setShowPremiumModal(false);
-                toast.info("Fonctionnalité bientôt disponible !");
-              }}
-            />
-          </motion.div>
-        </motion.div>
-      )}
 
       {/* Create Live Modal */}
       <CreateLiveModal
