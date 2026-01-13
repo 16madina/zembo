@@ -25,7 +25,11 @@ const verificationSteps: { id: VerificationStep; instruction: string; subtext: s
 ];
 
 const REQUIRED_HOLD_TIME = 1500; // ms to hold position
-const FACE_MATCH_THRESHOLD = 0.38; // Lowered similarity threshold for better mobile compatibility
+const FACE_DISTANCE_THRESHOLD = 0.6; // Max distance for a match (0.55-0.65 is reasonable, lower = stricter)
+const FACE_MATCH_THRESHOLD = 1 - FACE_DISTANCE_THRESHOLD; // For display purposes only
+
+// Detection options for better mobile compatibility
+const DETECTION_OPTIONS = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
 
 // Capture video frame to canvas for more reliable face detection on mobile
 const captureVideoFrame = (video: HTMLVideoElement): HTMLCanvasElement | null => {
@@ -475,9 +479,11 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
   const [showDebugCanvas, setShowDebugCanvas] = useState(true); // Debug mode enabled
   const [debugFrameInfo, setDebugFrameInfo] = useState<string>("");
+  const [comparisonDebug, setComparisonDebug] = useState<string>(""); // Debug info for comparison results
   
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const centerFramesRef = useRef<HTMLCanvasElement[]>([]); // Store frontal frames captured during "center" step
   const streamRef = useRef<MediaStream | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartTimeRef = useRef<number | null>(null);
@@ -492,60 +498,137 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     isModelsLoading: isComparisonLoading,
     modelsError: comparisonError,
     photoDescriptors,
+    flippedDescriptors,
     hasDescriptors: hasPhotoDescriptors,
   } = useFaceRecognitionPreload();
 
-  // Fast face comparison using preloaded descriptors - now uses canvas capture for reliability
-  const compareFaceWithPreloaded = useCallback(async (videoElement: HTMLVideoElement) => {
+  // Helper: flip a canvas horizontally
+  const flipCanvasHorizontally = useCallback((sourceCanvas: HTMLCanvasElement): HTMLCanvasElement => {
+    const flipped = document.createElement('canvas');
+    flipped.width = sourceCanvas.width;
+    flipped.height = sourceCanvas.height;
+    const ctx = flipped.getContext('2d')!;
+    ctx.translate(flipped.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(sourceCanvas, 0, 0);
+    return flipped;
+  }, []);
+
+  // Improved face comparison using preloaded descriptors with flip handling and distance-based matching
+  const compareFaceWithPreloaded = useCallback(async (canvas: HTMLCanvasElement) => {
     console.log('[FaceVerification] Starting face comparison...');
-    console.log(`[FaceVerification] Models loaded: ${isComparisonModelsLoaded}, Descriptors: ${photoDescriptors.length}`);
+    console.log(`[FaceVerification] Models loaded: ${isComparisonModelsLoaded}, Descriptors: ${photoDescriptors.length}, Flipped: ${flippedDescriptors.length}`);
     
     if (!isComparisonModelsLoaded || photoDescriptors.length === 0) {
-      return { isMatch: false, similarity: 0, error: 'Modèles non chargés ou descripteurs manquants', noFaceDetected: false };
+      return { isMatch: false, similarity: 0, distance: Infinity, error: 'Modèles non chargés ou descripteurs manquants', noFaceDetected: false, usedFlip: false, photoIndex: -1 };
     }
 
     try {
-      // Capture frame to canvas for more reliable detection on mobile
-      const canvas = captureVideoFrame(videoElement);
-      if (!canvas) {
-        console.warn('[FaceVerification] Failed to capture video frame');
-        return { isMatch: false, similarity: 0, error: null, noFaceDetected: true };
-      }
-
+      // Detect face with explicit options for better mobile compatibility
       console.log('[FaceVerification] Detecting face in captured frame...');
-      const detection = await faceapi
-        .detectSingleFace(canvas)
+      let detection = await faceapi
+        .detectSingleFace(canvas, DETECTION_OPTIONS)
         .withFaceLandmarks()
         .withFaceDescriptor();
 
+      // Fallback: try without options
       if (!detection) {
-        console.log('[FaceVerification] No face detected in video frame');
-        return { isMatch: false, similarity: 0, error: null, noFaceDetected: true };
+        console.log('[FaceVerification] Retrying with default options...');
+        detection = await faceapi
+          .detectSingleFace(canvas)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
       }
 
-      console.log('[FaceVerification] Face detected! Computing similarity...');
-      const videoDescriptor = detection.descriptor;
-      let bestMatch = { index: -1, distance: Infinity };
+      // Fallback: try detectAllFaces and pick largest
+      if (!detection) {
+        console.log('[FaceVerification] Trying detectAllFaces...');
+        const allDetections = await faceapi
+          .detectAllFaces(canvas, DETECTION_OPTIONS)
+          .withFaceLandmarks()
+          .withFaceDescriptors();
+        
+        if (allDetections.length > 0) {
+          detection = allDetections.reduce((best, curr) => {
+            const bestArea = best.detection.box.width * best.detection.box.height;
+            const currArea = curr.detection.box.width * curr.detection.box.height;
+            return currArea > bestArea ? curr : best;
+          });
+        }
+      }
 
+      if (!detection) {
+        console.log('[FaceVerification] No face detected in video frame');
+        return { isMatch: false, similarity: 0, distance: Infinity, error: null, noFaceDetected: true, usedFlip: false, photoIndex: -1 };
+      }
+
+      console.log('[FaceVerification] Face detected! Computing distances...');
+      const videoDescriptor = detection.descriptor;
+      
+      // Also try with flipped frame for mirror handling
+      let flippedDescriptor: Float32Array | null = null;
+      try {
+        const flippedCanvas = flipCanvasHorizontally(canvas);
+        const flippedDetection = await faceapi
+          .detectSingleFace(flippedCanvas, DETECTION_OPTIONS)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        if (flippedDetection) {
+          flippedDescriptor = flippedDetection.descriptor;
+          console.log('[FaceVerification] Flipped descriptor also computed');
+        }
+      } catch (flipErr) {
+        console.warn('[FaceVerification] Flipped detection failed:', flipErr);
+      }
+
+      // Compare against all photo descriptors (normal + flipped)
+      let bestMatch = { index: -1, distance: Infinity, usedFlip: false };
+
+      // Compare with normal photo descriptors
       for (let i = 0; i < photoDescriptors.length; i++) {
         const distance = faceapi.euclideanDistance(videoDescriptor, photoDescriptors[i]);
         console.log(`[FaceVerification] Distance to photo ${i}: ${distance.toFixed(4)}`);
         if (distance < bestMatch.distance) {
-          bestMatch = { index: i, distance };
+          bestMatch = { index: i, distance, usedFlip: false };
+        }
+        
+        // Also try flipped video descriptor against normal photo
+        if (flippedDescriptor) {
+          const flippedDistance = faceapi.euclideanDistance(flippedDescriptor, photoDescriptors[i]);
+          console.log(`[FaceVerification] Flipped distance to photo ${i}: ${flippedDistance.toFixed(4)}`);
+          if (flippedDistance < bestMatch.distance) {
+            bestMatch = { index: i, distance: flippedDistance, usedFlip: true };
+          }
+        }
+      }
+
+      // Also compare with flipped photo descriptors (if available)
+      for (let i = 0; i < flippedDescriptors.length; i++) {
+        const distance = faceapi.euclideanDistance(videoDescriptor, flippedDescriptors[i]);
+        if (distance < bestMatch.distance) {
+          bestMatch = { index: i, distance, usedFlip: true };
         }
       }
 
       const similarity = Math.max(0, 1 - bestMatch.distance);
-      const isMatch = similarity >= FACE_MATCH_THRESHOLD;
+      const isMatch = bestMatch.distance <= FACE_DISTANCE_THRESHOLD;
 
-      console.log(`[FaceVerification] Best match: photo ${bestMatch.index}, distance: ${bestMatch.distance.toFixed(4)}, similarity: ${(similarity * 100).toFixed(1)}%, threshold: ${(FACE_MATCH_THRESHOLD * 100).toFixed(0)}%, match: ${isMatch}`);
+      console.log(`[FaceVerification] Best match: photo ${bestMatch.index}, distance: ${bestMatch.distance.toFixed(4)}, similarity: ${(similarity * 100).toFixed(1)}%, threshold distance: ${FACE_DISTANCE_THRESHOLD}, match: ${isMatch}, usedFlip: ${bestMatch.usedFlip}`);
 
-      return { isMatch, similarity, error: null, noFaceDetected: false };
+      return { 
+        isMatch, 
+        similarity, 
+        distance: bestMatch.distance,
+        error: null, 
+        noFaceDetected: false,
+        usedFlip: bestMatch.usedFlip,
+        photoIndex: bestMatch.index
+      };
     } catch (err: any) {
       console.error('[FaceVerification] Comparison error:', err);
-      return { isMatch: false, similarity: 0, error: err?.message || 'Erreur de comparaison', noFaceDetected: false };
+      return { isMatch: false, similarity: 0, distance: Infinity, error: err?.message || 'Erreur de comparaison', noFaceDetected: false, usedFlip: false, photoIndex: -1 };
     }
-  }, [isComparisonModelsLoaded, photoDescriptors]);
+  }, [isComparisonModelsLoaded, photoDescriptors, flippedDescriptors, flipCanvasHorizontally]);
 
   const { isLoading: isFaceDetectionLoading, error: faceDetectionError, result: faceResult } = useFaceDetection({
     videoRef,
@@ -608,9 +691,9 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     },
   });
 
-  // Perform face comparison after movement verification is complete
+  // Perform face comparison using captured frontal frames from "center" step
   const performFaceComparison = useCallback(async () => {
-    if (!videoRef.current || comparisonAttemptedRef.current) return;
+    if (comparisonAttemptedRef.current) return;
 
     const stopCameraNow = () => {
       if (streamRef.current) {
@@ -660,65 +743,115 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     };
 
     try {
-      // Wait a moment for stable video frame
-      await withTimeout(new Promise<void>((resolve) => setTimeout(resolve, 800)), 2000, "Délai de préparation de la caméra");
+      // Use the frontal frames captured during "center" step if available
+      // Otherwise capture new frames from current video
+      let framesToCompare: HTMLCanvasElement[] = [];
+      
+      if (centerFramesRef.current.length > 0) {
+        console.log(`[FaceVerification] Using ${centerFramesRef.current.length} pre-captured frontal frames`);
+        framesToCompare = centerFramesRef.current;
+      } else if (videoRef.current) {
+        // Fallback: capture fresh frames now
+        console.log('[FaceVerification] No pre-captured frames, capturing fresh frames...');
+        await withTimeout(new Promise<void>((resolve) => setTimeout(resolve, 300)), 1000, "Délai de préparation");
+        
+        for (let i = 0; i < 3; i++) {
+          const frame = captureVideoFrame(videoRef.current);
+          if (frame) framesToCompare.push(frame);
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
 
-      const results: { similarity: number; isMatch: boolean; noFaceDetected: boolean }[] = [];
+      if (framesToCompare.length === 0) {
+        throw new Error("Aucune image capturée. Réessayez.");
+      }
+
+      interface ComparisonResult {
+        similarity: number;
+        isMatch: boolean;
+        noFaceDetected: boolean;
+        distance: number;
+        usedFlip: boolean;
+        photoIndex: number;
+        frameIndex: number;
+      }
+      
+      const results: ComparisonResult[] = [];
       const overallStart = Date.now();
-      const OVERALL_TIMEOUT_MS = 20000;
+      const OVERALL_TIMEOUT_MS = 25000;
       let noFaceCount = 0;
 
-      console.log('[FaceVerification] Starting comparison loop (5 attempts)...');
+      console.log(`[FaceVerification] Starting comparison on ${framesToCompare.length} frames...`);
 
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < framesToCompare.length; i++) {
         const remaining = OVERALL_TIMEOUT_MS - (Date.now() - overallStart);
         if (remaining <= 0) throw new Error("La comparaison prend trop de temps");
 
-        console.log(`[FaceVerification] Attempt ${i + 1}/5...`);
-        setDetectionStatus(`Analyse en cours... (${i + 1}/5)`);
+        console.log(`[FaceVerification] Processing frame ${i + 1}/${framesToCompare.length}...`);
+        setDetectionStatus(`Analyse image ${i + 1}/${framesToCompare.length}...`);
 
         const result = await withTimeout(
-          compareFaceWithPreloaded(videoRef.current!),
-          Math.min(6000, remaining),
-          "Délai de comparaison (essayez de réessayer)"
+          compareFaceWithPreloaded(framesToCompare[i]),
+          Math.min(8000, remaining),
+          "Délai de comparaison"
         );
 
         if (result.error) {
-          throw new Error(result.error);
+          console.warn(`[FaceVerification] Frame ${i + 1} error:`, result.error);
+          continue; // Skip this frame, try next
         }
 
         if (result.noFaceDetected) {
           noFaceCount++;
-          console.log(`[FaceVerification] No face detected (${noFaceCount} times)`);
+          console.log(`[FaceVerification] No face in frame ${i + 1} (total no-face: ${noFaceCount})`);
         }
 
-        results.push({ similarity: result.similarity, isMatch: result.isMatch, noFaceDetected: result.noFaceDetected || false });
-        
-        // Wait longer between attempts for better frame diversity
-        await withTimeout(new Promise<void>((resolve) => setTimeout(resolve, 500)), 1500, "Délai interne");
+        results.push({ 
+          similarity: result.similarity, 
+          isMatch: result.isMatch, 
+          noFaceDetected: result.noFaceDetected || false,
+          distance: result.distance,
+          usedFlip: result.usedFlip,
+          photoIndex: result.photoIndex,
+          frameIndex: i
+        });
       }
 
       // Filter results that actually detected a face
       const validResults = results.filter(r => !r.noFaceDetected);
       console.log(`[FaceVerification] Valid results: ${validResults.length}/${results.length}`);
 
-      // Always set a result for display, even if no face was detected
-      let bestResult: { similarity: number; isMatch: boolean };
+      // Find best result by lowest distance (not highest similarity)
+      let bestResult: ComparisonResult;
+      let debugMessage = "";
       
       if (validResults.length === 0) {
-        // No face was ever detected in video - show 0% similarity
-        console.log('[FaceVerification] No face detected in any attempt');
-        bestResult = { similarity: 0, isMatch: false };
-        setCameraError("Aucun visage détecté dans la vidéo. Assurez-vous d'être bien éclairé et face à la caméra.");
+        console.log('[FaceVerification] No face detected in any frame');
+        bestResult = { 
+          similarity: 0, 
+          isMatch: false, 
+          noFaceDetected: true, 
+          distance: Infinity, 
+          usedFlip: false, 
+          photoIndex: -1,
+          frameIndex: -1
+        };
+        debugMessage = `❌ Aucun visage détecté (${framesToCompare.length} frames analysées)`;
+        setCameraError("Aucun visage détecté. Assurez-vous d'être bien éclairé et face à la caméra.");
       } else {
-        bestResult = validResults.reduce((best, curr) => (curr.similarity > best.similarity ? curr : best), validResults[0]);
-        console.log(`[FaceVerification] Best result: similarity ${(bestResult.similarity * 100).toFixed(1)}%`);
+        bestResult = validResults.reduce((best, curr) => 
+          curr.distance < best.distance ? curr : best, validResults[0]
+        );
+        
+        debugMessage = `Frame ${bestResult.frameIndex + 1} | Photo ${bestResult.photoIndex + 1} | Dist: ${bestResult.distance.toFixed(3)} (seuil: ${FACE_DISTANCE_THRESHOLD}) | Flip: ${bestResult.usedFlip ? 'oui' : 'non'}`;
+        console.log(`[FaceVerification] Best result: ${debugMessage}`);
       }
       
-      // Always set the match result so the user can see the similarity percentage
-      setFaceMatchResult(bestResult);
+      setComparisonDebug(debugMessage);
+      setFaceMatchResult({ similarity: bestResult.similarity, isMatch: bestResult.isMatch });
 
       stopCameraNow();
+      centerFramesRef.current = []; // Clear captured frames
 
       if (bestResult.isMatch) {
         setCurrentStep("complete");
@@ -729,16 +862,37 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     } catch (err: any) {
       console.error("[FaceVerification] Face comparison failed:", err);
       stopCameraNow();
-      // Set a 0% result so user sees something
+      centerFramesRef.current = [];
       setFaceMatchResult({ similarity: 0, isMatch: false });
+      setComparisonDebug(`Erreur: ${err?.message}`);
       setCameraError(err?.message || "Erreur pendant la comparaison");
       setCurrentStep("failed");
     }
   }, [compareFaceWithPreloaded, updateData, isComparisonModelsLoaded, hasPhotoDescriptors]);
 
+  // Capture frontal frames during the "center" step for later comparison
+  const captureCenterFrame = useCallback(() => {
+    if (!videoRef.current || videoRef.current.videoWidth === 0) return;
+    
+    const frame = captureVideoFrame(videoRef.current);
+    if (frame) {
+      centerFramesRef.current.push(frame);
+      console.log(`[FaceVerification] Captured frontal frame (total: ${centerFramesRef.current.length})`);
+    }
+  }, []);
+
   const completeCurrentStep = useCallback(() => {
     setCompletedSteps(prev => [...prev, currentStep as VerificationStep]);
     holdStartTimeRef.current = null;
+    
+    // When completing "center" step, capture multiple frontal frames for comparison
+    if (currentStep === "center") {
+      console.log('[FaceVerification] Center step complete, capturing frontal frames...');
+      // Capture 3 frames with slight delays for diversity
+      captureCenterFrame();
+      setTimeout(() => captureCenterFrame(), 100);
+      setTimeout(() => captureCenterFrame(), 200);
+    }
     
     setTimeout(() => {
       if (currentStep === "center") {
@@ -750,11 +904,11 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         setProgress(0);
         setDetectionStatus("");
       } else if (currentStep === "right") {
-        // After all movement steps, perform face comparison
+        // After all movement steps, perform face comparison using captured frontal frames
         performFaceComparison();
       }
     }, 300);
-  }, [currentStep, performFaceComparison]);
+  }, [currentStep, performFaceComparison, captureCenterFrame]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -1218,6 +1372,8 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     setIsVideoReady(false);
     setDebugInfo("");
     setCameraError(null);
+    setComparisonDebug("");
+    centerFramesRef.current = []; // Clear captured frames
   };
 
   const handleRetry = () => {
@@ -2004,23 +2160,21 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.65 }}
-              className="mb-4 px-4 py-2 rounded-full bg-destructive/10 border border-destructive/20"
+              className="mb-4 px-4 py-3 rounded-2xl bg-destructive/10 border border-destructive/20"
             >
-              <p className="text-xs text-muted-foreground">
-                Similarité détectée : {faceMatchResult ? Math.round(faceMatchResult.similarity * 100) : 0}%
+              <p className="text-sm text-muted-foreground mb-1">
+                Similarité détectée : <span className="font-semibold">{faceMatchResult ? Math.round(faceMatchResult.similarity * 100) : 0}%</span>
                 {faceMatchResult && faceMatchResult.similarity === 0 && " (aucun visage détecté)"}
               </p>
+              <p className="text-xs text-muted-foreground/70">
+                Seuil requis : {Math.round((1 - FACE_DISTANCE_THRESHOLD) * 100)}% (distance max: {FACE_DISTANCE_THRESHOLD})
+              </p>
+              {comparisonDebug && (
+                <p className="text-[10px] text-muted-foreground/50 mt-2 font-mono break-words">
+                  {comparisonDebug}
+                </p>
+              )}
             </motion.div>
-
-            {/* Show threshold info for debugging */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="text-xs text-muted-foreground/60 mb-6"
-            >
-              Seuil requis : {Math.round(FACE_MATCH_THRESHOLD * 100)}%
-            </motion.p>
 
             <motion.div
               initial={{ opacity: 0 }}
