@@ -306,7 +306,7 @@ const Profile = () => {
   const birthDateDisplay = birthYear ? `${birthYear} (${age} ans)` : null;
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-y-auto overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
+    <div className="fixed inset-0 flex flex-col overflow-y-auto overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))] md:px-8 lg:px-16">
       {/* Header with gradient background */}
       <div className="relative">
         {/* Gradient background */}
@@ -486,7 +486,7 @@ const Profile = () => {
 
       {/* Profile Content */}
       <motion.div
-        className="flex-1 mx-4 -mt-2 space-y-4"
+        className="flex-1 mx-4 -mt-2 space-y-4 max-w-2xl md:mx-auto md:w-full"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}

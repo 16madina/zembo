@@ -88,7 +88,7 @@ const Live = () => {
 
       {/* Fixed Go Live Button */}
       <motion.div
-        className="px-6 mb-6 flex-shrink-0"
+        className="px-6 mb-6 flex-shrink-0 max-w-2xl mx-auto w-full"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
@@ -125,8 +125,8 @@ const Live = () => {
 
         {/* Live Streams Grid */}
         {loading ? (
-          <div className="px-4 grid grid-cols-2 gap-3 pb-4">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="px-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-4 max-w-6xl mx-auto">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
             ))}
           </div>
@@ -148,7 +148,7 @@ const Live = () => {
           </motion.div>
         ) : (
           <motion.div
-            className="px-4 grid grid-cols-2 gap-3 pb-4"
+            className="px-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-4 max-w-6xl mx-auto"
             variants={container}
             initial="hidden"
             animate="show"
