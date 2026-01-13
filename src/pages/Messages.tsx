@@ -174,10 +174,10 @@ const Messages = () => {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))] md:px-8 lg:px-16">
+    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       {/* Fixed Header */}
       <motion.header 
-        className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+        className="flex items-center justify-between px-4 md:px-8 py-3 flex-shrink-0 max-w-4xl md:mx-auto w-full"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -186,7 +186,7 @@ const Messages = () => {
       </motion.header>
 
       <motion.div 
-        className="px-4 mb-4 flex-shrink-0"
+        className="px-4 md:px-8 mb-4 flex-shrink-0 max-w-4xl md:mx-auto w-full"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
@@ -196,11 +196,11 @@ const Messages = () => {
       </motion.div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl md:mx-auto w-full">
         {/* New Matches Section */}
         {mockNewMatches.length > 0 && (
           <motion.div
-            className="px-4 mb-4"
+            className="px-4 md:px-8 mb-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
@@ -243,7 +243,7 @@ const Messages = () => {
 
         {/* Conversations Section */}
         <motion.div 
-          className="px-4 mb-2"
+          className="px-4 md:px-8 mb-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -253,7 +253,7 @@ const Messages = () => {
 
         {mockConversations.length > 0 ? (
           <motion.div 
-            className="px-4 space-y-2 pb-4"
+            className="px-4 md:px-8 space-y-2 md:space-y-3 pb-4"
             variants={container}
             initial="hidden"
             animate="show"
