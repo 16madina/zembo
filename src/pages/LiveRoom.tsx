@@ -82,6 +82,8 @@ const LiveRoom = () => {
     gift: VirtualGift;
     senderName: string;
   } | null>(null);
+  const [hasIncrementedViewer, setHasIncrementedViewer] = useState(false);
+  const [hasShownStageToast, setHasShownStageToast] = useState(false);
 
   // Snapchat-style filters for streamer
   const {
@@ -204,24 +206,41 @@ const LiveRoom = () => {
 
     fetchLive();
 
-    // Cleanup: decrement viewer count and stop stream
-    return () => {
-      if (id && user && !isStreamer && hasAccess) {
-        updateViewerCount(id, false);
-      }
-      stopStream();
-    };
   }, [id, user]);
 
   // Show join modal if no access
   useEffect(() => {
     if (!accessLoading && hasAccess === false && !isStreamer && live) {
       setShowJoinModal(true);
-    } else if (hasAccess === true && !isStreamer && id) {
-      // Increment viewer count when access is confirmed
+    } else if (hasAccess === true && !isStreamer && id && !hasIncrementedViewer) {
+      // Increment viewer count when access is confirmed (only once)
       updateViewerCount(id, true);
+      setHasIncrementedViewer(true);
     }
-  }, [hasAccess, accessLoading, isStreamer, live, id]);
+  }, [hasAccess, accessLoading, isStreamer, live, id, hasIncrementedViewer]);
+
+  // Cleanup: decrement viewer count on unmount
+  useEffect(() => {
+    return () => {
+      if (id && hasIncrementedViewer) {
+        updateViewerCount(id, false);
+      }
+      stopStream();
+    };
+  }, [id, hasIncrementedViewer]);
+
+  // Show toast for stage request button after joining
+  useEffect(() => {
+    if (!isStreamer && hasAccess && !isOnStage && !hasShownStageToast) {
+      const timer = setTimeout(() => {
+        toast.info("Appuyez sur ✋ pour demander à rejoindre le streamer !", {
+          duration: 5000,
+        });
+        setHasShownStageToast(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isStreamer, hasAccess, isOnStage, hasShownStageToast]);
 
   // Auto-start camera for streamer
   useEffect(() => {
