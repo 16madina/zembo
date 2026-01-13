@@ -6,6 +6,7 @@ interface FaceRecognitionPreloadContextType {
   isModelsLoading: boolean;
   modelsError: string | null;
   photoDescriptors: Float32Array[];
+  flippedDescriptors: Float32Array[]; // Horizontally flipped descriptors for mirror handling
   isExtractingDescriptors: boolean;
   extractDescriptors: (photos: string[]) => Promise<void>;
   hasDescriptors: boolean;
@@ -20,11 +21,27 @@ const MODEL_URL_CANDIDATES = [
   "https://justadudewhohacks.github.io/face-api.js/models/",
 ] as const;
 
+// Detection options with lower confidence for better mobile detection
+const DETECTION_OPTIONS = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+
+// Helper to flip an image horizontally
+const flipImageHorizontally = (img: HTMLImageElement): HTMLCanvasElement => {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(img, 0, 0);
+  return canvas;
+};
+
 export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNode }) => {
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [isModelsLoading, setIsModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [photoDescriptors, setPhotoDescriptors] = useState<Float32Array[]>([]);
+  const [flippedDescriptors, setFlippedDescriptors] = useState<Float32Array[]>([]);
   const [isExtractingDescriptors, setIsExtractingDescriptors] = useState(false);
 
   const modelsLoadedRef = useRef(false);
@@ -93,7 +110,7 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
     };
   }, []);
 
-  // Extract descriptors from photos
+  // Extract descriptors from photos (+ flipped versions for mirror handling)
   const extractDescriptors = useCallback(async (photos: string[]) => {
     if (!isModelsLoaded || extractionInProgressRef.current || photos.length === 0) {
       return;
@@ -105,6 +122,7 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
     try {
       console.log(`[FacePreload] Extracting descriptors from ${photos.length} photos`);
       const descriptors: Float32Array[] = [];
+      const flipped: Float32Array[] = [];
 
       for (const photoUrl of photos) {
         try {
@@ -118,14 +136,62 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
             setTimeout(() => reject(new Error('Image load timeout')), 10000);
           });
 
-          const detection = await faceapi
-            .detectSingleFace(img)
+          // Try with explicit detection options for better mobile compatibility
+          let detection = await faceapi
+            .detectSingleFace(img, DETECTION_OPTIONS)
             .withFaceLandmarks()
             .withFaceDescriptor();
+
+          // Fallback: try without options if first attempt fails
+          if (!detection) {
+            console.log('[FacePreload] Retrying with default options...');
+            detection = await faceapi
+              .detectSingleFace(img)
+              .withFaceLandmarks()
+              .withFaceDescriptor();
+          }
+
+          // Fallback: try detectAllFaces and pick largest
+          if (!detection) {
+            console.log('[FacePreload] Trying detectAllFaces...');
+            const allDetections = await faceapi
+              .detectAllFaces(img, DETECTION_OPTIONS)
+              .withFaceLandmarks()
+              .withFaceDescriptors();
+            
+            if (allDetections.length > 0) {
+              // Pick the largest face (by bounding box area)
+              detection = allDetections.reduce((best, curr) => {
+                const bestArea = best.detection.box.width * best.detection.box.height;
+                const currArea = curr.detection.box.width * curr.detection.box.height;
+                return currArea > bestArea ? curr : best;
+              });
+            }
+          }
 
           if (detection) {
             descriptors.push(detection.descriptor);
             console.log('[FacePreload] Descriptor extracted from photo');
+
+            // Also extract flipped descriptor for mirror handling
+            try {
+              const flippedCanvas = flipImageHorizontally(img);
+              const flippedDetection = await faceapi
+                .detectSingleFace(flippedCanvas, DETECTION_OPTIONS)
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+              
+              if (flippedDetection) {
+                flipped.push(flippedDetection.descriptor);
+                console.log('[FacePreload] Flipped descriptor extracted');
+              } else {
+                // Use same descriptor as fallback
+                flipped.push(detection.descriptor);
+              }
+            } catch (flipErr) {
+              console.warn('[FacePreload] Flipped extraction failed, using original:', flipErr);
+              flipped.push(detection.descriptor);
+            }
           } else {
             console.warn('[FacePreload] No face detected in photo');
           }
@@ -135,7 +201,8 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
       }
 
       setPhotoDescriptors(descriptors);
-      console.log(`[FacePreload] Extracted ${descriptors.length} descriptors from ${photos.length} photos`);
+      setFlippedDescriptors(flipped);
+      console.log(`[FacePreload] Extracted ${descriptors.length} descriptors (+ ${flipped.length} flipped) from ${photos.length} photos`);
     } catch (err) {
       console.error('[FacePreload] Error extracting descriptors:', err);
     } finally {
@@ -151,6 +218,7 @@ export const FaceRecognitionPreloadProvider = ({ children }: { children: ReactNo
         isModelsLoading,
         modelsError,
         photoDescriptors,
+        flippedDescriptors,
         isExtractingDescriptors,
         extractDescriptors,
         hasDescriptors: photoDescriptors.length > 0,
