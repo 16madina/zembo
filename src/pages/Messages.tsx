@@ -4,6 +4,7 @@ import { MessageCircle, CheckCheck, Check, Loader2, Heart, Lock, Crown, Sparkles
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import ChatView from "@/components/ChatView";
+import ProfileModal from "@/components/ProfileModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -36,6 +37,22 @@ interface LikedByUser {
   photo: string;
   isSuperLike: boolean;
   createdAt: string;
+  age?: number;
+  location?: string;
+  bio?: string;
+  interests?: string[];
+  isVerified?: boolean;
+}
+
+interface SelectedProfile {
+  id: string;
+  name: string;
+  age: number;
+  location: string;
+  photos: string[];
+  bio: string;
+  interests: string[];
+  isVerified: boolean;
 }
 
 interface OpenChatData {
@@ -77,6 +94,7 @@ const Messages = () => {
   const [newMatches, setNewMatches] = useState<NewMatch[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [likedByUsers, setLikedByUsers] = useState<LikedByUser[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<SelectedProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'like' | 'match'; name?: string } | null>(null);
   const isFirstLoad = useRef(true);
@@ -522,10 +540,20 @@ const Messages = () => {
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               {likedByUsers.map((likedBy) => (
-                <motion.div
+                <motion.button
                   key={likedBy.id}
                   whileTap={{ scale: 0.95 }}
-                  className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                  onClick={() => setSelectedProfile({
+                    id: likedBy.id,
+                    name: likedBy.name,
+                    age: likedBy.age || 25,
+                    location: likedBy.location || "France",
+                    photos: [likedBy.photo],
+                    bio: "",
+                    interests: [],
+                    isVerified: false
+                  })}
+                  className="flex flex-col items-center gap-1.5 flex-shrink-0"
                 >
                   <div className="relative">
                     <div className={`w-16 h-16 rounded-full p-0.5 ${likedBy.isSuperLike ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600' : 'bg-gradient-to-br from-destructive via-destructive/80 to-destructive/60'}`}>
@@ -544,7 +572,7 @@ const Messages = () => {
                   <span className="text-xs font-medium text-foreground">
                     {likedBy.name}
                   </span>
-                </motion.div>
+                </motion.button>
               ))}
             </div>
           </motion.div>
@@ -696,6 +724,46 @@ const Messages = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* Profile Modal for Who Liked Me */}
+      <ProfileModal
+        isOpen={!!selectedProfile}
+        onClose={() => setSelectedProfile(null)}
+        profile={selectedProfile}
+        onLike={async () => {
+          if (selectedProfile && user) {
+            // Add a like back - this will create a match since they already liked us
+            const { error } = await supabase
+              .from("likes")
+              .insert({ liker_id: user.id, liked_id: selectedProfile.id });
+            
+            if (!error) {
+              toast({
+                title: "C'est un match ! 🎉",
+                description: `Vous avez matché avec ${selectedProfile.name}`,
+              });
+              setSelectedProfile(null);
+              fetchData(); // Refresh to move them to matches
+            }
+          }
+        }}
+        onSuperLike={async () => {
+          if (selectedProfile && user) {
+            const { error } = await supabase
+              .from("likes")
+              .insert({ liker_id: user.id, liked_id: selectedProfile.id, is_super_like: true });
+            
+            if (!error) {
+              toast({
+                title: "Super Like envoyé ! ⭐",
+                description: `Vous avez matché avec ${selectedProfile.name}`,
+              });
+              setSelectedProfile(null);
+              fetchData();
+            }
+          }
+        }}
+      />
 
       <BottomNavigation />
     </div>
