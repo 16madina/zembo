@@ -372,3 +372,38 @@ export function validateFullName(firstName: string, lastName: string): {
     isValid: firstNameResult.isValid && lastNameResult.isValid,
   };
 }
+
+/**
+ * Sanitizes a message by removing phone numbers and email addresses
+ * to prevent users from sharing contact info before matching
+ */
+export function sanitizeContactInfo(message: string): string {
+  if (!message) return "";
+  
+  let sanitized = message;
+  
+  // Remove phone numbers (various formats)
+  // International formats: +33, +1, etc.
+  sanitized = sanitized.replace(/\+?\d{1,4}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,9}/g, "[numéro masqué]");
+  
+  // French phone numbers: 06, 07, 01, etc.
+  sanitized = sanitized.replace(/(?:0|\+33|0033)[\s.-]?[1-9](?:[\s.-]?\d{2}){4}/g, "[numéro masqué]");
+  
+  // General patterns with digits grouped (6+ consecutive digits)
+  sanitized = sanitized.replace(/\d[\d\s.-]{5,}\d/g, "[numéro masqué]");
+  
+  // Remove email addresses
+  sanitized = sanitized.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[email masqué]");
+  
+  // Remove URLs
+  sanitized = sanitized.replace(/https?:\/\/[^\s]+/g, "[lien masqué]");
+  sanitized = sanitized.replace(/www\.[^\s]+/g, "[lien masqué]");
+  
+  // Remove social media handles (Instagram, Snapchat, etc.)
+  sanitized = sanitized.replace(/@[a-zA-Z0-9._]{3,}/g, "[pseudo masqué]");
+  
+  // Remove "insta:", "snap:", "whatsapp:", etc.
+  sanitized = sanitized.replace(/(?:insta(?:gram)?|snap(?:chat)?|whatsapp|telegram|tiktok|facebook|fb|twitter|discord)[\s:]*[a-zA-Z0-9._@-]+/gi, "[contact masqué]");
+  
+  return sanitized.trim();
+}
