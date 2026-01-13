@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal, SearchX, Loader2 } from "lucide-react";
+import { SlidersHorizontal, SearchX, Loader2, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -12,8 +12,9 @@ import NearbyMap from "@/components/NearbyMap";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfilesWithDistance, ProfileWithDistance } from "@/hooks/useProfilesWithDistance";
 
-// Profile interface matching database structure
+// Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
   name: string;
@@ -32,8 +33,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
+  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,54 +52,38 @@ const Home = () => {
     genders: ["all"],
   });
 
-  // Fetch real profiles from database
-  useEffect(() => {
-    const fetchProfiles = async () => {
-      if (!user) return;
-      
-      setIsLoadingProfiles(true);
-      try {
-        // Get profiles that are not the current user and have at least an avatar
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .neq("user_id", user.id)
-          .not("avatar_url", "is", null)
-          .not("display_name", "is", null)
-          .order("created_at", { ascending: false });
+  // Use the new hook with distance calculation
+  const {
+    profiles: profilesWithDistance,
+    isLoading: isLoadingProfiles,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    userLocation,
+  } = useProfilesWithDistance({
+    pageSize: 10,
+    maxDistance: filters.distance,
+    ageMin: filters.ageMin,
+    ageMax: filters.ageMax,
+    genders: filters.genders,
+  });
 
-        if (error) {
-          console.error("Error fetching profiles:", error);
-          return;
-        }
-
-        if (data) {
-          // Transform database profiles to match the Profile interface
-          const transformedProfiles: Profile[] = data.map((p) => ({
-            id: p.user_id,
-            name: p.display_name || "Utilisateur",
-            age: p.age || 25,
-            gender: (p.gender === "homme" ? "male" : p.gender === "femme" ? "female" : "female") as 'male' | 'female',
-            location: p.location || "Non spécifié",
-            distance: "5 km", // Default distance, could be calculated with geolocation
-            bio: p.bio || "",
-            photos: p.avatar_url ? [p.avatar_url] : [],
-            isOnline: p.is_online || false,
-            isVerified: p.is_verified || false,
-            interests: p.interests || [],
-          }));
-
-          setProfiles(transformedProfiles);
-        }
-      } catch (err) {
-        console.error("Error loading profiles:", err);
-      } finally {
-        setIsLoadingProfiles(false);
-      }
-    };
-
-    fetchProfiles();
-  }, [user]);
+  // Transform profiles for compatibility with existing components
+  const profiles: Profile[] = useMemo(() => 
+    profilesWithDistance.map(p => ({
+      id: p.id,
+      name: p.name,
+      age: p.age,
+      gender: p.gender,
+      location: p.location,
+      distance: p.distance,
+      bio: p.bio,
+      photos: p.photos,
+      isOnline: p.isOnline,
+      isVerified: p.isVerified,
+      interests: p.interests,
+    }))
+  , [profilesWithDistance]);
 
   // Fetch user's country from profile
   useEffect(() => {
@@ -120,21 +104,12 @@ const Home = () => {
     fetchUserCountry();
   }, [user]);
 
-  // Filter profiles based on criteria
-  const filteredProfiles = profiles.filter((profile) => {
-    // Age filter
-    if (profile.age < filters.ageMin || profile.age > filters.ageMax) {
-      return false;
+  // Load more profiles when nearing the end of the stack
+  useEffect(() => {
+    if (currentIndex >= profiles.length - 3 && hasMore && !isLoadingMore) {
+      loadMore();
     }
-    
-    // Distance filter (extract number from "X km" string)
-    const distanceNum = parseInt(profile.distance.replace(/[^0-9]/g, ""), 10);
-    if (distanceNum > filters.distance) {
-      return false;
-    }
-    
-    return true;
-  });
+  }, [currentIndex, profiles.length, hasMore, isLoadingMore, loadMore]);
 
   // Check if filters are modified from default
   const hasActiveFilters = 
@@ -143,8 +118,8 @@ const Home = () => {
     filters.distance !== 50 || 
     (filters.genders.length !== 1 || !filters.genders.includes("all"));
 
-  const currentProfile = filteredProfiles.length > 0 
-    ? filteredProfiles[currentIndex % filteredProfiles.length] 
+  const currentProfile = profiles.length > 0 
+    ? profiles[currentIndex % profiles.length] 
     : null;
   const profilesWhoLikedUser = new Set(["1", "3", "5"]);
 
@@ -178,9 +153,13 @@ const Home = () => {
       }
     }
 
-    if (currentIndex < filteredProfiles.length - 1) {
+    if (currentIndex < profiles.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
+      // Try to load more if available
+      if (hasMore) {
+        loadMore();
+      }
       setCurrentIndex(0);
     }
   };
@@ -226,7 +205,19 @@ const Home = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <ZemboLogo />
+        <div className="flex items-center gap-2">
+          <ZemboLogo />
+          {userLocation.latitude && userLocation.longitude && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30"
+            >
+              <MapPin className="w-3 h-3 text-green-500" />
+              <span className="text-xs text-green-500 font-medium">GPS</span>
+            </motion.div>
+          )}
+        </div>
         <motion.button 
           onClick={() => setIsFilterOpen(true)}
           className={`relative p-2 rounded-lg tap-highlight ${hasActiveFilters ? 'bg-primary/20 border border-primary/30' : 'glass'}`}
@@ -293,7 +284,7 @@ const Home = () => {
               transition={{ duration: 0.3 }}
             >
               {/* Background cards (stack effect) */}
-              {filteredProfiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
+              {profiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
                 <motion.div
                   key={profile.id}
                   className="absolute w-full h-full rounded-3xl overflow-hidden"
@@ -398,7 +389,7 @@ const Home = () => {
               transition={{ duration: 0.3 }}
             >
               <NearbyMap 
-                profiles={filteredProfiles} 
+                profiles={profiles} 
                 userCountry={userCountry}
                 onProfileClick={(profile) => {
                   setSelectedProfile(profile);
