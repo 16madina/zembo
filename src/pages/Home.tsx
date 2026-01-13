@@ -10,6 +10,7 @@ import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 import NearbyMap from "@/components/NearbyMap";
 import SuperLikeExplosion from "@/components/SuperLikeExplosion";
+import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,7 @@ const Home = () => {
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
   const [showSuperLikeExplosion, setShowSuperLikeExplosion] = useState(false);
+  const [showRosePetals, setShowRosePetals] = useState(false);
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
@@ -230,6 +232,10 @@ const Home = () => {
     setShowSuperLikeExplosion(false);
   }, []);
 
+  const handleRosePetalsComplete = useCallback(() => {
+    setShowRosePetals(false);
+  }, []);
+
   const handleInfoClick = () => {
     setSelectedProfile(currentProfile);
     setIsModalOpen(true);
@@ -275,6 +281,7 @@ const Home = () => {
     const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹");
     
     if (result.success) {
+      setShowRosePetals(true);
       toast({
         title: "Rose envoyée ! 🌹",
         description: `${selectedProfile.name} a reçu votre rose`,
@@ -520,6 +527,11 @@ const Home = () => {
       <SuperLikeExplosion 
         isVisible={showSuperLikeExplosion} 
         onComplete={handleSuperLikeExplosionComplete} 
+      />
+
+      <RosePetalsAnimation 
+        isVisible={showRosePetals} 
+        onComplete={handleRosePetalsComplete} 
       />
 
       <BottomNavigation />
