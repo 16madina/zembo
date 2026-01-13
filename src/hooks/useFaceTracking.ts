@@ -54,6 +54,12 @@ const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
+// Check if we're on iPad (Safari has issues with MediaPipe WebGL)
+const isIPad = () => {
+  return /iPad/i.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
 export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): UseFaceTrackingResult => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,6 +202,15 @@ export const useFaceTracking = ({ videoRef, enabled }: UseFaceTrackingProps): Us
         setIsTracking(false);
         setLandmarks(null);
       }
+      return;
+    }
+
+    // Skip face tracking on iPad - Safari has known issues with MediaPipe WebGL
+    const isIPadDevice = isIPad();
+    if (isIPadDevice) {
+      console.log("[FaceTracking] Disabled on iPad due to WebGL compatibility issues");
+      setIsLoading(false);
+      setError(null);
       return;
     }
 
