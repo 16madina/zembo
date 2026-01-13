@@ -721,30 +721,42 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         }
       }
       
-      // For native Capacitor apps, still try getUserMedia as it works in WebView
-      const constraints: MediaStreamConstraints = {
-        video: { 
-          facingMode: "user", 
-          width: { ideal: 640, max: 1280 }, 
-          height: { ideal: 640, max: 1280 } 
-        }
-      };
-
       // Check if getUserMedia is available
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("getUserMedia n'est pas disponible sur cet appareil");
       }
 
-      console.log("[FaceVerification] Requesting camera with constraints:", constraints);
+      // Use simplified constraints for Android to avoid hardware compatibility issues
+      const isAndroidDevice = isNative && (window as any).Capacitor?.getPlatform?.() === 'android';
       
-      // On Android, try multiple times with delays if first attempt fails
+      // Android needs simpler constraints - many devices struggle with specific dimensions
+      const constraints: MediaStreamConstraints = isAndroidDevice 
+        ? { video: { facingMode: "user" } }
+        : { 
+            video: { 
+              facingMode: "user", 
+              width: { ideal: 640, max: 1280 }, 
+              height: { ideal: 640, max: 1280 } 
+            }
+          };
+
+      console.log("[FaceVerification] Requesting camera with constraints:", constraints, "isAndroid:", isAndroidDevice);
+      
+      // Try to get camera stream with retry logic and fallback to minimal constraints
       let stream: MediaStream | null = null;
       let lastError: any = null;
       
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           console.log(`[FaceVerification] getUserMedia attempt ${attempt + 1}/3`);
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          
+          // On second attempt, use even simpler constraints
+          const attemptConstraints = attempt >= 1 
+            ? { video: true } // Minimal fallback
+            : constraints;
+            
+          stream = await navigator.mediaDevices.getUserMedia(attemptConstraints);
+          console.log("[FaceVerification] Camera stream obtained successfully");
           break; // Success, exit loop
         } catch (err: any) {
           lastError = err;
@@ -757,7 +769,9 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
           
           // Wait before retry (increasing delay)
           if (attempt < 2) {
-            await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+            const delay = 500 * (attempt + 1);
+            console.log(`[FaceVerification] Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }

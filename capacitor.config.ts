@@ -37,7 +37,10 @@ const config: CapacitorConfig = {
   },
   android: {
     backgroundColor: "#0a0c14",
-    allowMixedContent: true
+    allowMixedContent: true,
+    webContentsDebuggingEnabled: true,
+    // Enable camera in WebView
+    appendUserAgent: "ZemboApp"
   }
 };
 
