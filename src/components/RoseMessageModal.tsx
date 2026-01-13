@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send } from "lucide-react";
+import { X, Send, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -10,6 +10,48 @@ interface RoseMessageModalProps {
   onSend: (message: string) => void;
   recipientName: string;
   isLoading?: boolean;
+}
+
+/**
+ * Detects if a message contains phone numbers, emails, or other contact info
+ */
+function detectContactInfo(text: string): { hasContact: boolean; type: string | null } {
+  if (!text) return { hasContact: false, type: null };
+  
+  // Phone number patterns
+  const phonePatterns = [
+    /\+?\d{1,4}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,9}/,
+    /(?:0|\+33|0033)[\s.-]?[1-9](?:[\s.-]?\d{2}){4}/,
+    /\d[\d\s.-]{5,}\d/,
+  ];
+  
+  for (const pattern of phonePatterns) {
+    if (pattern.test(text)) {
+      return { hasContact: true, type: "numéro de téléphone" };
+    }
+  }
+  
+  // Email pattern
+  if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(text)) {
+    return { hasContact: true, type: "adresse email" };
+  }
+  
+  // URL patterns
+  if (/https?:\/\/[^\s]+/.test(text) || /www\.[^\s]+/.test(text)) {
+    return { hasContact: true, type: "lien" };
+  }
+  
+  // Social media handles
+  if (/@[a-zA-Z0-9._]{3,}/.test(text)) {
+    return { hasContact: true, type: "pseudo de réseau social" };
+  }
+  
+  // Social media mentions (insta:, snap:, etc.)
+  if (/(?:insta(?:gram)?|snap(?:chat)?|whatsapp|telegram|tiktok|facebook|fb|twitter|discord)[\s:]+[a-zA-Z0-9._@-]+/i.test(text)) {
+    return { hasContact: true, type: "contact de réseau social" };
+  }
+  
+  return { hasContact: false, type: null };
 }
 
 const RoseMessageModal = ({
@@ -22,7 +64,13 @@ const RoseMessageModal = ({
   const [message, setMessage] = useState("");
   const maxLength = 150;
 
+  // Check for contact info in real-time
+  const contactDetection = useMemo(() => detectContactInfo(message), [message]);
+
   const handleSend = () => {
+    // Block sending if contact info detected
+    if (contactDetection.hasContact) return;
+    
     onSend(message.trim() || "Une rose pour toi 🌹");
     setMessage("");
   };
@@ -77,18 +125,41 @@ const RoseMessageModal = ({
             </div>
 
             {/* Message Input */}
-            <div className="relative mb-4">
+            <div className="relative mb-2">
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, maxLength))}
                 placeholder="Ton sourire m'a captivé... 💕"
-                className="min-h-[100px] bg-white/10 border-rose-400/30 text-white placeholder:text-rose-200/50 resize-none rounded-xl focus:border-rose-400 focus:ring-rose-400/30"
+                className={`min-h-[100px] bg-white/10 border-rose-400/30 text-white placeholder:text-rose-200/50 resize-none rounded-xl focus:ring-rose-400/30 ${
+                  contactDetection.hasContact 
+                    ? "border-red-500 focus:border-red-500" 
+                    : "focus:border-rose-400"
+                }`}
                 disabled={isLoading}
               />
               <span className="absolute bottom-2 right-3 text-xs text-rose-200/60">
                 {message.length}/{maxLength}
               </span>
             </div>
+
+            {/* Contact Info Warning */}
+            <AnimatePresence>
+              {contactDetection.hasContact && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-3"
+                >
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/20 border border-red-500/30">
+                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <p className="text-xs text-red-200">
+                      Les {contactDetection.type}s ne sont pas autorisés. Matchez d'abord pour discuter ! 😊
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Cost Info */}
             <div className="flex items-center justify-center gap-2 mb-4 text-sm text-rose-200/80">
@@ -108,8 +179,8 @@ const RoseMessageModal = ({
               </Button>
               <Button
                 onClick={handleSend}
-                disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white gap-2"
+                disabled={isLoading || contactDetection.hasContact}
+                className="flex-1 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white gap-2 disabled:opacity-50"
               >
                 {isLoading ? (
                   <motion.div
