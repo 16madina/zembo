@@ -174,7 +174,7 @@ const Messages = () => {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
+    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))] md:px-8 lg:px-16">
       {/* Fixed Header */}
       <motion.header 
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
@@ -196,7 +196,7 @@ const Messages = () => {
       </motion.div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl mx-auto w-full">
         {/* New Matches Section */}
         {mockNewMatches.length > 0 && (
           <motion.div
