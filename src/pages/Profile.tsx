@@ -113,6 +113,7 @@ const Profile = () => {
   const [editField, setEditField] = useState<EditFieldType>("occupation");
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [countdown, setCountdown] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
   // Calculate countdown timer for email limit reset
   const calculateCountdown = useCallback(() => {
@@ -157,18 +158,21 @@ const Profile = () => {
     }
   }, [profile?.verification_email_count, profile?.email_verified, calculateCountdown]);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+  const userId = user?.id;
 
+  useEffect(() => {
+    // Prevent re-fetching if already loaded for this user
+    if (hasFetched || !userId) {
+      if (!userId) setIsLoading(false);
+      return;
+    }
+
+    const fetchProfile = async () => {
       try {
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .maybeSingle();
 
         if (error) {
@@ -178,17 +182,19 @@ const Profile = () => {
         }
 
         // Fetch user's photos from storage
-        const { data: photoFiles } = await supabase.storage.from("profile-photos").list(user.id);
+        const { data: photoFiles } = await supabase.storage.from("profile-photos").list(userId);
 
         if (photoFiles && photoFiles.length > 0) {
           const photoUrls = photoFiles.map((file) => {
             const {
               data: { publicUrl },
-            } = supabase.storage.from("profile-photos").getPublicUrl(`${user.id}/${file.name}`);
+            } = supabase.storage.from("profile-photos").getPublicUrl(`${userId}/${file.name}`);
             return publicUrl;
           });
           setPhotos(photoUrls);
         }
+        
+        setHasFetched(true);
       } catch (err) {
         console.error("Error:", err);
       } finally {
@@ -197,7 +203,7 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [user]);
+  }, [userId, hasFetched]);
 
   const handleSignOut = async () => {
     await signOut();
