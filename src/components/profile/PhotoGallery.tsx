@@ -124,7 +124,9 @@ const PhotoGallery = ({ userId, photos, onPhotosChange, onAvatarChange }: PhotoG
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 10,
+        delay: 150,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -261,8 +263,12 @@ const PhotoGallery = ({ userId, photos, onPhotosChange, onAvatarChange }: PhotoG
     toast.success("Photo supprimée");
   };
 
-  const openFilePicker = () => {
-    fileInputRef.current?.click();
+  const openFilePicker = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 50);
   };
 
   return (
