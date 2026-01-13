@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, MapPin, BadgeCheck, Heart, Star, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp, Flower2 } from "lucide-react";
+import { X, MapPin, BadgeCheck, Heart, Star, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 interface ProfileData {
@@ -279,7 +279,7 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                 onClick={onSuperLike}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="p-4 bg-accent/20 backdrop-blur-md rounded-full border border-accent/50"
+                className="w-14 h-14 flex items-center justify-center bg-accent/20 backdrop-blur-md rounded-full border border-accent/50"
               >
                 <Star className="w-7 h-7 text-accent" fill="currentColor" />
               </motion.button>
@@ -289,23 +289,23 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                 onClick={onSendRose}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="p-4 bg-rose-500/20 backdrop-blur-md rounded-full border border-rose-500/50 relative overflow-hidden"
+                className="w-14 h-14 flex items-center justify-center bg-gradient-to-br from-rose-500/30 to-pink-500/30 backdrop-blur-md rounded-full border border-rose-400/50 relative overflow-hidden"
               >
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-t from-rose-600/30 to-transparent"
+                  className="absolute inset-0 bg-gradient-to-t from-rose-500/40 to-transparent"
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ repeat: Infinity, duration: 2 }}
                 />
-                <Flower2 className="w-7 h-7 text-rose-400 relative z-10" fill="currentColor" />
+                <span className="text-2xl relative z-10">🌹</span>
               </motion.button>
               
               <motion.button
                 onClick={onLike}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="p-5 btn-gold rounded-full shadow-lg shadow-primary/30"
+                className="w-16 h-16 flex items-center justify-center btn-gold rounded-full shadow-lg shadow-primary/30"
               >
-                <Heart className="w-9 h-9 text-primary-foreground" fill="currentColor" />
+                <Heart className="w-8 h-8 text-primary-foreground" fill="currentColor" />
               </motion.button>
             </motion.div>
           </motion.div>
@@ -454,22 +454,38 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
 
                 {/* Action buttons fixed at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent">
-                  <div className="flex items-center justify-center gap-6">
+                  <div className="flex items-center justify-center gap-4">
                     <motion.button
                       onClick={() => { onSuperLike(); setShowDetails(false); }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      className="p-4 glass rounded-full text-accent border border-accent/30"
+                      className="w-14 h-14 flex items-center justify-center glass rounded-full text-accent border border-accent/30"
                     >
                       <Star className="w-7 h-7" fill="currentColor" />
                     </motion.button>
+                    
+                    {/* Rose button */}
+                    <motion.button
+                      onClick={() => { onSendRose?.(); setShowDetails(false); }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="w-14 h-14 flex items-center justify-center bg-gradient-to-br from-rose-500/30 to-pink-500/30 rounded-full border border-rose-400/50 relative overflow-hidden"
+                    >
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-t from-rose-500/40 to-transparent"
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                      />
+                      <span className="text-2xl relative z-10">🌹</span>
+                    </motion.button>
+                    
                     <motion.button
                       onClick={() => { onLike(); setShowDetails(false); }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      className="p-5 btn-gold rounded-full"
+                      className="w-16 h-16 flex items-center justify-center btn-gold rounded-full"
                     >
-                      <Heart className="w-9 h-9 text-primary-foreground" fill="currentColor" />
+                      <Heart className="w-8 h-8 text-primary-foreground" fill="currentColor" />
                     </motion.button>
                   </div>
                 </div>
