@@ -20,6 +20,8 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Camera as CapCamera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Capacitor } from "@capacitor/core";
 
 interface PhotoGalleryProps {
   userId: string;
@@ -263,12 +265,63 @@ const PhotoGallery = ({ userId, photos, onPhotosChange, onAvatarChange }: PhotoG
     toast.success("Photo supprimée");
   };
 
-  const openFilePicker = (e?: React.MouseEvent) => {
+  const openFilePicker = async (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    setTimeout(() => {
-      fileInputRef.current?.click();
-    }, 50);
+
+    // Use Capacitor Camera on native platforms
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const image = await CapCamera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Base64,
+          source: CameraSource.Prompt, // Let user choose camera or gallery
+        });
+
+        if (image.base64String) {
+          setIsUploading(true);
+          setUploadingIndex(photos.length);
+
+          // Convert base64 to blob
+          const byteCharacters = atob(image.base64String);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: `image/${image.format || 'jpeg'}` });
+          const file = new File([blob], `photo-${Date.now()}.${image.format || 'jpeg'}`, { type: `image/${image.format || 'jpeg'}` });
+
+          const url = await uploadPhoto(file, photos.length);
+          if (url) {
+            const updatedPhotos = [...photos, url];
+            onPhotosChange(updatedPhotos);
+
+            if (photos.length === 0) {
+              await updateAvatar(url);
+            }
+
+            toast.success("Photo ajoutée");
+          }
+
+          setIsUploading(false);
+          setUploadingIndex(null);
+        }
+      } catch (error: any) {
+        console.error("Camera error:", error);
+        if (!error.message?.includes("cancelled")) {
+          toast.error("Erreur lors de la sélection de la photo");
+        }
+        setIsUploading(false);
+        setUploadingIndex(null);
+      }
+    } else {
+      // Web fallback
+      setTimeout(() => {
+        fileInputRef.current?.click();
+      }, 50);
+    }
   };
 
   return (
