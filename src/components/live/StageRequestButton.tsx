@@ -50,15 +50,20 @@ const StageRequestButton = ({
       onClick={onRequest}
       disabled={isLoading}
       className={cn(
-        "w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors",
+        "w-10 h-10 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center active:bg-primary transition-colors relative",
         isLoading && "opacity-50"
       )}
+      animate={{ scale: [1, 1.05, 1] }}
+      transition={{ duration: 2, repeat: Infinity, repeatType: "loop" }}
     >
       {isLoading ? (
-        <Loader2 className="w-5 h-5 text-foreground animate-spin" />
+        <Loader2 className="w-5 h-5 text-white animate-spin" />
       ) : (
-        <Hand className="w-5 h-5 text-foreground" />
+        <Hand className="w-5 h-5 text-white" />
       )}
+      <span className="absolute -bottom-5 whitespace-nowrap text-[10px] text-primary font-medium">
+        Rejoindre
+      </span>
     </motion.button>
   );
 };
