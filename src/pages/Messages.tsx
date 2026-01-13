@@ -519,19 +519,13 @@ const Messages = () => {
               <h3 className="text-sm font-medium text-muted-foreground">
                 Qui m'a liké ({likedByUsers.length})
               </h3>
-              {!isPremium && (
-                <span className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                  <Crown className="w-3 h-3" />
-                  Premium
-                </span>
-              )}
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               {likedByUsers.map((likedBy) => (
                 <motion.div
                   key={likedBy.id}
-                  whileTap={isPremium ? { scale: 0.95 } : undefined}
-                  className={`flex flex-col items-center gap-1.5 flex-shrink-0 ${!isPremium ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer"
                 >
                   <div className="relative">
                     <div className={`w-16 h-16 rounded-full p-0.5 ${likedBy.isSuperLike ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600' : 'bg-gradient-to-br from-destructive via-destructive/80 to-destructive/60'}`}>
@@ -539,34 +533,20 @@ const Messages = () => {
                         <img
                           src={likedBy.photo}
                           alt={likedBy.name}
-                          className={`w-full h-full rounded-full object-cover border-2 border-background ${!isPremium ? 'blur-md' : ''}`}
+                          className="w-full h-full rounded-full object-cover border-2 border-background"
                         />
-                        {!isPremium && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
-                            <Lock className="w-5 h-5 text-white" />
-                          </div>
-                        )}
                       </div>
                     </div>
                     {likedBy.isSuperLike && (
                       <span className="absolute -top-1 -right-1 text-lg">⭐</span>
                     )}
                   </div>
-                  <span className={`text-xs font-medium text-foreground ${!isPremium ? 'blur-sm' : ''}`}>
-                    {isPremium ? likedBy.name : "???"}
+                  <span className="text-xs font-medium text-foreground">
+                    {likedBy.name}
                   </span>
                 </motion.div>
               ))}
             </div>
-            {!isPremium && likedByUsers.length > 0 && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-xs text-muted-foreground mt-2 text-center"
-              >
-                Passez en Premium pour voir qui vous a liké
-              </motion.p>
-            )}
           </motion.div>
         )}
 
