@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, CheckCheck, Check, Loader2 } from "lucide-react";
+import { MessageCircle, CheckCheck, Check, Loader2, Heart, Lock, Crown } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import ChatView from "@/components/ChatView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface Conversation {
   id: string;
@@ -26,6 +27,14 @@ interface NewMatch {
   name: string;
   photo: string;
   isOnline: boolean;
+}
+
+interface LikedByUser {
+  id: string;
+  name: string;
+  photo: string;
+  isSuperLike: boolean;
+  createdAt: string;
 }
 
 interface OpenChatData {
@@ -61,123 +70,266 @@ const MessageStatus = ({ status }: { status: Conversation["status"] }) => {
 
 const Messages = () => {
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMatches, setNewMatches] = useState<NewMatch[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [likedByUsers, setLikedByUsers] = useState<LikedByUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch matches and conversations from database
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
+  // Fetch all data
+  const fetchData = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch all matches where current user is involved
+      const { data: matchesData } = await supabase
+        .from("matches")
+        .select("*")
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .order("created_at", { ascending: false });
+
+      // Fetch users who liked me but I haven't liked back (for "Who liked me" section)
+      const { data: likedByData } = await supabase
+        .from("likes")
+        .select("liker_id, is_super_like, created_at")
+        .eq("liked_id", user.id);
+
+      // Get IDs of users I've already liked
+      const { data: myLikesData } = await supabase
+        .from("likes")
+        .select("liked_id")
+        .eq("liker_id", user.id);
+
+      const myLikedIds = new Set(myLikesData?.map(l => l.liked_id) || []);
+      
+      // Filter to only users I haven't liked back
+      const pendingLikes = likedByData?.filter(l => !myLikedIds.has(l.liker_id)) || [];
+
+      if (pendingLikes.length > 0) {
+        const likerIds = pendingLikes.map(l => l.liker_id);
+        const { data: likerProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, display_name, avatar_url")
+          .in("user_id", likerIds);
+
+        if (likerProfiles) {
+          const likedByList: LikedByUser[] = pendingLikes.map(like => {
+            const profile = likerProfiles.find(p => p.user_id === like.liker_id);
+            return {
+              id: like.liker_id,
+              name: profile?.display_name || "Utilisateur",
+              photo: profile?.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+              isSuperLike: like.is_super_like,
+              createdAt: like.created_at,
+            };
+          });
+          setLikedByUsers(likedByList);
+        }
+      } else {
+        setLikedByUsers([]);
       }
 
-      try {
-        // Fetch all matches where current user is involved
-        const { data: matchesData } = await supabase
-          .from("matches")
-          .select("*")
-          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-          .order("created_at", { ascending: false });
+      if (matchesData) {
+        // Get the other user's ID for each match
+        const otherUserIds = matchesData.map(match =>
+          match.user1_id === user.id ? match.user2_id : match.user1_id
+        );
 
-        if (matchesData) {
-          // Get the other user's ID for each match
-          const otherUserIds = matchesData.map(match =>
-            match.user1_id === user.id ? match.user2_id : match.user1_id
-          );
+        // Fetch profiles for matched users
+        if (otherUserIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("user_id, display_name, avatar_url, is_online")
+            .in("user_id", otherUserIds);
 
-          // Fetch profiles for matched users
-          if (otherUserIds.length > 0) {
-            const { data: profilesData } = await supabase
-              .from("profiles")
-              .select("user_id, display_name, avatar_url, is_online")
-              .in("user_id", otherUserIds);
+          if (profilesData) {
+            // Get the last message for each conversation
+            const conversationsWithMessages: Conversation[] = [];
+            const newMatchesList: NewMatch[] = [];
 
-            if (profilesData) {
-              // Get the last message for each conversation
-              const conversationsWithMessages: Conversation[] = [];
-              const newMatchesList: NewMatch[] = [];
+            for (const match of matchesData) {
+              const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id;
+              const profile = profilesData.find(p => p.user_id === otherUserId);
 
-              for (const match of matchesData) {
-                const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id;
-                const profile = profilesData.find(p => p.user_id === otherUserId);
+              if (profile) {
+                // Get last message between users
+                const { data: lastMessageData } = await supabase
+                  .from("messages")
+                  .select("*")
+                  .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
+                  .order("created_at", { ascending: false })
+                  .limit(1);
 
-                if (profile) {
-                  // Get last message between users
-                  const { data: lastMessageData } = await supabase
-                    .from("messages")
-                    .select("*")
-                    .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
-                    .order("created_at", { ascending: false })
-                    .limit(1);
+                // Count unread messages
+                const { count: unreadCount } = await supabase
+                  .from("messages")
+                  .select("*", { count: "exact", head: true })
+                  .eq("sender_id", otherUserId)
+                  .eq("receiver_id", user.id)
+                  .eq("is_read", false);
 
-                  // Count unread messages
-                  const { count: unreadCount } = await supabase
-                    .from("messages")
-                    .select("*", { count: "exact", head: true })
-                    .eq("sender_id", otherUserId)
-                    .eq("receiver_id", user.id)
-                    .eq("is_read", false);
+                const lastMessage = lastMessageData?.[0];
 
-                  const lastMessage = lastMessageData?.[0];
-
-                  if (lastMessage) {
-                    // Has messages - add to conversations
-                    const date = new Date(lastMessage.created_at);
-                    const now = new Date();
-                    const isToday = date.toDateString() === now.toDateString();
-                    const isYesterday = new Date(now.getTime() - 86400000).toDateString() === date.toDateString();
-                    
-                    let timeString = "";
-                    if (isToday) {
-                      timeString = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-                    } else if (isYesterday) {
-                      timeString = "Hier";
-                    } else {
-                      timeString = date.toLocaleDateString("fr-FR", { weekday: "short" });
-                    }
-
-                    conversationsWithMessages.push({
-                      id: otherUserId,
-                      user: {
-                        name: profile.display_name || "Utilisateur",
-                        photo: profile.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
-                        isOnline: profile.is_online || false,
-                      },
-                      lastMessage: lastMessage.content || (lastMessage.image_url ? "📷 Photo" : lastMessage.audio_url ? "🎤 Message vocal" : ""),
-                      time: timeString,
-                      unread: unreadCount || 0,
-                      status: lastMessage.sender_id === user.id ? (lastMessage.is_read ? "read" : "delivered") : "read",
-                      isTyping: false,
-                    });
+                if (lastMessage) {
+                  // Has messages - add to conversations
+                  const date = new Date(lastMessage.created_at);
+                  const now = new Date();
+                  const isToday = date.toDateString() === now.toDateString();
+                  const isYesterday = new Date(now.getTime() - 86400000).toDateString() === date.toDateString();
+                  
+                  let timeString = "";
+                  if (isToday) {
+                    timeString = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                  } else if (isYesterday) {
+                    timeString = "Hier";
                   } else {
-                    // No messages yet - new match
-                    newMatchesList.push({
-                      id: otherUserId,
+                    timeString = date.toLocaleDateString("fr-FR", { weekday: "short" });
+                  }
+
+                  conversationsWithMessages.push({
+                    id: otherUserId,
+                    user: {
                       name: profile.display_name || "Utilisateur",
                       photo: profile.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
                       isOnline: profile.is_online || false,
-                    });
-                  }
+                    },
+                    lastMessage: lastMessage.content || (lastMessage.image_url ? "📷 Photo" : lastMessage.audio_url ? "🎤 Message vocal" : ""),
+                    time: timeString,
+                    unread: unreadCount || 0,
+                    status: lastMessage.sender_id === user.id ? (lastMessage.is_read ? "read" : "delivered") : "read",
+                    isTyping: false,
+                  });
+                } else {
+                  // No messages yet - new match
+                  newMatchesList.push({
+                    id: otherUserId,
+                    name: profile.display_name || "Utilisateur",
+                    photo: profile.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+                    isOnline: profile.is_online || false,
+                  });
                 }
               }
-
-              setConversations(conversationsWithMessages);
-              setNewMatches(newMatchesList);
             }
+
+            setConversations(conversationsWithMessages);
+            setNewMatches(newMatchesList);
           }
         }
-      } catch (error) {
-        console.error("Error fetching messages data:", error);
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    fetchData();
+    } catch (error) {
+      console.error("Error fetching messages data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [user]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Real-time subscriptions for matches, messages, and likes
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to new matches
+    const matchesChannel = supabase
+      .channel("realtime-matches")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "matches",
+        },
+        (payload) => {
+          const newMatch = payload.new as { user1_id: string; user2_id: string };
+          // Check if current user is part of this match
+          if (newMatch.user1_id === user.id || newMatch.user2_id === user.id) {
+            console.log("New match detected!", newMatch);
+            fetchData(); // Refresh all data
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to new messages (for unread count and last message updates)
+    const messagesChannel = supabase
+      .channel("realtime-messages-list")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const newMessage = payload.new as { sender_id: string; receiver_id: string };
+          // Check if current user is part of this conversation
+          if (newMessage.sender_id === user.id || newMessage.receiver_id === user.id) {
+            console.log("New message detected!", newMessage);
+            fetchData(); // Refresh to update last message and unread count
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const updatedMessage = payload.new as { sender_id: string; receiver_id: string };
+          if (updatedMessage.sender_id === user.id || updatedMessage.receiver_id === user.id) {
+            fetchData(); // Refresh for read status updates
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to new likes (for "Who liked me" section)
+    const likesChannel = supabase
+      .channel("realtime-likes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "likes",
+        },
+        (payload) => {
+          const newLike = payload.new as { liker_id: string; liked_id: string };
+          // Someone liked me
+          if (newLike.liked_id === user.id) {
+            console.log("Someone liked me!", newLike);
+            fetchData(); // Refresh to show in "Who liked me"
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "likes",
+        },
+        () => {
+          fetchData(); // Refresh when likes are removed
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(matchesChannel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(likesChannel);
+    };
+  }, [user, fetchData]);
 
   // Check for notification deep link on mount
   useEffect(() => {
@@ -215,6 +367,8 @@ const Messages = () => {
 
   const handleCloseChat = () => {
     setSelectedConversation(null);
+    // Refresh data when closing chat to update read status
+    fetchData();
   };
 
   return (
@@ -241,6 +395,71 @@ const Messages = () => {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl md:mx-auto w-full">
+        
+        {/* Who Liked Me Section */}
+        {likedByUsers.length > 0 && (
+          <motion.div
+            className="px-4 md:px-8 mb-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Heart className="w-4 h-4 text-destructive fill-destructive" />
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Qui m'a liké ({likedByUsers.length})
+              </h3>
+              {!isPremium && (
+                <span className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                  <Crown className="w-3 h-3" />
+                  Premium
+                </span>
+              )}
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {likedByUsers.map((likedBy) => (
+                <motion.div
+                  key={likedBy.id}
+                  whileTap={isPremium ? { scale: 0.95 } : undefined}
+                  className={`flex flex-col items-center gap-1.5 flex-shrink-0 ${!isPremium ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <div className="relative">
+                    <div className={`w-16 h-16 rounded-full p-0.5 ${likedBy.isSuperLike ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600' : 'bg-gradient-to-br from-destructive via-destructive/80 to-destructive/60'}`}>
+                      <div className="relative w-full h-full">
+                        <img
+                          src={likedBy.photo}
+                          alt={likedBy.name}
+                          className={`w-full h-full rounded-full object-cover border-2 border-background ${!isPremium ? 'blur-md' : ''}`}
+                        />
+                        {!isPremium && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
+                            <Lock className="w-5 h-5 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {likedBy.isSuperLike && (
+                      <span className="absolute -top-1 -right-1 text-lg">⭐</span>
+                    )}
+                  </div>
+                  <span className={`text-xs font-medium text-foreground ${!isPremium ? 'blur-sm' : ''}`}>
+                    {isPremium ? likedBy.name : "???"}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+            {!isPremium && likedByUsers.length > 0 && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xs text-muted-foreground mt-2 text-center"
+              >
+                Passez en Premium pour voir qui vous a liké
+              </motion.p>
+            )}
+          </motion.div>
+        )}
+
         {/* New Matches Section */}
         {newMatches.length > 0 && (
           <motion.div
