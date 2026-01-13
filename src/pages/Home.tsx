@@ -43,6 +43,7 @@ const Home = () => {
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
+  const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
@@ -85,23 +86,44 @@ const Home = () => {
     }))
   , [profilesWithDistance]);
 
-  // Fetch user's country from profile
+  // Fetch user's country and received likes from database
   useEffect(() => {
-    const fetchUserCountry = async () => {
+    const fetchUserData = async () => {
       if (!user) return;
       
-      const { data } = await supabase
+      // Fetch user's country
+      const { data: profileData } = await supabase
         .from("profiles")
         .select("location")
         .eq("user_id", user.id)
         .maybeSingle();
       
-      if (data?.location) {
-        setUserCountry(data.location);
+      if (profileData?.location) {
+        setUserCountry(profileData.location);
+      }
+      
+      // Fetch likes received by this user (people who liked me)
+      const { data: likesData } = await supabase
+        .from("likes")
+        .select("liker_id")
+        .eq("liked_id", user.id);
+      
+      if (likesData) {
+        setReceivedLikes(new Set(likesData.map(l => l.liker_id)));
+      }
+      
+      // Fetch likes already sent by this user
+      const { data: sentLikesData } = await supabase
+        .from("likes")
+        .select("liked_id")
+        .eq("liker_id", user.id);
+      
+      if (sentLikesData) {
+        setLikedProfiles(new Set(sentLikesData.map(l => l.liked_id)));
       }
     };
     
-    fetchUserCountry();
+    fetchUserData();
   }, [user]);
 
   // Load more profiles when nearing the end of the stack
@@ -121,35 +143,52 @@ const Home = () => {
   const currentProfile = profiles.length > 0 
     ? profiles[currentIndex % profiles.length] 
     : null;
-  const profilesWhoLikedUser = new Set(["1", "3", "5"]);
 
+  // Check for match using real database data
   const checkForMatch = (profileId: string) => {
-    return profilesWhoLikedUser.has(profileId);
+    // A match occurs if the other person already liked us
+    return receivedLikes.has(profileId);
   };
 
   const handleSwipe = async (direction: "left" | "right" | "up") => {
     const swipedProfile = currentProfile;
+    if (!swipedProfile || !user) return;
     
     if (direction === "right" || direction === "up") {
-      setLikedProfiles((prev) => new Set([...prev, swipedProfile.id]));
-      
-      // Send like notification (in a real app, this would also save the like to database)
       const isSuperLike = direction === "up";
+      
+      // Save like to database
       try {
-        await supabase.functions.invoke("notify-like", {
-          body: {
-            liker_id: user?.id,
+        const { error: likeError } = await supabase
+          .from("likes")
+          .upsert({
+            liker_id: user.id,
             liked_id: swipedProfile.id,
             is_super_like: isSuperLike,
-          },
-        });
+          }, { onConflict: 'liker_id,liked_id' });
+        
+        if (likeError) {
+          console.error("Error saving like:", likeError);
+        } else {
+          setLikedProfiles((prev) => new Set([...prev, swipedProfile.id]));
+          
+          // Send like notification
+          await supabase.functions.invoke("notify-like", {
+            body: {
+              liker_id: user.id,
+              liked_id: swipedProfile.id,
+              is_super_like: isSuperLike,
+            },
+          });
+          
+          // Check for match - the database trigger will create the match automatically
+          if (checkForMatch(swipedProfile.id)) {
+            setMatchedProfile(swipedProfile);
+            setIsMatchModalOpen(true);
+          }
+        }
       } catch (err) {
-        console.error("Error sending like notification:", err);
-      }
-      
-      if (checkForMatch(swipedProfile.id)) {
-        setMatchedProfile(swipedProfile);
-        setIsMatchModalOpen(true);
+        console.error("Error processing like:", err);
       }
     }
 

@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, CheckCheck, Check } from "lucide-react";
+import { MessageCircle, CheckCheck, Check, Loader2 } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import ChatView from "@/components/ChatView";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Conversation {
   id: string;
@@ -33,81 +35,6 @@ interface OpenChatData {
   isOnline: boolean;
 }
 
-const mockNewMatches: NewMatch[] = [
-  {
-    id: "m1",
-    name: "Chloé",
-    photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
-    isOnline: true
-  },
-  {
-    id: "m2",
-    name: "Julie",
-    photo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop",
-    isOnline: false
-  },
-  {
-    id: "m3",
-    name: "Marie",
-    photo: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop",
-    isOnline: true
-  },
-];
-
-const mockConversations: Conversation[] = [
-  {
-    id: "1",
-    user: {
-      name: "Sophie",
-      photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-      isOnline: true
-    },
-    lastMessage: "On se retrouve où demain ?",
-    time: "14:32",
-    unread: 2,
-    status: "read",
-    isTyping: true
-  },
-  {
-    id: "2",
-    user: {
-      name: "Emma",
-      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
-      isOnline: false
-    },
-    lastMessage: "Super, j'ai hâte d'y être ! 😊",
-    time: "Hier",
-    unread: 0,
-    status: "read",
-    isTyping: false
-  },
-  {
-    id: "3",
-    user: {
-      name: "Léa",
-      photo: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=100&h=100&fit=crop",
-      isOnline: true
-    },
-    lastMessage: "Tu fais quoi ce weekend ?",
-    time: "Lun",
-    unread: 1,
-    status: "delivered",
-    isTyping: false
-  },
-  {
-    id: "4",
-    user: {
-      name: "Camille",
-      photo: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=100&h=100&fit=crop",
-      isOnline: false
-    },
-    lastMessage: "Merci pour la soirée !",
-    time: "Dim",
-    unread: 0,
-    status: "sent",
-    isTyping: false
-  }
-];
 
 const container = {
   hidden: { opacity: 0 },
@@ -133,7 +60,124 @@ const MessageStatus = ({ status }: { status: Conversation["status"] }) => {
 };
 
 const Messages = () => {
+  const { user } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [newMatches, setNewMatches] = useState<NewMatch[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch matches and conversations from database
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch all matches where current user is involved
+        const { data: matchesData } = await supabase
+          .from("matches")
+          .select("*")
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .order("created_at", { ascending: false });
+
+        if (matchesData) {
+          // Get the other user's ID for each match
+          const otherUserIds = matchesData.map(match =>
+            match.user1_id === user.id ? match.user2_id : match.user1_id
+          );
+
+          // Fetch profiles for matched users
+          if (otherUserIds.length > 0) {
+            const { data: profilesData } = await supabase
+              .from("profiles")
+              .select("user_id, display_name, avatar_url, is_online")
+              .in("user_id", otherUserIds);
+
+            if (profilesData) {
+              // Get the last message for each conversation
+              const conversationsWithMessages: Conversation[] = [];
+              const newMatchesList: NewMatch[] = [];
+
+              for (const match of matchesData) {
+                const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id;
+                const profile = profilesData.find(p => p.user_id === otherUserId);
+
+                if (profile) {
+                  // Get last message between users
+                  const { data: lastMessageData } = await supabase
+                    .from("messages")
+                    .select("*")
+                    .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
+                    .order("created_at", { ascending: false })
+                    .limit(1);
+
+                  // Count unread messages
+                  const { count: unreadCount } = await supabase
+                    .from("messages")
+                    .select("*", { count: "exact", head: true })
+                    .eq("sender_id", otherUserId)
+                    .eq("receiver_id", user.id)
+                    .eq("is_read", false);
+
+                  const lastMessage = lastMessageData?.[0];
+
+                  if (lastMessage) {
+                    // Has messages - add to conversations
+                    const date = new Date(lastMessage.created_at);
+                    const now = new Date();
+                    const isToday = date.toDateString() === now.toDateString();
+                    const isYesterday = new Date(now.getTime() - 86400000).toDateString() === date.toDateString();
+                    
+                    let timeString = "";
+                    if (isToday) {
+                      timeString = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                    } else if (isYesterday) {
+                      timeString = "Hier";
+                    } else {
+                      timeString = date.toLocaleDateString("fr-FR", { weekday: "short" });
+                    }
+
+                    conversationsWithMessages.push({
+                      id: otherUserId,
+                      user: {
+                        name: profile.display_name || "Utilisateur",
+                        photo: profile.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+                        isOnline: profile.is_online || false,
+                      },
+                      lastMessage: lastMessage.content || (lastMessage.image_url ? "📷 Photo" : lastMessage.audio_url ? "🎤 Message vocal" : ""),
+                      time: timeString,
+                      unread: unreadCount || 0,
+                      status: lastMessage.sender_id === user.id ? (lastMessage.is_read ? "read" : "delivered") : "read",
+                      isTyping: false,
+                    });
+                  } else {
+                    // No messages yet - new match
+                    newMatchesList.push({
+                      id: otherUserId,
+                      name: profile.display_name || "Utilisateur",
+                      photo: profile.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
+                      isOnline: profile.is_online || false,
+                    });
+                  }
+                }
+              }
+
+              setConversations(conversationsWithMessages);
+              setNewMatches(newMatchesList);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching messages data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
 
   // Check for notification deep link on mount
   useEffect(() => {
@@ -192,13 +236,13 @@ const Messages = () => {
         transition={{ delay: 0.1 }}
       >
         <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-        <p className="text-sm text-muted-foreground">{mockConversations.length + mockNewMatches.length} matchs</p>
+        <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} matchs</p>
       </motion.div>
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl md:mx-auto w-full">
         {/* New Matches Section */}
-        {mockNewMatches.length > 0 && (
+        {newMatches.length > 0 && (
           <motion.div
             className="px-4 md:px-8 mb-4"
             initial={{ opacity: 0, y: 10 }}
@@ -207,7 +251,7 @@ const Messages = () => {
           >
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Nouveaux matchs</h3>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {mockNewMatches.map((match) => (
+              {newMatches.map((match) => (
                 <motion.button
                   key={match.id}
                   whileTap={{ scale: 0.95 }}
@@ -251,14 +295,18 @@ const Messages = () => {
           <h3 className="text-sm font-medium text-muted-foreground">Conversations</h3>
         </motion.div>
 
-        {mockConversations.length > 0 ? (
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : conversations.length > 0 ? (
           <motion.div 
             className="px-4 md:px-8 space-y-2 md:space-y-3 pb-4"
             variants={container}
             initial="hidden"
             animate="show"
           >
-            {mockConversations.map((conv) => (
+            {conversations.map((conv) => (
             <motion.div
               key={conv.id}
               variants={item}
