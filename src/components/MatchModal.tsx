@@ -165,52 +165,102 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
             </motion.div>
 
             {/* Profile Photos */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring", damping: 15 }}
-              className="relative flex items-center justify-center mb-12"
-            >
-              {/* Your photo */}
+            <div className="relative flex items-center justify-center mb-12">
+              {/* Your photo - slides in from left */}
               <motion.div 
                 className="relative"
-                animate={{ x: [-5, 5, -5] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                initial={{ x: -100, scale: 0, opacity: 0, rotate: -20 }}
+                animate={{ 
+                  x: 0, 
+                  scale: 1, 
+                  opacity: 1, 
+                  rotate: 0 
+                }}
+                transition={{ 
+                  delay: 0.3, 
+                  duration: 0.6, 
+                  type: "spring", 
+                  damping: 12,
+                  stiffness: 100
+                }}
               >
-                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary glow-gold">
-                  <img
-                    src={currentUserPhoto || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop"}
-                    alt="Vous"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <motion.div
+                  animate={{ x: [-5, 5, -5] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                >
+                  <motion.div 
+                    className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary glow-gold"
+                    initial={{ boxShadow: "0 0 0px rgba(212, 165, 55, 0)" }}
+                    animate={{ boxShadow: "0 0 30px rgba(212, 165, 55, 0.6)" }}
+                    transition={{ delay: 0.8, duration: 0.5 }}
+                  >
+                    <motion.img
+                      src={currentUserPhoto || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop"}
+                      alt="Vous"
+                      className="w-full h-full object-cover"
+                      initial={{ scale: 1.5 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
+                    />
+                  </motion.div>
+                </motion.div>
               </motion.div>
 
-              {/* Heart */}
+              {/* Heart - pops up after photos meet */}
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: [0, 1.3, 1] }}
-                transition={{ delay: 0.5, duration: 0.6, type: "spring" }}
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: [0, 1.5, 1], rotate: 0 }}
+                transition={{ delay: 0.8, duration: 0.6, type: "spring", stiffness: 200 }}
                 className="absolute z-10 p-3 btn-gold rounded-full"
               >
-                <Heart className="w-6 h-6 text-primary-foreground" fill="currentColor" />
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ delay: 1.2, duration: 0.8, repeat: Infinity, repeatDelay: 0.5 }}
+                >
+                  <Heart className="w-6 h-6 text-primary-foreground" fill="currentColor" />
+                </motion.div>
               </motion.div>
 
-              {/* Match's photo */}
+              {/* Match's photo - slides in from right */}
               <motion.div 
                 className="relative -ml-6"
-                animate={{ x: [5, -5, 5] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                initial={{ x: 100, scale: 0, opacity: 0, rotate: 20 }}
+                animate={{ 
+                  x: 0, 
+                  scale: 1, 
+                  opacity: 1, 
+                  rotate: 0 
+                }}
+                transition={{ 
+                  delay: 0.4, 
+                  duration: 0.6, 
+                  type: "spring", 
+                  damping: 12,
+                  stiffness: 100
+                }}
               >
-                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary glow-gold">
-                  <img
-                    src={profile.photos[0]}
-                    alt={profile.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <motion.div
+                  animate={{ x: [5, -5, 5] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                >
+                  <motion.div 
+                    className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary glow-gold"
+                    initial={{ boxShadow: "0 0 0px rgba(212, 165, 55, 0)" }}
+                    animate={{ boxShadow: "0 0 30px rgba(212, 165, 55, 0.6)" }}
+                    transition={{ delay: 0.9, duration: 0.5 }}
+                  >
+                    <motion.img
+                      src={profile.photos[0]}
+                      alt={profile.name}
+                      className="w-full h-full object-cover"
+                      initial={{ scale: 1.5 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
+                    />
+                  </motion.div>
+                </motion.div>
               </motion.div>
-            </motion.div>
+            </div>
 
             {/* Action Buttons */}
             <motion.div
