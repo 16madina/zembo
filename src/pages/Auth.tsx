@@ -111,9 +111,24 @@ const Auth = () => {
           avatar_url: avatarUrl,
           is_verified: data.faceVerified || false,
         }).eq("user_id", user.id);
+
+        // Send verification email automatically after signup
+        try {
+          const { data: emailResponse, error: emailError } = await supabase.functions.invoke("send-verification-email", {
+            body: { email: data.email.trim().toLowerCase() },
+          });
+          
+          if (emailError) {
+            console.error("Error sending verification email:", emailError);
+          } else if (emailResponse?.success) {
+            console.log("Verification email sent successfully");
+          }
+        } catch (emailErr) {
+          console.error("Failed to send verification email:", emailErr);
+        }
       }
 
-      toast.success("Compte créé avec succès ! Bienvenue sur Zembo 💫");
+      toast.success("Compte créé avec succès ! Un email de vérification vous a été envoyé 💫");
       navigate("/");
     } catch (err) {
       toast.error("Une erreur est survenue");
