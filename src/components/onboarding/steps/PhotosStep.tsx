@@ -204,13 +204,36 @@ const PhotosStep = ({ data, updateData }: PhotosStepProps) => {
           updateData({ photos: [...data.photos, image.dataUrl] });
         }
       } catch (error: any) {
+        const errorMessage = error?.message || String(error);
+        console.error("[Onboarding PhotosStep] Camera error details:", {
+          message: errorMessage,
+          code: error?.code,
+          fullError: error,
+        });
+        
         // User cancelled - don't show error
-        if (error?.message?.includes("cancelled") || error?.message?.includes("canceled")) {
+        if (
+          errorMessage.includes("cancelled") || 
+          errorMessage.includes("canceled") ||
+          errorMessage.includes("User cancelled") ||
+          errorMessage.includes("No image picked")
+        ) {
           console.log("[Onboarding PhotosStep] User cancelled photo selection");
           return;
         }
-        console.error("[Onboarding PhotosStep] Camera error:", error);
-        toast.error("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+        
+        // Permission denied
+        if (
+          errorMessage.includes("permission") || 
+          errorMessage.includes("Permission") ||
+          errorMessage.includes("denied")
+        ) {
+          toast.error("Permission caméra refusée. Allez dans Paramètres > Applications > Zembo > Permissions.");
+          return;
+        }
+        
+        // Generic error with actual message for debugging
+        toast.error(`Erreur caméra: ${errorMessage.substring(0, 100)}`);
       }
     } else {
       fileInputRef.current?.click();
