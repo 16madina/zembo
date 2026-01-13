@@ -298,6 +298,7 @@ export type Database = {
       likes: {
         Row: {
           created_at: string
+          has_rose: boolean | null
           id: string
           is_super_like: boolean
           liked_id: string
@@ -305,6 +306,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          has_rose?: boolean | null
           id?: string
           is_super_like?: boolean
           liked_id: string
@@ -312,6 +314,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          has_rose?: boolean | null
           id?: string
           is_super_like?: boolean
           liked_id?: string
