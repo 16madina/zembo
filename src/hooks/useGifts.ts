@@ -29,11 +29,12 @@ export const useGifts = (liveId?: string) => {
     setLoading(false);
   }, []);
 
-  // Send a gift to the streamer
+  // Send a gift to someone (outside of live streams, creates a like for roses)
   const sendGift = async (
     gift: VirtualGift,
     receiverId: string,
-    message?: string
+    message?: string,
+    options?: { createLike?: boolean }
   ): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return { success: false, error: "Non authentifié" };
@@ -63,6 +64,23 @@ export const useGifts = (liveId?: string) => {
       // Refund the coins if transaction fails
       await refetchCoins();
       return { success: false, error: "Erreur lors de l'envoi du cadeau" };
+    }
+
+    // For Rose gifts (outside live), also create a like with has_rose = true
+    if (options?.createLike && gift.name === "Rose") {
+      const { error: likeError } = await supabase
+        .from("likes")
+        .upsert({
+          liker_id: user.id,
+          liked_id: receiverId,
+          is_super_like: false,
+          has_rose: true,
+        }, { onConflict: 'liker_id,liked_id' });
+
+      if (likeError) {
+        console.error("Error creating like for rose:", likeError);
+        // Don't fail the whole transaction, the gift was already sent
+      }
     }
 
     return { success: true };

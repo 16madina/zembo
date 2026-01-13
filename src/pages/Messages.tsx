@@ -39,6 +39,7 @@ interface LikedByUser {
   name: string;
   photo: string;
   isSuperLike: boolean;
+  hasRose: boolean;
   createdAt: string;
   age?: number;
   location?: string;
@@ -123,7 +124,7 @@ const Messages = () => {
       // Fetch users who liked me but I haven't liked back (for "Who liked me" section)
       const { data: likedByData } = await supabase
         .from("likes")
-        .select("liker_id, is_super_like, created_at")
+        .select("liker_id, is_super_like, has_rose, created_at")
         .eq("liked_id", user.id);
 
       // Get IDs of users I've already liked
@@ -152,6 +153,7 @@ const Messages = () => {
               name: profile?.display_name || "Utilisateur",
               photo: profile?.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
               isSuperLike: like.is_super_like,
+              hasRose: like.has_rose || false,
               createdAt: like.created_at,
             };
           });
@@ -562,7 +564,13 @@ const Messages = () => {
                   className="flex flex-col items-center gap-1.5 flex-shrink-0"
                 >
                   <div className="relative">
-                    <div className={`w-16 h-16 rounded-full p-0.5 ${likedBy.isSuperLike ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600' : 'bg-gradient-to-br from-destructive via-destructive/80 to-destructive/60'}`}>
+                    <div className={`w-16 h-16 rounded-full p-0.5 ${
+                      likedBy.hasRose 
+                        ? 'bg-gradient-to-br from-rose-400 via-rose-500 to-rose-600' 
+                        : likedBy.isSuperLike 
+                          ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600' 
+                          : 'bg-gradient-to-br from-destructive via-destructive/80 to-destructive/60'
+                    }`}>
                       <div className="relative w-full h-full">
                         <img
                           src={likedBy.photo}
@@ -571,7 +579,9 @@ const Messages = () => {
                         />
                       </div>
                     </div>
-                    {likedBy.isSuperLike && (
+                    {likedBy.hasRose ? (
+                      <span className="absolute -top-1 -right-1 text-lg">🌹</span>
+                    ) : likedBy.isSuperLike && (
                       <span className="absolute -top-1 -right-1 text-lg">⭐</span>
                     )}
                   </div>

@@ -278,7 +278,7 @@ const Home = () => {
       return;
     }
     
-    const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹");
+    const result = await sendGift(roseGift, selectedProfile.id, "Une rose pour toi 🌹", { createLike: true });
     
     if (result.success) {
       setShowRosePetals(true);
@@ -318,7 +318,7 @@ const Home = () => {
       return;
     }
     
-    const result = await sendGift(roseGift, currentProfile.id, "Une rose pour toi 🌹");
+    const result = await sendGift(roseGift, currentProfile.id, "Une rose pour toi 🌹", { createLike: true });
     
     if (result.success) {
       setShowRosePetals(true);
