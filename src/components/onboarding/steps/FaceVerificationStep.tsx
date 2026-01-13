@@ -611,12 +611,9 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const [showSkipOption, setShowSkipOption] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
-  const [showDebugCanvas, setShowDebugCanvas] = useState(true); // Debug mode enabled
-  const [debugFrameInfo, setDebugFrameInfo] = useState<string>("");
-  const [comparisonDebug, setComparisonDebug] = useState<string>(""); // Debug info for comparison results
   const [isSubmittingForReview, setIsSubmittingForReview] = useState(false);
   
-  const debugCanvasRef = useRef<HTMLCanvasElement>(null);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const centerFramesRef = useRef<HTMLCanvasElement[]>([]); // Store frontal frames captured during "center" step
   const streamRef = useRef<MediaStream | null>(null);
@@ -1063,7 +1060,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
         console.log(`[FaceVerification] Best result: ${debugMessage}`);
       }
       
-      setComparisonDebug(debugMessage);
+      console.log(`[FaceVerification] Debug: ${debugMessage}`);
       setFaceMatchResult({ similarity: bestResult.similarity, isMatch: bestResult.isMatch });
 
       stopCameraNow();
@@ -1104,8 +1101,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
       stopCameraNow();
       centerFramesRef.current = [];
       setFaceMatchResult({ similarity: 0, isMatch: false });
-      setComparisonDebug(`Erreur: ${err?.message}`);
-      setCameraError(err?.message || "Erreur pendant la comparaison");
+      console.error(`[FaceVerification] Comparison error: ${err?.message}`);
       setCurrentStep("failed");
     }
   }, [compareFaceWithPreloaded, updateData, isComparisonModelsLoaded, hasPhotoDescriptors, submitForAdminReview]);
@@ -1510,81 +1506,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     return () => clearInterval(id);
   }, [isVerificationActive]);
 
-  // Debug canvas: draw video frames in real-time to verify camera capture
-  useEffect(() => {
-    if (!showDebugCanvas || !isVerificationActive) return;
-
-    let animationId: number;
-    let frameCount = 0;
-    let lastFaceCheck = 0;
-
-    const drawDebugFrame = async () => {
-      const video = videoRef.current;
-      const canvas = debugCanvasRef.current;
-      
-      if (!video || !canvas || video.videoWidth === 0) {
-        setDebugFrameInfo("Vidéo non prête");
-        animationId = requestAnimationFrame(drawDebugFrame);
-        return;
-      }
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        animationId = requestAnimationFrame(drawDebugFrame);
-        return;
-      }
-
-      // Set canvas size to match video (scaled down for debug)
-      const scale = 0.3;
-      canvas.width = video.videoWidth * scale;
-      canvas.height = video.videoHeight * scale;
-
-      // Draw video frame (mirrored like the main view)
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-      ctx.restore();
-
-      frameCount++;
-
-      // Check for face detection every 30 frames (~1 second at 30fps)
-      const now = Date.now();
-      if (now - lastFaceCheck > 1000) {
-        lastFaceCheck = now;
-        
-        try {
-          // Quick face detection check on the debug frame
-          const fullCanvas = captureVideoFrame(video);
-          if (fullCanvas) {
-            const detection = await faceapi.detectSingleFace(fullCanvas);
-            if (detection) {
-              setDebugFrameInfo(`✅ Visage détecté! (${video.videoWidth}x${video.videoHeight}) Frame #${frameCount}`);
-              // Draw green border on debug canvas
-              ctx.strokeStyle = '#22c55e';
-              ctx.lineWidth = 4;
-              ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-            } else {
-              setDebugFrameInfo(`❌ Pas de visage (${video.videoWidth}x${video.videoHeight}) Frame #${frameCount}`);
-              // Draw red border on debug canvas
-              ctx.strokeStyle = '#ef4444';
-              ctx.lineWidth = 4;
-              ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-            }
-          }
-        } catch (err) {
-          setDebugFrameInfo(`⚠️ Erreur détection: ${err}`);
-        }
-      }
-
-      animationId = requestAnimationFrame(drawDebugFrame);
-    };
-
-    drawDebugFrame();
-
-    return () => {
-      if (animationId) cancelAnimationFrame(animationId);
-    };
-  }, [showDebugCanvas, isVerificationActive]);
+  // No debug canvas - removed for production
 
   const startVerification = () => {
     setCurrentStep("preparing");
@@ -1612,7 +1534,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
     setIsVideoReady(false);
     setDebugInfo("");
     setCameraError(null);
-    setComparisonDebug("");
+    centerFramesRef.current = []; // Clear captured frames
     centerFramesRef.current = []; // Clear captured frames
   };
 
@@ -2319,31 +2241,46 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               </div>
             )}
 
-            {/* Debug Canvas Panel - shows real-time video capture */}
-            {showDebugCanvas && (
-              <div className="absolute bottom-4 left-4 z-50 bg-black/80 rounded-lg p-2 border border-white/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-[10px] text-white/80 font-mono">DEBUG</span>
-                  <button 
-                    onClick={() => setShowDebugCanvas(false)}
-                    className="ml-2 text-white/50 hover:text-white text-xs"
-                  >
-                    ✕
-                  </button>
+            {/* Reference Photo Panel - shows the photo being used for comparison */}
+            {data.photos.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, x: -20, y: 20 }}
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.4 }}
+                className="absolute bottom-4 left-4 z-50 bg-black/80 backdrop-blur-sm rounded-2xl p-3 border border-primary/30 shadow-lg shadow-black/20"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-[10px] text-white/90 font-medium uppercase tracking-wide">Photo de référence</span>
                 </div>
-                <canvas 
-                  ref={debugCanvasRef} 
-                  className="rounded border border-white/10"
-                  style={{ maxWidth: '150px', maxHeight: '150px' }}
-                />
-                <p className="text-[9px] text-white/70 mt-1 max-w-[150px] break-words font-mono">
-                  {debugFrameInfo || "Initialisation..."}
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-primary/50 shadow-inner">
+                    <img 
+                      src={data.photos[0]} 
+                      alt="Photo de référence"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* Scanning animation overlay */}
+                  <motion.div
+                    className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none"
+                    style={{ border: '2px solid transparent' }}
+                  >
+                    <motion.div
+                      animate={{ y: ['-100%', '200%'] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-x-0 h-1/3 bg-gradient-to-b from-transparent via-primary/30 to-transparent"
+                    />
+                  </motion.div>
+                  {/* Check indicator */}
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center border-2 border-black">
+                    <ImageIcon className="w-3 h-3 text-primary-foreground" />
+                  </div>
+                </div>
+                <p className="text-[9px] text-white/60 mt-2 text-center max-w-[80px]">
+                  L'IA compare votre visage à cette photo
                 </p>
-                <p className="text-[8px] text-white/50 mt-0.5 font-mono">
-                  {debugInfo}
-                </p>
-              </div>
+              </motion.div>
             )}
           </motion.div>
         )}
@@ -2409,11 +2346,6 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               <p className="text-xs text-muted-foreground/70">
                 Seuil requis : {Math.round((1 - FACE_DISTANCE_THRESHOLD) * 100)}% (distance max: {FACE_DISTANCE_THRESHOLD})
               </p>
-              {comparisonDebug && (
-                <p className="text-[10px] text-muted-foreground/50 mt-2 font-mono break-words">
-                  {comparisonDebug}
-                </p>
-              )}
             </motion.div>
 
             <motion.div
