@@ -79,7 +79,7 @@ const Live = () => {
     <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       {/* Fixed Header */}
       <motion.header
-        className="flex items-center justify-center px-6 py-4 flex-shrink-0"
+        className="flex items-center justify-center px-6 md:px-8 py-4 flex-shrink-0"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -88,7 +88,7 @@ const Live = () => {
 
       {/* Fixed Go Live Button */}
       <motion.div
-        className="px-6 mb-6 flex-shrink-0 max-w-2xl mx-auto w-full"
+        className="px-6 md:px-8 mb-6 flex-shrink-0 max-w-md md:max-w-lg lg:max-w-xl mx-auto w-full"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
@@ -114,7 +114,7 @@ const Live = () => {
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
         {/* Section Title */}
         <motion.div
-          className="px-6 mb-4"
+          className="px-6 md:px-8 mb-4 max-w-6xl mx-auto w-full"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}

@@ -214,14 +214,14 @@ const Random = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
       <motion.header 
-        className="flex items-center justify-center px-6 py-4 flex-shrink-0"
+        className="flex items-center justify-center px-6 md:px-8 py-4 flex-shrink-0"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <ZemboLogo />
       </motion.header>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-8 text-center overflow-hidden min-h-0 max-w-2xl md:mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={status}
