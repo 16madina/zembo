@@ -24,6 +24,7 @@ import { useSnapchatFilters } from "@/hooks/useSnapchatFilters";
 import { useFaceTracking } from "@/hooks/useFaceTracking";
 import { useLiveStage } from "@/hooks/useLiveStage";
 import { useStageWebRTC } from "@/hooks/useStageWebRTC";
+import { useLiveAccess } from "@/hooks/useLiveAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,6 +40,7 @@ import StageRequestQueue from "@/components/live/StageRequestQueue";
 import GuestPipView from "@/components/live/GuestPipView";
 import SplitScreenView from "@/components/live/SplitScreenView";
 import GuestViewModeSelector, { type GuestViewMode } from "@/components/live/GuestViewModeSelector";
+import JoinLiveModal from "@/components/live/JoinLiveModal";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -55,6 +57,15 @@ const LiveRoom = () => {
   const { endLive, updateViewerCount } = useLives();
   const { recentGifts } = useGifts(id);
   const { balance } = useCoins();
+  
+  // Live access control
+  const { 
+    hasAccess, 
+    loading: accessLoading, 
+    isStreamer: accessIsStreamer,
+    checkAccess,
+  } = useLiveAccess(id || "");
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   const [live, setLive] = useState<Live | null>(null);
   const [messages, setMessages] = useState<LiveMessage[]>([]);
@@ -179,9 +190,15 @@ const LiveRoom = () => {
       setIsStreamer(liveData.streamer_id === user?.id);
       setIsLoading(false);
 
-      // Increment viewer count
+      // Check access for non-streamers
       if (liveData.streamer_id !== user?.id) {
-        updateViewerCount(id, true);
+        // Wait for access check to complete
+        await checkAccess();
+      }
+
+      // Increment viewer count (only if we have access, checked later)
+      if (liveData.streamer_id !== user?.id) {
+        // We'll increment after access check
       }
     };
 
@@ -189,12 +206,22 @@ const LiveRoom = () => {
 
     // Cleanup: decrement viewer count and stop stream
     return () => {
-      if (id && user && !isStreamer) {
+      if (id && user && !isStreamer && hasAccess) {
         updateViewerCount(id, false);
       }
       stopStream();
     };
   }, [id, user]);
+
+  // Show join modal if no access
+  useEffect(() => {
+    if (!accessLoading && hasAccess === false && !isStreamer && live) {
+      setShowJoinModal(true);
+    } else if (hasAccess === true && !isStreamer && id) {
+      // Increment viewer count when access is confirmed
+      updateViewerCount(id, true);
+    }
+  }, [hasAccess, accessLoading, isStreamer, live, id]);
 
   // Auto-start camera for streamer
   useEffect(() => {
@@ -741,6 +768,25 @@ const LiveRoom = () => {
           </motion.div>
         ))}
       </AnimatePresence>
+
+      {/* Join Live Modal - Access Control */}
+      {live && (
+        <JoinLiveModal
+          isOpen={showJoinModal}
+          onClose={() => {
+            setShowJoinModal(false);
+            navigate("/live");
+          }}
+          liveId={id!}
+          streamerId={live.streamer_id}
+          streamerName={live.streamer?.display_name || null}
+          streamerAvatar={live.streamer?.avatar_url || null}
+          onAccessGranted={() => {
+            setShowJoinModal(false);
+            toast.success("Bienvenue dans le live !");
+          }}
+        />
+      )}
     </div>
   );
 };

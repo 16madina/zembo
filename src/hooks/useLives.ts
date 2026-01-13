@@ -8,6 +8,8 @@ export type Live = Tables<"lives"> & {
     display_name: string | null;
     avatar_url: string | null;
   };
+  isPremium?: boolean;
+  isVip?: boolean;
 };
 
 export const useLives = () => {
@@ -28,41 +30,76 @@ export const useLives = () => {
     if (!error && livesData) {
       // Fetch streamer profiles separately
       const streamerIds = [...new Set(livesData.map((l) => l.streamer_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name, avatar_url")
-        .in("user_id", streamerIds);
+      
+      const [profilesResult, subscriptionsResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("user_id, display_name, avatar_url")
+          .in("user_id", streamerIds),
+        supabase
+          .from("user_subscriptions")
+          .select("user_id, tier, is_active")
+          .in("user_id", streamerIds)
+          .eq("is_active", true),
+      ]);
 
       const profileMap = new Map(
-        profiles?.map((p) => [p.user_id, p]) || []
+        profilesResult.data?.map((p) => [p.user_id, p]) || []
+      );
+      
+      const subscriptionMap = new Map(
+        subscriptionsResult.data?.map((s) => [s.user_id, s]) || []
       );
 
-      const mappedLives = livesData.map((live) => ({
-        ...live,
-        streamer: profileMap.get(live.streamer_id) || {
-          display_name: null,
-          avatar_url: null,
-        },
-      }));
+      const mappedLives: Live[] = livesData.map((live) => {
+        const subscription = subscriptionMap.get(live.streamer_id);
+        return {
+          ...live,
+          streamer: profileMap.get(live.streamer_id) || {
+            display_name: null,
+            avatar_url: null,
+          },
+          isPremium: subscription?.tier === "premium",
+          isVip: subscription?.tier === "vip",
+        };
+      });
+      
+      // Sort: VIP first, then Premium, then others (all by viewer_count)
+      mappedLives.sort((a, b) => {
+        if (a.isVip && !b.isVip) return -1;
+        if (!a.isVip && b.isVip) return 1;
+        if (a.isPremium && !b.isPremium && !b.isVip) return -1;
+        if (!a.isPremium && b.isPremium && !a.isVip) return 1;
+        return b.viewer_count - a.viewer_count;
+      });
+      
       setLives(mappedLives);
     }
     setLoading(false);
   };
 
-  // Check if user can go live (premium/vip subscription)
+  // Check if user can go live (now free for all authenticated users)
   const checkCanGoLive = async () => {
     if (!user) {
       setCanGoLive(false);
       return;
     }
+    // All authenticated users can now create lives
+    setCanGoLive(true);
+  };
 
-    const { data, error } = await supabase.rpc("can_go_live", {
-      p_user_id: user.id,
-    });
+  // Check if user has Premium/VIP subscription (for badges and exclusive features)
+  const checkIsPremium = async (): Promise<boolean> => {
+    if (!user) return false;
 
-    if (!error) {
-      setCanGoLive(data ?? false);
-    }
+    const { data, error } = await supabase
+      .from("user_subscriptions")
+      .select("tier, is_active")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error || !data) return false;
+    return data.is_active && (data.tier === "premium" || data.tier === "vip");
   };
 
   // Create a new live
@@ -181,5 +218,6 @@ export const useLives = () => {
     endLive,
     updateViewerCount,
     checkCanGoLive,
+    checkIsPremium,
   };
 };
