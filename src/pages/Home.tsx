@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal, SearchX } from "lucide-react";
+import { SlidersHorizontal, SearchX, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -13,13 +13,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 
-import { mockProfiles, Profile } from "@/data/mockProfiles";
+// Profile interface matching database structure
+export interface Profile {
+  id: string;
+  name: string;
+  age: number;
+  gender: 'male' | 'female';
+  location: string;
+  distance: string;
+  bio: string;
+  photos: string[];
+  isOnline: boolean;
+  isVerified: boolean;
+  interests: string[];
+}
 
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [profiles] = useState<Profile[]>(mockProfiles);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,6 +51,55 @@ const Home = () => {
     distance: 50,
     genders: ["all"],
   });
+
+  // Fetch real profiles from database
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (!user) return;
+      
+      setIsLoadingProfiles(true);
+      try {
+        // Get profiles that are not the current user and have at least an avatar
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .neq("user_id", user.id)
+          .not("avatar_url", "is", null)
+          .not("display_name", "is", null)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching profiles:", error);
+          return;
+        }
+
+        if (data) {
+          // Transform database profiles to match the Profile interface
+          const transformedProfiles: Profile[] = data.map((p) => ({
+            id: p.user_id,
+            name: p.display_name || "Utilisateur",
+            age: p.age || 25,
+            gender: (p.gender === "homme" ? "male" : p.gender === "femme" ? "female" : "female") as 'male' | 'female',
+            location: p.location || "Non spécifié",
+            distance: "5 km", // Default distance, could be calculated with geolocation
+            bio: p.bio || "",
+            photos: p.avatar_url ? [p.avatar_url] : [],
+            isOnline: p.is_online || false,
+            isVerified: p.is_verified || false,
+            interests: p.interests || [],
+          }));
+
+          setProfiles(transformedProfiles);
+        }
+      } catch (err) {
+        console.error("Error loading profiles:", err);
+      } finally {
+        setIsLoadingProfiles(false);
+      }
+    };
+
+    fetchProfiles();
+  }, [user]);
 
   // Fetch user's country from profile
   useEffect(() => {
@@ -255,9 +318,21 @@ const Home = () => {
                 </motion.div>
               ))}
 
-              {/* Active card or empty state */}
+              {/* Active card or empty/loading state */}
               <AnimatePresence mode="popLayout">
-                {currentProfile ? (
+                {isLoadingProfiles ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center glass-strong rounded-3xl p-6 text-center"
+                  >
+                    <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      Chargement des profils...
+                    </h3>
+                  </motion.div>
+                ) : currentProfile ? (
                   <ProfileCard
                     key={currentProfile.id}
                     profile={currentProfile}
@@ -278,35 +353,37 @@ const Home = () => {
                       <SearchX className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
-                      {t.noProfilesFound}
+                      {profiles.length === 0 ? "Aucun profil disponible" : t.noProfilesFound}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      {t.modifyFilters}
+                      {profiles.length === 0 ? "Soyez le premier à vous inscrire dans votre région !" : t.modifyFilters}
                     </p>
-                    <div className="flex gap-2">
-                      <motion.button
-                        onClick={() => {
-                          setFilters({
-                            ageMin: 18,
-                            ageMax: 50,
-                            distance: 50,
-                            genders: ["all"],
-                          });
-                          setCurrentIndex(0);
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 glass rounded-xl text-sm font-medium text-foreground"
-                      >
-                        {t.reset}
-                      </motion.button>
-                      <motion.button
-                        onClick={() => setIsFilterOpen(true)}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
-                      >
-                        {t.modify}
-                      </motion.button>
-                    </div>
+                    {profiles.length > 0 && (
+                      <div className="flex gap-2">
+                        <motion.button
+                          onClick={() => {
+                            setFilters({
+                              ageMin: 18,
+                              ageMax: 50,
+                              distance: 50,
+                              genders: ["all"],
+                            });
+                            setCurrentIndex(0);
+                          }}
+                          whileTap={{ scale: 0.95 }}
+                          className="px-4 py-2 glass rounded-xl text-sm font-medium text-foreground"
+                        >
+                          {t.reset}
+                        </motion.button>
+                        <motion.button
+                          onClick={() => setIsFilterOpen(true)}
+                          whileTap={{ scale: 0.95 }}
+                          className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
+                        >
+                          {t.modify}
+                        </motion.button>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
