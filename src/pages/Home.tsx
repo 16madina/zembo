@@ -218,7 +218,7 @@ const Home = () => {
       </motion.div>
 
       {/* Card Stack or Map */}
-      <div className="flex-1 px-2 max-w-md mx-auto w-full flex flex-col min-h-0">
+      <div className="flex-1 px-2 max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto w-full flex flex-col min-h-0">
         <AnimatePresence mode="wait">
           {activeTab === "discover" ? (
             <motion.div 
