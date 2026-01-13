@@ -76,7 +76,6 @@ const LiveRoom = () => {
   const [showStageQueue, setShowStageQueue] = useState(false);
   const [showViewModeSelector, setShowViewModeSelector] = useState(false);
   const [guestViewMode, setGuestViewMode] = useState<GuestViewMode>("pip");
-  const [isStreamer, setIsStreamer] = useState(false);
   const [realtimeViewers, setRealtimeViewers] = useState(0);
   const [activeGift, setActiveGift] = useState<{
     gift: VirtualGift;
@@ -84,6 +83,9 @@ const LiveRoom = () => {
   } | null>(null);
   const [hasIncrementedViewer, setHasIncrementedViewer] = useState(false);
   const [hasShownStageToast, setHasShownStageToast] = useState(false);
+  
+  // Use accessIsStreamer from the hook as the source of truth
+  const isStreamer = accessIsStreamer;
 
   // Snapchat-style filters for streamer
   const {
@@ -189,7 +191,11 @@ const LiveRoom = () => {
       };
 
       setLive(liveWithStreamer);
-      setIsStreamer(liveData.streamer_id === user?.id);
+      console.log("LiveRoom - streamer check:", { 
+        streamerId: liveData.streamer_id, 
+        userId: user?.id, 
+        isMatch: liveData.streamer_id === user?.id 
+      });
       setIsLoading(false);
 
       // Check access for non-streamers
@@ -482,23 +488,23 @@ const LiveRoom = () => {
           />
         )}
 
-        {/* Snapchat Filter Button for Streamer */}
+        {/* Snapchat Filter Button for Streamer - positioned below the end button */}
         {isStreamer && (
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowBeautyPanel(true)}
-            className="absolute top-16 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
+            className="absolute top-28 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
           >
             <Wand2 className="w-5 h-5 text-primary" />
           </motion.button>
         )}
 
-        {/* Guest View Mode Button for Streamer */}
+        {/* Guest View Mode Button for Streamer - positioned below filter button */}
         {isStreamer && (
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowViewModeSelector(true)}
-            className="absolute top-28 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
+            className="absolute top-40 right-4 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center z-20 border border-primary/30"
           >
             <Settings2 className="w-5 h-5 text-primary" />
           </motion.button>
