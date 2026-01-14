@@ -17,7 +17,7 @@ export type CallStatus =
   | "rejected";       // Other person said no
 
 // Demo mode flag - set to true to simulate matches without a real user
-const DEMO_MODE = true;
+const DEMO_MODE = false;
 const DEMO_MATCH_DELAY_MS = 4000; // Time before "finding" a demo match
 
 interface RandomCallSession {
