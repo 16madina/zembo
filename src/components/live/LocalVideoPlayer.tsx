@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Camera, CameraOff, Wifi, Loader2 } from "lucide-react";
+import { Camera, CameraOff, Wifi, Loader2, WifiOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Track } from "livekit-client";
 
 interface LocalVideoPlayerProps {
   isStreamer: boolean;
@@ -13,6 +14,11 @@ interface LocalVideoPlayerProps {
   streamerAvatar?: string | null;
   setVideoRef: (ref: HTMLVideoElement | null) => void;
   filterString?: string;
+  // LiveKit props for viewers
+  remoteVideoTrack?: Track | null;
+  isLiveKitConnected?: boolean;
+  isLiveKitConnecting?: boolean;
+  setRemoteVideoRef?: (ref: HTMLVideoElement | null) => void;
 }
 
 const LocalVideoPlayer = ({
@@ -25,12 +31,17 @@ const LocalVideoPlayer = ({
   streamerAvatar,
   setVideoRef,
   filterString = "none",
+  remoteVideoTrack,
+  isLiveKitConnected = false,
+  isLiveKitConnecting = false,
+  setRemoteVideoRef,
 }: LocalVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${streamerId}`;
 
-  // Attach stream to video element
+  // Attach local stream to video element (for streamer)
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
@@ -43,6 +54,27 @@ const LocalVideoPlayer = ({
       setVideoRef(videoRef.current);
     }
   }, [setVideoRef]);
+
+  // Attach remote video track (for viewers via LiveKit)
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteVideoTrack) {
+      console.log("LocalVideoPlayer - Attaching remote video track");
+      remoteVideoTrack.attach(remoteVideoRef.current);
+    }
+    
+    return () => {
+      if (remoteVideoTrack) {
+        remoteVideoTrack.detach();
+      }
+    };
+  }, [remoteVideoTrack]);
+
+  // Pass remote ref to parent
+  useEffect(() => {
+    if (remoteVideoRef.current && setRemoteVideoRef) {
+      setRemoteVideoRef(remoteVideoRef.current);
+    }
+  }, [setRemoteVideoRef]);
 
   // Streamer view - show local camera
   if (isStreamer) {
@@ -97,7 +129,74 @@ const LocalVideoPlayer = ({
     );
   }
 
-  // Viewer view - show streamer placeholder (LiveKit would show actual stream)
+  // === VIEWER VIEW ===
+
+  // Viewer: Show remote video if connected and track available
+  if (isLiveKitConnected && remoteVideoTrack) {
+    return (
+      <div className="absolute inset-0 bg-black">
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover"
+        />
+        {/* Live indicator */}
+        <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/90 backdrop-blur-sm z-10">
+          <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+          <span className="text-xs font-bold text-white">EN DIRECT</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Viewer: Connecting to LiveKit
+  if (isLiveKitConnecting) {
+    return (
+      <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="relative">
+            <Loader2 className="w-16 h-16 mx-auto mb-4 text-primary animate-spin" />
+            <Wifi className="w-6 h-6 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-primary" />
+          </div>
+          <p className="text-muted-foreground">Connexion au stream...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Viewer: Connected but waiting for video
+  if (isLiveKitConnected && !remoteVideoTrack) {
+    return (
+      <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="text-center"
+        >
+          <Avatar className="w-32 h-32 mx-auto mb-4 border-4 border-primary shadow-lg">
+            <AvatarImage src={streamerAvatar || defaultAvatar} />
+            <AvatarFallback className="text-2xl">
+              {streamerName?.[0] || "?"}
+            </AvatarFallback>
+          </Avatar>
+          <h2 className="text-xl font-bold text-foreground mb-2">
+            {streamerName || "Streamer"}
+          </h2>
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Wifi className="w-4 h-4 text-green-500" />
+            <span>En attente de la vidéo...</span>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Viewer: Not connected yet - show placeholder
   return (
     <div className="absolute inset-0 bg-gradient-to-br from-muted to-background">
       <div className="absolute inset-0 flex items-center justify-center">
@@ -117,11 +216,10 @@ const LocalVideoPlayer = ({
           </h2>
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Camera className="w-4 h-4" />
-            <span>Stream en cours...</span>
+            <span>Préparation du stream...</span>
           </div>
         </motion.div>
       </div>
-
 
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
