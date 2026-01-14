@@ -43,6 +43,10 @@ interface UseRandomCallLiveKitReturn {
 }
 
 const CALL_DURATION_SECONDS = 90; // 1m30
+const SEARCH_TIMEOUT_SECONDS = 120; // 2 minutes
+const SEARCH_POLL_INTERVAL_MS = 1500; // Poll every 1.5s
+const INITIAL_DELAY_MS = 1500; // Wait before first match attempt
+const HEARTBEAT_INTERVAL_MS = 5000; // Update queue entry every 5s
 
 export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const { user } = useAuth();
@@ -63,6 +67,9 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch user gender on mount
   useEffect(() => {
@@ -87,6 +94,21 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
 
     if (animationFrameRef.current) {
@@ -131,8 +153,52 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
     console.log("[random-call-lk]", "startSearch", { preference, gender: userGender });
 
+    // Helper to poll for matches
+    const pollForMatch = async () => {
+      try {
+        const { data, error: rpcError } = await supabase.rpc("random_call_find_or_create_match", {
+          p_user_id: user.id,
+          p_user_gender: userGender,
+          p_looking_for: preference,
+        });
+
+        if (rpcError) {
+          console.error("[random-call-lk]", "RPC error", rpcError);
+          return;
+        }
+
+        const result = data as RpcResult;
+        console.log("[random-call-lk]", "poll result", result);
+
+        if (result.action === "matched" && result.room_name) {
+          // Stop polling/heartbeat
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+          if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+          setRoomName(result.room_name);
+          setSessionId(result.session_id || null);
+          setMatchedUserId(result.matched_user_id || null);
+          setStatus("matched");
+          
+          await joinLiveKitRoom(result.room_name);
+        }
+      } catch (err) {
+        console.error("[random-call-lk]", "poll error", err);
+      }
+    };
+
+    // Heartbeat to keep queue entry fresh
+    const heartbeat = async () => {
+      try {
+        await supabase.rpc("random_call_heartbeat", { p_user_id: user.id });
+      } catch (err) {
+        console.error("[random-call-lk]", "heartbeat error", err);
+      }
+    };
+
     try {
-      // Call the atomic RPC function
+      // Initial call to RPC (UPSERT into queue)
       const { data, error: rpcError } = await supabase.rpc("random_call_find_or_create_match", {
         p_user_id: user.id,
         p_user_gender: userGender,
@@ -147,7 +213,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       }
 
       const result = data as RpcResult;
-      console.log("[random-call-lk]", "RPC result", result);
+      console.log("[random-call-lk]", "initial RPC result", result);
 
       if (result.action === "matched" && result.room_name) {
         // Immediate match found
@@ -156,19 +222,37 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
         setMatchedUserId(result.matched_user_id || null);
         setStatus("matched");
         
-        // Join the LiveKit room
         await joinLiveKitRoom(result.room_name);
-      } else if (result.action === "waiting") {
-        // Subscribe to realtime updates for our queue entry
-        subscribeToQueueUpdates(user.id);
+        return;
       }
+
+      // No immediate match - set up polling, heartbeat, realtime, and timeout
+      subscribeToQueueUpdates(user.id);
+
+      // Wait initial delay before polling (let other user join queue)
+      await new Promise(resolve => setTimeout(resolve, INITIAL_DELAY_MS));
+
+      // Start periodic polling
+      pollIntervalRef.current = setInterval(pollForMatch, SEARCH_POLL_INTERVAL_MS);
+
+      // Start heartbeat
+      heartbeatIntervalRef.current = setInterval(heartbeat, HEARTBEAT_INTERVAL_MS);
+
+      // Set search timeout
+      searchTimeoutRef.current = setTimeout(async () => {
+        console.log("[random-call-lk]", "search timeout reached");
+        await cleanup(true);
+        setStatus("error");
+        setError("Aucun utilisateur trouvé. Réessayez plus tard.");
+      }, SEARCH_TIMEOUT_SECONDS * 1000);
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur inconnue";
       console.error("[random-call-lk]", "startSearch error", err);
       setError(message);
       setStatus("error");
     }
-  }, [user?.id, userGender]);
+  }, [user?.id, userGender, cleanup]);
 
   // Subscribe to realtime updates on our queue entry
   const subscribeToQueueUpdates = useCallback((userId: string) => {
@@ -189,6 +273,11 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           console.log("[random-call-lk]", "queue update received", updated);
 
           if (updated.status === "matched" && updated.room_name) {
+            // Stop polling/heartbeat/timeout
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+            if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
             setRoomName(updated.room_name);
             setStatus("matched");
             

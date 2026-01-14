@@ -1073,6 +1073,7 @@ export type Database = {
         }
         Returns: Json
       }
+      random_call_heartbeat: { Args: { p_user_id: string }; Returns: Json }
       submit_random_call_decision: {
         Args: { p_decision: string; p_session_id: string; p_user_id: string }
         Returns: Json
