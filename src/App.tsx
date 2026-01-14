@@ -25,7 +25,7 @@ import Support from "./pages/Support";
 
 const queryClient = new QueryClient();
 
-// Protected route wrapper
+// Protected route wrapper - MUST be used inside AuthProvider
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
 
@@ -44,7 +44,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Public route wrapper (redirects to home if already logged in)
+// Public route wrapper (redirects to home if already logged in) - MUST be used inside AuthProvider
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
 
@@ -63,6 +63,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// AppRoutes must be rendered INSIDE AuthProvider
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
