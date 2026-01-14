@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,6 +13,7 @@ import {
   Wand2,
   Hand,
   Settings2,
+  RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,6 +43,7 @@ import GuestPipView from "@/components/live/GuestPipView";
 import SplitScreenView from "@/components/live/SplitScreenView";
 import GuestViewModeSelector, { type GuestViewMode } from "@/components/live/GuestViewModeSelector";
 import JoinLiveModal from "@/components/live/JoinLiveModal";
+import LiveDebugPanel from "@/components/live/LiveDebugPanel";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -141,6 +143,7 @@ const LiveRoom = () => {
     isMuted: liveKitMuted,
     isVideoOff: liveKitVideoOff,
     remoteVideoTrack,
+    debugInfo: liveKitDebugInfo,
     connect: connectLiveKit,
     disconnect: disconnectLiveKit,
     toggleMute: liveKitToggleMute,
@@ -148,12 +151,19 @@ const LiveRoom = () => {
     switchCamera: liveKitSwitchCamera,
     setLocalVideoRef,
     setRemoteVideoRef,
+    forceReconnect: liveKitForceReconnect,
+    forceResyncTracks: liveKitResyncTracks,
   } = useLiveKit({
     roomName,
     isStreamer,
     // Streamer: reuse the already-open camera stream to publish to LiveKit.
     publishStream: isStreamer ? stream : null,
   });
+
+  // Auto-reconnect state for viewers
+  const [showReconnectButton, setShowReconnectButton] = useState(false);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptRef = useRef(0);
 
   // Use LiveKit controls when connected, otherwise use local controls
   const isMuted = liveKitConnected ? liveKitMuted : localIsMuted;
@@ -323,15 +333,72 @@ const LiveRoom = () => {
     }
   }, [live, roomName, isStreamer, hasAccess, stream, isInitialized, liveKitConnected, liveKitConnecting, liveKitError, connectLiveKit]);
 
-  // Log LiveKit connection status
+  // Log LiveKit connection status and handle auto-reconnect for viewers
   useEffect(() => {
     if (liveKitError) {
       console.error("LiveKit error:", liveKitError);
     }
     if (liveKitConnected) {
       console.log("LiveRoom - LiveKit connected successfully");
+      reconnectAttemptRef.current = 0;
+      setShowReconnectButton(false);
+      
+      // Clear any pending reconnect timer
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
     }
   }, [liveKitConnected, liveKitError]);
+
+  // Auto-reconnect for viewers if connected but no video after 10 seconds
+  useEffect(() => {
+    if (isStreamer || !liveKitConnected || remoteVideoTrack) {
+      // Clear timer if conditions not met
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      setShowReconnectButton(false);
+      return;
+    }
+
+    // Viewer is connected but has no video track - start timer
+    console.log("[LiveRoom] Viewer connected but no video - starting 10s timer");
+    
+    reconnectTimerRef.current = setTimeout(() => {
+      if (reconnectAttemptRef.current < 2) {
+        // Auto-reconnect first 2 times
+        console.log("[LiveRoom] Auto-reconnecting (attempt", reconnectAttemptRef.current + 1, ")");
+        toast.info("Vidéo non reçue, reconnexion...", { duration: 2000 });
+        reconnectAttemptRef.current++;
+        handleLiveKitReconnect();
+      } else {
+        // Show manual reconnect button after 2 attempts
+        console.log("[LiveRoom] Auto-reconnect limit reached, showing manual button");
+        setShowReconnectButton(true);
+        toast.warning("Problème de connexion vidéo. Essayez de reconnecter manuellement.", { duration: 5000 });
+      }
+    }, 10000);
+
+    return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+  }, [isStreamer, liveKitConnected, remoteVideoTrack]);
+
+  // Handler for manual reconnect
+  const handleLiveKitReconnect = useCallback(async () => {
+    console.log("[LiveRoom] Manual LiveKit reconnect triggered");
+    setShowReconnectButton(false);
+    await liveKitForceReconnect();
+    // Wait a bit then reconnect
+    setTimeout(() => {
+      connectLiveKit();
+    }, 1000);
+  }, [liveKitForceReconnect, connectLiveKit]);
 
   // Fetch and subscribe to messages
   useEffect(() => {
@@ -501,6 +568,38 @@ const LiveRoom = () => {
 
   return (
     <div className="fixed inset-0 bg-black">
+      {/* Debug Panel (dev only) */}
+      <LiveDebugPanel
+        liveKitDebug={liveKitDebugInfo}
+        stageConnected={stageConnected}
+        stageConnecting={stageConnecting}
+        isOnStage={isOnStage}
+        onReconnectLiveKit={handleLiveKitReconnect}
+        onResyncTracks={liveKitResyncTracks}
+      />
+
+      {/* Reconnect Button for Viewers with video issues */}
+      <AnimatePresence>
+        {showReconnectButton && !isStreamer && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-32 left-1/2 -translate-x-1/2 z-50"
+          >
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleLiveKitReconnect}
+              className="shadow-lg"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reconnecter la vidéo
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Video Area - Full Screen or Split Screen */}
       <div className="absolute inset-0">
         {currentGuest && guestViewMode === "split" ? (
