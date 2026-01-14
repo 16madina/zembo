@@ -155,6 +155,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     setIsRoomConnected(false);
     setAudioLevel(0);
     sessionEndsAtRef.current = null;
+  }, [user?.id]);
 
   // Start search for a random call
   const startSearch = useCallback(async (preference: string) => {
@@ -367,7 +368,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           // Attach audio to a hidden element
           const audioElement = track.attach();
           audioElement.style.display = "none";
-          (audioElement as HTMLMediaElement).playsInline = true;
+          audioElement.setAttribute("playsinline", "true");
           document.body.appendChild(audioElement);
 
           const tryPlay = () => {
