@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useAuth } from "@/contexts/AuthContext";
 import ReportModal from "./ReportModal";
@@ -48,18 +48,25 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCal
     isInitiator,
   });
 
-  // Auto-start call when component mounts
+  // Auto-start call when component mounts - use refs to avoid re-triggering
+  const hasStartedRef = useRef(false);
+  
   useEffect(() => {
-    if (sessionId && otherUserId && user?.id) {
-      console.log("[random-call]", "InCallScreen startCall trigger");
+    if (sessionId && otherUserId && user?.id && !hasStartedRef.current) {
+      hasStartedRef.current = true;
+      console.log("[random-call]", "InCallScreen startCall trigger (once)");
       startCall();
     }
-    
+  }, [sessionId, otherUserId, user?.id, startCall]);
+  
+  // Cleanup on unmount only
+  useEffect(() => {
     return () => {
+      console.log("[random-call]", "InCallScreen unmount - ending call");
       endCall();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, otherUserId, user?.id]);
+  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

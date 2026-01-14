@@ -64,8 +64,18 @@ export const useWebRTC = ({
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const isStartingRef = useRef(false);
 
-  // Cleanup function
+  // Refs to track streams for cleanup without causing dependency loops
+  const localStreamRef = useRef<MediaStream | null>(null);
+
+  // Update ref when state changes
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
+
+  // Cleanup function - no dependencies to avoid re-creation
   const cleanup = useCallback(() => {
+    log("webrtc cleanup called");
+    
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -83,13 +93,14 @@ export const useWebRTC = ({
       } catch {
         // ignore
       }
-      // Remove from DOM to avoid leaks
       remoteAudioRef.current.remove();
       remoteAudioRef.current = null;
     }
 
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
+    // Use ref instead of state to avoid dependency
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
       setLocalStream(null);
     }
 
@@ -108,7 +119,7 @@ export const useWebRTC = ({
     setRemoteStream(null);
     setIsConnected(false);
     setIsConnecting(false);
-  }, [localStream]);
+  }, [log]);
 
   // Send signaling data
   const sendSignal = useCallback(async (signalType: string, signalData: any) => {
