@@ -51,10 +51,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // IMPORTANT: when restoring an existing session, onAuthStateChange may not fire,
+      // so we must also mark the user online here.
+      if (session?.user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ is_online: true, last_seen: new Date().toISOString() })
+          .eq("user_id", session.user.id);
+
+        if (error) {
+          console.error("Failed to set online status on session restore:", error);
+        }
+      }
     });
 
     return () => {
