@@ -302,19 +302,26 @@ const LiveRoom = () => {
 
   // Auto-connect to LiveKit when live is loaded and has access
   useEffect(() => {
-    if (live && roomName && !liveKitConnected && !liveKitConnecting && !liveKitError) {
-      // For streamer: connect immediately when live is loaded
-      // For viewer: connect when access is granted
-      const shouldConnect = isStreamer 
-        ? true  // Streamer connects immediately - LiveKit handles camera
-        : (hasAccess === true);
-      
-      if (shouldConnect) {
-        console.log("LiveRoom - Connecting to LiveKit:", { roomName, isStreamer });
+    if (!live || !roomName) return;
+    if (liveKitConnected || liveKitConnecting || liveKitError) return;
+
+    if (isStreamer) {
+      // STREAMER: Wait for local camera stream to be ready before connecting
+      // This ensures we have tracks to publish to LiveKit
+      if (!stream || !isInitialized) {
+        console.log("LiveRoom - Streamer waiting for local stream before connecting to LiveKit");
+        return;
+      }
+      console.log("LiveRoom - Streamer connecting to LiveKit with local stream ready");
+      connectLiveKit();
+    } else {
+      // VIEWER: Connect when access is granted
+      if (hasAccess === true) {
+        console.log("LiveRoom - Viewer connecting to LiveKit");
         connectLiveKit();
       }
     }
-  }, [live, roomName, isStreamer, hasAccess, liveKitConnected, liveKitConnecting, liveKitError, connectLiveKit]);
+  }, [live, roomName, isStreamer, hasAccess, stream, isInitialized, liveKitConnected, liveKitConnecting, liveKitError, connectLiveKit]);
 
   // Log LiveKit connection status
   useEffect(() => {
