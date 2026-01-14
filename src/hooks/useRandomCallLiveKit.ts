@@ -80,9 +80,9 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       });
   }, [user?.id]);
 
-  // Cleanup function
-  const cleanup = useCallback(async () => {
-    console.log("[random-call-lk]", "cleanup called");
+  // Cleanup function - does NOT cancel queue entry (only cancelSearch does that)
+  const cleanup = useCallback(async (shouldCancelQueue = false) => {
+    console.log("[random-call-lk]", "cleanup called", { shouldCancelQueue });
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -109,8 +109,8 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       channelRef.current = null;
     }
 
-    // Clean up queue entry
-    if (user?.id) {
+    // Only cancel queue entry when explicitly requested
+    if (shouldCancelQueue && user?.id) {
       await supabase.rpc("random_call_cancel", { p_user_id: user.id });
     }
 
@@ -332,18 +332,18 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     }, 1000);
   }, []);
 
-  // Cancel search
+  // Cancel search - explicitly cancels queue entry
   const cancelSearch = useCallback(async () => {
     console.log("[random-call-lk]", "cancelSearch");
-    await cleanup();
+    await cleanup(true); // Pass true to cancel queue entry
     setStatus("cancelled");
     setTimeout(() => setStatus("idle"), 500);
   }, [cleanup]);
 
-  // End call
+  // End call - also cancels queue entry
   const endCall = useCallback(() => {
     console.log("[random-call-lk]", "endCall");
-    cleanup();
+    cleanup(true);
     setStatus("completed");
     setTimeout(() => setStatus("idle"), 500);
   }, [cleanup]);
@@ -383,7 +383,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           // Mutual match - keep connection or celebrate
           console.log("[random-call-lk]", "MATCH!");
         }
-        await cleanup();
+        await cleanup(true);
         setStatus("completed");
       }
     } catch (err) {
@@ -391,10 +391,10 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     }
   }, [sessionId, user?.id, cleanup]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - but don't cancel queue (user might be just navigating)
   useEffect(() => {
     return () => {
-      cleanup();
+      cleanup(false);
     };
   }, [cleanup]);
 
