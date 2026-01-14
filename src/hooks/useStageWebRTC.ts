@@ -40,10 +40,19 @@ export const useStageWebRTC = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidate[]>([]);
+  const hasInitializedRef = useRef(false);
+  const userIdRef = useRef<string | null>(null);
+  const liveIdRef = useRef<string | null>(null);
 
-  // Cleanup function
+  // Keep refs updated for cleanup
+  useEffect(() => {
+    userIdRef.current = user?.id || null;
+    liveIdRef.current = liveId || null;
+  }, [user?.id, liveId]);
+
+  // Cleanup function - only cleans local resources, not signals
   const cleanup = useCallback(() => {
-    console.log("[StageWebRTC] Cleaning up...");
+    console.log("[StageWebRTC] Cleaning up local resources...");
     
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
@@ -61,25 +70,53 @@ export const useStageWebRTC = ({
     }
 
     pendingCandidatesRef.current = [];
+    hasInitializedRef.current = false;
     setGuestStream(null);
     setIsConnected(false);
     setIsConnecting(false);
     onGuestDisconnected?.();
   }, [localStream, onGuestDisconnected]);
 
+  // Full cleanup including signals - only called on unmount
+  const fullCleanup = useCallback(async () => {
+    console.log("[StageWebRTC] Full cleanup with signal deletion...");
+    cleanup();
+    
+    const userId = userIdRef.current;
+    const currentLiveId = liveIdRef.current;
+    
+    if (userId && currentLiveId) {
+      try {
+        await supabase
+          .from("live_stage_signals")
+          .delete()
+          .eq("live_id", currentLiveId)
+          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+        console.log("[StageWebRTC] Cleaned up signals");
+      } catch (err) {
+        console.error("[StageWebRTC] Error cleaning signals:", err);
+      }
+    }
+  }, [cleanup]);
+
   // Send signaling data
   const sendSignal = useCallback(async (signalType: string, signalData: any, receiverId: string) => {
     if (!liveId || !user) return;
 
     try {
-      await supabase.from("live_stage_signals").insert({
+      const { error: insertError } = await supabase.from("live_stage_signals").insert({
         live_id: liveId,
         sender_id: user.id,
         receiver_id: receiverId,
         signal_type: signalType,
         signal_data: signalData,
       });
-      console.log(`[StageWebRTC] Sent ${signalType} to ${receiverId}`);
+      
+      if (insertError) {
+        console.error(`[StageWebRTC] Error inserting ${signalType}:`, insertError);
+      } else {
+        console.log(`[StageWebRTC] Sent ${signalType} to ${receiverId}`);
+      }
     } catch (err) {
       console.error("[StageWebRTC] Error sending signal:", err);
     }
@@ -90,6 +127,7 @@ export const useStageWebRTC = ({
     const pc = peerConnectionRef.current;
     if (!pc || !pc.remoteDescription) return;
 
+    console.log(`[StageWebRTC] Processing ${pendingCandidatesRef.current.length} pending candidates`);
     for (const candidate of pendingCandidatesRef.current) {
       try {
         await pc.addIceCandidate(candidate);
@@ -105,7 +143,7 @@ export const useStageWebRTC = ({
   const handleSignal = useCallback(async (signalType: string, signalData: any, senderId: string) => {
     const pc = peerConnectionRef.current;
     if (!pc) {
-      console.log("[StageWebRTC] No peer connection, ignoring signal");
+      console.log("[StageWebRTC] No peer connection, ignoring signal:", signalType);
       return;
     }
 
@@ -113,14 +151,17 @@ export const useStageWebRTC = ({
       console.log(`[StageWebRTC] Handling ${signalType} from ${senderId}`);
       
       if (signalType === "offer") {
+        console.log("[StageWebRTC] Guest received offer, creating answer...");
         await pc.setRemoteDescription(new RTCSessionDescription(signalData));
         await processPendingCandidates();
         
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        console.log("[StageWebRTC] Guest sending answer...");
         await sendSignal("answer", answer, senderId);
         
       } else if (signalType === "answer") {
+        console.log("[StageWebRTC] Streamer received answer");
         await pc.setRemoteDescription(new RTCSessionDescription(signalData));
         await processPendingCandidates();
         
@@ -128,9 +169,10 @@ export const useStageWebRTC = ({
         const candidate = new RTCIceCandidate(signalData);
         if (pc.remoteDescription) {
           await pc.addIceCandidate(candidate);
+          console.log("[StageWebRTC] Added ICE candidate");
         } else {
           pendingCandidatesRef.current.push(candidate);
-          console.log("[StageWebRTC] Queued ICE candidate");
+          console.log("[StageWebRTC] Queued ICE candidate (no remote description yet)");
         }
       }
     } catch (err) {
@@ -141,7 +183,12 @@ export const useStageWebRTC = ({
   // Start connection as streamer (receives guest video)
   const startAsStreamer = useCallback(async (targetGuestId: string) => {
     if (!user || !liveId) return;
+    if (hasInitializedRef.current) {
+      console.log("[StageWebRTC] Already initialized as streamer, skipping");
+      return;
+    }
 
+    hasInitializedRef.current = true;
     console.log("[StageWebRTC] Starting as streamer, waiting for guest:", targetGuestId);
     setIsConnecting(true);
     setError(null);
@@ -153,7 +200,7 @@ export const useStageWebRTC = ({
 
       // Handle remote stream (guest video)
       pc.ontrack = (event) => {
-        console.log("[StageWebRTC] Received track from guest");
+        console.log("[StageWebRTC] Received track from guest:", event.track.kind);
         const [remoteStream] = event.streams;
         setGuestStream(remoteStream);
         onGuestStreamReady?.(remoteStream);
@@ -162,6 +209,7 @@ export const useStageWebRTC = ({
       // Handle ICE candidates
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log("[StageWebRTC] Streamer sending ICE candidate");
           sendSignal("ice-candidate", event.candidate, targetGuestId);
         }
       };
@@ -176,8 +224,12 @@ export const useStageWebRTC = ({
           setIsConnecting(false);
         } else if (state === "disconnected" || state === "failed") {
           setIsConnected(false);
-          cleanup();
+          setIsConnecting(false);
         }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        console.log("[StageWebRTC] ICE connection state:", pc.iceConnectionState);
       };
 
       // Subscribe to signals
@@ -193,41 +245,52 @@ export const useStageWebRTC = ({
           },
           (payload) => {
             const signal = payload.new as any;
+            console.log("[StageWebRTC] Streamer received signal:", signal.signal_type);
             if (signal.live_id === liveId) {
               handleSignal(signal.signal_type, signal.signal_data, signal.sender_id);
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("[StageWebRTC] Streamer channel status:", status);
+        });
 
       channelRef.current = channel;
 
       // Create and send offer to guest
+      console.log("[StageWebRTC] Creating offer for guest...");
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
       });
       await pc.setLocalDescription(offer);
+      console.log("[StageWebRTC] Sending offer to guest:", targetGuestId);
       await sendSignal("offer", offer, targetGuestId);
 
     } catch (err: any) {
       console.error("[StageWebRTC] Error starting as streamer:", err);
       setError(err.message || "Failed to connect");
       setIsConnecting(false);
-      cleanup();
+      hasInitializedRef.current = false;
     }
-  }, [user, liveId, sendSignal, handleSignal, cleanup, onGuestStreamReady]);
+  }, [user, liveId, sendSignal, handleSignal, onGuestStreamReady]);
 
   // Start connection as guest (sends video to streamer)
   const startAsGuest = useCallback(async (streamerId: string) => {
     if (!user || !liveId) return;
+    if (hasInitializedRef.current) {
+      console.log("[StageWebRTC] Already initialized as guest, skipping");
+      return;
+    }
 
+    hasInitializedRef.current = true;
     console.log("[StageWebRTC] Starting as guest, sending video to:", streamerId);
     setIsConnecting(true);
     setError(null);
 
     try {
       // Get local video/audio stream
+      console.log("[StageWebRTC] Guest requesting camera access...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: 1280, height: 720 },
         audio: {
@@ -236,6 +299,7 @@ export const useStageWebRTC = ({
           autoGainControl: true,
         },
       });
+      console.log("[StageWebRTC] Guest got camera stream");
       setLocalStream(stream);
 
       // Create peer connection
@@ -244,12 +308,14 @@ export const useStageWebRTC = ({
 
       // Add local stream tracks
       stream.getTracks().forEach(track => {
+        console.log("[StageWebRTC] Guest adding track:", track.kind);
         pc.addTrack(track, stream);
       });
 
       // Handle ICE candidates
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log("[StageWebRTC] Guest sending ICE candidate");
           sendSignal("ice-candidate", event.candidate, streamerId);
         }
       };
@@ -257,18 +323,23 @@ export const useStageWebRTC = ({
       // Handle connection state changes
       pc.onconnectionstatechange = () => {
         const state = pc.connectionState;
-        console.log("[StageWebRTC] Connection state:", state);
+        console.log("[StageWebRTC] Guest connection state:", state);
         
         if (state === "connected") {
           setIsConnected(true);
           setIsConnecting(false);
         } else if (state === "disconnected" || state === "failed") {
           setIsConnected(false);
-          cleanup();
+          setIsConnecting(false);
         }
       };
 
-      // Subscribe to signals
+      pc.oniceconnectionstatechange = () => {
+        console.log("[StageWebRTC] Guest ICE connection state:", pc.iceConnectionState);
+      };
+
+      // Subscribe to signals BEFORE checking for existing offer
+      console.log("[StageWebRTC] Guest subscribing to signals...");
       const channel = supabase
         .channel(`stage-webrtc-${liveId}-${user.id}`)
         .on(
@@ -281,17 +352,24 @@ export const useStageWebRTC = ({
           },
           (payload) => {
             const signal = payload.new as any;
+            console.log("[StageWebRTC] Guest received signal:", signal.signal_type);
             if (signal.live_id === liveId) {
               handleSignal(signal.signal_type, signal.signal_data, signal.sender_id);
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("[StageWebRTC] Guest channel status:", status);
+        });
 
       channelRef.current = channel;
 
+      // Wait a bit for subscription to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Check for existing offer from streamer
-      const { data: existingSignals } = await supabase
+      console.log("[StageWebRTC] Guest checking for existing offer...");
+      const { data: existingSignals, error: fetchError } = await supabase
         .from("live_stage_signals")
         .select("*")
         .eq("live_id", liveId)
@@ -300,45 +378,39 @@ export const useStageWebRTC = ({
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (existingSignals && existingSignals.length > 0) {
+      if (fetchError) {
+        console.error("[StageWebRTC] Error fetching existing signals:", fetchError);
+      } else if (existingSignals && existingSignals.length > 0) {
+        console.log("[StageWebRTC] Found existing offer, processing...");
         await handleSignal("offer", existingSignals[0].signal_data, existingSignals[0].sender_id);
+      } else {
+        console.log("[StageWebRTC] No existing offer found, waiting for realtime signal...");
       }
 
     } catch (err: any) {
       console.error("[StageWebRTC] Error starting as guest:", err);
       setError(err.message || "Failed to connect");
       setIsConnecting(false);
-      cleanup();
+      hasInitializedRef.current = false;
     }
-  }, [user, liveId, sendSignal, handleSignal, cleanup]);
+  }, [user, liveId, sendSignal, handleSignal]);
 
-  // Effect: Start connection when guest is on stage
+  // Effect: Streamer starts connection when guest is accepted
   useEffect(() => {
-    if (!guestId || !user || !liveId) return;
-
-    if (isStreamer && guestId) {
-      // Streamer initiates connection when guest is accepted
-      startAsStreamer(guestId);
-    }
-
-    return () => {
-      // Cleanup signals when connection ends
-      if (user) {
-        supabase
-          .from("live_stage_signals")
-          .delete()
-          .eq("live_id", liveId)
-          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-          .then(() => console.log("[StageWebRTC] Cleaned up signals"));
-      }
-    };
-  }, [isStreamer, guestId, user, liveId, startAsStreamer]);
+    if (!isStreamer || !guestId || !user || !liveId) return;
+    
+    console.log("[StageWebRTC] Streamer effect triggered, guestId:", guestId);
+    startAsStreamer(guestId);
+    
+    // No cleanup here - cleanup only on unmount
+  }, [isStreamer, guestId, user?.id, liveId]); // Use user?.id instead of user object
 
   // Effect: Guest starts connection when they go on stage
   useEffect(() => {
-    if (!isOnStage || isStreamer || !user) return;
+    if (!isOnStage || isStreamer || !user || !liveId) return;
 
-    // We need the streamer ID - fetch from the live
+    console.log("[StageWebRTC] Guest effect triggered, fetching streamer...");
+    
     const fetchStreamerAndConnect = async () => {
       const { data: live } = await supabase
         .from("lives")
@@ -347,21 +419,23 @@ export const useStageWebRTC = ({
         .maybeSingle();
 
       if (live?.streamer_id) {
+        console.log("[StageWebRTC] Found streamer:", live.streamer_id);
         startAsGuest(live.streamer_id);
+      } else {
+        console.error("[StageWebRTC] Could not find streamer for live:", liveId);
       }
     };
 
     fetchStreamerAndConnect();
+    
+    // No cleanup here - cleanup only on unmount
+  }, [isOnStage, isStreamer, user?.id, liveId]); // Use user?.id instead of user object
 
-    return () => {
-      cleanup();
-    };
-  }, [isOnStage, isStreamer, user, liveId, startAsGuest, cleanup]);
-
-  // Cleanup on unmount
+  // Final cleanup on unmount
   useEffect(() => {
     return () => {
-      cleanup();
+      console.log("[StageWebRTC] Component unmounting, running full cleanup");
+      fullCleanup();
     };
   }, []);
 
