@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo, useMemo } from "react";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useAuth } from "@/contexts/AuthContext";
 import ReportModal from "./ReportModal";
@@ -22,16 +22,26 @@ interface InCallScreenProps {
   onHangUp?: () => void;
 }
 
-const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCallScreenProps) => {
+const InCallScreen = memo(({ timeRemaining, otherUserId, sessionId, onHangUp }: InCallScreenProps) => {
   const { user } = useAuth();
   const [showReportModal, setShowReportModal] = useState(false);
   const [showHangUpConfirm, setShowHangUpConfirm] = useState(false);
+  const hasLoggedMountRef = useRef(false);
 
   // Determine if this user is the initiator (user1 in session)
   // Sessions store user1_id = LEAST(id1, id2), so the "smaller" UUID is user1
-  const isInitiator = user?.id && otherUserId ? user.id < otherUserId : false;
+  // Memoize to avoid recalculating
+  const isInitiator = useMemo(() => {
+    return user?.id && otherUserId ? user.id < otherUserId : false;
+  }, [user?.id, otherUserId]);
 
-  console.log("[random-call]", "InCallScreen mount", { sessionId, otherUserId, userId: user?.id, isInitiator });
+  // Log only once on actual mount
+  useEffect(() => {
+    if (!hasLoggedMountRef.current && sessionId && otherUserId && user?.id) {
+      hasLoggedMountRef.current = true;
+      console.log("[random-call]", "InCallScreen mounted", { sessionId, otherUserId, userId: user.id, isInitiator });
+    }
+  }, [sessionId, otherUserId, user?.id, isInitiator]);
 
   const {
     isConnected,
@@ -54,7 +64,7 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCal
   useEffect(() => {
     if (sessionId && otherUserId && user?.id && !hasStartedRef.current) {
       hasStartedRef.current = true;
-      console.log("[random-call]", "InCallScreen startCall trigger (once)");
+      console.log("[random-call]", "InCallScreen startCall trigger");
       startCall();
     }
   }, [sessionId, otherUserId, user?.id, startCall]);
@@ -260,6 +270,8 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCal
       )}
     </>
   );
-};
+});
+
+InCallScreen.displayName = "InCallScreen";
 
 export default InCallScreen;

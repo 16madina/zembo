@@ -47,15 +47,6 @@ export const useWebRTC = ({
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const log = useCallback((message: string, data?: unknown) => {
-    // Reuse the same prefix so it shows in the Random debug panel
-    if (data === undefined) {
-      console.log("[random-call]", message);
-    } else {
-      console.log("[random-call]", message, data);
-    }
-  }, []);
-
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -63,18 +54,33 @@ export const useWebRTC = ({
   const animationFrameRef = useRef<number | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const isStartingRef = useRef(false);
+  const isCleaningUpRef = useRef(false);
 
-  // Refs to track streams for cleanup without causing dependency loops
+  // Refs to track values for cleanup without causing dependency loops
   const localStreamRef = useRef<MediaStream | null>(null);
+  const sessionIdRef = useRef(sessionId);
+  const otherUserIdRef = useRef(otherUserId);
+  const userIdRef = useRef(user?.id);
+  const isInitiatorRef = useRef(isInitiator);
 
-  // Update ref when state changes
+  // Update refs when props change
   useEffect(() => {
     localStreamRef.current = localStream;
   }, [localStream]);
 
-  // Cleanup function - no dependencies to avoid re-creation
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+    otherUserIdRef.current = otherUserId;
+    userIdRef.current = user?.id;
+    isInitiatorRef.current = isInitiator;
+  }, [sessionId, otherUserId, user?.id, isInitiator]);
+
+  // Cleanup function - stable, no dependencies
   const cleanup = useCallback(() => {
-    log("webrtc cleanup called");
+    if (isCleaningUpRef.current) return;
+    isCleaningUpRef.current = true;
+
+    console.log("[random-call]", "webrtc cleanup called");
     
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -97,7 +103,6 @@ export const useWebRTC = ({
       remoteAudioRef.current = null;
     }
 
-    // Use ref instead of state to avoid dependency
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
@@ -115,38 +120,43 @@ export const useWebRTC = ({
     }
 
     isStartingRef.current = false;
+    isCleaningUpRef.current = false;
 
     setRemoteStream(null);
     setIsConnected(false);
     setIsConnecting(false);
-  }, [log]);
+  }, []);
 
-  // Send signaling data
+  // Send signaling data - use refs for stable function
   const sendSignal = useCallback(async (signalType: string, signalData: any) => {
-    if (!sessionId || !user || !otherUserId) return;
+    const sid = sessionIdRef.current;
+    const uid = userIdRef.current;
+    const otherId = otherUserIdRef.current;
+    
+    if (!sid || !uid || !otherId) return;
 
     try {
       await supabase.from("webrtc_signals").insert({
-        session_id: sessionId,
-        sender_id: user.id,
-        receiver_id: otherUserId,
+        session_id: sid,
+        sender_id: uid,
+        receiver_id: otherId,
         signal_type: signalType,
         signal_data: signalData,
       });
     } catch (err) {
       console.error("Error sending signal:", err);
     }
-  }, [sessionId, user, otherUserId]);
+  }, []);
 
-  // Handle incoming signals
+  // Handle incoming signals - use refs for stable function
   const handleSignal = useCallback(async (signalType: string, signalData: unknown) => {
     const pc = peerConnectionRef.current;
     if (!pc) {
-      log("handleSignal: no peer connection yet", { signalType });
+      console.log("[random-call]", "handleSignal: no peer connection yet", { signalType });
       return;
     }
 
-    log("handleSignal", { signalType, signalingState: pc.signalingState });
+    console.log("[random-call]", "handleSignal", { signalType, signalingState: pc.signalingState });
 
     try {
       if (signalType === "offer") {
@@ -154,19 +164,19 @@ export const useWebRTC = ({
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         await sendSignal("answer", answer);
-        log("handleSignal: sent answer");
+        console.log("[random-call]", "handleSignal: sent answer");
       } else if (signalType === "answer") {
         if (pc.signalingState === "have-local-offer") {
           await pc.setRemoteDescription(new RTCSessionDescription(signalData as RTCSessionDescriptionInit));
-          log("handleSignal: set remote answer");
+          console.log("[random-call]", "handleSignal: set remote answer");
         }
       } else if (signalType === "ice-candidate" && signalData) {
         await pc.addIceCandidate(new RTCIceCandidate(signalData as RTCIceCandidateInit));
       }
     } catch (err: unknown) {
-      log("handleSignal error", { signalType, error: (err as Error)?.message });
+      console.log("[random-call]", "handleSignal error", { signalType, error: (err as Error)?.message });
     }
-  }, [sendSignal, log]);
+  }, [sendSignal]);
 
   // Setup audio level monitoring
   const setupAudioLevelMonitoring = useCallback((stream: MediaStream) => {
@@ -194,16 +204,21 @@ export const useWebRTC = ({
     }
   }, []);
 
-  // Start the call
+  // Start the call - use refs to avoid dependency changes
   const startCall = useCallback(async () => {
-    if (!sessionId || !user || !otherUserId) {
+    const sid = sessionIdRef.current;
+    const uid = userIdRef.current;
+    const otherId = otherUserIdRef.current;
+    const initiator = isInitiatorRef.current;
+
+    if (!sid || !uid || !otherId) {
       setError("Session not ready");
       return;
     }
 
     // Prevent double-start (React strict mode / fast re-renders)
     if (isStartingRef.current || peerConnectionRef.current) {
-      log("webrtc startCall skipped (already starting/started)");
+      console.log("[random-call]", "webrtc startCall skipped (already starting/started)");
       return;
     }
 
@@ -212,7 +227,7 @@ export const useWebRTC = ({
     setIsConnecting(true);
     setError(null);
 
-    log("webrtc startCall", { sessionId, isInitiator });
+    console.log("[random-call]", "webrtc startCall", { sessionId: sid, isInitiator: initiator });
 
     try {
       // Get audio stream
@@ -225,6 +240,7 @@ export const useWebRTC = ({
         video: false,
       });
       
+      localStreamRef.current = stream;
       setLocalStream(stream);
       setupAudioLevelMonitoring(stream);
 
@@ -242,7 +258,7 @@ export const useWebRTC = ({
         const [incomingRemoteStream] = event.streams;
         setRemoteStream(incomingRemoteStream);
 
-        log("webrtc ontrack", {
+        console.log("[random-call]", "webrtc ontrack", {
           tracks: incomingRemoteStream.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled })),
         });
 
@@ -262,9 +278,9 @@ export const useWebRTC = ({
         const tryPlay = () => {
           remoteAudioRef.current
             ?.play()
-            .then(() => log("webrtc remote audio playing"))
+            .then(() => console.log("[random-call]", "webrtc remote audio playing"))
             .catch((err) => {
-              log("webrtc audio play blocked", String(err));
+              console.log("[random-call]", "webrtc audio play blocked", String(err));
               // Common on iOS: need a user gesture; retry on next tap
               const retryOnce = () => {
                 remoteAudioRef.current?.play().catch(() => undefined);
@@ -287,7 +303,7 @@ export const useWebRTC = ({
       // Handle connection state changes
       pc.onconnectionstatechange = () => {
         const state = pc.connectionState;
-        log("webrtc connection state", { state });
+        console.log("[random-call]", "webrtc connection state", { state });
         onConnectionStateChange?.(state);
 
         if (state === "connected") {
@@ -303,63 +319,63 @@ export const useWebRTC = ({
 
       // Subscribe to signals from the other user
       const channel = supabase
-        .channel(`webrtc-${sessionId}`)
+        .channel(`webrtc-${sid}`)
         .on(
           "postgres_changes",
           {
             event: "INSERT",
             schema: "public",
             table: "webrtc_signals",
-            filter: `receiver_id=eq.${user.id}`,
+            filter: `receiver_id=eq.${uid}`,
           },
           (payload) => {
             const signal = payload.new as { session_id: string; signal_type: string; signal_data: unknown };
-            log("webrtc signal received", { signalType: signal.signal_type, session: signal.session_id });
-            if (signal.session_id === sessionId) {
+            console.log("[random-call]", "webrtc signal received", { signalType: signal.signal_type, session: signal.session_id });
+            if (signal.session_id === sid) {
               handleSignal(signal.signal_type, signal.signal_data);
             }
           }
         )
         .subscribe((state) => {
-          log("webrtc signal channel", { state });
+          console.log("[random-call]", "webrtc signal channel", { state });
         });
 
       channelRef.current = channel;
 
       // If initiator, create and send offer
-      if (isInitiator) {
-        log("webrtc: I am initiator, creating offer");
+      if (initiator) {
+        console.log("[random-call]", "webrtc: I am initiator, creating offer");
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await sendSignal("offer", offer);
-        log("webrtc: offer sent");
+        console.log("[random-call]", "webrtc: offer sent");
       } else {
-        log("webrtc: I am NOT initiator, waiting for offer");
+        console.log("[random-call]", "webrtc: I am NOT initiator, waiting for offer");
         // Check for existing offer (in case it arrived before we subscribed)
         const { data: existingSignals, error: sigErr } = await supabase
           .from("webrtc_signals")
           .select("*")
-          .eq("session_id", sessionId)
-          .eq("receiver_id", user.id)
+          .eq("session_id", sid)
+          .eq("receiver_id", uid)
           .eq("signal_type", "offer")
           .order("created_at", { ascending: false })
           .limit(1);
 
         if (sigErr) {
-          log("webrtc: error fetching existing offer", sigErr.message);
+          console.log("[random-call]", "webrtc: error fetching existing offer", sigErr.message);
         }
 
         if (existingSignals && existingSignals.length > 0) {
-          log("webrtc: found existing offer, handling it");
+          console.log("[random-call]", "webrtc: found existing offer, handling it");
           await handleSignal("offer", existingSignals[0].signal_data);
         } else {
-          log("webrtc: no existing offer yet, will wait for realtime");
+          console.log("[random-call]", "webrtc: no existing offer yet, will wait for realtime");
         }
       }
 
     } catch (err: any) {
       console.error("Error starting call:", err);
-      log("webrtc startCall error", {
+      console.log("[random-call]", "webrtc startCall error", {
         name: err?.name,
         message: err?.message,
       });
@@ -372,7 +388,7 @@ export const useWebRTC = ({
         isStartingRef.current = false;
       }
     }
-  }, [sessionId, user, otherUserId, isInitiator, sendSignal, handleSignal, setupAudioLevelMonitoring, cleanup, onConnectionStateChange, log]);
+  }, [sendSignal, handleSignal, setupAudioLevelMonitoring, cleanup, onConnectionStateChange]);
 
   // End the call
   const endCall = useCallback(() => {
