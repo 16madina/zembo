@@ -252,7 +252,25 @@ export const useRandomCall = (): UseRandomCallReturn => {
 
   const startSearch = useCallback(async (preference: string) => {
     if (!user) return;
-    
+
+    // If user restarts search quickly, ensure previous timers/subscriptions are cleared
+    if (searchIntervalRef.current) {
+      clearInterval(searchIntervalRef.current);
+      searchIntervalRef.current = null;
+    }
+    if (channelRef.current) {
+      channelRef.current.unsubscribe();
+      channelRef.current = null;
+    }
+    if (demoTimeoutRef.current) {
+      clearTimeout(demoTimeoutRef.current);
+      demoTimeoutRef.current = null;
+    }
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
     setSelectedPreference(preference);
     setStatus("searching");
     setHasAskedFirstDecision(false);
@@ -260,7 +278,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
     setIsDemoMode(false);
     setSearchTimeRemaining(30);
     setSearchStartTime(Date.now());
-    
+
     // If DEMO_MODE is enabled, simulate a match after delay
     if (DEMO_MODE) {
       // Set a 30 second timeout for search
@@ -272,18 +290,18 @@ export const useRandomCall = (): UseRandomCallReturn => {
         }
         setStatus("search_timeout");
       }, 30000); // 30 seconds timeout
-      
+
       demoTimeoutRef.current = setTimeout(() => {
         // Clear the search timeout since we found a match
         if (searchTimeoutRef.current) {
           clearTimeout(searchTimeoutRef.current);
           searchTimeoutRef.current = null;
         }
-        
+
         // Create a fake demo session
         const now = new Date();
         const endsAt = new Date(now.getTime() + 90 * 1000); // 90 seconds from now
-        
+
         const demoSession: RandomCallSession = {
           id: "demo-session-" + Date.now(),
           user1_id: user.id,
@@ -294,24 +312,44 @@ export const useRandomCall = (): UseRandomCallReturn => {
           user2_decision: null,
           status: "active",
         };
-        
+
         setSession(demoSession);
         setIsDemoMode(true);
         setTimeRemaining(90);
         setStatus("matched");
-        
+
         // Short delay then start call
         setTimeout(() => {
           setStatus("in_call");
         }, 2000);
       }, DEMO_MATCH_DELAY_MS);
-      
+
       return;
     }
-    
+
     // Real mode - requires userGender
-    if (!userGender) return;
-    
+    if (!userGender) {
+      console.warn("Random call: user gender not loaded yet");
+      setStatus("idle");
+      setSelectedPreference(null);
+      return;
+    }
+
+    const clearSearchResources = () => {
+      if (searchIntervalRef.current) {
+        clearInterval(searchIntervalRef.current);
+        searchIntervalRef.current = null;
+      }
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+    };
+
     try {
       // Add to queue
       await supabase.from("random_call_queue").upsert({
@@ -320,7 +358,21 @@ export const useRandomCall = (): UseRandomCallReturn => {
         looking_for: preference,
         status: "waiting",
       });
-      
+
+      // Real-mode timeout: after 30s, stop searching and remove user from queue
+      searchTimeoutRef.current = setTimeout(() => {
+        void (async () => {
+          try {
+            await supabase.from("random_call_queue").delete().eq("user_id", user.id);
+          } catch {
+            // Best-effort cleanup
+          } finally {
+            clearSearchResources();
+            setStatus("search_timeout");
+          }
+        })();
+      }, 30000);
+
       // Try to find a match immediately and periodically
       const tryMatch = async () => {
         const { data: sessionId } = await supabase.rpc("find_random_call_match", {
@@ -328,38 +380,37 @@ export const useRandomCall = (): UseRandomCallReturn => {
           p_user_gender: userGender,
           p_looking_for: preference,
         });
-        
-        if (sessionId) {
-          // Found a match!
-          const { data: sessionData } = await supabase
-            .from("random_call_sessions")
-            .select("*")
-            .eq("id", sessionId)
-            .maybeSingle();
-          
-          if (sessionData) {
-            setSession(sessionData as RandomCallSession);
-            setStatus("matched");
-            
-            // Short delay then start call
-            setTimeout(() => {
-              setStatus("in_call");
-            }, 2000);
-            
-            // Clear search interval
-            if (searchIntervalRef.current) {
-              clearInterval(searchIntervalRef.current);
-            }
-          }
-        }
+
+        if (!sessionId) return;
+
+        // Found a match!
+        const { data: sessionData } = await supabase
+          .from("random_call_sessions")
+          .select("*")
+          .eq("id", sessionId)
+          .maybeSingle();
+
+        if (!sessionData) return;
+
+        // Stop timers/subscriptions and cleanup queue entry
+        clearSearchResources();
+        void supabase.from("random_call_queue").delete().eq("user_id", user.id);
+
+        setSession(sessionData as RandomCallSession);
+        setStatus("matched");
+
+        // Short delay then start call
+        setTimeout(() => {
+          setStatus("in_call");
+        }, 2000);
       };
-      
+
       // Try immediately
       await tryMatch();
-      
+
       // Then every 3 seconds
       searchIntervalRef.current = setInterval(tryMatch, 3000);
-      
+
       // Also subscribe to queue changes for real-time matching
       const queueChannel = supabase
         .channel("queue-updates")
@@ -376,11 +427,11 @@ export const useRandomCall = (): UseRandomCallReturn => {
           }
         )
         .subscribe();
-        
+
       channelRef.current = queueChannel;
-      
     } catch (error) {
       console.error("Error starting search:", error);
+      clearSearchResources();
       setStatus("idle");
     }
   }, [user, userGender]);
