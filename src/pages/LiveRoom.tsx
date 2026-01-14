@@ -151,6 +151,8 @@ const LiveRoom = () => {
   } = useLiveKit({
     roomName,
     isStreamer,
+    // Streamer: reuse the already-open camera stream to publish to LiveKit.
+    publishStream: isStreamer ? stream : null,
   });
 
   // Use LiveKit controls when connected, otherwise use local controls
@@ -496,7 +498,8 @@ const LiveRoom = () => {
       <div className="absolute inset-0">
         {currentGuest && guestViewMode === "split" ? (
           <SplitScreenView
-            streamerStream={stream}
+            streamerStream={isStreamer ? stream : null}
+            streamerRemoteVideoTrack={!isStreamer ? remoteVideoTrack : null}
             streamerName={live.streamer?.display_name || null}
             streamerAvatar={live.streamer?.avatar_url || null}
             streamerId={live.streamer_id}
@@ -505,7 +508,13 @@ const LiveRoom = () => {
             guestName={currentGuest.profile?.display_name || null}
             guestAvatar={currentGuest.profile?.avatar_url || null}
             guestId={currentGuest.user_id}
-            guestStream={guestStream}
+            guestStream={
+              isStreamer
+                ? guestStream
+                : isOnStage
+                  ? guestLocalStream
+                  : null
+            }
             isStreamer={isStreamer}
             onRemoveGuest={removeFromStage}
             isConnecting={stageConnecting}
@@ -536,7 +545,13 @@ const LiveRoom = () => {
                   guestName={currentGuest.profile?.display_name || null}
                   guestAvatar={currentGuest.profile?.avatar_url || null}
                   guestId={currentGuest.user_id}
-                  guestStream={guestStream}
+                  guestStream={
+                    isOnStage && !isStreamer
+                      ? guestLocalStream
+                      : isStreamer
+                        ? guestStream
+                        : null
+                  }
                   isStreamer={isStreamer}
                   isGuest={isOnStage}
                   isMuted={guestMuted}

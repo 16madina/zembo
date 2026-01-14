@@ -16,6 +16,11 @@ import { supabase } from "@/integrations/supabase/client";
 interface UseLiveKitOptions {
   roomName: string;
   isStreamer: boolean;
+  /**
+   * Optional existing stream to publish for streamers.
+   * When provided, we reuse these tracks instead of requesting a second camera/mic.
+   */
+  publishStream?: MediaStream | null;
   onParticipantJoined?: (participant: RemoteParticipant) => void;
   onParticipantLeft?: (participant: RemoteParticipant) => void;
 }
@@ -23,6 +28,7 @@ interface UseLiveKitOptions {
 export const useLiveKit = ({
   roomName,
   isStreamer,
+  publishStream,
   onParticipantJoined,
   onParticipantLeft,
 }: UseLiveKitOptions) => {
@@ -126,17 +132,28 @@ export const useLiveKit = ({
 
       // If streamer, publish tracks
       if (isStreamer) {
-        const videoTrack = await createLocalVideoTrack({
-          facingMode: "user",
-          resolution: VideoPresets.h720.resolution,
-        });
-        const audioTrack = await createLocalAudioTrack();
+        // IMPORTANT: Reuse existing getUserMedia stream when available.
+        // This avoids a second camera capture which often fails on mobile/webviews.
+        const existingVideoTrack = publishStream?.getVideoTracks?.()?.[0] || null;
+        const existingAudioTrack = publishStream?.getAudioTracks?.()?.[0] || null;
 
-        await newRoom.localParticipant.publishTrack(videoTrack);
-        await newRoom.localParticipant.publishTrack(audioTrack);
+        const publishedVideoPub = existingVideoTrack
+          ? await newRoom.localParticipant.publishTrack(existingVideoTrack)
+          : await newRoom.localParticipant.publishTrack(
+              await createLocalVideoTrack({
+                facingMode: "user",
+                resolution: VideoPresets.h720.resolution,
+              })
+            );
 
-        if (localVideoRef.current) {
-          videoTrack.attach(localVideoRef.current);
+        if (existingAudioTrack) {
+          await newRoom.localParticipant.publishTrack(existingAudioTrack);
+        } else {
+          await newRoom.localParticipant.publishTrack(await createLocalAudioTrack());
+        }
+
+        if (localVideoRef.current && publishedVideoPub?.track) {
+          publishedVideoPub.track.attach(localVideoRef.current);
         }
       }
     } catch (err: any) {
