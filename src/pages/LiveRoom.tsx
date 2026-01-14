@@ -84,16 +84,11 @@ const LiveRoom = () => {
   const [hasIncrementedViewer, setHasIncrementedViewer] = useState(false);
   const [hasShownStageToast, setHasShownStageToast] = useState(false);
   
-  // SECURITY: Direct comparison only - single source of truth
-  // Do NOT rely on hook state which can be stale or incorrectly cached
-  const isStreamer = Boolean(
-    user?.id && 
-    live?.streamer_id && 
-    user.id === live.streamer_id
-  );
+  // SECURITY: Ultra simple - only compare IDs directly
+  const isStreamer = live?.streamer_id === user?.id;
   
-  // SECURITY: Never show streamer controls during loading
-  const showStreamerControls = isStreamer && !isLoading && live !== null;
+  // Alias for UI controls
+  const showStreamerControls = !!isStreamer;
   
   // Debug logging for streamer verification
   console.log("LiveRoom - SECURITY CHECK:", {
