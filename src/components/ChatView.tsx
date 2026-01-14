@@ -318,13 +318,83 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     });
   }, [displayMessages.length]);
 
-  // Simulate typing indicator
+  // Real-time typing indicator via Supabase Presence
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIsTyping((prev) => !prev);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!currentUser?.id || !user.id) return;
+    
+    const channelName = `typing-${[currentUser.id, user.id].sort().join('-')}`;
+    const typingChannel = supabase.channel(channelName, {
+      config: { presence: { key: currentUser.id } }
+    });
+    
+    typingChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = typingChannel.presenceState();
+        // Check if the OTHER user is typing
+        const otherUserPresence = state[user.id];
+        if (otherUserPresence && Array.isArray(otherUserPresence)) {
+          const isOtherTyping = otherUserPresence.some((p: any) => p.isTyping === true);
+          setIsTyping(isOtherTyping);
+        } else {
+          setIsTyping(false);
+        }
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(typingChannel);
+    };
+  }, [currentUser?.id, user.id]);
+  
+  // Broadcast own typing status
+  const broadcastTyping = useCallback((typing: boolean) => {
+    if (!currentUser?.id || !user.id) return;
+    
+    const channelName = `typing-${[currentUser.id, user.id].sort().join('-')}`;
+    const typingChannel = supabase.channel(channelName, {
+      config: { presence: { key: currentUser.id } }
+    });
+    
+    typingChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await typingChannel.track({ isTyping: typing });
+      }
+    });
+  }, [currentUser?.id, user.id]);
+  
+  // Handle input change to broadcast typing
+  const handleInputChange = useCallback((value: string) => {
+    setNewMessage(value);
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Broadcast typing if there's content
+    if (value.trim()) {
+      broadcastTyping(true);
+      
+      // Stop typing after 2 seconds of no activity
+      typingTimeoutRef.current = setTimeout(() => {
+        broadcastTyping(false);
+      }, 2000);
+    } else {
+      broadcastTyping(false);
+    }
+  }, [broadcastTyping]);
+  
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      broadcastTyping(false);
+    };
+  }, [broadcastTyping]);
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -388,7 +458,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
   };
 
   const handleEmojiSelect = (emoji: any) => {
-    setNewMessage((prev) => prev + emoji.native);
+    handleInputChange(newMessage + emoji.native);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -810,10 +880,10 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
               </motion.button>
               
               <div className={`flex-1 flex items-center gap-2 glass rounded-full px-4 py-2.5 ${isInputDisabled ? 'opacity-50' : ''}`}>
-                <input
+              <input
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => handleInputChange(e.target.value)}
                   onKeyPress={handleKeyPress}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
