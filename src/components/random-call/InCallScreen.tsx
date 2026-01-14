@@ -28,7 +28,10 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCal
   const [showHangUpConfirm, setShowHangUpConfirm] = useState(false);
 
   // Determine if this user is the initiator (user1 in session)
-  const isInitiator = user?.id ? user.id < (otherUserId || "") : false;
+  // Sessions store user1_id = LEAST(id1, id2), so the "smaller" UUID is user1
+  const isInitiator = user?.id && otherUserId ? user.id < otherUserId : false;
+
+  console.log("[random-call]", "InCallScreen mount", { sessionId, otherUserId, userId: user?.id, isInitiator });
 
   const {
     isConnected,
@@ -47,14 +50,16 @@ const InCallScreen = ({ timeRemaining, otherUserId, sessionId, onHangUp }: InCal
 
   // Auto-start call when component mounts
   useEffect(() => {
-    if (sessionId && otherUserId) {
+    if (sessionId && otherUserId && user?.id) {
+      console.log("[random-call]", "InCallScreen startCall trigger");
       startCall();
     }
     
     return () => {
       endCall();
     };
-  }, [sessionId, otherUserId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, otherUserId, user?.id]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

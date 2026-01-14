@@ -128,25 +128,34 @@ export const useWebRTC = ({
   }, [sessionId, user, otherUserId]);
 
   // Handle incoming signals
-  const handleSignal = useCallback(async (signalType: string, signalData: any) => {
+  const handleSignal = useCallback(async (signalType: string, signalData: unknown) => {
     const pc = peerConnectionRef.current;
-    if (!pc) return;
+    if (!pc) {
+      log("handleSignal: no peer connection yet", { signalType });
+      return;
+    }
+
+    log("handleSignal", { signalType, signalingState: pc.signalingState });
 
     try {
       if (signalType === "offer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(signalData));
+        await pc.setRemoteDescription(new RTCSessionDescription(signalData as RTCSessionDescriptionInit));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         await sendSignal("answer", answer);
+        log("handleSignal: sent answer");
       } else if (signalType === "answer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(signalData));
+        if (pc.signalingState === "have-local-offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(signalData as RTCSessionDescriptionInit));
+          log("handleSignal: set remote answer");
+        }
       } else if (signalType === "ice-candidate" && signalData) {
-        await pc.addIceCandidate(new RTCIceCandidate(signalData));
+        await pc.addIceCandidate(new RTCIceCandidate(signalData as RTCIceCandidateInit));
       }
-    } catch (err) {
-      console.error("Error handling signal:", err);
+    } catch (err: unknown) {
+      log("handleSignal error", { signalType, error: (err as Error)?.message });
     }
-  }, [sendSignal]);
+  }, [sendSignal, log]);
 
   // Setup audio level monitoring
   const setupAudioLevelMonitoring = useCallback((stream: MediaStream) => {
@@ -293,24 +302,30 @@ export const useWebRTC = ({
             filter: `receiver_id=eq.${user.id}`,
           },
           (payload) => {
-            const signal = payload.new as any;
+            const signal = payload.new as { session_id: string; signal_type: string; signal_data: unknown };
+            log("webrtc signal received", { signalType: signal.signal_type, session: signal.session_id });
             if (signal.session_id === sessionId) {
               handleSignal(signal.signal_type, signal.signal_data);
             }
           }
         )
-        .subscribe();
+        .subscribe((state) => {
+          log("webrtc signal channel", { state });
+        });
 
       channelRef.current = channel;
 
       // If initiator, create and send offer
       if (isInitiator) {
+        log("webrtc: I am initiator, creating offer");
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await sendSignal("offer", offer);
+        log("webrtc: offer sent");
       } else {
-        // Check for existing offer
-        const { data: existingSignals } = await supabase
+        log("webrtc: I am NOT initiator, waiting for offer");
+        // Check for existing offer (in case it arrived before we subscribed)
+        const { data: existingSignals, error: sigErr } = await supabase
           .from("webrtc_signals")
           .select("*")
           .eq("session_id", sessionId)
@@ -319,8 +334,15 @@ export const useWebRTC = ({
           .order("created_at", { ascending: false })
           .limit(1);
 
+        if (sigErr) {
+          log("webrtc: error fetching existing offer", sigErr.message);
+        }
+
         if (existingSignals && existingSignals.length > 0) {
+          log("webrtc: found existing offer, handling it");
           await handleSignal("offer", existingSignals[0].signal_data);
+        } else {
+          log("webrtc: no existing offer yet, will wait for realtime");
         }
       }
 
