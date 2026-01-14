@@ -494,8 +494,11 @@ export const useRandomCall = (): UseRandomCallReturn => {
       tryMatchRef.current = tryMatch;
 
       try {
-        // Add to queue
-        const { error: queueError } = await supabase.from("random_call_queue").upsert({
+        // First, clean up any existing queue entry for this user
+        await supabase.from("random_call_queue").delete().eq("user_id", user.id);
+        
+        // Then add to queue
+        const { error: queueError } = await supabase.from("random_call_queue").insert({
           user_id: user.id,
           gender: userGender,
           looking_for: preference,
@@ -503,7 +506,7 @@ export const useRandomCall = (): UseRandomCallReturn => {
         });
 
         if (queueError) {
-          log("queue upsert error", queueError.message);
+          log("queue insert error", queueError.message);
           throw queueError;
         }
 
