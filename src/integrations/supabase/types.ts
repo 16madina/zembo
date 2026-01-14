@@ -761,6 +761,7 @@ export type Database = {
           gender: string
           id: string
           looking_for: string
+          room_name: string | null
           status: string
           user_id: string
         }
@@ -769,6 +770,7 @@ export type Database = {
           gender: string
           id?: string
           looking_for: string
+          room_name?: string | null
           status?: string
           user_id: string
         }
@@ -777,6 +779,7 @@ export type Database = {
           gender?: string
           id?: string
           looking_for?: string
+          room_name?: string | null
           status?: string
           user_id?: string
         }
@@ -787,6 +790,7 @@ export type Database = {
           created_at: string
           ends_at: string
           id: string
+          room_name: string | null
           started_at: string
           status: string
           user1_decision: string | null
@@ -798,6 +802,7 @@ export type Database = {
           created_at?: string
           ends_at?: string
           id?: string
+          room_name?: string | null
           started_at?: string
           status?: string
           user1_decision?: string | null
@@ -809,6 +814,7 @@ export type Database = {
           created_at?: string
           ends_at?: string
           id?: string
+          room_name?: string | null
           started_at?: string
           status?: string
           user1_decision?: string | null
@@ -1058,6 +1064,15 @@ export type Database = {
         Returns: boolean
       }
       is_user_banned: { Args: { p_user_id: string }; Returns: boolean }
+      random_call_cancel: { Args: { p_user_id: string }; Returns: Json }
+      random_call_find_or_create_match: {
+        Args: {
+          p_looking_for: string
+          p_user_gender: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       submit_random_call_decision: {
         Args: { p_decision: string; p_session_id: string; p_user_id: string }
         Returns: Json
