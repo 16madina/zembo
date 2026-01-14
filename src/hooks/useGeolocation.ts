@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface GeolocationState {
   latitude: number | null;
@@ -20,6 +20,9 @@ const defaultOptions: UseGeolocationOptions = {
   maximumAge: 60000, // Cache position for 1 minute
 };
 
+// Round coordinates to 4 decimal places (~11m precision) to avoid constant updates
+const roundCoord = (coord: number): number => Math.round(coord * 10000) / 10000;
+
 export const useGeolocation = (options: UseGeolocationOptions = {}) => {
   const [state, setState] = useState<GeolocationState>({
     latitude: null,
@@ -29,12 +32,32 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
     loading: true,
   });
 
+  // Track last stable coordinates to prevent unnecessary updates
+  const lastCoordsRef = useRef<{ lat: number | null; lng: number | null }>({
+    lat: null,
+    lng: null,
+  });
+
   const mergedOptions = { ...defaultOptions, ...options };
 
   const updatePosition = useCallback((position: GeolocationPosition) => {
+    const newLat = roundCoord(position.coords.latitude);
+    const newLng = roundCoord(position.coords.longitude);
+    
+    // Only update state if coordinates have meaningfully changed
+    if (
+      lastCoordsRef.current.lat === newLat &&
+      lastCoordsRef.current.lng === newLng
+    ) {
+      // Coordinates haven't changed significantly, skip update
+      return;
+    }
+    
+    lastCoordsRef.current = { lat: newLat, lng: newLng };
+    
     setState({
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
+      latitude: newLat,
+      longitude: newLng,
       accuracy: position.coords.accuracy,
       error: null,
       loading: false,
@@ -85,7 +108,7 @@ export const useGeolocation = (options: UseGeolocationOptions = {}) => {
   useEffect(() => {
     requestPosition();
 
-    // Watch position for updates
+    // Watch position for updates (with stabilization to prevent constant re-renders)
     const watchId = navigator.geolocation?.watchPosition(
       updatePosition,
       handleError,
