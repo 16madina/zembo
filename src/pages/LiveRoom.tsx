@@ -84,19 +84,24 @@ const LiveRoom = () => {
   const [hasIncrementedViewer, setHasIncrementedViewer] = useState(false);
   const [hasShownStageToast, setHasShownStageToast] = useState(false);
   
-  // Double verification for streamer status - BOTH must be true
-  // This prevents controls from being shown during loading or if hook returns incorrect value
-  const localIsStreamer = live?.streamer_id === user?.id;
-  const isStreamer = accessIsStreamer === true && localIsStreamer === true && !accessLoading;
+  // SECURITY: Direct comparison only - single source of truth
+  // Do NOT rely on hook state which can be stale or incorrectly cached
+  const isStreamer = Boolean(
+    user?.id && 
+    live?.streamer_id && 
+    user.id === live.streamer_id
+  );
+  
+  // SECURITY: Never show streamer controls during loading
+  const showStreamerControls = isStreamer && !isLoading && live !== null;
   
   // Debug logging for streamer verification
   console.log("LiveRoom - SECURITY CHECK:", {
-    accessIsStreamer,
-    localIsStreamer,
-    accessLoading,
-    finalIsStreamer: isStreamer,
+    isStreamer,
+    showStreamerControls,
     userId: user?.id,
-    streamerId: live?.streamer_id
+    streamerId: live?.streamer_id,
+    isLoading
   });
 
   // Snapchat-style filters for streamer
@@ -489,8 +494,8 @@ const LiveRoom = () => {
           </>
         )}
 
-        {/* Filter Overlays (vignette, grain, AR masks with face tracking) */}
-        {isStreamer && (
+        {/* Filter Overlays (vignette, grain, AR masks with face tracking) - STREAMER ONLY */}
+        {showStreamerControls && (
           <FaceTrackingOverlay
             overlay={filterState.activeOverlay}
             landmarks={faceLandmarks}
@@ -500,8 +505,8 @@ const LiveRoom = () => {
           />
         )}
 
-        {/* Snapchat Filter Button for Streamer - positioned below the end button */}
-        {isStreamer && (
+        {/* Snapchat Filter Button for Streamer - STREAMER ONLY */}
+        {showStreamerControls && (
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowBeautyPanel(true)}
@@ -511,8 +516,8 @@ const LiveRoom = () => {
           </motion.button>
         )}
 
-        {/* Guest View Mode Button for Streamer - positioned below filter button */}
-        {isStreamer && (
+        {/* Guest View Mode Button for Streamer - STREAMER ONLY */}
+        {showStreamerControls && (
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowViewModeSelector(true)}
@@ -522,7 +527,7 @@ const LiveRoom = () => {
           </motion.button>
         )}
 
-        {/* Stream Controls for Streamer */}
+        {/* Stream Controls for Streamer - STREAMER ONLY */}
         <StreamControls
           isMuted={isMuted}
           isVideoOff={isVideoOff}
@@ -530,7 +535,7 @@ const LiveRoom = () => {
           onToggleVideo={toggleVideo}
           onSwitchCamera={switchCamera}
           onEndStream={handleEndLive}
-          isStreamer={isStreamer}
+          isStreamer={showStreamerControls}
         />
 
         {/* Top Bar */}
@@ -568,7 +573,7 @@ const LiveRoom = () => {
                 <span className="font-semibold text-primary text-xs">{balance}</span>
               </div>
             )}
-            {isStreamer ? (
+            {showStreamerControls ? (
               <Button
                 variant="destructive"
                 onClick={handleEndLive}
@@ -628,8 +633,8 @@ const LiveRoom = () => {
             <Share2 className="w-5 h-5 text-foreground" />
           </motion.button>
 
-          {/* Stage Queue Button for Streamer (après Share) */}
-          {isStreamer && (
+          {/* Stage Queue Button for Streamer - STREAMER ONLY */}
+          {showStreamerControls && (
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowStageQueue(true)}
@@ -746,37 +751,43 @@ const LiveRoom = () => {
         onComplete={() => setActiveGift(null)}
       />
 
-      {/* Snapchat Filter Panel */}
-      <SnapchatFilterPanel
-        isOpen={showBeautyPanel}
-        onClose={() => setShowBeautyPanel(false)}
-        state={filterState}
-        onUpdateColorFilter={updateColorFilter}
-        onUpdateFaceFilter={updateFaceFilter}
-        onUpdateBackground={updateBackground}
-        onApplyColorPreset={applyColorPreset}
-        onApplyFacePreset={applyFacePreset}
-        onSetOverlay={setOverlay}
-        onToggleFilters={toggleFilters}
-        onReset={resetFilters}
-      />
+      {/* Snapchat Filter Panel - STREAMER ONLY */}
+      {showStreamerControls && (
+        <SnapchatFilterPanel
+          isOpen={showBeautyPanel}
+          onClose={() => setShowBeautyPanel(false)}
+          state={filterState}
+          onUpdateColorFilter={updateColorFilter}
+          onUpdateFaceFilter={updateFaceFilter}
+          onUpdateBackground={updateBackground}
+          onApplyColorPreset={applyColorPreset}
+          onApplyFacePreset={applyFacePreset}
+          onSetOverlay={setOverlay}
+          onToggleFilters={toggleFilters}
+          onReset={resetFilters}
+        />
+      )}
 
-      {/* Stage Request Queue for Streamer */}
-      <StageRequestQueue
-        isOpen={showStageQueue}
-        onClose={() => setShowStageQueue(false)}
-        requests={stageRequests}
-        onAccept={acceptRequest}
-        onReject={rejectRequest}
-      />
+      {/* Stage Request Queue for Streamer - STREAMER ONLY */}
+      {showStreamerControls && (
+        <StageRequestQueue
+          isOpen={showStageQueue}
+          onClose={() => setShowStageQueue(false)}
+          requests={stageRequests}
+          onAccept={acceptRequest}
+          onReject={rejectRequest}
+        />
+      )}
 
-      {/* Guest View Mode Selector for Streamer */}
-      <GuestViewModeSelector
-        isOpen={showViewModeSelector}
-        onClose={() => setShowViewModeSelector(false)}
-        currentMode={guestViewMode}
-        onModeChange={setGuestViewMode}
-      />
+      {/* Guest View Mode Selector for Streamer - STREAMER ONLY */}
+      {showStreamerControls && (
+        <GuestViewModeSelector
+          isOpen={showViewModeSelector}
+          onClose={() => setShowViewModeSelector(false)}
+          currentMode={guestViewMode}
+          onModeChange={setGuestViewMode}
+        />
+      )}
 
       {/* Recent Gifts Display */}
       <AnimatePresence>
