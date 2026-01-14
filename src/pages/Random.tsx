@@ -82,8 +82,9 @@ const Random = () => {
       case "in_call":
       case "first_decision":
       case "waiting_decision":
+        // Important: Don't wrap in motion div that would remount on status change
         return (
-          <div className="relative w-full">
+          <div className="relative w-full" key="in-call-container">
             <InCallScreen 
               timeRemaining={timeRemaining} 
               otherUserId={otherUserId || undefined} 
@@ -224,8 +225,9 @@ const Random = () => {
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-8 text-center overflow-hidden min-h-0 max-w-2xl md:mx-auto w-full">
         <AnimatePresence mode="wait">
+          {/* Use stable keys for call states to prevent remounting InCallScreen */}
           <motion.div
-            key={status}
+            key={status === "in_call" || status === "first_decision" || status === "waiting_decision" ? "in-call" : status}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
