@@ -495,34 +495,10 @@ export const useRandomCall = (): UseRandomCallReturn => {
       tryMatchRef.current = tryMatch;
 
       try {
-        // First, clean up any existing queue entry for this user
-        await supabase.from("random_call_queue").delete().eq("user_id", user.id);
-        
-        // Then add to queue
-        const { error: queueError } = await supabase.from("random_call_queue").insert({
-          user_id: user.id,
-          gender: userGender,
-          looking_for: preference,
-          status: "waiting",
-        });
+        // La fonction SQL find_random_call_match gère maintenant l'UPSERT dans la queue
+        // Plus besoin de DELETE/INSERT manuels ici
 
-        if (queueError) {
-          log("queue insert error", queueError.message);
-          throw queueError;
-        }
-
-        log("added to queue");
-
-        // Helpful debug: how many people are currently waiting?
-        try {
-          const { count } = await supabase
-            .from("random_call_queue")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "waiting");
-          log("queue waiting count", { count });
-        } catch (e) {
-          log("queue waiting count error", e);
-        }
+        log("starting search, SQL function handles queue UPSERT");
 
         // Backup timeout: after SEARCH_TIMEOUT_SECONDS, stop searching and remove user from queue
         searchTimeoutRef.current = setTimeout(() => {
