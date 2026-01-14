@@ -123,6 +123,8 @@ const Messages = () => {
       return;
     }
 
+    console.log("[Messages] fetchData - current user.id:", user.id, "email:", user.email);
+
     try {
       // Fetch all matches where current user is involved
       const { data: matchesData } = await supabase
@@ -174,10 +176,14 @@ const Messages = () => {
       }
 
       if (matchesData) {
+        console.log("[Messages] matchesData:", matchesData);
+        
         // Get the other user's ID for each match
-        const otherUserIds = matchesData.map(match =>
-          match.user1_id === user.id ? match.user2_id : match.user1_id
-        );
+        const otherUserIds = matchesData.map(match => {
+          const otherId = match.user1_id === user.id ? match.user2_id : match.user1_id;
+          console.log(`[Messages] Match: user1=${match.user1_id}, user2=${match.user2_id}, me=${user.id}, other=${otherId}`);
+          return otherId;
+        });
 
         // Fetch profiles for matched users
         if (otherUserIds.length > 0) {
