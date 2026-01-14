@@ -320,6 +320,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
   // Real-time typing indicator via Supabase Presence
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   useEffect(() => {
     if (!currentUser?.id || !user.id) return;
@@ -329,10 +330,12 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       config: { presence: { key: currentUser.id } }
     });
     
+    typingChannelRef.current = typingChannel;
+    
     typingChannel
       .on('presence', { event: 'sync' }, () => {
         const state = typingChannel.presenceState();
-        // Check if the OTHER user is typing
+        // Check if the OTHER user is typing (not ourselves)
         const otherUserPresence = state[user.id];
         if (otherUserPresence && Array.isArray(otherUserPresence)) {
           const isOtherTyping = otherUserPresence.some((p: any) => p.isTyping === true);
@@ -341,28 +344,29 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
           setIsTyping(false);
         }
       })
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Track initial state as not typing
+          await typingChannel.track({ isTyping: false });
+        }
+      });
     
     return () => {
+      typingChannelRef.current = null;
       supabase.removeChannel(typingChannel);
     };
   }, [currentUser?.id, user.id]);
   
-  // Broadcast own typing status
-  const broadcastTyping = useCallback((typing: boolean) => {
-    if (!currentUser?.id || !user.id) return;
-    
-    const channelName = `typing-${[currentUser.id, user.id].sort().join('-')}`;
-    const typingChannel = supabase.channel(channelName, {
-      config: { presence: { key: currentUser.id } }
-    });
-    
-    typingChannel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await typingChannel.track({ isTyping: typing });
+  // Broadcast own typing status using the existing channel
+  const broadcastTyping = useCallback(async (typing: boolean) => {
+    if (typingChannelRef.current) {
+      try {
+        await typingChannelRef.current.track({ isTyping: typing });
+      } catch (e) {
+        console.error('Failed to broadcast typing status:', e);
       }
-    });
-  }, [currentUser?.id, user.id]);
+    }
+  }, []);
   
   // Handle input change to broadcast typing
   const handleInputChange = useCallback((value: string) => {
