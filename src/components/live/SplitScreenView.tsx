@@ -85,7 +85,7 @@ const SplitScreenView = ({
     <div className="absolute inset-0 bg-black flex flex-col">
       {/* Top video - Streamer */}
       <div className="relative flex-1 border-b-2 border-primary/50">
-        {streamerStream && !isVideoOff ? (
+        {(streamerStream || streamerRemoteVideoTrack) && !isVideoOff ? (
           <video
             ref={streamerVideoRef}
             autoPlay

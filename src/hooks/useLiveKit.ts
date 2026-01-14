@@ -101,7 +101,9 @@ export const useLiveKit = ({
       newRoom.on(
         RoomEvent.TrackSubscribed,
         (track, publication, participant) => {
+          console.log("[LiveKit] TrackSubscribed:", track.kind, "from", participant.identity);
           if (track.kind === Track.Kind.Video) {
+            console.log("[LiveKit] Setting remote video track for viewer");
             setRemoteVideoTrack(track);
             if (remoteVideoRef.current) {
               track.attach(remoteVideoRef.current);
@@ -137,6 +139,12 @@ export const useLiveKit = ({
         const existingVideoTrack = publishStream?.getVideoTracks?.()?.[0] || null;
         const existingAudioTrack = publishStream?.getAudioTracks?.()?.[0] || null;
 
+        console.log("[LiveKit] Publishing as streamer:", {
+          hasPublishStream: !!publishStream,
+          videoTracksCount: publishStream?.getVideoTracks?.()?.length || 0,
+          audioTracksCount: publishStream?.getAudioTracks?.()?.length || 0,
+        });
+
         const publishedVideoPub = existingVideoTrack
           ? await newRoom.localParticipant.publishTrack(existingVideoTrack)
           : await newRoom.localParticipant.publishTrack(
@@ -155,13 +163,15 @@ export const useLiveKit = ({
         if (localVideoRef.current && publishedVideoPub?.track) {
           publishedVideoPub.track.attach(localVideoRef.current);
         }
+
+        console.log("[LiveKit] Streamer tracks published successfully");
       }
     } catch (err: any) {
       console.error("LiveKit connection error:", err);
       setError(err.message || "Failed to connect");
       setIsConnecting(false);
     }
-  }, [getToken, isStreamer, isConnecting, isConnected, onParticipantJoined, onParticipantLeft]);
+  }, [getToken, isStreamer, isConnecting, isConnected, publishStream, onParticipantJoined, onParticipantLeft]);
 
   // Disconnect from room
   const disconnect = useCallback(() => {
