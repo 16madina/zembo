@@ -56,6 +56,12 @@ export const useWebRTC = ({
   const isStartingRef = useRef(false);
   const isCleaningUpRef = useRef(false);
 
+  // Prevent duplicate handling when we do an initial catch-up fetch + realtime
+  const processedSignalIdsRef = useRef<Set<string>>(new Set());
+
+  // ICE candidates can arrive before remoteDescription is set; queue them safely
+  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+
   // Refs to track values for cleanup without causing dependency loops
   const localStreamRef = useRef<MediaStream | null>(null);
   const sessionIdRef = useRef(sessionId);
@@ -81,7 +87,10 @@ export const useWebRTC = ({
     isCleaningUpRef.current = true;
 
     console.log("[random-call]", "webrtc cleanup called");
-    
+
+    processedSignalIdsRef.current.clear();
+    pendingIceCandidatesRef.current = [];
+
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -132,7 +141,7 @@ export const useWebRTC = ({
     const sid = sessionIdRef.current;
     const uid = userIdRef.current;
     const otherId = otherUserIdRef.current;
-    
+
     if (!sid || !uid || !otherId) return;
 
     try {
@@ -148,35 +157,67 @@ export const useWebRTC = ({
     }
   }, []);
 
-  // Handle incoming signals - use refs for stable function
-  const handleSignal = useCallback(async (signalType: string, signalData: unknown) => {
-    const pc = peerConnectionRef.current;
-    if (!pc) {
-      console.log("[random-call]", "handleSignal: no peer connection yet", { signalType });
-      return;
-    }
-
-    console.log("[random-call]", "handleSignal", { signalType, signalingState: pc.signalingState });
-
-    try {
-      if (signalType === "offer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(signalData as RTCSessionDescriptionInit));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await sendSignal("answer", answer);
-        console.log("[random-call]", "handleSignal: sent answer");
-      } else if (signalType === "answer") {
-        if (pc.signalingState === "have-local-offer") {
-          await pc.setRemoteDescription(new RTCSessionDescription(signalData as RTCSessionDescriptionInit));
-          console.log("[random-call]", "handleSignal: set remote answer");
-        }
-      } else if (signalType === "ice-candidate" && signalData) {
-        await pc.addIceCandidate(new RTCIceCandidate(signalData as RTCIceCandidateInit));
+  // Handle incoming signals - queue ICE safely until remoteDescription exists
+  const handleSignal = useCallback(
+    async (signalType: string, signalData: unknown) => {
+      const pc = peerConnectionRef.current;
+      if (!pc) {
+        console.log("[random-call]", "handleSignal: no peer connection yet", { signalType });
+        return;
       }
-    } catch (err: unknown) {
-      console.log("[random-call]", "handleSignal error", { signalType, error: (err as Error)?.message });
-    }
-  }, [sendSignal]);
+
+      const flushPendingIce = async () => {
+        if (!pc.remoteDescription) return;
+        if (pendingIceCandidatesRef.current.length === 0) return;
+
+        const queued = [...pendingIceCandidatesRef.current];
+        pendingIceCandidatesRef.current = [];
+
+        for (const c of queued) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(c));
+          } catch (err) {
+            console.log("[random-call]", "addIceCandidate (queued) error", {
+              error: (err as Error)?.message,
+            });
+          }
+        }
+      };
+
+      console.log("[random-call]", "handleSignal", { signalType, signalingState: pc.signalingState });
+
+      try {
+        if (signalType === "offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(signalData as RTCSessionDescriptionInit));
+          await flushPendingIce();
+
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await sendSignal("answer", answer);
+          console.log("[random-call]", "handleSignal: sent answer");
+        } else if (signalType === "answer") {
+          if (pc.signalingState === "have-local-offer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(signalData as RTCSessionDescriptionInit));
+            console.log("[random-call]", "handleSignal: set remote answer");
+            await flushPendingIce();
+          }
+        } else if (signalType === "ice-candidate" && signalData) {
+          const candidateInit = (signalData as RTCIceCandidateInit);
+
+          if (!pc.remoteDescription) {
+            pendingIceCandidatesRef.current.push(candidateInit);
+            console.log("[random-call]", "queued ice-candidate (no remoteDescription yet)");
+            return;
+          }
+
+          await pc.addIceCandidate(new RTCIceCandidate(candidateInit));
+        }
+      } catch (err: unknown) {
+        console.log("[random-call]", "handleSignal error", { signalType, error: (err as Error)?.message });
+      }
+    },
+    [sendSignal]
+  );
 
   // Setup audio level monitoring
   const setupAudioLevelMonitoring = useCallback((stream: MediaStream) => {
