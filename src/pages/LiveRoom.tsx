@@ -84,8 +84,20 @@ const LiveRoom = () => {
   const [hasIncrementedViewer, setHasIncrementedViewer] = useState(false);
   const [hasShownStageToast, setHasShownStageToast] = useState(false);
   
-  // Use accessIsStreamer from the hook as the source of truth
-  const isStreamer = accessIsStreamer;
+  // Double verification for streamer status - BOTH must be true
+  // This prevents controls from being shown during loading or if hook returns incorrect value
+  const localIsStreamer = live?.streamer_id === user?.id;
+  const isStreamer = accessIsStreamer === true && localIsStreamer === true && !accessLoading;
+  
+  // Debug logging for streamer verification
+  console.log("LiveRoom - SECURITY CHECK:", {
+    accessIsStreamer,
+    localIsStreamer,
+    accessLoading,
+    finalIsStreamer: isStreamer,
+    userId: user?.id,
+    streamerId: live?.streamer_id
+  });
 
   // Snapchat-style filters for streamer
   const {

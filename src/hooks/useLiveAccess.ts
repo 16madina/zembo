@@ -9,7 +9,8 @@ export const useLiveAccess = (liveId: string) => {
   const { user } = useAuth();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isStreamer, setIsStreamer] = useState(false);
+  // CRITICAL: Initialize isStreamer to false - only set true after verified DB check
+  const [isStreamer, setIsStreamer] = useState<boolean>(false);
   const [isPremium, setIsPremium] = useState(false);
   const [joinGifts, setJoinGifts] = useState<JoinGift[]>([]);
 
