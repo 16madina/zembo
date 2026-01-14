@@ -370,15 +370,23 @@ export const useWebRTC = ({
             filter: `receiver_id=eq.${uid}`,
           },
           (payload) => {
-            const signal = payload.new as { session_id: string; signal_type: string; signal_data: unknown };
-            console.log("[random-call]", "webrtc signal received", { signalType: signal.signal_type, session: signal.session_id });
+            const signal = payload.new as { id: string; session_id: string; signal_type: string; signal_data: unknown };
+            console.log("[random-call]", "webrtc signal received (realtime)", { signalType: signal.signal_type, signalId: signal.id, session: signal.session_id });
+            
+            // Avoid processing the same signal twice (realtime + polling could overlap)
+            if (processedSignalIdsRef.current.has(signal.id)) {
+              console.log("[random-call]", "webrtc signal already processed, skipping", { signalId: signal.id });
+              return;
+            }
+            processedSignalIdsRef.current.add(signal.id);
+            
             if (signal.session_id === sid) {
               handleSignal(signal.signal_type, signal.signal_data);
             }
           }
         )
         .subscribe((state) => {
-          console.log("[random-call]", "webrtc signal channel", { state });
+          console.log("[random-call]", "webrtc signal channel", { state, uid, sid });
         });
 
       channelRef.current = channel;
@@ -391,26 +399,62 @@ export const useWebRTC = ({
         await sendSignal("offer", offer);
         console.log("[random-call]", "webrtc: offer sent");
       } else {
-        console.log("[random-call]", "webrtc: I am NOT initiator, waiting for offer");
-        // Check for existing offer (in case it arrived before we subscribed)
-        const { data: existingSignals, error: sigErr } = await supabase
-          .from("webrtc_signals")
-          .select("*")
-          .eq("session_id", sid)
-          .eq("receiver_id", uid)
-          .eq("signal_type", "offer")
-          .order("created_at", { ascending: false })
-          .limit(1);
+        console.log("[random-call]", "webrtc: I am NOT initiator, waiting for offer", { sid, uid });
+        
+        // Poll for offer - the initiator may not have sent it yet
+        // Try immediately, then retry a few times with delays
+        const checkForOffer = async (attempt: number): Promise<boolean> => {
+          const { data: existingSignals, error: sigErr } = await supabase
+            .from("webrtc_signals")
+            .select("*")
+            .eq("session_id", sid)
+            .eq("receiver_id", uid)
+            .eq("signal_type", "offer")
+            .order("created_at", { ascending: false })
+            .limit(1);
 
-        if (sigErr) {
-          console.log("[random-call]", "webrtc: error fetching existing offer", sigErr.message);
+          if (sigErr) {
+            console.log("[random-call]", "webrtc: error fetching existing offer", { error: sigErr.message, attempt });
+            return false;
+          }
+
+          if (existingSignals && existingSignals.length > 0) {
+            const signalId = existingSignals[0].id;
+            // Avoid processing the same offer twice
+            if (!processedSignalIdsRef.current.has(signalId)) {
+              processedSignalIdsRef.current.add(signalId);
+              console.log("[random-call]", "webrtc: found existing offer, handling it", { attempt, signalId });
+              await handleSignal("offer", existingSignals[0].signal_data);
+              return true;
+            }
+          }
+          return false;
+        };
+
+        // First immediate check
+        let foundOffer = await checkForOffer(1);
+        
+        // If not found, retry up to 5 times with 500ms delays
+        if (!foundOffer) {
+          for (let attempt = 2; attempt <= 6; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Check if we're still active
+            if (!peerConnectionRef.current || peerConnectionRef.current.signalingState === 'closed') {
+              console.log("[random-call]", "webrtc: peer connection closed, stopping offer polling");
+              break;
+            }
+            // If already got remote description via realtime, stop polling
+            if (peerConnectionRef.current.remoteDescription) {
+              console.log("[random-call]", "webrtc: already have remote description, stopping polling");
+              break;
+            }
+            foundOffer = await checkForOffer(attempt);
+            if (foundOffer) break;
+          }
         }
-
-        if (existingSignals && existingSignals.length > 0) {
-          console.log("[random-call]", "webrtc: found existing offer, handling it");
-          await handleSignal("offer", existingSignals[0].signal_data);
-        } else {
-          console.log("[random-call]", "webrtc: no existing offer yet, will wait for realtime");
+        
+        if (!foundOffer) {
+          console.log("[random-call]", "webrtc: no offer found after polling, relying on realtime");
         }
       }
 
