@@ -25,6 +25,7 @@ const Random = () => {
     audioLevel,
     error,
     timeRemaining,
+    decisionResult,
     startSearch,
     cancelSearch,
     endCall,
@@ -116,7 +117,7 @@ const Random = () => {
       case "completed":
         return (
           <ResultScreen 
-            matched={false} 
+            matched={decisionResult === "matched"} 
             onRetry={handleReset}
             otherUserId={matchedUserId || undefined}
             onRevealSound={playRevealSound}

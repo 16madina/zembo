@@ -22,6 +22,9 @@ interface RpcResult {
   queue_id?: string;
   completed?: boolean;
   matched?: boolean;
+  rejected?: boolean;
+  continued?: boolean;
+  waiting?: boolean;
   success?: boolean;
 }
 
@@ -35,6 +38,7 @@ interface UseRandomCallLiveKitReturn {
   audioLevel: number;
   error: string | null;
   timeRemaining: number;
+  decisionResult: "matched" | "rejected" | "continued" | null;
   startSearch: (preference: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
   endCall: () => void;
@@ -61,8 +65,11 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const [timeRemaining, setTimeRemaining] = useState(CALL_DURATION_SECONDS);
   const [userGender, setUserGender] = useState<string | null>(null);
 
+  const [decisionResult, setDecisionResult] = useState<"matched" | "rejected" | "continued" | null>(null);
+
   const roomRef = useRef<Room | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const sessionChannelRef = useRef<RealtimeChannel | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -70,6 +77,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionEndsAtRef = useRef<Date | null>(null);
 
   // Fetch user gender on mount
   useEffect(() => {
@@ -131,6 +139,11 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       channelRef.current = null;
     }
 
+    if (sessionChannelRef.current) {
+      sessionChannelRef.current.unsubscribe();
+      sessionChannelRef.current = null;
+    }
+
     // Only cancel queue entry when explicitly requested
     if (shouldCancelQueue && user?.id) {
       await supabase.rpc("random_call_cancel", { p_user_id: user.id });
@@ -138,6 +151,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
     setIsConnected(false);
     setAudioLevel(0);
+    sessionEndsAtRef.current = null;
   }, [user?.id]);
 
   // Start search for a random call
@@ -222,6 +236,19 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
         setMatchedUserId(result.matched_user_id || null);
         setStatus("matched");
         
+        // Fetch ends_at for timer synchronization
+        if (result.session_id) {
+          const { data: sessionData } = await supabase
+            .from("random_call_sessions")
+            .select("ends_at")
+            .eq("id", result.session_id)
+            .single();
+          
+          if (sessionData?.ends_at) {
+            sessionEndsAtRef.current = new Date(sessionData.ends_at);
+          }
+        }
+        
         await joinLiveKitRoom(result.room_name);
         return;
       }
@@ -281,10 +308,10 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
             setRoomName(updated.room_name);
             setStatus("matched");
             
-            // Fetch session info
+            // Fetch session info including ends_at
             const { data: sessions } = await supabase
               .from("random_call_sessions")
-              .select("id, user1_id, user2_id")
+              .select("id, user1_id, user2_id, ends_at")
               .eq("room_name", updated.room_name)
               .single();
 
@@ -292,6 +319,11 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
               setSessionId(sessions.id);
               const otherId = sessions.user1_id === userId ? sessions.user2_id : sessions.user1_id;
               setMatchedUserId(otherId);
+              
+              // Store ends_at for synchronized timer
+              if (sessions.ends_at) {
+                sessionEndsAtRef.current = new Date(sessions.ends_at);
+              }
             }
 
             // Join the LiveKit room
@@ -401,23 +433,49 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     }
   }, []);
 
-  // Start call timer
+  // Start call timer - synchronized using ends_at from DB
   const startCallTimer = useCallback(() => {
-    setTimeRemaining(CALL_DURATION_SECONDS);
+    // Calculate remaining time from session ends_at if available
+    if (sessionEndsAtRef.current) {
+      const now = new Date();
+      const remaining = Math.max(0, Math.floor((sessionEndsAtRef.current.getTime() - now.getTime()) / 1000));
+      console.log("[random-call-lk]", "starting synchronized timer", { remaining, endsAt: sessionEndsAtRef.current });
+      setTimeRemaining(remaining);
+    } else {
+      setTimeRemaining(CALL_DURATION_SECONDS);
+    }
     
     timerRef.current = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
+      if (sessionEndsAtRef.current) {
+        // Use server time for synchronization
+        const now = new Date();
+        const remaining = Math.max(0, Math.floor((sessionEndsAtRef.current.getTime() - now.getTime()) / 1000));
+        
+        if (remaining <= 0) {
           // Timer ended - show decision screen
           setStatus("deciding");
           if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
           }
-          return 0;
+          setTimeRemaining(0);
+        } else {
+          setTimeRemaining(remaining);
         }
-        return prev - 1;
-      });
+      } else {
+        // Fallback to local timer
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            setStatus("deciding");
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
     }, 1000);
   }, []);
 
@@ -446,11 +504,66 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     setIsMuted(newMuted);
   }, [isMuted]);
 
+  // Subscribe to session updates for decision synchronization
+  const subscribeToSessionUpdates = useCallback((currentSessionId: string) => {
+    console.log("[random-call-lk]", "subscribing to session updates", { sessionId: currentSessionId });
+
+    const channel = supabase
+      .channel(`random-call-session-${currentSessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "random_call_sessions",
+          filter: `id=eq.${currentSessionId}`,
+        },
+        async (payload) => {
+          const updated = payload.new as {
+            status: string;
+            user1_decision: string | null;
+            user2_decision: string | null;
+            user1_id: string;
+            user2_id: string;
+          };
+          console.log("[random-call-lk]", "session update received", updated);
+
+          // Check if session is completed
+          if (updated.status === "completed") {
+            const bothYes = updated.user1_decision === "yes" && updated.user2_decision === "yes";
+            const anyContinue = updated.user1_decision === "continue" || updated.user2_decision === "continue";
+            
+            if (bothYes) {
+              console.log("[random-call-lk]", "MATCH via realtime!");
+              setDecisionResult("matched");
+            } else if (anyContinue && updated.user1_decision !== "no" && updated.user2_decision !== "no") {
+              setDecisionResult("continued");
+            } else {
+              setDecisionResult("rejected");
+            }
+            
+            await cleanup(true);
+            setStatus("completed");
+          }
+        }
+      )
+      .subscribe((state) => {
+        console.log("[random-call-lk]", "session channel state", state);
+      });
+
+    sessionChannelRef.current = channel;
+  }, [cleanup]);
+
   // Submit decision
   const submitDecision = useCallback(async (decision: "yes" | "no" | "continue") => {
     if (!sessionId || !user?.id) return;
 
     console.log("[random-call-lk]", "submitDecision", { decision, sessionId });
+
+    // Subscribe to session updates BEFORE submitting decision
+    if (!sessionChannelRef.current) {
+      subscribeToSessionUpdates(sessionId);
+    }
 
     try {
       const { data, error: rpcError } = await supabase.rpc("submit_random_call_decision", {
@@ -468,17 +581,25 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       console.log("[random-call-lk]", "decision result", result);
 
       if (result.completed) {
+        // Decision is final
         if (result.matched) {
-          // Mutual match - keep connection or celebrate
           console.log("[random-call-lk]", "MATCH!");
+          setDecisionResult("matched");
+        } else if (result.continued) {
+          setDecisionResult("continued");
+        } else {
+          setDecisionResult("rejected");
         }
         await cleanup(true);
         setStatus("completed");
+      } else if (result.waiting) {
+        // Waiting for other user - the realtime subscription will handle the update
+        console.log("[random-call-lk]", "waiting for other user decision...");
       }
     } catch (err) {
       console.error("[random-call-lk]", "submitDecision error", err);
     }
-  }, [sessionId, user?.id, cleanup]);
+  }, [sessionId, user?.id, cleanup, subscribeToSessionUpdates]);
 
   // Cleanup on unmount - but don't cancel queue (user might be just navigating)
   useEffect(() => {
@@ -497,6 +618,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     audioLevel,
     error,
     timeRemaining,
+    decisionResult,
     startSearch,
     cancelSearch,
     endCall,
