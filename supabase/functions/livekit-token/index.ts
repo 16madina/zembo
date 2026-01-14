@@ -15,23 +15,41 @@ serve(async (req) => {
   }
 
   try {
+    // Check for authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.error("Missing or invalid Authorization header");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
         global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
+          headers: { Authorization: authHeader },
         },
       }
     );
 
-    // Get the user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
+    // Validate the JWT token using getClaims
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
 
-    if (userError || !user) {
+    if (claimsError || !claimsData?.claims) {
+      console.error("Token validation failed:", claimsError);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = claimsData.claims.sub;
+    if (!userId) {
+      console.error("No user ID in claims");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -52,6 +70,7 @@ serve(async (req) => {
     const livekitUrl = Deno.env.get("LIVEKIT_URL");
 
     if (!apiKey || !apiSecret || !livekitUrl) {
+      console.error("LiveKit not configured:", { apiKey: !!apiKey, apiSecret: !!apiSecret, livekitUrl: !!livekitUrl });
       return new Response(
         JSON.stringify({ error: "LiveKit not configured" }),
         {
@@ -65,11 +84,11 @@ serve(async (req) => {
     const { data: profile } = await supabaseClient
       .from("profiles")
       .select("display_name")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
-    const participantName = profile?.display_name || user.email || "Anonyme";
-    const participantIdentity = user.id;
+    const participantName = profile?.display_name || claimsData.claims.email || "Anonyme";
+    const participantIdentity = userId;
 
     // Create access token
     const at = new AccessToken(apiKey, apiSecret, {
@@ -99,11 +118,13 @@ serve(async (req) => {
       });
     }
 
-    const token = await at.toJwt();
+    const jwtToken = await at.toJwt();
+
+    console.log("LiveKit token generated successfully for:", { userId, roomName, isStreamer });
 
     return new Response(
       JSON.stringify({
-        token,
+        token: jwtToken,
         url: livekitUrl,
         identity: participantIdentity,
         name: participantName,
