@@ -169,29 +169,46 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     }
   }, [activeReactionMessageId, toggleReaction]);
 
-  // Real-time online status subscription
+  // Real-time online status from profiles table (source of truth)
   useEffect(() => {
+    if (!user.id) return;
+
+    let isMounted = true;
+
+    const fetchInitial = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_online, last_seen")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!isMounted) return;
+      if (!error && data) {
+        setIsOnline(Boolean(data.is_online));
+      }
+    };
+
+    fetchInitial();
+
     const channel = supabase
-      .channel(`presence-${user.id}`)
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const userPresence = state[user.id];
-        setIsOnline(userPresence && userPresence.length > 0);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          const { data } = await supabase
-            .from('profiles')
-            .select('is_online, last_seen')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          if (data) {
-            setIsOnline(data.is_online || false);
-          }
+      .channel(`profile-status-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const nextOnline = Boolean((payload.new as any)?.is_online);
+          setIsOnline(nextOnline);
         }
-      });
+      )
+      .subscribe();
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
     };
   }, [user.id]);
@@ -320,52 +337,74 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
   // Real-time typing indicator via Supabase Presence
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  
+  const typingChannelRef = useRef<any>(null);
+  const typingSubscribedRef = useRef(false);
+  const pendingTypingRef = useRef<boolean | null>(null);
+
   useEffect(() => {
     if (!currentUser?.id || !user.id) return;
-    
+
     const channelName = `typing-${[currentUser.id, user.id].sort().join('-')}`;
     const typingChannel = supabase.channel(channelName, {
-      config: { presence: { key: currentUser.id } }
+      config: { presence: { key: currentUser.id } },
     });
-    
+
     typingChannelRef.current = typingChannel;
-    
+    typingSubscribedRef.current = false;
+    pendingTypingRef.current = null;
+
+    const updateTypingFromState = () => {
+      const state = typingChannel.presenceState();
+      const other = state[user.id];
+      if (other && Array.isArray(other)) {
+        setIsTyping(other.some((p: any) => p.isTyping === true));
+      } else {
+        setIsTyping(false);
+      }
+    };
+
     typingChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = typingChannel.presenceState();
-        // Check if the OTHER user is typing (not ourselves)
-        const otherUserPresence = state[user.id];
-        if (otherUserPresence && Array.isArray(otherUserPresence)) {
-          const isOtherTyping = otherUserPresence.some((p: any) => p.isTyping === true);
-          setIsTyping(isOtherTyping);
-        } else {
-          setIsTyping(false);
-        }
-      })
+      .on("presence", { event: "sync" }, updateTypingFromState)
+      .on("presence", { event: "join" }, updateTypingFromState)
+      .on("presence", { event: "leave" }, updateTypingFromState)
       .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          // Track initial state as not typing
+        if (status === "SUBSCRIBED") {
+          typingSubscribedRef.current = true;
+
+          // ensure we have a state for ourselves
           await typingChannel.track({ isTyping: false });
+
+          // if we typed before subscription finished, flush it now
+          if (pendingTypingRef.current !== null) {
+            const pending = pendingTypingRef.current;
+            pendingTypingRef.current = null;
+            await typingChannel.track({ isTyping: pending });
+          }
         }
       });
-    
+
     return () => {
+      typingSubscribedRef.current = false;
+      pendingTypingRef.current = null;
       typingChannelRef.current = null;
+      setIsTyping(false);
       supabase.removeChannel(typingChannel);
     };
   }, [currentUser?.id, user.id]);
-  
+
   // Broadcast own typing status using the existing channel
-  const broadcastTyping = useCallback(async (typing: boolean) => {
-    if (typingChannelRef.current) {
-      try {
-        await typingChannelRef.current.track({ isTyping: typing });
-      } catch (e) {
-        console.error('Failed to broadcast typing status:', e);
-      }
+  const broadcastTyping = useCallback((typing: boolean) => {
+    const ch = typingChannelRef.current;
+    if (!ch) return;
+
+    if (!typingSubscribedRef.current) {
+      pendingTypingRef.current = typing;
+      return;
     }
+
+    ch.track({ isTyping: typing }).catch((e: any) => {
+      console.error("Failed to broadcast typing status:", e);
+    });
   }, []);
   
   // Handle input change to broadcast typing
@@ -438,7 +477,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       }
       
       await sendMessage(newMessage, imageUrl, undefined, undefined, replyToMessage?.id);
-      setNewMessage("");
+      handleInputChange("");
       setSelectedImage(null);
       setSelectedFile(null);
       setReplyToMessage(null);
@@ -555,9 +594,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
             <div>
               <h2 className="font-semibold text-foreground">{user.name}</h2>
               <p className="text-xs text-muted-foreground">
-                {isTyping ? (
-                  <span className="text-success">écrit...</span>
-                ) : isOnline ? (
+                {isOnline ? (
                   <span className="text-success">En ligne</span>
                 ) : (
                   "Hors ligne"
