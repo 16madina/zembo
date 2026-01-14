@@ -15,6 +15,7 @@ import ExtendedCallScreen from "@/components/random-call/ExtendedCallScreen";
 import ResultScreen from "@/components/random-call/ResultScreen";
 import RejectedScreen from "@/components/random-call/RejectedScreen";
 import DiceAnimation from "@/components/random-call/DiceAnimation";
+import DebugPanel from "@/components/random-call/DebugPanel";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
@@ -236,6 +237,9 @@ const Random = () => {
       </div>
 
       <BottomNavigation />
+      
+      {/* iOS Debug Panel */}
+      <DebugPanel />
     </div>
   );
 };
