@@ -212,10 +212,27 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
     }
   }, [user, userLat, userLng, pageSize, maxDistance, ageMin, ageMax, genders]);
 
-  // Initial fetch
+  // Track if initial fetch has been done to prevent constant refetching
+  const hasFetchedRef = useRef(false);
+  const lastParamsRef = useRef<string>("");
+
+  // Initial fetch - only refetch when filters change, not on every coordinate update
   useEffect(() => {
-    fetchProfiles(true);
-  }, [user, userLat, userLng, maxDistance, ageMin, ageMax, JSON.stringify(genders)]);
+    // Create a stable params key for comparison
+    const paramsKey = `${maxDistance}-${ageMin}-${ageMax}-${JSON.stringify(genders)}`;
+    const coordsReady = userLat !== null && userLng !== null;
+    
+    // Fetch on first load when coords are ready, or when filters change
+    if (!hasFetchedRef.current && coordsReady && user) {
+      hasFetchedRef.current = true;
+      lastParamsRef.current = paramsKey;
+      fetchProfiles(true);
+    } else if (hasFetchedRef.current && paramsKey !== lastParamsRef.current) {
+      // Filters changed, refetch
+      lastParamsRef.current = paramsKey;
+      fetchProfiles(true);
+    }
+  }, [user, userLat, userLng, maxDistance, ageMin, ageMax, JSON.stringify(genders), fetchProfiles]);
 
   const loadMore = useCallback(() => {
     if (!isLoading && !isLoadingMore && hasMore) {
