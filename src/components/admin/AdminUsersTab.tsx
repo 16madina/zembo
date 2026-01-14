@@ -823,6 +823,18 @@ const AdminUsersTab = () => {
                         >
                           <Gift className="w-4 h-4" />
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400"
+                          onClick={() => {
+                            setSelectedUser(profile);
+                            setShowManageCoinsDialog(true);
+                          }}
+                          title="Gérer les coins"
+                        >
+                          <Coins className="w-4 h-4" />
+                        </Button>
                         {profile.is_banned ? (
                           <Button
                             size="sm"
