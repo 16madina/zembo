@@ -760,6 +760,7 @@ export type Database = {
           created_at: string
           gender: string
           id: string
+          last_heartbeat: string | null
           looking_for: string
           room_name: string | null
           status: string
@@ -769,6 +770,7 @@ export type Database = {
           created_at?: string
           gender: string
           id?: string
+          last_heartbeat?: string | null
           looking_for: string
           room_name?: string | null
           status?: string
@@ -778,6 +780,7 @@ export type Database = {
           created_at?: string
           gender?: string
           id?: string
+          last_heartbeat?: string | null
           looking_for?: string
           room_name?: string | null
           status?: string
