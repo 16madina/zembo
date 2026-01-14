@@ -21,7 +21,8 @@ const StreamControls = ({
   onEndStream,
   isStreamer,
 }: StreamControlsProps) => {
-  if (!isStreamer) return null;
+  // SECURITY: Double-check - never render if not strictly true
+  if (isStreamer !== true) return null;
 
   return (
     <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-3 z-30">
