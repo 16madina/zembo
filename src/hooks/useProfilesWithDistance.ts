@@ -215,24 +215,36 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
   // Track if initial fetch has been done to prevent constant refetching
   const hasFetchedRef = useRef(false);
   const lastParamsRef = useRef<string>("");
+  const geoReadyRef = useRef(false);
 
-  // Initial fetch - only refetch when filters change, not on every coordinate update
+  // Get geolocation loading status
+  const { loading: geoLoading } = useGeolocation();
+
+  // Initial fetch - fetch profiles even without GPS, refetch when filters change or GPS becomes available
   useEffect(() => {
     // Create a stable params key for comparison
     const paramsKey = `${maxDistance}-${ageMin}-${ageMax}-${JSON.stringify(genders)}`;
     const coordsReady = userLat !== null && userLng !== null;
+    const geoFinished = !geoLoading; // Geo has finished attempting (success or error)
     
-    // Fetch on first load when coords are ready, or when filters change
-    if (!hasFetchedRef.current && coordsReady && user) {
+    // Fetch on first load when:
+    // 1. Geo finished (either got coords or gave up) AND we have a user
+    // 2. Or when filters change
+    if (!hasFetchedRef.current && geoFinished && user) {
       hasFetchedRef.current = true;
       lastParamsRef.current = paramsKey;
+      geoReadyRef.current = coordsReady;
       fetchProfiles(true);
     } else if (hasFetchedRef.current && paramsKey !== lastParamsRef.current) {
       // Filters changed, refetch
       lastParamsRef.current = paramsKey;
       fetchProfiles(true);
+    } else if (hasFetchedRef.current && coordsReady && !geoReadyRef.current) {
+      // GPS became available after initial fetch without coords, refetch to calculate distances
+      geoReadyRef.current = true;
+      fetchProfiles(true);
     }
-  }, [user, userLat, userLng, maxDistance, ageMin, ageMax, JSON.stringify(genders), fetchProfiles]);
+  }, [user, userLat, userLng, geoLoading, maxDistance, ageMin, ageMax, JSON.stringify(genders), fetchProfiles]);
 
   const loadMore = useCallback(() => {
     if (!isLoading && !isLoadingMore && hasMore) {
