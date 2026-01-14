@@ -1,28 +1,31 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Wifi, X, Loader2 } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Track } from "livekit-client";
 
 interface SplitScreenViewProps {
   // Streamer props
   streamerStream: MediaStream | null;
+  /** Viewer-only: streamer video coming from LiveKit */
+  streamerRemoteVideoTrack?: Track | null;
   streamerName: string | null;
   streamerAvatar: string | null;
   streamerId: string;
   isVideoOff: boolean;
   filterString?: string;
-  
+
   // Guest props
   guestName: string | null;
   guestAvatar: string | null;
   guestId: string;
   guestStream?: MediaStream | null;
-  
+
   // Control props
   isStreamer: boolean;
   onRemoveGuest?: () => void;
-  
+
   // Connection status
   isConnecting?: boolean;
   isConnected?: boolean;
@@ -30,6 +33,7 @@ interface SplitScreenViewProps {
 
 const SplitScreenView = ({
   streamerStream,
+  streamerRemoteVideoTrack,
   streamerName,
   streamerAvatar,
   streamerId,
@@ -47,12 +51,25 @@ const SplitScreenView = ({
   const streamerVideoRef = useRef<HTMLVideoElement>(null);
   const guestVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Attach streamer stream
+  // Attach streamer stream (streamer local preview)
   useEffect(() => {
     if (streamerVideoRef.current && streamerStream) {
       streamerVideoRef.current.srcObject = streamerStream;
     }
   }, [streamerStream]);
+
+  // Attach streamer remote video track (viewer)
+  useEffect(() => {
+    if (streamerVideoRef.current && streamerRemoteVideoTrack && !streamerStream) {
+      streamerRemoteVideoTrack.attach(streamerVideoRef.current);
+    }
+
+    return () => {
+      if (streamerRemoteVideoTrack && !streamerStream) {
+        streamerRemoteVideoTrack.detach();
+      }
+    };
+  }, [streamerRemoteVideoTrack, streamerStream]);
 
   // Attach guest stream
   useEffect(() => {
