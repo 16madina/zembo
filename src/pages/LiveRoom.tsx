@@ -20,6 +20,7 @@ import { useLives, type Live } from "@/hooks/useLives";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { useLocalStream } from "@/hooks/useLocalStream";
+import { useLiveKit } from "@/hooks/useLiveKit";
 import { useSnapchatFilters } from "@/hooks/useSnapchatFilters";
 import { useFaceTracking } from "@/hooks/useFaceTracking";
 import { useLiveStage } from "@/hooks/useLiveStage";
@@ -115,20 +116,49 @@ const LiveRoom = () => {
     resetAll: resetFilters,
   } = useSnapchatFilters();
 
-  // Local stream for streamer (fallback without LiveKit)
+  // Local stream for streamer
   const {
     stream,
-    isMuted,
-    isVideoOff,
+    isMuted: localIsMuted,
+    isVideoOff: localIsVideoOff,
     isInitialized,
     initCamera,
     stopStream,
-    toggleMute,
-    toggleVideo,
-    switchCamera,
+    toggleMute: localToggleMute,
+    toggleVideo: localToggleVideo,
+    switchCamera: localSwitchCamera,
     setVideoRef,
     videoRef,
   } = useLocalStream();
+
+  // LiveKit for streaming to viewers
+  // Use live's livekit_room_name if available, otherwise use the live id
+  const roomName = live?.livekit_room_name || live?.id || id || "";
+  const {
+    isConnected: liveKitConnected,
+    isConnecting: liveKitConnecting,
+    error: liveKitError,
+    isMuted: liveKitMuted,
+    isVideoOff: liveKitVideoOff,
+    remoteVideoTrack,
+    connect: connectLiveKit,
+    disconnect: disconnectLiveKit,
+    toggleMute: liveKitToggleMute,
+    toggleVideo: liveKitToggleVideo,
+    switchCamera: liveKitSwitchCamera,
+    setLocalVideoRef,
+    setRemoteVideoRef,
+  } = useLiveKit({
+    roomName,
+    isStreamer,
+  });
+
+  // Use LiveKit controls when connected, otherwise use local controls
+  const isMuted = liveKitConnected ? liveKitMuted : localIsMuted;
+  const isVideoOff = liveKitConnected ? liveKitVideoOff : localIsVideoOff;
+  const toggleMute = liveKitConnected ? liveKitToggleMute : localToggleMute;
+  const toggleVideo = liveKitConnected ? liveKitToggleVideo : localToggleVideo;
+  const switchCamera = liveKitConnected ? liveKitSwitchCamera : localSwitchCamera;
 
   // Face tracking for AR overlays
   const {
@@ -237,15 +267,16 @@ const LiveRoom = () => {
     }
   }, [hasAccess, accessLoading, isStreamer, live, id, hasIncrementedViewer]);
 
-  // Cleanup: decrement viewer count on unmount
+  // Cleanup: decrement viewer count and disconnect on unmount
   useEffect(() => {
     return () => {
       if (id && hasIncrementedViewer) {
         updateViewerCount(id, false);
       }
       stopStream();
+      disconnectLiveKit();
     };
-  }, [id, hasIncrementedViewer]);
+  }, [id, hasIncrementedViewer, disconnectLiveKit]);
 
   // Show toast for stage request button after joining
   useEffect(() => {
@@ -260,12 +291,38 @@ const LiveRoom = () => {
     }
   }, [isStreamer, hasAccess, isOnStage, hasShownStageToast]);
 
-  // Auto-start camera for streamer
+  // Auto-start camera for streamer (for local preview and face tracking)
   useEffect(() => {
     if (live && isStreamer && !isInitialized) {
       initCamera();
     }
   }, [live, isStreamer, isInitialized, initCamera]);
+
+  // Auto-connect to LiveKit when live is loaded and has access
+  useEffect(() => {
+    if (live && roomName && !liveKitConnected && !liveKitConnecting && !liveKitError) {
+      // For streamer: connect immediately when live is loaded
+      // For viewer: connect when access is granted
+      const shouldConnect = isStreamer 
+        ? true  // Streamer connects immediately - LiveKit handles camera
+        : (hasAccess === true);
+      
+      if (shouldConnect) {
+        console.log("LiveRoom - Connecting to LiveKit:", { roomName, isStreamer });
+        connectLiveKit();
+      }
+    }
+  }, [live, roomName, isStreamer, hasAccess, liveKitConnected, liveKitConnecting, liveKitError, connectLiveKit]);
+
+  // Log LiveKit connection status
+  useEffect(() => {
+    if (liveKitError) {
+      console.error("LiveKit error:", liveKitError);
+    }
+    if (liveKitConnected) {
+      console.log("LiveRoom - LiveKit connected successfully");
+    }
+  }, [liveKitConnected, liveKitError]);
 
   // Fetch and subscribe to messages
   useEffect(() => {
@@ -466,6 +523,10 @@ const LiveRoom = () => {
               streamerAvatar={live.streamer?.avatar_url}
               setVideoRef={setVideoRef}
               filterString={isStreamer ? filterString : undefined}
+              remoteVideoTrack={remoteVideoTrack}
+              isLiveKitConnected={liveKitConnected}
+              isLiveKitConnecting={liveKitConnecting}
+              setRemoteVideoRef={setRemoteVideoRef}
             />
 
             {/* Guest PiP View (Picture-in-Picture) */}
