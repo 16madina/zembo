@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { AccessToken } from "https://esm.sh/livekit-server-sdk@2.6.1";
+import { AccessToken, TrackSource } from "https://esm.sh/livekit-server-sdk@2.6.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +56,7 @@ serve(async (req) => {
       });
     }
 
-    const { roomName, isStreamer } = await req.json();
+    const { roomName, isStreamer, isRandomCall } = await req.json();
 
     if (!roomName) {
       return new Response(JSON.stringify({ error: "Room name is required" }), {
@@ -98,7 +98,17 @@ serve(async (req) => {
     });
 
     // Grant permissions based on role
-    if (isStreamer) {
+    if (isRandomCall) {
+      // Random call: both participants can publish audio and subscribe
+      at.addGrant({
+        room: roomName,
+        roomJoin: true,
+        canPublish: true,
+        canPublishSources: [TrackSource.MICROPHONE], // Audio only, no video
+        canSubscribe: true,
+        canPublishData: true,
+      });
+    } else if (isStreamer) {
       // Streamer can publish and subscribe
       at.addGrant({
         room: roomName,
