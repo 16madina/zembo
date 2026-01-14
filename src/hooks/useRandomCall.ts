@@ -18,7 +18,8 @@ export type CallStatus =
 
 // Tuning (mobile/iOS friendly)
 const SEARCH_TIMEOUT_SECONDS = 60;
-const SEARCH_POLL_INTERVAL_MS = 3000;
+const SEARCH_POLL_INTERVAL_MS = 2000; // Faster polling for better sync
+const INITIAL_MATCH_DELAY_MS = 500; // Delay before first match attempt
 
 // Demo mode flag - set to true to simulate matches without a real user
 const DEMO_MODE = false;
@@ -534,6 +535,9 @@ export const useRandomCall = (): UseRandomCallReturn => {
             setStatus("search_timeout");
           })();
         }, SEARCH_TIMEOUT_SECONDS * 1000);
+
+        // Add a small delay before first match attempt to let the other user join the queue
+        await new Promise(resolve => setTimeout(resolve, INITIAL_MATCH_DELAY_MS));
 
         // Try to find a match immediately and periodically
         await tryMatch();
