@@ -47,25 +47,49 @@ export const useWebRTC = ({
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const log = useCallback((message: string, data?: unknown) => {
+    // Reuse the same prefix so it shows in the Random debug panel
+    if (data === undefined) {
+      console.log("[random-call]", message);
+    } else {
+      console.log("[random-call]", message, data);
+    }
+  }, []);
+
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isStartingRef = useRef(false);
 
   // Cleanup function
   const cleanup = useCallback(() => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
-    
+
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
 
+    if (remoteAudioRef.current) {
+      try {
+        remoteAudioRef.current.pause();
+        remoteAudioRef.current.srcObject = null;
+      } catch {
+        // ignore
+      }
+      // Remove from DOM to avoid leaks
+      remoteAudioRef.current.remove();
+      remoteAudioRef.current = null;
+    }
+
     if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+      localStream.getTracks().forEach((track) => track.stop());
       setLocalStream(null);
     }
 
@@ -78,6 +102,8 @@ export const useWebRTC = ({
       channelRef.current.unsubscribe();
       channelRef.current = null;
     }
+
+    isStartingRef.current = false;
 
     setRemoteStream(null);
     setIsConnected(false);
@@ -155,8 +181,18 @@ export const useWebRTC = ({
       return;
     }
 
+    // Prevent double-start (React strict mode / fast re-renders)
+    if (isStartingRef.current || peerConnectionRef.current) {
+      log("webrtc startCall skipped (already starting/started)");
+      return;
+    }
+
+    isStartingRef.current = true;
+
     setIsConnecting(true);
     setError(null);
+
+    log("webrtc startCall", { sessionId, isInitiator });
 
     try {
       // Get audio stream
@@ -183,14 +219,42 @@ export const useWebRTC = ({
 
       // Handle remote stream
       pc.ontrack = (event) => {
-        const [remoteStream] = event.streams;
-        setRemoteStream(remoteStream);
-        
-        // Create audio element and play
-        const audio = new Audio();
-        audio.srcObject = remoteStream;
-        audio.autoplay = true;
-        audio.play().catch(console.error);
+        const [incomingRemoteStream] = event.streams;
+        setRemoteStream(incomingRemoteStream);
+
+        log("webrtc ontrack", {
+          tracks: incomingRemoteStream.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled })),
+        });
+
+        // iOS Safari is picky: keep a persistent <audio> element attached to DOM
+        if (!remoteAudioRef.current) {
+          const audioEl = document.createElement("audio");
+          audioEl.autoplay = true;
+          (audioEl as HTMLMediaElement & { playsInline?: boolean }).playsInline = true;
+          audioEl.muted = false;
+          audioEl.style.display = "none";
+          document.body.appendChild(audioEl);
+          remoteAudioRef.current = audioEl;
+        }
+
+        remoteAudioRef.current.srcObject = incomingRemoteStream;
+
+        const tryPlay = () => {
+          remoteAudioRef.current
+            ?.play()
+            .then(() => log("webrtc remote audio playing"))
+            .catch((err) => {
+              log("webrtc audio play blocked", String(err));
+              // Common on iOS: need a user gesture; retry on next tap
+              const retryOnce = () => {
+                remoteAudioRef.current?.play().catch(() => undefined);
+              };
+              document.addEventListener("touchend", retryOnce, { once: true });
+              document.addEventListener("click", retryOnce, { once: true });
+            });
+        };
+
+        tryPlay();
       };
 
       // Handle ICE candidates
@@ -203,14 +267,17 @@ export const useWebRTC = ({
       // Handle connection state changes
       pc.onconnectionstatechange = () => {
         const state = pc.connectionState;
+        log("webrtc connection state", { state });
         onConnectionStateChange?.(state);
-        
+
         if (state === "connected") {
           setIsConnected(true);
           setIsConnecting(false);
+          isStartingRef.current = false;
         } else if (state === "disconnected" || state === "failed") {
           setIsConnected(false);
           setError("Connection lost");
+          isStartingRef.current = false;
         }
       };
 
@@ -259,11 +326,20 @@ export const useWebRTC = ({
 
     } catch (err: any) {
       console.error("Error starting call:", err);
+      log("webrtc startCall error", {
+        name: err?.name,
+        message: err?.message,
+      });
       setError(err.message || "Failed to start call");
       setIsConnecting(false);
       cleanup();
+    } finally {
+      // If we never reached "connected", allow retry
+      if (!peerConnectionRef.current || peerConnectionRef.current.connectionState !== "connected") {
+        isStartingRef.current = false;
+      }
     }
-  }, [sessionId, user, otherUserId, isInitiator, sendSignal, handleSignal, setupAudioLevelMonitoring, cleanup, onConnectionStateChange]);
+  }, [sessionId, user, otherUserId, isInitiator, sendSignal, handleSignal, setupAudioLevelMonitoring, cleanup, onConnectionStateChange, log]);
 
   // End the call
   const endCall = useCallback(() => {
