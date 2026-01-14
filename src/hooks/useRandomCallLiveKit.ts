@@ -58,7 +58,9 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const [roomName, setRoomName] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [matchedUserId, setMatchedUserId] = useState<string | null>(null);
+  // isConnected = true only when a remote participant has joined (real peer present)
   const [isConnected, setIsConnected] = useState(false);
+  const [, setIsRoomConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -150,9 +152,9 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     }
 
     setIsConnected(false);
+    setIsRoomConnected(false);
     setAudioLevel(0);
     sessionEndsAtRef.current = null;
-  }, [user?.id]);
 
   // Start search for a random call
   const startSearch = useCallback(async (preference: string) => {
@@ -360,35 +362,66 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       // Handle remote tracks (other participant's audio)
       room.on(RoomEvent.TrackSubscribed, (track) => {
         console.log("[random-call-lk]", "track subscribed", { kind: track.kind });
-        
+
         if (track.kind === Track.Kind.Audio) {
           // Attach audio to a hidden element
           const audioElement = track.attach();
           audioElement.style.display = "none";
+          (audioElement as HTMLMediaElement).playsInline = true;
           document.body.appendChild(audioElement);
-          audioElement.play().catch(console.error);
+
+          const tryPlay = () => {
+            audioElement
+              .play()
+              .then(() => console.log("[random-call-lk]", "remote audio playing"))
+              .catch((err) => {
+                console.log("[random-call-lk]", "remote audio play blocked", String(err));
+                // Common on iOS: need a user gesture; retry on next tap
+                const retryOnce = () => {
+                  audioElement.play().catch(() => undefined);
+                };
+                document.addEventListener("touchend", retryOnce, { once: true });
+                document.addEventListener("click", retryOnce, { once: true });
+              });
+          };
+
+          tryPlay();
 
           // Monitor remote audio level
-          if (track.mediaStream) {
-            setupRemoteAudioMonitoring(track.mediaStream);
+          try {
+            const stream = new MediaStream([track.mediaStreamTrack]);
+            setupRemoteAudioMonitoring(stream);
+          } catch (e) {
+            console.log("[random-call-lk]", "failed to build remote MediaStream", e);
           }
         }
       });
 
+      // Connected to LiveKit server (does NOT mean the other user is here yet)
       room.on(RoomEvent.Connected, () => {
         console.log("[random-call-lk]", "connected to LiveKit room");
-        setIsConnected(true);
+        setIsRoomConnected(true);
         setStatus("in_call");
         startCallTimer();
       });
 
       room.on(RoomEvent.Disconnected, () => {
         console.log("[random-call-lk]", "disconnected from LiveKit room");
+        setIsRoomConnected(false);
         setIsConnected(false);
       });
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
         console.log("[random-call-lk]", "participant connected", { id: participant.identity });
+        // A real peer is present now
+        setIsConnected(true);
+      });
+
+      room.on(RoomEvent.ParticipantDisconnected, () => {
+        // If no remote participants left, go back to waiting state
+        if (room.remoteParticipants.size === 0) {
+          setIsConnected(false);
+        }
       });
 
       // Connect to the room
@@ -396,8 +429,12 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       await room.connect(livekitUrl, tokenData.token);
 
       // Publish only audio (no video for random calls)
-      await room.localParticipant.setMicrophoneEnabled(true);
-      console.log("[random-call-lk]", "microphone enabled");
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true);
+        console.log("[random-call-lk]", "microphone enabled");
+      } catch (micErr) {
+        console.log("[random-call-lk]", "microphone enable failed", micErr);
+      }
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Impossible de rejoindre l'appel";
@@ -411,6 +448,17 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const setupRemoteAudioMonitoring = useCallback((stream: MediaStream) => {
     try {
       audioContextRef.current = new AudioContext();
+
+      // iOS/Safari often starts suspended until a user gesture
+      const resumeAudio = () => {
+        audioContextRef.current?.resume().catch(() => undefined);
+      };
+      if (audioContextRef.current.state === "suspended") {
+        resumeAudio();
+        document.addEventListener("touchend", resumeAudio, { once: true });
+        document.addEventListener("click", resumeAudio, { once: true });
+      }
+
       analyserRef.current = audioContextRef.current.createAnalyser();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
@@ -432,8 +480,6 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       console.error("[random-call-lk]", "audio monitoring error", err);
     }
   }, []);
-
-  // Start call timer - synchronized using ends_at from DB
   const startCallTimer = useCallback(() => {
     // Calculate remaining time from session ends_at if available
     if (sessionEndsAtRef.current) {
