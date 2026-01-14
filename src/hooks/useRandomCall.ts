@@ -512,6 +512,17 @@ export const useRandomCall = (): UseRandomCallReturn => {
 
         log("added to queue");
 
+        // Helpful debug: how many people are currently waiting?
+        try {
+          const { count } = await supabase
+            .from("random_call_queue")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "waiting");
+          log("queue waiting count", { count });
+        } catch (e) {
+          log("queue waiting count error", e);
+        }
+
         // Backup timeout: after SEARCH_TIMEOUT_SECONDS, stop searching and remove user from queue
         searchTimeoutRef.current = setTimeout(() => {
           if (timedOutRef.current || foundSessionRef.current) return;
