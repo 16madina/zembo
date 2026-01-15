@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { create } from "https://deno.land/x/djwt@v2.8/mod.ts";
+import { 
+  getAccessToken, 
+  getUserDevices, 
+  sendToAllDevices,
+  ServiceAccountKey 
+} from "../_shared/send-to-all-devices.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,76 +16,6 @@ interface MatchNotificationRequest {
   user1_id: string;
   user2_id: string;
   match_id: string;
-}
-
-interface ServiceAccountKey {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
-}
-
-async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  
-  const jwtPayload = {
-    iss: serviceAccount.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-
-  const pemHeader = "-----BEGIN PRIVATE KEY-----";
-  const pemFooter = "-----END PRIVATE KEY-----";
-  const pemContents = serviceAccount.private_key
-    .replace(pemHeader, "")
-    .replace(pemFooter, "")
-    .replace(/\n/g, "");
-  
-  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
-    false,
-    ["sign"]
-  );
-
-  const jwt = await create(
-    { alg: "RS256", typ: "JWT" },
-    jwtPayload,
-    cryptoKey
-  );
-
-  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
-  });
-
-  const tokenResult = await tokenResponse.json();
-  
-  if (!tokenResponse.ok) {
-    throw new Error(`Failed to get access token: ${JSON.stringify(tokenResult)}`);
-  }
-
-  return tokenResult.access_token;
 }
 
 serve(async (req) => {
@@ -113,10 +48,10 @@ serve(async (req) => {
       );
     }
 
-    // Fetch both users' profiles with FCM tokens and display names
+    // Fetch both users' profiles
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
-      .select("user_id, display_name, fcm_token, avatar_url")
+      .select("user_id, display_name, avatar_url")
       .in("user_id", [user1_id, user2_id]);
 
     if (profilesError) {
@@ -127,119 +62,102 @@ serve(async (req) => {
     const user1Profile = profiles?.find(p => p.user_id === user1_id);
     const user2Profile = profiles?.find(p => p.user_id === user2_id);
 
-    // Get OAuth2 access token
+    // Get devices for both users
+    const [user1Devices, user2Devices] = await Promise.all([
+      getUserDevices(supabase, user1_id),
+      getUserDevices(supabase, user2_id),
+    ]);
+
     const accessToken = await getAccessToken(serviceAccount);
 
-    const notifications: Promise<Response>[] = [];
+    let totalSuccess = 0;
+    let totalFailed = 0;
 
     // Send notification to user1 about user2
-    if (user1Profile?.fcm_token) {
-      const notifPromise = fetch(
-        `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+    if (user1Devices.length > 0) {
+      const result = await sendToAllDevices(
+        serviceAccount,
+        accessToken,
+        user1Devices,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
+          notification: {
+            title: "💕 Nouveau Match !",
+            body: `${user2Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
           },
-          body: JSON.stringify({
-            message: {
-              token: user1Profile.fcm_token,
-              notification: {
-                title: "💕 Nouveau Match !",
-                body: `${user2Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
-              },
-              apns: {
-                payload: {
-                  aps: {
-                    sound: "default",
-                    badge: 1,
-                  },
-                },
-              },
-              android: {
-                priority: "high",
-                notification: {
-                  sound: "default",
-                },
-              },
-              data: {
-                type: "match",
-                match_id: match_id || "",
-                matched_user_id: user2_id,
-                matched_user_name: user2Profile?.display_name || "",
-                matched_user_avatar: user2Profile?.avatar_url || "",
+          apns: {
+            payload: {
+              aps: {
+                sound: "default",
+                badge: 1,
               },
             },
-          }),
-        }
+          },
+          android: {
+            priority: "high",
+            notification: {
+              sound: "default",
+            },
+          },
+          data: {
+            type: "match",
+            match_id: match_id || "",
+            matched_user_id: user2_id,
+            matched_user_name: user2Profile?.display_name || "",
+            matched_user_avatar: user2Profile?.avatar_url || "",
+          },
+        },
+        supabase
       );
-      notifications.push(notifPromise);
+      totalSuccess += result.successCount;
+      totalFailed += result.failedCount;
     }
 
     // Send notification to user2 about user1
-    if (user2Profile?.fcm_token) {
-      const notifPromise = fetch(
-        `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+    if (user2Devices.length > 0) {
+      const result = await sendToAllDevices(
+        serviceAccount,
+        accessToken,
+        user2Devices,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
+          notification: {
+            title: "💕 Nouveau Match !",
+            body: `${user1Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
           },
-          body: JSON.stringify({
-            message: {
-              token: user2Profile.fcm_token,
-              notification: {
-                title: "💕 Nouveau Match !",
-                body: `${user1Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
-              },
-              apns: {
-                payload: {
-                  aps: {
-                    sound: "default",
-                    badge: 1,
-                  },
-                },
-              },
-              android: {
-                priority: "high",
-                notification: {
-                  sound: "default",
-                },
-              },
-              data: {
-                type: "match",
-                match_id: match_id || "",
-                matched_user_id: user1_id,
-                matched_user_name: user1Profile?.display_name || "",
-                matched_user_avatar: user1Profile?.avatar_url || "",
+          apns: {
+            payload: {
+              aps: {
+                sound: "default",
+                badge: 1,
               },
             },
-          }),
-        }
+          },
+          android: {
+            priority: "high",
+            notification: {
+              sound: "default",
+            },
+          },
+          data: {
+            type: "match",
+            match_id: match_id || "",
+            matched_user_id: user1_id,
+            matched_user_name: user1Profile?.display_name || "",
+            matched_user_avatar: user1Profile?.avatar_url || "",
+          },
+        },
+        supabase
       );
-      notifications.push(notifPromise);
+      totalSuccess += result.successCount;
+      totalFailed += result.failedCount;
     }
 
-    if (notifications.length === 0) {
-      console.log("No FCM tokens found for users, skipping notifications");
-      return new Response(
-        JSON.stringify({ success: true, message: "No FCM tokens available" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const results = await Promise.allSettled(notifications);
-    const successCount = results.filter(r => r.status === "fulfilled").length;
-
-    console.log(`Match notifications sent: ${successCount}/${notifications.length}`);
+    console.log(`Match notifications: ${totalSuccess} success, ${totalFailed} failed`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        notifications_sent: successCount,
-        total_attempted: notifications.length 
+        notifications_sent: totalSuccess,
+        notifications_failed: totalFailed 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

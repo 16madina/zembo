@@ -1,82 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { create } from "https://deno.land/x/djwt@v2.8/mod.ts";
+import { 
+  getAccessToken, 
+  getUserDevices, 
+  sendToAllDevices,
+  ServiceAccountKey 
+} from "../_shared/send-to-all-devices.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface ServiceAccountKey {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
-}
-
-// Generate OAuth2 access token from Service Account
-async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  
-  const jwtPayload = {
-    iss: serviceAccount.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-
-  const pemHeader = "-----BEGIN PRIVATE KEY-----";
-  const pemFooter = "-----END PRIVATE KEY-----";
-  const pemContents = serviceAccount.private_key
-    .replace(pemHeader, "")
-    .replace(pemFooter, "")
-    .replace(/\n/g, "");
-  
-  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
-    false,
-    ["sign"]
-  );
-
-  const jwt = await create(
-    { alg: "RS256", typ: "JWT" },
-    jwtPayload,
-    cryptoKey
-  );
-
-  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
-  });
-
-  const tokenResult = await tokenResponse.json();
-  
-  if (!tokenResponse.ok) {
-    throw new Error(`Failed to get access token: ${JSON.stringify(tokenResult)}`);
-  }
-
-  return tokenResult.access_token;
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -105,24 +39,15 @@ serve(async (req) => {
       );
     }
 
-    // Get callee's FCM token
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    const { data: calleeProfile, error: profileError } = await supabase
-      .from("profiles")
-      .select("fcm_token, display_name")
-      .eq("user_id", calleeId)
-      .maybeSingle();
+    // Get all devices for the callee
+    const devices = await getUserDevices(supabase, calleeId);
 
-    if (profileError) {
-      console.error("Error fetching callee profile:", profileError);
-      throw new Error("Failed to fetch callee profile");
-    }
-
-    if (!calleeProfile?.fcm_token) {
-      console.log("Callee has no FCM token, cannot send push notification");
+    if (devices.length === 0) {
+      console.log("Callee has no registered devices, cannot send push notification");
       return new Response(
-        JSON.stringify({ success: false, reason: "Callee has no FCM token" }),
+        JSON.stringify({ success: false, reason: "Callee has no registered devices" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -133,78 +58,57 @@ serve(async (req) => {
     const title = callType === "video" ? "📹 Appel vidéo entrant" : "📞 Appel entrant";
     const body = `${callerName} vous appelle`;
 
-    // Send push notification via FCM HTTP v1 API
-    const fcmResponse = await fetch(
-      `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+    // Send to all devices
+    const result = await sendToAllDevices(
+      serviceAccount,
+      accessToken,
+      devices,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          message: {
-            token: calleeProfile.fcm_token,
-            notification: {
-              title,
-              body,
-            },
-            apns: {
-              payload: {
-                aps: {
-                  // Use custom ringtone sound for calls
-                  sound: "ringtone.caf",
-                  badge: 1,
-                  "content-available": 1,
-                  // Enable critical alert for calls (requires special entitlement)
-                  "interruption-level": "time-sensitive",
-                },
-              },
-              headers: {
-                "apns-priority": "10",
-                "apns-push-type": "alert",
-              },
-            },
-            android: {
-              priority: "high",
-              notification: {
-                // Use custom ringtone sound for calls
-                sound: "ringtone",
-                channel_id: "incoming_calls",
-                // Keep notification visible
-                visibility: "public",
-                // High importance for calls
-                notification_priority: "PRIORITY_MAX",
-              },
-              // Time to live: 60 seconds (call timeout)
-              ttl: "60s",
-            },
-            data: {
-              type: "incoming_call",
-              callId,
-              callType: callType || "audio",
-              callerName,
-              callerPhoto: callerPhoto || "",
+        notification: { title, body },
+        apns: {
+          payload: {
+            aps: {
+              sound: "ringtone.caf",
+              badge: 1,
+              "content-available": 1,
+              "interruption-level": "time-sensitive",
             },
           },
-        }),
-      }
+          headers: {
+            "apns-priority": "10",
+            "apns-push-type": "alert",
+          },
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "ringtone",
+            channel_id: "incoming_calls",
+            visibility: "public",
+            notification_priority: "PRIORITY_MAX",
+          },
+          ttl: "60s",
+        },
+        data: {
+          type: "incoming_call",
+          callId,
+          callType: callType || "audio",
+          callerName,
+          callerPhoto: callerPhoto || "",
+        },
+      },
+      supabase
     );
 
-    const fcmResult = await fcmResponse.json();
-
-    if (!fcmResponse.ok) {
-      console.error("FCM error:", fcmResult);
-      return new Response(
-        JSON.stringify({ error: "Failed to send notification", details: fcmResult }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Call notification sent successfully to:", calleeProfile.display_name);
+    console.log(`Call notification sent to ${result.successCount}/${devices.length} devices`);
 
     return new Response(
-      JSON.stringify({ success: true, result: fcmResult }),
+      JSON.stringify({ 
+        success: true, 
+        devices_notified: result.successCount,
+        devices_failed: result.failedCount,
+        total_devices: devices.length
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
