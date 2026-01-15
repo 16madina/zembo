@@ -9,6 +9,7 @@ export type RandomCallStatus =
   | "searching"
   | "matched"
   | "in_call"
+  | "in_call_deciding" // New: in call + decision overlay shown
   | "deciding"
   | "completed"
   | "cancelled"
@@ -47,10 +48,11 @@ interface UseRandomCallLiveKitReturn {
   endCall: () => void;
   toggleMute: () => void;
   toggleSpeaker: () => Promise<void>;
-  submitDecision: (decision: "yes" | "no" | "continue") => Promise<void>;
+  submitDecision: (decision: "yes" | "no") => Promise<void>;
 }
 
-const CALL_DURATION_SECONDS = 90; // 1m30
+const CALL_DURATION_SECONDS = 90; // 1m30 total call duration
+const DECISION_TRIGGER_SECONDS = 30; // Show decision at 30s remaining (after 60s of call)
 const SEARCH_TIMEOUT_SECONDS = 120; // 2 minutes
 const SEARCH_POLL_INTERVAL_MS = 1500; // Poll every 1.5s
 const INITIAL_DELAY_MS = 1500; // Wait before first match attempt
@@ -609,33 +611,55 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
         const now = new Date();
         const remaining = Math.max(0, Math.floor((sessionEndsAtRef.current.getTime() - now.getTime()) / 1000));
         
+        setTimeRemaining(remaining);
+        
+        // At 30s remaining (after 60s of call), show decision overlay
+        if (remaining <= DECISION_TRIGGER_SECONDS && remaining > 0) {
+          setStatus((prevStatus) => {
+            if (prevStatus === "in_call") {
+              console.log("[random-call-lk]", "60s elapsed - showing decision overlay");
+              return "in_call_deciding";
+            }
+            return prevStatus;
+          });
+        }
+        
+        // At 0s, end the call automatically if no decision made
         if (remaining <= 0) {
-          // Timer ended - show decision screen
-          setStatus("deciding");
+          console.log("[random-call-lk]", "Timer expired - ending call");
           if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
           }
-          setTimeRemaining(0);
-        } else {
-          setTimeRemaining(remaining);
+          setDecisionResult("rejected");
+          cleanup(true);
+          setStatus("completed");
         }
       } else {
         // Fallback to local timer
         setTimeRemaining((prev) => {
+          // At 30s remaining, show decision overlay
+          if (prev === DECISION_TRIGGER_SECONDS) {
+            console.log("[random-call-lk]", "60s elapsed (local) - showing decision overlay");
+            setStatus("in_call_deciding");
+          }
+          
           if (prev <= 1) {
-            setStatus("deciding");
+            console.log("[random-call-lk]", "Timer expired (local) - ending call");
             if (timerRef.current) {
               clearInterval(timerRef.current);
               timerRef.current = null;
             }
+            setDecisionResult("rejected");
+            cleanup(true);
+            setStatus("completed");
             return 0;
           }
           return prev - 1;
         });
       }
     }, 1000);
-  }, []);
+  }, [cleanup]);
 
   // Cancel search - explicitly cancels queue entry
   const cancelSearch = useCallback(async () => {
@@ -739,23 +763,28 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
               return;
             }
 
+            // BOTH MATCHED: If both users said yes, immediately transition to success
+            if (updated.user1_decision === "yes" && updated.user2_decision === "yes") {
+              console.log("[random-call-lk]", "MATCH via realtime! Both said yes!");
+              if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+              }
+              setDecisionResult("matched");
+              setWaitingForOther(false);
+              await cleanup(true);
+              setStatus("completed");
+              return;
+            }
+
             // Check if session is completed
             if (updated.status === "completed") {
               const bothYes =
                 updated.user1_decision === "yes" && updated.user2_decision === "yes";
-              const anyContinue =
-                updated.user1_decision === "continue" ||
-                updated.user2_decision === "continue";
 
               if (bothYes) {
-                console.log("[random-call-lk]", "MATCH via realtime!");
+                console.log("[random-call-lk]", "MATCH via completed status!");
                 setDecisionResult("matched");
-              } else if (
-                anyContinue &&
-                updated.user1_decision !== "no" &&
-                updated.user2_decision !== "no"
-              ) {
-                setDecisionResult("continued");
               } else {
                 setDecisionResult("rejected");
               }
@@ -780,9 +809,9 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     [cleanup, user?.id]
   );
 
-  // Submit decision
+  // Submit decision - only "yes" or "no"
   const submitDecision = useCallback(
-    async (decision: "yes" | "no" | "continue") => {
+    async (decision: "yes" | "no") => {
       if (!sessionId || !user?.id) return;
 
       console.log("[random-call-lk]", "submitDecision", { decision, sessionId });
@@ -811,12 +840,15 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
         console.log("[random-call-lk]", "decision result", result);
 
         if (result.completed) {
-          // Decision is final
+          // Decision is final - stop the timer
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+          
           if (result.matched) {
             console.log("[random-call-lk]", "MATCH!");
             setDecisionResult("matched");
-          } else if (result.continued) {
-            setDecisionResult("continued");
           } else {
             setDecisionResult("rejected");
           }
@@ -831,8 +863,12 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           );
           setWaitingForOther(true);
         } else if (result.rejected) {
-          // Other user already said no
+          // Other user already said no - stop the timer
           console.log("[random-call-lk]", "Other user already rejected");
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
           setDecisionResult("rejected");
           await cleanup(true);
           setStatus("completed");
@@ -844,10 +880,10 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     [sessionId, user?.id, cleanup, subscribeToSessionUpdates]
   );
 
-  // CRITICAL: Subscribe to session updates as soon as we enter "deciding" state
+  // CRITICAL: Subscribe to session updates as soon as we enter "in_call_deciding" state
   // This ensures we catch the other user's decision immediately
   useEffect(() => {
-    if (status === "deciding" && sessionId && !sessionChannelRef.current) {
+    if ((status === "in_call_deciding" || status === "deciding") && sessionId && !sessionChannelRef.current) {
       console.log("[random-call-lk]", "Auto-subscribing to session updates on deciding state");
       subscribeToSessionUpdates(sessionId);
     }

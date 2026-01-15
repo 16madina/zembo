@@ -8,6 +8,12 @@ interface DecisionOverlayProps {
 }
 
 const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionOverlayProps) => {
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   if (waitingForOther) {
     return (
       <motion.div
@@ -21,6 +27,15 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
           animate={{ scale: 1, opacity: 1 }}
           className="flex flex-col items-center justify-center gap-6 p-6 rounded-3xl glass max-w-sm mx-4"
         >
+          {/* Timer continues */}
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 1, repeat: Infinity }}
+            className="text-3xl font-bold text-primary"
+          >
+            {formatTime(timeRemaining)}
+          </motion.div>
+          
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -43,6 +58,8 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
     );
   }
 
+  const isLowTime = timeRemaining <= 10;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -56,13 +73,13 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
         exit={{ scale: 0.9, opacity: 0 }}
         className="flex flex-col items-center justify-center gap-5 p-6 rounded-3xl glass max-w-sm mx-4"
       >
-        {/* Timer warning */}
+        {/* Timer continues counting down */}
         <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 0.5, repeat: Infinity }}
-          className="text-2xl font-bold text-primary"
+          animate={isLowTime ? { scale: [1, 1.1, 1] } : { scale: [1, 1.05, 1] }}
+          transition={{ duration: isLowTime ? 0.5 : 1, repeat: Infinity }}
+          className={`text-3xl font-bold ${isLowTime ? "text-destructive" : "text-primary"}`}
         >
-          {timeRemaining}s restantes
+          {formatTime(timeRemaining)}
         </motion.div>
 
         {/* Anonymous avatar */}
@@ -83,7 +100,7 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
           </p>
         </div>
 
-        {/* Decision buttons - only 2 options now */}
+        {/* Decision buttons - only 2 options */}
         <div className="flex flex-col gap-3 w-full">
           {/* Match button */}
           <motion.button
@@ -109,7 +126,10 @@ const DecisionOverlay = ({ onDecide, waitingForOther, timeRemaining }: DecisionO
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Si vous matchez, vos profils seront révélés
+          {isLowTime 
+            ? "L'appel se termine bientôt !" 
+            : "Si vous matchez, vos profils seront révélés"
+          }
         </p>
       </motion.div>
     </motion.div>

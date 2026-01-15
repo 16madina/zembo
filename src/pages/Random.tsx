@@ -98,11 +98,12 @@ const Random = () => {
           />
         );
       
-      case "deciding":
+      case "in_call_deciding":
+        // Show in-call screen with decision overlay - timer still running
         return (
           <div className="relative w-full">
             <InCallScreenLiveKit 
-              timeRemaining={0}
+              timeRemaining={timeRemaining}
               isConnected={isConnected}
               isMuted={isMuted}
               isSpeakerOn={isSpeakerOn}
@@ -117,7 +118,32 @@ const Random = () => {
             <DecisionOverlay 
               onDecide={submitDecision} 
               waitingForOther={waitingForOther}
-              timeRemaining={0}
+              timeRemaining={timeRemaining}
+            />
+          </div>
+        );
+      
+      case "deciding":
+        // Legacy: pure decision screen (shouldn't happen with new flow)
+        return (
+          <div className="relative w-full">
+            <InCallScreenLiveKit 
+              timeRemaining={timeRemaining}
+              isConnected={isConnected}
+              isMuted={isMuted}
+              isSpeakerOn={isSpeakerOn}
+              audioLevel={audioLevel}
+              error={error}
+              matchedUserId={matchedUserId || undefined}
+              sessionId={sessionId || undefined}
+              onToggleMute={toggleMute}
+              onToggleSpeaker={toggleSpeaker}
+              onEndCall={handleReset}
+            />
+            <DecisionOverlay 
+              onDecide={submitDecision} 
+              waitingForOther={waitingForOther}
+              timeRemaining={timeRemaining}
             />
           </div>
         );
