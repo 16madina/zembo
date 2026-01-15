@@ -6,13 +6,11 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 // Dynamic import for Push Notifications to avoid errors on web
-let PushNotifications: any = null;
-
-if (isNative) {
-  import("@capacitor/push-notifications").then((module) => {
-    PushNotifications = module.PushNotifications;
-  });
-}
+const getPushNotifications = async () => {
+  if (!isNative) return null;
+  const mod = await import("@capacitor/push-notifications");
+  return mod.PushNotifications;
+};
 
 export interface PushNotificationToken {
   value: string;
@@ -37,10 +35,11 @@ export interface NotificationData {
   callerPhoto?: string;
 }
 
-export const usePushNotifications = () => {
+export const usePushNotifications = (options?: { enabled?: boolean }) => {
   const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<string>("prompt");
+  const enabled = options?.enabled ?? true;
 
   const registerToken = useCallback(async (fcmToken: string) => {
     if (!user) return;
@@ -171,8 +170,9 @@ export const usePushNotifications = () => {
   }, []);
 
   const requestPermissions = useCallback(async () => {
-    if (!isNative || !PushNotifications) {
-      console.log("Push notifications not available on web");
+    const PushNotifications = await getPushNotifications();
+    if (!PushNotifications) {
+      console.log("Push notifications not available");
       return false;
     }
 
@@ -183,10 +183,10 @@ export const usePushNotifications = () => {
       if (permission.receive === "granted") {
         await PushNotifications.register();
         return true;
-      } else {
-        toast.error("Permission refusée pour les notifications");
-        return false;
       }
+
+      toast.error("Permission refusée pour les notifications");
+      return false;
     } catch (error) {
       console.error("Error requesting push permissions:", error);
       return false;
@@ -194,65 +194,77 @@ export const usePushNotifications = () => {
   }, []);
 
   const initializePushNotifications = useCallback(async () => {
-    if (!isNative || !PushNotifications) return;
+    const PushNotifications = await getPushNotifications();
+    if (!PushNotifications || !user) return;
 
-    // Check current permission status
-    const permission = await PushNotifications.checkPermissions();
-    setPermissionStatus(permission.receive);
+    try {
+      // Avoid duplicate listeners on fast refresh / re-mounts
+      await PushNotifications.removeAllListeners();
 
-    if (permission.receive === "granted") {
-      await PushNotifications.register();
-    }
-
-    // Listen for registration success
-    PushNotifications.addListener("registration", (token: PushNotificationToken) => {
-      console.log("Push registration success, token:", token.value);
-      setToken(token.value);
-      registerToken(token.value);
-    });
-
-    // Listen for registration errors
-    PushNotifications.addListener("registrationError", (error: any) => {
-      console.error("Push registration error:", error);
-      toast.error("Erreur lors de l'enregistrement des notifications");
-    });
-
-    // Listen for push notifications received while app is in foreground
-    PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
-      console.log("Push notification received:", notification);
-      
-      const data: NotificationData = notification.data || {};
-      
-      // Show in-app toast with action
-      toast(notification.title, {
-        description: notification.body,
-        action: {
-          label: "Voir",
-          onClick: () => handleNotificationNavigation(data),
-        },
-        duration: 5000,
+      // Listen for registration success
+      PushNotifications.addListener("registration", (token: PushNotificationToken) => {
+        console.log("Push registration success, token:", token.value);
+        setToken(token.value);
+        registerToken(token.value);
       });
-    });
 
-    // Listen for push notification action (user tapped on notification)
-    PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
-      console.log("Push notification action performed:", notification);
-      
-      const data: NotificationData = notification.notification?.data || {};
-      handleNotificationNavigation(data);
-    });
-  }, [registerToken, handleNotificationNavigation]);
+      // Listen for registration errors
+      PushNotifications.addListener("registrationError", (error: any) => {
+        console.error("Push registration error:", error);
+        toast.error("Erreur lors de l'enregistrement des notifications");
+      });
+
+      // Listen for push notifications received while app is in foreground
+      PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
+        console.log("Push notification received:", notification);
+
+        const data: NotificationData = notification.data || {};
+
+        // Show in-app toast with action
+        toast(notification.title, {
+          description: notification.body,
+          action: {
+            label: "Voir",
+            onClick: () => handleNotificationNavigation(data),
+          },
+          duration: 5000,
+        });
+      });
+
+      // Listen for push notification action (user tapped on notification)
+      PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
+        console.log("Push notification action performed:", notification);
+
+        const data: NotificationData = notification.notification?.data || {};
+        handleNotificationNavigation(data);
+      });
+
+      // Check current permission status
+      const current = await PushNotifications.checkPermissions();
+      setPermissionStatus(current.receive);
+
+      if (current.receive !== "granted") {
+        const permission = await PushNotifications.requestPermissions();
+        setPermissionStatus(permission.receive);
+        if (permission.receive !== "granted") return;
+      }
+
+      await PushNotifications.register();
+    } catch (error) {
+      console.error("Error initializing push notifications:", error);
+    }
+  }, [user, registerToken, handleNotificationNavigation]);
 
   useEffect(() => {
-    if (isNative && user) {
-      // Small delay to ensure PushNotifications module is loaded
+    if (isNative && user && enabled) {
+      // Small delay to ensure bridge is ready right after login
       const timer = setTimeout(() => {
         initializePushNotifications();
       }, 500);
 
       return () => clearTimeout(timer);
     }
-  }, [user, initializePushNotifications]);
+  }, [user, enabled, initializePushNotifications]);
 
   return {
     token,

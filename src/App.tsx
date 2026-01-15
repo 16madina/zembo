@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { initializeCapacitor } from "@/lib/capacitor";
 import SplashScreen from "@/components/SplashScreen";
 import HelpButton from "@/components/HelpButton";
+import PushNotificationsBootstrap from "@/components/PushNotificationsBootstrap";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
 import LiveRoom from "./pages/LiveRoom";
@@ -112,6 +113,7 @@ const AppContent = () => {
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <PushNotificationsBootstrap />
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
