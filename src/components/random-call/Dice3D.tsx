@@ -12,9 +12,11 @@ const DiceDot = ({ position, isRed = false }: DiceDotProps) => (
   <mesh position={position}>
     <sphereGeometry args={[0.06, 32, 32]} />
     <meshStandardMaterial 
-      color={isRed ? "#c41e3a" : "#1a1a2e"} 
-      roughness={0.3}
-      metalness={0.2}
+      color={isRed ? "#d4af37" : "#d4af37"} 
+      roughness={0.2}
+      metalness={0.8}
+      emissive="#d4af37"
+      emissiveIntensity={0.2}
     />
   </mesh>
 );
@@ -137,8 +139,8 @@ interface Dice3DProps {
 
 const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
   return (
-    <div className="w-28 h-28">
-      <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>
+    <div className="w-32 h-32">
+      <Canvas camera={{ position: [0, 0, 2.3], fov: 45 }}>
         <ambientLight intensity={0.8} />
         <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
         <directionalLight position={[-3, -3, -3]} intensity={0.3} />
