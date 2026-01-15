@@ -64,7 +64,9 @@ const InCallScreenLiveKit = memo(({
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary"
           >
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm font-medium">Connexion en cours...</span>
+            <span className="text-sm font-medium">
+              Connexion à l'appel...
+            </span>
           </motion.div>
         )}
 
@@ -75,7 +77,9 @@ const InCallScreenLiveKit = memo(({
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-500"
           >
             <Phone className="w-4 h-4" />
-            <span className="text-sm font-medium">Connecté via LiveKit</span>
+            <span className="text-sm font-medium">
+              🎙️ Audio connecté
+            </span>
           </motion.div>
         )}
 

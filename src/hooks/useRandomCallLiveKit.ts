@@ -80,6 +80,8 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sessionEndsAtRef = useRef<Date | null>(null);
+  // Ref to store joinLiveKitRoom function to avoid circular dependency
+  const joinLiveKitRoomRef = useRef<((roomName: string) => Promise<void>) | null>(null);
 
   // Fetch user gender on mount
   useEffect(() => {
@@ -311,26 +313,44 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
             setRoomName(updated.room_name);
             setStatus("matched");
             
-            // Fetch session info including ends_at
-            const { data: sessions } = await supabase
+            // Fetch session info including ends_at - CRITICAL: Get the matched user
+            const { data: sessions, error: sessionError } = await supabase
               .from("random_call_sessions")
               .select("id, user1_id, user2_id, ends_at")
               .eq("room_name", updated.room_name)
+              .eq("status", "active")
               .single();
 
+            if (sessionError) {
+              console.error("[random-call-lk]", "failed to fetch session", sessionError);
+            }
+
             if (sessions) {
+              console.log("[random-call-lk]", "session found via realtime", {
+                sessionId: sessions.id,
+                user1: sessions.user1_id,
+                user2: sessions.user2_id,
+                currentUser: userId
+              });
+              
               setSessionId(sessions.id);
+              // Determine which user is the "other" user
               const otherId = sessions.user1_id === userId ? sessions.user2_id : sessions.user1_id;
               setMatchedUserId(otherId);
+              console.log("[random-call-lk]", "matched user id set", { otherId });
               
               // Store ends_at for synchronized timer
               if (sessions.ends_at) {
                 sessionEndsAtRef.current = new Date(sessions.ends_at);
               }
+            } else {
+              console.warn("[random-call-lk]", "no active session found for room", updated.room_name);
             }
 
-            // Join the LiveKit room
-            await joinLiveKitRoom(updated.room_name);
+            // Join the LiveKit room using ref to avoid circular dependency
+            if (joinLiveKitRoomRef.current) {
+              await joinLiveKitRoomRef.current(updated.room_name);
+            }
           }
         }
       )
@@ -361,53 +381,131 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       roomRef.current = room;
 
       // Handle remote tracks (other participant's audio)
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        console.log("[random-call-lk]", "track subscribed", { kind: track.kind });
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        console.log("[random-call-lk]", "🎵 track subscribed", { 
+          kind: track.kind, 
+          participantId: participant.identity,
+          trackSid: publication.trackSid 
+        });
 
         if (track.kind === Track.Kind.Audio) {
-          // Attach audio to a hidden element
-          const audioElement = track.attach();
+          // Mark as connected when we receive audio track
+          console.log("[random-call-lk]", "✓ Audio track received - marking as connected");
+          setIsConnected(true);
+          
+          // Create audio element with proper attributes for mobile
+          const audioElement = document.createElement("audio");
           audioElement.style.display = "none";
-          audioElement.setAttribute("playsinline", "true");
+          audioElement.setAttribute("playsinline", "");
+          audioElement.setAttribute("autoplay", "");
+          audioElement.muted = false;
+          audioElement.volume = 1.0;
           document.body.appendChild(audioElement);
+          
+          // Attach track to audio element
+          track.attach(audioElement);
+
+          console.log("[random-call-lk]", "audio element attached", { 
+            muted: audioElement.muted,
+            volume: audioElement.volume,
+            paused: audioElement.paused,
+            readyState: audioElement.readyState
+          });
 
           const tryPlay = () => {
             audioElement
               .play()
-              .then(() => console.log("[random-call-lk]", "remote audio playing"))
+              .then(() => {
+                console.log("[random-call-lk]", "✓ Remote audio playing successfully");
+              })
               .catch((err) => {
-                console.log("[random-call-lk]", "remote audio play blocked", String(err));
-                // Common on iOS: need a user gesture; retry on next tap
-                const retryOnce = () => {
-                  audioElement.play().catch(() => undefined);
+                console.warn("[random-call-lk]", "⚠️ Remote audio play blocked:", String(err));
+                // iOS/Android: Need user gesture to play audio
+                const retryOnGesture = () => {
+                  audioElement.play().then(() => {
+                    console.log("[random-call-lk]", "✓ Remote audio playing after user gesture");
+                  }).catch(() => undefined);
+                  document.removeEventListener("touchstart", retryOnGesture);
+                  document.removeEventListener("click", retryOnGesture);
                 };
-                document.addEventListener("touchend", retryOnce, { once: true });
-                document.addEventListener("click", retryOnce, { once: true });
+                document.addEventListener("touchstart", retryOnGesture, { once: true, passive: true });
+                document.addEventListener("click", retryOnGesture, { once: true });
               });
           };
 
-          tryPlay();
+          // Small delay to ensure track is ready, then play
+          setTimeout(tryPlay, 150);
 
-          // Monitor remote audio level
+          // Monitor remote audio level for visualization
           try {
             const stream = new MediaStream([track.mediaStreamTrack]);
             setupRemoteAudioMonitoring(stream);
           } catch (e) {
-            console.log("[random-call-lk]", "failed to build remote MediaStream", e);
+            console.warn("[random-call-lk]", "Failed to setup audio monitoring:", e);
           }
         }
       });
 
-      // Connected to LiveKit server (does NOT mean the other user is here yet)
+      // Also listen for TrackPublished to catch tracks that were published before we subscribed
+      room.on(RoomEvent.TrackPublished, (publication, participant) => {
+        console.log("[random-call-lk]", "📢 Track published", { 
+          kind: publication.kind,
+          participantId: participant.identity 
+        });
+      });
+
+      // Connected to LiveKit server
       room.on(RoomEvent.Connected, () => {
-        console.log("[random-call-lk]", "connected to LiveKit room");
+        console.log("[random-call-lk]", "✓ Connected to LiveKit room");
         setIsRoomConnected(true);
         setStatus("in_call");
         startCallTimer();
+        
+        // Check if there are already remote participants (we joined late)
+        const participantCount = room.remoteParticipants.size;
+        if (participantCount > 0) {
+          console.log("[random-call-lk]", "📍 Remote participants already present:", participantCount);
+          setIsConnected(true);
+          
+          // Check for existing audio tracks and attach them
+          room.remoteParticipants.forEach((participant) => {
+            console.log("[random-call-lk]", "Checking tracks for participant:", participant.identity);
+            participant.audioTrackPublications.forEach((publication) => {
+              console.log("[random-call-lk]", "Audio publication:", { 
+                isSubscribed: publication.isSubscribed,
+                hasTrack: !!publication.track,
+                trackSid: publication.trackSid
+              });
+              
+              if (publication.track && publication.isSubscribed) {
+                console.log("[random-call-lk]", "🔊 Attaching existing audio track from", participant.identity);
+                
+                // Create audio element explicitly
+                const audioElement = document.createElement("audio");
+                audioElement.style.display = "none";
+                audioElement.setAttribute("playsinline", "");
+                audioElement.setAttribute("autoplay", "");
+                audioElement.muted = false;
+                audioElement.volume = 1.0;
+                document.body.appendChild(audioElement);
+                
+                // Attach track
+                publication.track.attach(audioElement);
+                
+                // Try to play
+                audioElement.play().then(() => {
+                  console.log("[random-call-lk]", "✓ Existing audio track playing");
+                }).catch((err) => {
+                  console.warn("[random-call-lk]", "⚠️ Existing audio play blocked:", String(err));
+                });
+              }
+            });
+          });
+        }
       });
 
-      room.on(RoomEvent.Disconnected, () => {
-        console.log("[random-call-lk]", "disconnected from LiveKit room");
+      room.on(RoomEvent.Disconnected, (reason) => {
+        console.log("[random-call-lk]", "disconnected from LiveKit room", { reason });
         setIsRoomConnected(false);
         setIsConnected(false);
       });
@@ -418,7 +516,8 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
         setIsConnected(true);
       });
 
-      room.on(RoomEvent.ParticipantDisconnected, () => {
+      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        console.log("[random-call-lk]", "participant disconnected", { id: participant.identity });
         // If no remote participants left, go back to waiting state
         if (room.remoteParticipants.size === 0) {
           setIsConnected(false);
@@ -427,6 +526,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
       // Connect to the room
       const livekitUrl = tokenData.url || import.meta.env.VITE_LIVEKIT_URL || "wss://zembo-app-5cqbwowc.livekit.cloud";
+      console.log("[random-call-lk]", "connecting to LiveKit", { url: livekitUrl });
       await room.connect(livekitUrl, tokenData.token);
 
       // Publish only audio (no video for random calls)
@@ -444,6 +544,9 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       setStatus("error");
     }
   }, [user?.id]);
+
+  // Store joinLiveKitRoom in ref for use in callbacks
+  joinLiveKitRoomRef.current = joinLiveKitRoom;
 
   // Setup remote audio monitoring for visualization
   const setupRemoteAudioMonitoring = useCallback((stream: MediaStream) => {
