@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { initializeCapacitor } from "@/lib/capacitor";
 import SplashScreen from "@/components/SplashScreen";
+import HelpButton from "@/components/HelpButton";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
 import LiveRoom from "./pages/LiveRoom";
@@ -63,24 +64,39 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Component to conditionally show help button
+const HelpButtonWrapper = () => {
+  const location = useLocation();
+  const { user } = useAuth();
+  
+  // Show help button only on main app pages when logged in
+  const showHelpButton = user && ["/", "/messages", "/random", "/live", "/profile"].includes(location.pathname);
+  
+  if (!showHelpButton) return null;
+  return <HelpButton />;
+};
+
 // AppRoutes must be rendered INSIDE AuthProvider
 const AppRoutes = () => (
-  <Routes>
-    <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-    <Route path="/age-rating" element={<AgeRating />} />
-    <Route path="/privacy" element={<Privacy />} />
-    <Route path="/terms" element={<Terms />} />
-    <Route path="/verify-email" element={<VerifyEmail />} />
-    <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-    <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
-    <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
-    <Route path="/random" element={<ProtectedRoute><Random /></ProtectedRoute>} />
-    <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-    <Route path="/support" element={<Support />} />
-    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-    <Route path="*" element={<NotFound />} />
-  </Routes>
+  <>
+    <HelpButtonWrapper />
+    <Routes>
+      <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+      <Route path="/age-rating" element={<AgeRating />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
+      <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
+      <Route path="/random" element={<ProtectedRoute><Random /></ProtectedRoute>} />
+      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/support" element={<Support />} />
+      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </>
 );
 
 const AppContent = () => {
