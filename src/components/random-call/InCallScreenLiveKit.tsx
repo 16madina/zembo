@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2 } from "lucide-react";
+import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2, Volume2, VolumeX } from "lucide-react";
 import { useState, memo } from "react";
 import ReportModal from "./ReportModal";
 import AudioLevelMeter from "./AudioLevelMeter";
@@ -18,11 +18,13 @@ interface InCallScreenLiveKitProps {
   timeRemaining: number;
   isConnected: boolean;
   isMuted: boolean;
+  isSpeakerOn: boolean;
   audioLevel: number;
   error: string | null;
   matchedUserId?: string;
   sessionId?: string;
   onToggleMute: () => void;
+  onToggleSpeaker: () => void;
   onEndCall: () => void;
 }
 
@@ -30,11 +32,13 @@ const InCallScreenLiveKit = memo(({
   timeRemaining, 
   isConnected,
   isMuted,
+  isSpeakerOn,
   audioLevel,
   error,
   matchedUserId,
   sessionId,
   onToggleMute,
+  onToggleSpeaker,
   onEndCall,
 }: InCallScreenLiveKitProps) => {
   const [showReportModal, setShowReportModal] = useState(false);
@@ -152,7 +156,20 @@ const InCallScreenLiveKit = memo(({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Speaker toggle button */}
+          <motion.button
+            onClick={onToggleSpeaker}
+            className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
+              isSpeakerOn 
+                ? "bg-primary text-primary-foreground" 
+                : "glass text-foreground"
+            }`}
+            whileTap={{ scale: 0.95 }}
+          >
+            {isSpeakerOn ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+          </motion.button>
+
           {/* Mute button */}
           <motion.button
             onClick={onToggleMute}
@@ -179,7 +196,7 @@ const InCallScreenLiveKit = memo(({
           {matchedUserId && (
             <motion.button
               onClick={() => setShowReportModal(true)}
-              className="w-12 h-12 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+              className="w-14 h-14 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
               whileTap={{ scale: 0.95 }}
             >
               <Flag className="w-5 h-5" />

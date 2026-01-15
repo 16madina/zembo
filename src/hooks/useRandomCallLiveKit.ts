@@ -35,14 +35,18 @@ interface UseRandomCallLiveKitReturn {
   matchedUserId: string | null;
   isConnected: boolean;
   isMuted: boolean;
+  isSpeakerOn: boolean;
   audioLevel: number;
   error: string | null;
   timeRemaining: number;
   decisionResult: "matched" | "rejected" | "continued" | null;
+  waitingForOther: boolean;
+  otherUserRejected: boolean;
   startSearch: (preference: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
   endCall: () => void;
   toggleMute: () => void;
+  toggleSpeaker: () => Promise<void>;
   submitDecision: (decision: "yes" | "no" | "continue") => Promise<void>;
 }
 
@@ -62,10 +66,13 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const [isConnected, setIsConnected] = useState(false);
   const [, setIsRoomConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(CALL_DURATION_SECONDS);
   const [userGender, setUserGender] = useState<string | null>(null);
+  const [waitingForOther, setWaitingForOther] = useState(false);
+  const [otherUserRejected, setOtherUserRejected] = useState(false);
 
   const [decisionResult, setDecisionResult] = useState<"matched" | "rejected" | "continued" | null>(null);
 
@@ -654,6 +661,38 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     setIsMuted(newMuted);
   }, [isMuted]);
 
+  // Toggle speaker (speakerphone vs earpiece)
+  const toggleSpeaker = useCallback(async () => {
+    if (!roomRef.current) return;
+
+    const newSpeakerOn = !isSpeakerOn;
+    
+    try {
+      // Get all audio elements and switch output
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach((audio) => {
+        // On mobile, we use setSinkId if available, otherwise toggle volume/routing
+        if ('setSinkId' in audio && typeof (audio as HTMLAudioElement & { setSinkId: (sinkId: string) => Promise<void> }).setSinkId === 'function') {
+          // Use default speaker for speakerphone
+          (audio as HTMLAudioElement & { setSinkId: (sinkId: string) => Promise<void> }).setSinkId(newSpeakerOn ? '' : 'default').catch(() => {});
+        }
+      });
+      
+      // For LiveKit, use room's audio output device setting
+      if (newSpeakerOn) {
+        await roomRef.current.switchActiveDevice('audiooutput', '');
+      } else {
+        await roomRef.current.switchActiveDevice('audiooutput', 'default');
+      }
+      
+      console.log("[random-call-lk]", "speaker toggled", { newSpeakerOn });
+    } catch (err) {
+      console.warn("[random-call-lk]", "Failed to toggle speaker:", err);
+    }
+    
+    setIsSpeakerOn(newSpeakerOn);
+  }, [isSpeakerOn]);
+
 
   // Subscribe to session updates for decision synchronization
   const subscribeToSessionUpdates = useCallback(
@@ -683,6 +722,22 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
             console.log("[random-call-lk]", "session update received", updated);
 
+            // Determine if current user is user1 or user2
+            const isUser1 = updated.user1_id === user?.id;
+            const myDecision = isUser1 ? updated.user1_decision : updated.user2_decision;
+            const otherDecision = isUser1 ? updated.user2_decision : updated.user1_decision;
+
+            // INSTANT REJECTION: If the other user said "no", immediately show rejection
+            if (otherDecision === "no") {
+              console.log("[random-call-lk]", "Other user rejected via realtime - showing rejection immediately");
+              setOtherUserRejected(true);
+              setWaitingForOther(false);
+              setDecisionResult("rejected");
+              await cleanup(true);
+              setStatus("completed");
+              return;
+            }
+
             // Check if session is completed
             if (updated.status === "completed") {
               const bothYes =
@@ -704,8 +759,14 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
                 setDecisionResult("rejected");
               }
 
+              setWaitingForOther(false);
               await cleanup(true);
               setStatus("completed");
+            } else if (updated.status === "deciding") {
+              // If we submitted but other hasn't yet
+              if (myDecision && !otherDecision) {
+                setWaitingForOther(true);
+              }
             }
           }
         )
@@ -715,7 +776,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
       sessionChannelRef.current = channel;
     },
-    [cleanup]
+    [cleanup, user?.id]
   );
 
   // Submit decision
@@ -767,6 +828,13 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
             "[random-call-lk]",
             "waiting for other user decision..."
           );
+          setWaitingForOther(true);
+        } else if (result.rejected) {
+          // Other user already said no
+          console.log("[random-call-lk]", "Other user already rejected");
+          setDecisionResult("rejected");
+          await cleanup(true);
+          setStatus("completed");
         }
       } catch (err) {
         console.error("[random-call-lk]", "submitDecision error", err);
@@ -789,14 +857,18 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     matchedUserId,
     isConnected,
     isMuted,
+    isSpeakerOn,
     audioLevel,
     error,
     timeRemaining,
     decisionResult,
+    waitingForOther,
+    otherUserRejected,
     startSearch,
     cancelSearch,
     endCall,
     toggleMute,
+    toggleSpeaker,
     submitDecision,
   };
 };
