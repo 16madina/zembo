@@ -3,7 +3,6 @@ import { isNative } from "@/lib/capacitor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 // Dynamic import for Push Notifications to avoid errors on web
 const getPushNotifications = async () => {
@@ -35,11 +34,15 @@ export interface NotificationData {
   callerPhoto?: string;
 }
 
-export const usePushNotifications = (options?: { enabled?: boolean }) => {
+interface UsePushNotificationsOptions {
+  enabled?: boolean;
+}
+
+export const usePushNotifications = (options: UsePushNotificationsOptions = {}) => {
   const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<string>("prompt");
-  const enabled = options?.enabled ?? true;
+  const enabled = options.enabled ?? true;
 
   const registerToken = useCallback(async (fcmToken: string) => {
     if (!user) return;
