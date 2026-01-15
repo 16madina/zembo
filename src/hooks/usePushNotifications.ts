@@ -198,35 +198,32 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
 
   const initializePushNotifications = useCallback(async () => {
     // DEBUG TOAST 1: Hook started
-    toast.info("🔔 DEBUG: Initialisation push...", { duration: 3000 });
     console.log("DEBUG: initializePushNotifications called");
 
     const PushNotifications = await getPushNotifications();
     if (!PushNotifications) {
-      toast.error("❌ DEBUG: PushNotifications non disponible");
       console.log("DEBUG: PushNotifications not available");
+      toast.error("❌ PushNotifications non disponible", { duration: 3000 });
       return;
     }
     
     if (!user) {
-      toast.error("❌ DEBUG: User non connecté");
       console.log("DEBUG: User not connected");
+      toast.error("❌ User non connecté", { duration: 3000 });
       return;
     }
 
-    toast.info("✅ DEBUG: PushNotifications chargé, user: " + user.id.slice(0, 8), { duration: 3000 });
+    toast.info("🔔 Push init - user: " + user.id.slice(0, 8), { duration: 2000 });
 
     try {
       // Avoid duplicate listeners on fast refresh / re-mounts
       await PushNotifications.removeAllListeners();
-      toast.info("🔄 DEBUG: Listeners nettoyés", { duration: 2000 });
 
       // Listen for registration success
       PushNotifications.addListener("registration", (tokenData: PushNotificationToken) => {
         console.log("DEBUG: registration listener TRIGGERED, token:", tokenData.value);
-        // DEBUG TOAST: Registration success
-        toast.success("🎉 DEBUG: TOKEN REÇU! " + tokenData.value.slice(0, 20) + "...", { 
-          duration: 10000 
+        toast.success("🎉 TOKEN REÇU via listener! " + tokenData.value.slice(0, 15) + "...", { 
+          duration: 8000 
         });
         setToken(tokenData.value);
         registerToken(tokenData.value);
@@ -234,18 +231,14 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
 
       // Listen for registration errors
       PushNotifications.addListener("registrationError", (error: any) => {
-        console.error("DEBUG: registrationError listener TRIGGERED:", error);
-        // DEBUG TOAST: Registration error
-        toast.error("❌ DEBUG: ERREUR REGISTRATION: " + JSON.stringify(error), { 
-          duration: 10000 
-        });
+        console.error("DEBUG: registrationError:", error);
+        toast.error("❌ Erreur registration: " + JSON.stringify(error), { duration: 8000 });
       });
 
       // Listen for push notifications received while app is in foreground
       PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
         console.log("DEBUG: pushNotificationReceived:", notification);
-        // DEBUG TOAST: Notification received
-        toast.success("📬 DEBUG: NOTIF REÇUE: " + notification.title, { duration: 5000 });
+        toast.success("📬 Notif reçue: " + notification.title, { duration: 5000 });
 
         const data: NotificationData = notification.data || {};
 
@@ -263,49 +256,54 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       // Listen for push notification action (user tapped on notification)
       PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
         console.log("DEBUG: pushNotificationActionPerformed:", notification);
-        toast.info("👆 DEBUG: Notif tapped", { duration: 3000 });
+        toast.info("👆 Notif tapped", { duration: 3000 });
 
         const data: NotificationData = notification.notification?.data || {};
         handleNotificationNavigation(data);
       });
 
-      toast.info("👂 DEBUG: Listeners ajoutés", { duration: 2000 });
-
       // Check current permission status
       const current = await PushNotifications.checkPermissions();
       setPermissionStatus(current.receive);
-      toast.info("🔐 DEBUG: Permission actuelle: " + current.receive, { duration: 3000 });
+      toast.info("🔐 Permission: " + current.receive, { duration: 2000 });
 
       if (current.receive !== "granted") {
-        toast.info("🙏 DEBUG: Demande de permission...", { duration: 2000 });
         const permission = await PushNotifications.requestPermissions();
         setPermissionStatus(permission.receive);
-        toast.info("🔐 DEBUG: Permission après demande: " + permission.receive, { duration: 3000 });
         if (permission.receive !== "granted") {
-          toast.error("❌ DEBUG: Permission refusée!", { duration: 5000 });
+          toast.error("❌ Permission refusée", { duration: 5000 });
           return;
         }
       }
 
-      // Register for push notifications
-      toast.info("📝 DEBUG: Appel register()...", { duration: 2000 });
-      const result = await PushNotifications.register();
-      console.log("DEBUG: PushNotifications.register() result:", result);
-      toast.info("📝 DEBUG: register() terminé", { duration: 3000 });
-
-      // Wait and check if registration event fired
-      setTimeout(() => {
-        console.log("DEBUG: Timeout check - registration event should have fired by now");
-        toast.info("⏰ DEBUG: 2s écoulées - vérifiez si 🎉 TOKEN REÇU est apparu", { 
-          duration: 5000 
-        });
-      }, 2000);
+      // Register for push notifications - this should trigger the registration listener
+      toast.info("📝 Appel register()...", { duration: 2000 });
+      await PushNotifications.register();
+      
+      // WORKAROUND: On iOS, the token might already exist from Firebase swizzling
+      // Try to get the delivery status which contains the token on some versions
+      setTimeout(async () => {
+        // If we still don't have a token after 3 seconds, try to get it another way
+        if (!token) {
+          console.log("DEBUG: Token not received after 3s, checking getDeliveredNotifications...");
+          toast.warning("⏰ Token non reçu via listener après 3s", { duration: 3000 });
+          
+          // Try to check if we can get notifications (this confirms registration worked)
+          try {
+            const delivered = await PushNotifications.getDeliveredNotifications();
+            console.log("DEBUG: getDeliveredNotifications worked, registration seems OK:", delivered);
+            toast.info("📋 getDeliveredNotifications OK: " + delivered.notifications.length + " notifs", { duration: 3000 });
+          } catch (e) {
+            console.error("DEBUG: getDeliveredNotifications failed:", e);
+          }
+        }
+      }, 3000);
 
     } catch (error) {
       console.error("DEBUG: Error initializing push notifications:", error);
-      toast.error("💥 DEBUG: ERREUR INIT: " + String(error), { duration: 10000 });
+      toast.error("💥 Erreur init: " + String(error), { duration: 8000 });
     }
-  }, [user, registerToken, handleNotificationNavigation]);
+  }, [user, token, registerToken, handleNotificationNavigation]);
 
   useEffect(() => {
     if (isNative && user && enabled) {
