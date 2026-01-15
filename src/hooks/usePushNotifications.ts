@@ -30,6 +30,11 @@ export interface NotificationData {
   matched_user_avatar?: string;
   live_id?: string;
   live_title?: string;
+  // Call notification data
+  callId?: string;
+  callType?: string;
+  callerName?: string;
+  callerPhoto?: string;
 }
 
 export const usePushNotifications = () => {
@@ -106,6 +111,20 @@ export const usePushNotifications = () => {
       case "super_like":
         // Navigate to home to see the super like
         window.location.href = "/";
+        break;
+
+      case "incoming_call":
+        // Navigate to messages to handle the incoming call
+        // The call will be received via realtime subscription in useVoiceCall
+        if (data.sender_id || data.callId) {
+          sessionStorage.setItem("pendingCall", JSON.stringify({
+            callId: data.callId,
+            callerName: data.callerName,
+            callerPhoto: data.callerPhoto,
+            callType: data.callType || "audio",
+          }));
+        }
+        window.location.href = "/messages";
         break;
         
       default:
