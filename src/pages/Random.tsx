@@ -11,6 +11,7 @@ import InCallScreenLiveKit from "@/components/random-call/InCallScreenLiveKit";
 import DecisionOverlay from "@/components/random-call/DecisionOverlay";
 import ResultScreen from "@/components/random-call/ResultScreen";
 import DiceAnimation from "@/components/random-call/DiceAnimation";
+import MicrophoneTest from "@/components/random-call/MicrophoneTest";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
@@ -166,9 +167,19 @@ const Random = () => {
               Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
-            <motion.p className="text-muted-foreground/70 mb-10 max-w-xs text-center text-sm z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+            <motion.p className="text-muted-foreground/70 mb-6 max-w-xs text-center text-sm z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
               Aucun profil. Aucune photo.<br /><span className="text-foreground font-medium">Juste une voix.</span>
             </motion.p>
+
+            {/* Microphone Test */}
+            <motion.div
+              className="mb-6 z-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+            >
+              <MicrophoneTest />
+            </motion.div>
 
             <motion.button onClick={handleCommencer} className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Play className="w-5 h-5 text-primary-foreground" />
