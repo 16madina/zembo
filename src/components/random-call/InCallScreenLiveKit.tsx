@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2 } from "lucide-react";
 import { useState, memo } from "react";
 import ReportModal from "./ReportModal";
+import AudioLevelMeter from "./AudioLevelMeter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,6 +103,9 @@ const InCallScreenLiveKit = memo(({
         >
           {formatTime(timeRemaining)}
         </motion.div>
+
+        {/* Audio Level VU Meter */}
+        <AudioLevelMeter level={normalizedAudioLevel} isActive={isConnected} />
 
         {/* Anonymous caller visual with audio visualization */}
         <div className="relative">
