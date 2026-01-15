@@ -90,6 +90,7 @@ const LiveRoom = () => {
   } | null>(null);
   const [hasIncrementedViewer, setHasIncrementedViewer] = useState(false);
   const [hasShownStageToast, setHasShownStageToast] = useState(false);
+  const [liveEnded, setLiveEnded] = useState(false);
   
   // SECURITY: Ultra simple - only compare IDs directly
   const isStreamer = live?.streamer_id === user?.id;
@@ -397,9 +398,20 @@ const LiveRoom = () => {
   }, [user, isStreamer, currentGuest?.user_id, unlockAudio]);
 
   // Auto-reconnect for viewers if connected but no video after 10 seconds
+  // IMPORTANT: Skip reconnect logic entirely if live is ended or doesn't exist
   useEffect(() => {
-    if (isStreamer || !liveKitConnected || remoteVideoTrack) {
-      // Clear timer if conditions not met
+    // If live is ended or user is streamer, don't auto-reconnect
+    if (isStreamer || liveEnded) {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      setShowReconnectButton(false);
+      return;
+    }
+
+    // If we have video or not connected yet, no need for reconnect timer
+    if (!liveKitConnected || remoteVideoTrack) {
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
@@ -409,20 +421,35 @@ const LiveRoom = () => {
     }
 
     // Viewer is connected but has no video track - start timer
-    console.log("[LiveRoom] Viewer connected but no video - starting 10s timer");
-    
-    reconnectTimerRef.current = setTimeout(() => {
-      if (reconnectAttemptRef.current < 2) {
-        // Auto-reconnect first 2 times
-        console.log("[LiveRoom] Auto-reconnecting (attempt", reconnectAttemptRef.current + 1, ")");
+    console.log("[LiveRoom] Viewer connected but no video - starting 10s timer (attempt", reconnectAttemptRef.current + 1, "of 3)");
+
+    reconnectTimerRef.current = setTimeout(async () => {
+      // Before reconnecting, check if live still exists and is active
+      const { data: liveCheck } = await supabase
+        .from("lives")
+        .select("id, status")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (!liveCheck || liveCheck.status === "ended") {
+        console.log("[LiveRoom] Live ended or not found, stopping reconnect attempts");
+        setLiveEnded(true);
+        toast.info("Ce live est terminé", { duration: 3000 });
+        setTimeout(() => navigate("/live"), 3000);
+        return;
+      }
+
+      if (reconnectAttemptRef.current < 3) {
+        // Auto-reconnect up to 3 times
+        console.log("[LiveRoom] Auto-reconnecting (attempt", reconnectAttemptRef.current + 1, "of 3)");
         toast.info("Vidéo non reçue, reconnexion...", { duration: 2000 });
         reconnectAttemptRef.current++;
         handleLiveKitReconnect();
       } else {
-        // Show manual reconnect button after 2 attempts
-        console.log("[LiveRoom] Auto-reconnect limit reached, showing manual button");
+        // Show manual reconnect button after 3 attempts
+        console.log("[LiveRoom] Auto-reconnect limit reached (3 attempts), showing manual button");
         setShowReconnectButton(true);
-        toast.warning("Problème de connexion vidéo. Essayez de reconnecter manuellement.", { duration: 5000 });
+        toast.warning("Impossible de recevoir la vidéo. Vérifiez votre connexion.", { duration: 5000 });
       }
     }, 10000);
 
@@ -432,10 +459,25 @@ const LiveRoom = () => {
         reconnectTimerRef.current = null;
       }
     };
-  }, [isStreamer, liveKitConnected, remoteVideoTrack]);
+  }, [isStreamer, liveKitConnected, remoteVideoTrack, liveEnded, id, navigate]);
 
-  // Handler for manual reconnect
+  // Handler for manual reconnect - also checks if live is still active
   const handleLiveKitReconnect = useCallback(async () => {
+    // First check if live is still active
+    const { data: liveCheck } = await supabase
+      .from("lives")
+      .select("id, status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!liveCheck || liveCheck.status === "ended") {
+      console.log("[LiveRoom] Live ended, cannot reconnect");
+      setLiveEnded(true);
+      toast.info("Ce live est terminé", { duration: 3000 });
+      setTimeout(() => navigate("/live"), 3000);
+      return;
+    }
+
     console.log("[LiveRoom] Manual LiveKit reconnect triggered");
     setShowReconnectButton(false);
     await liveKitForceReconnect();
@@ -443,7 +485,7 @@ const LiveRoom = () => {
     setTimeout(() => {
       connectLiveKit();
     }, 1000);
-  }, [liveKitForceReconnect, connectLiveKit]);
+  }, [liveKitForceReconnect, connectLiveKit, id, navigate]);
 
   // Fetch and subscribe to messages
   useEffect(() => {
@@ -538,8 +580,10 @@ const LiveRoom = () => {
         (payload) => {
           const updated = payload.new as Tables<"lives">;
           if (updated.status === "ended") {
+            console.log("[LiveRoom] Live ended via realtime update");
+            setLiveEnded(true);
             toast.info("Le live est terminé");
-            navigate("/live");
+            setTimeout(() => navigate("/live"), 2000);
           } else {
             setLive((prev) =>
               prev ? { ...prev, ...updated } : null
