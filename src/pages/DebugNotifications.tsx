@@ -155,6 +155,23 @@ export default function DebugNotifications() {
       addLog(`   User ID: ${user.id}`);
       addLog(`   Token: ${fcmToken.slice(0, 30)}...`);
       
+      // Check if Supabase session is valid
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        addLog(`❌ Session error: ${sessionError.message}`);
+        toast.error("Session invalide");
+        return;
+      }
+      
+      if (!sessionData.session) {
+        addLog("❌ No active Supabase session!");
+        addLog("   auth.uid() will be NULL - RLS will block INSERT");
+        toast.error("Session Supabase expirée - reconnectez-vous");
+        return;
+      }
+      
+      addLog(`✅ Session active: ${sessionData.session.user.id.slice(0, 8)}...`);
+      
       const deviceType = isIOS ? "ios" : isAndroid ? "android" : "unknown";
       const deviceName = `${deviceType.toUpperCase()} Device`;
 
