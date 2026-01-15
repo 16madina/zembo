@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import goldenHand from "@/assets/golden-hand.png";
+import Dice3D from "./Dice3D";
 
 interface DiceAnimationProps {
   isExiting?: boolean;
@@ -27,13 +28,34 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
         damping: 15, 
         delay: 0.2 
       }}
-      className="relative w-72 h-72 z-10 flex items-center justify-center"
+      className="relative w-72 h-80 z-10 flex items-center justify-center"
     >
+      {/* 3D Dice positioned above the hand */}
+      <motion.div 
+        className="absolute -top-8 left-1/2 -translate-x-1/2 z-20"
+        animate={isExiting ? {
+          rotateZ: [0, 360, 720],
+          scale: [1, 1.3, 0.5],
+        } : {
+          y: [0, -5, 0],
+        }}
+        transition={isExiting ? {
+          duration: 0.8,
+          ease: "easeOut"
+        } : {
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        <Dice3D isAnimating={isExiting} />
+      </motion.div>
+
       {/* Golden Hand Image */}
       <motion.img
         src={goldenHand}
         alt="Golden Hand"
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain mt-16"
         animate={{ 
           y: [0, -8, 0],
           rotate: [0, 2, -2, 0]
