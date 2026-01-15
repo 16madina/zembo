@@ -410,17 +410,31 @@ export default function DebugNotifications() {
         <CardHeader>
           <CardTitle className="text-sm">Manual Token Test</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <textarea
             className="w-full bg-muted p-2 rounded text-xs font-mono h-20"
             placeholder="Paste FCM token here for manual testing..."
             onChange={(e) => {
               if (e.target.value.length > 50) {
-                setDebugInfo(prev => ({ ...prev, fcmToken: e.target.value }));
+                setDebugInfo(prev => ({ ...prev, fcmToken: e.target.value.trim() }));
               }
             }}
             defaultValue={debugInfo.fcmToken || ""}
           />
+          <Button 
+            onClick={() => {
+              if (debugInfo.fcmToken) {
+                saveTokenToDb(debugInfo.fcmToken);
+              } else {
+                toast.error("Aucun token à enregistrer");
+              }
+            }}
+            disabled={!debugInfo.fcmToken || !user}
+            className="w-full"
+            variant="secondary"
+          >
+            💾 Forcer l'enregistrement en base
+          </Button>
         </CardContent>
       </Card>
 
