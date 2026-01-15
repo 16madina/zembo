@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { create } from "https://deno.land/x/djwt@v2.8/mod.ts";
+import { 
+  getAccessToken, 
+  getUserDevices, 
+  sendToAllDevices,
+  ServiceAccountKey 
+} from "../_shared/send-to-all-devices.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,76 +19,6 @@ interface MessageNotificationRequest {
   content?: string;
   is_audio?: boolean;
   is_image?: boolean;
-}
-
-interface ServiceAccountKey {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
-}
-
-async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  
-  const jwtPayload = {
-    iss: serviceAccount.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-
-  const pemHeader = "-----BEGIN PRIVATE KEY-----";
-  const pemFooter = "-----END PRIVATE KEY-----";
-  const pemContents = serviceAccount.private_key
-    .replace(pemHeader, "")
-    .replace(pemFooter, "")
-    .replace(/\n/g, "");
-  
-  const binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
-    false,
-    ["sign"]
-  );
-
-  const jwt = await create(
-    { alg: "RS256", typ: "JWT" },
-    jwtPayload,
-    cryptoKey
-  );
-
-  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
-  });
-
-  const tokenResult = await tokenResponse.json();
-  
-  if (!tokenResponse.ok) {
-    throw new Error(`Failed to get access token: ${JSON.stringify(tokenResult)}`);
-  }
-
-  return tokenResult.access_token;
 }
 
 serve(async (req) => {
@@ -116,17 +51,13 @@ serve(async (req) => {
       );
     }
 
-    // Fetch receiver's profile with FCM token
-    const { data: receiverProfile, error: receiverError } = await supabase
-      .from("profiles")
-      .select("user_id, display_name, fcm_token")
-      .eq("user_id", receiver_id)
-      .single();
+    // Get all devices for the receiver
+    const devices = await getUserDevices(supabase, receiver_id);
 
-    if (receiverError || !receiverProfile?.fcm_token) {
-      console.log("No FCM token found for receiver:", receiver_id);
+    if (devices.length === 0) {
+      console.log("No devices found for receiver:", receiver_id);
       return new Response(
-        JSON.stringify({ success: true, message: "No FCM token available" }),
+        JSON.stringify({ success: true, message: "No devices available" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -152,62 +83,51 @@ serve(async (req) => {
       messagePreview = messagePreview.substring(0, 50) + "...";
     }
 
-    // Get OAuth2 access token
     const accessToken = await getAccessToken(serviceAccount);
 
-    // Send push notification via FCM HTTP v1 API
-    const fcmResponse = await fetch(
-      `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+    // Send to all devices
+    const result = await sendToAllDevices(
+      serviceAccount,
+      accessToken,
+      devices,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
+        notification: {
+          title: `💬 ${senderName}`,
+          body: messagePreview,
         },
-        body: JSON.stringify({
-          message: {
-            token: receiverProfile.fcm_token,
-            notification: {
-              title: `💬 ${senderName}`,
-              body: messagePreview,
-            },
-            apns: {
-              payload: {
-                aps: {
-                  sound: "default",
-                  badge: 1,
-                },
-              },
-            },
-            android: {
-              priority: "high",
-              notification: {
-                sound: "default",
-              },
-            },
-            data: {
-              type: "message",
-              sender_id: sender_id,
-              sender_name: senderName,
-              sender_avatar: senderProfile?.avatar_url || "",
-              message_id: message_id || "",
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
             },
           },
-        }),
-      }
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+          },
+        },
+        data: {
+          type: "message",
+          sender_id: sender_id,
+          sender_name: senderName,
+          sender_avatar: senderProfile?.avatar_url || "",
+          message_id: message_id || "",
+        },
+      },
+      supabase
     );
 
-    const fcmResult = await fcmResponse.json();
-
-    if (!fcmResponse.ok) {
-      console.error("FCM error:", fcmResult);
-      throw new Error(`FCM error: ${JSON.stringify(fcmResult)}`);
-    }
-
-    console.log("Message notification sent successfully:", fcmResult);
+    console.log(`Message notification sent to ${result.successCount}/${devices.length} devices`);
 
     return new Response(
-      JSON.stringify({ success: true, message_id: fcmResult.name }),
+      JSON.stringify({ 
+        success: true, 
+        devices_notified: result.successCount,
+        devices_failed: result.failedCount
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {

@@ -46,15 +46,38 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     try {
+      // Detect device type
+      const userAgent = navigator.userAgent.toLowerCase();
+      let deviceType = "unknown";
+      if (/iphone|ipad|ipod/.test(userAgent)) {
+        deviceType = "ios";
+      } else if (/android/.test(userAgent)) {
+        deviceType = "android";
+      }
+
+      // Generate a simple device name
+      const deviceName = `${deviceType.toUpperCase()} Device`;
+
+      // Upsert device token in user_devices table
       const { error } = await supabase
-        .from("profiles")
-        .update({ fcm_token: fcmToken })
-        .eq("user_id", user.id);
+        .from("user_devices")
+        .upsert(
+          {
+            user_id: user.id,
+            fcm_token: fcmToken,
+            device_type: deviceType,
+            device_name: deviceName,
+            last_used_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id,fcm_token",
+          }
+        );
 
       if (error) {
-        console.error("Error saving FCM token:", error);
+        console.error("Error saving device token:", error);
       } else {
-        console.log("FCM token registered successfully");
+        console.log("Device token registered successfully for", deviceType);
       }
     } catch (err) {
       console.error("Error registering token:", err);
