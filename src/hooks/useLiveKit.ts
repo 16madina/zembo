@@ -37,7 +37,22 @@ export interface LiveKitDebugInfo {
   remoteParticipants: number;
   remoteVideoTracks: number;
   hasRemoteVideoTrack: boolean;
+  hasRemoteAudioTrack: boolean;
+  audioPlaying: boolean;
 }
+
+// Helper to detect iOS
+const isIOS = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+};
+
+// Helper to detect Android
+const isAndroid = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return /Android/.test(navigator.userAgent);
+};
 
 export const useLiveKit = ({
   roomName,
@@ -55,10 +70,15 @@ export const useLiveKit = ({
   const [participantCount, setParticipantCount] = useState(0);
   const [remoteVideoTrack, setRemoteVideoTrack] = useState<Track | null>(null);
   const [remoteAudioTrack, setRemoteAudioTrack] = useState<Track | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const hasConnectedRef = useRef(false);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const hasUnlockedAudioRef = useRef(false);
 
   // Debug info state
   const [debugInfo, setDebugInfo] = useState<LiveKitDebugInfo>({
@@ -73,7 +93,122 @@ export const useLiveKit = ({
     remoteParticipants: 0,
     remoteVideoTracks: 0,
     hasRemoteVideoTrack: false,
+    hasRemoteAudioTrack: false,
+    audioPlaying: false,
   });
+
+  // Unlock audio for iOS - must be called on user interaction
+  const unlockAudio = useCallback(async () => {
+    if (hasUnlockedAudioRef.current) return;
+    
+    console.log("[LiveKit] 🔊 Unlocking audio for iOS/mobile...");
+    
+    try {
+      // Create or resume AudioContext (needed for iOS)
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      if (audioContextRef.current.state === "suspended") {
+        await audioContextRef.current.resume();
+        console.log("[LiveKit] ✓ AudioContext resumed");
+      }
+      
+      // Create a silent audio element and play it (iOS trick)
+      const silentAudio = new Audio();
+      silentAudio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBj+Y2vPEcyUELH/NLNiJOQgYZrrv6markup";
+      silentAudio.volume = 0.01;
+      silentAudio.muted = false;
+      silentAudio.setAttribute("playsinline", "");
+      
+      await silentAudio.play().catch(() => {});
+      silentAudio.pause();
+      silentAudio.remove();
+      
+      hasUnlockedAudioRef.current = true;
+      setNeedsAudioUnlock(false);
+      console.log("[LiveKit] ✓ Audio unlocked successfully");
+      
+      // If we have an audio track waiting, try to play it now
+      if (audioElementRef.current) {
+        audioElementRef.current.play().catch(e => {
+          console.warn("[LiveKit] Audio play after unlock failed:", e);
+        });
+      }
+    } catch (e) {
+      console.warn("[LiveKit] Audio unlock failed:", e);
+    }
+  }, []);
+
+  // Attach audio track with proper mobile handling
+  const attachAudioTrack = useCallback((track: Track) => {
+    console.log("[LiveKit] 🎵 Attaching audio track...");
+    
+    // Clean up existing audio element
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current.srcObject = null;
+      audioElementRef.current.remove();
+      audioElementRef.current = null;
+    }
+    
+    // Create new audio element with mobile-friendly attributes
+    const audioElement = document.createElement("audio");
+    audioElement.id = "livekit-remote-audio";
+    audioElement.style.display = "none";
+    audioElement.setAttribute("playsinline", "");
+    audioElement.setAttribute("autoplay", "");
+    audioElement.muted = false;
+    audioElement.volume = 1.0;
+    document.body.appendChild(audioElement);
+    audioElementRef.current = audioElement;
+    
+    // Attach the LiveKit track to our audio element
+    track.attach(audioElement);
+    
+    console.log("[LiveKit] Audio element created:", {
+      muted: audioElement.muted,
+      volume: audioElement.volume,
+      readyState: audioElement.readyState,
+      isIOS: isIOS(),
+      isAndroid: isAndroid(),
+    });
+    
+    // Try to play the audio
+    const tryPlay = async () => {
+      try {
+        await audioElement.play();
+        console.log("[LiveKit] ✓ Remote audio playing successfully");
+        setAudioPlaying(true);
+        setNeedsAudioUnlock(false);
+      } catch (err) {
+        console.warn("[LiveKit] ⚠️ Remote audio play blocked:", String(err));
+        setAudioPlaying(false);
+        setNeedsAudioUnlock(true);
+        
+        // Set up listeners for user gesture to unlock audio
+        const retryOnGesture = async () => {
+          await unlockAudio();
+          try {
+            await audioElement.play();
+            console.log("[LiveKit] ✓ Remote audio playing after user gesture");
+            setAudioPlaying(true);
+            setNeedsAudioUnlock(false);
+          } catch (e) {
+            console.warn("[LiveKit] Audio still blocked after gesture:", e);
+          }
+          document.removeEventListener("touchstart", retryOnGesture);
+          document.removeEventListener("click", retryOnGesture);
+        };
+        
+        document.addEventListener("touchstart", retryOnGesture, { once: true, passive: true });
+        document.addEventListener("click", retryOnGesture, { once: true });
+      }
+    };
+    
+    // Give track a moment to initialize, then play
+    setTimeout(tryPlay, 100);
+  }, [unlockAudio]);
 
   // Update debug info
   const updateDebugInfo = useCallback((currentRoom: Room | null) => {
@@ -86,6 +221,8 @@ export const useLiveKit = ({
         localAudioPublications: 0,
         remoteParticipants: 0,
         remoteVideoTracks: 0,
+        hasRemoteAudioTrack: false,
+        audioPlaying: false,
       }));
       return;
     }
@@ -95,6 +232,9 @@ export const useLiveKit = ({
     const remoteParticipants = Array.from(currentRoom.remoteParticipants.values());
     const remoteVideoCount = remoteParticipants.reduce((acc, p) => {
       return acc + Array.from(p.videoTrackPublications.values()).filter(pub => pub.track).length;
+    }, 0);
+    const remoteAudioCount = remoteParticipants.reduce((acc, p) => {
+      return acc + Array.from(p.audioTrackPublications.values()).filter(pub => pub.track).length;
     }, 0);
 
     setDebugInfo({
@@ -109,21 +249,29 @@ export const useLiveKit = ({
       remoteParticipants: remoteParticipants.length,
       remoteVideoTracks: remoteVideoCount,
       hasRemoteVideoTrack: !!remoteVideoTrack,
+      hasRemoteAudioTrack: remoteAudioCount > 0,
+      audioPlaying,
     });
-  }, [isStreamer, roomName, isConnecting, isConnected, error, remoteVideoTrack]);
+  }, [isStreamer, roomName, isConnecting, isConnected, error, remoteVideoTrack, audioPlaying]);
 
-  // Sync remote tracks - finds and attaches any available video tracks from remote participants
+  // Sync remote tracks - finds and attaches any available video/audio tracks from remote participants
   const syncRemoteTracks = useCallback((currentRoom: Room) => {
     if (isStreamer) return; // Only viewers need this
 
-    console.log("[LiveKit] syncRemoteTracks - Scanning for remote video tracks...");
+    console.log("[LiveKit] syncRemoteTracks - Scanning for remote tracks...");
     
     const remoteParticipants = Array.from(currentRoom.remoteParticipants.values());
     console.log("[LiveKit] Remote participants:", remoteParticipants.length);
 
+    let foundVideo = false;
+    let foundAudio = false;
+
     for (const participant of remoteParticipants) {
-      console.log("[LiveKit] Participant:", participant.identity, "Video pubs:", participant.videoTrackPublications.size);
+      console.log("[LiveKit] Participant:", participant.identity, 
+        "Video pubs:", participant.videoTrackPublications.size,
+        "Audio pubs:", participant.audioTrackPublications.size);
       
+      // Handle video tracks
       for (const [, publication] of participant.videoTrackPublications) {
         console.log("[LiveKit] Video publication:", {
           trackSid: publication.trackSid,
@@ -134,24 +282,53 @@ export const useLiveKit = ({
 
         // Force subscription if not subscribed
         if (!publication.isSubscribed && publication.trackSid) {
-          console.log("[LiveKit] Forcing subscription to track:", publication.trackSid);
+          console.log("[LiveKit] Forcing subscription to video track:", publication.trackSid);
           publication.setSubscribed(true);
         }
 
         // If we have a track, use it
-        if (publication.track && publication.track.kind === Track.Kind.Video) {
+        if (publication.track && publication.track.kind === Track.Kind.Video && !foundVideo) {
           console.log("[LiveKit] Found video track, attaching...");
           setRemoteVideoTrack(publication.track);
           if (remoteVideoRef.current) {
             publication.track.attach(remoteVideoRef.current);
           }
-          return; // Found one, stop searching
+          foundVideo = true;
+        }
+      }
+
+      // Handle audio tracks
+      for (const [, publication] of participant.audioTrackPublications) {
+        console.log("[LiveKit] Audio publication:", {
+          trackSid: publication.trackSid,
+          source: publication.source,
+          isSubscribed: publication.isSubscribed,
+          hasTrack: !!publication.track,
+        });
+
+        // Force subscription if not subscribed
+        if (!publication.isSubscribed && publication.trackSid) {
+          console.log("[LiveKit] Forcing subscription to audio track:", publication.trackSid);
+          publication.setSubscribed(true);
+        }
+
+        // If we have a track, attach it with mobile-friendly handling
+        if (publication.track && publication.track.kind === Track.Kind.Audio && !foundAudio) {
+          console.log("[LiveKit] Found audio track, attaching with mobile support...");
+          setRemoteAudioTrack(publication.track);
+          attachAudioTrack(publication.track);
+          foundAudio = true;
         }
       }
     }
 
-    console.log("[LiveKit] No remote video track found yet");
-  }, [isStreamer]);
+    if (!foundVideo) {
+      console.log("[LiveKit] No remote video track found yet");
+    }
+    if (!foundAudio) {
+      console.log("[LiveKit] No remote audio track found yet");
+    }
+  }, [isStreamer, attachAudioTrack]);
 
   // Get LiveKit token from edge function
   const getToken = useCallback(async () => {
@@ -285,9 +462,10 @@ export const useLiveKit = ({
               track.attach(remoteVideoRef.current);
             }
           } else if (track.kind === Track.Kind.Audio) {
+            console.log("[LiveKit] Setting remote audio track with mobile support");
             setRemoteAudioTrack(track);
-            // Audio tracks auto-play
-            track.attach();
+            // Use our custom audio attachment with iOS/Android support
+            attachAudioTrack(track);
           }
           updateDebugInfo(newRoom);
         }
@@ -302,6 +480,14 @@ export const useLiveKit = ({
             setRemoteVideoTrack(null);
           } else if (track.kind === Track.Kind.Audio) {
             setRemoteAudioTrack(null);
+            setAudioPlaying(false);
+            // Clean up audio element
+            if (audioElementRef.current) {
+              audioElementRef.current.pause();
+              audioElementRef.current.srcObject = null;
+              audioElementRef.current.remove();
+              audioElementRef.current = null;
+            }
           }
           updateDebugInfo(newRoom);
         }
@@ -381,7 +567,7 @@ export const useLiveKit = ({
       setError(err.message || "Failed to connect");
       setIsConnecting(false);
     }
-  }, [getToken, isStreamer, isConnecting, isConnected, publishStream, onParticipantJoined, onParticipantLeft, syncRemoteTracks, updateDebugInfo, roomName]);
+  }, [getToken, isStreamer, isConnecting, isConnected, publishStream, onParticipantJoined, onParticipantLeft, syncRemoteTracks, updateDebugInfo, roomName, attachAudioTrack]);
 
   // Disconnect from room
   const disconnect = useCallback(() => {
@@ -467,6 +653,18 @@ export const useLiveKit = ({
       if (room) {
         room.disconnect();
       }
+      // Clean up audio element
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current.srcObject = null;
+        audioElementRef.current.remove();
+        audioElementRef.current = null;
+      }
+      // Clean up audio context
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
     };
   }, [room]);
 
@@ -486,6 +684,9 @@ export const useLiveKit = ({
     isVideoOff,
     participantCount,
     remoteVideoTrack,
+    remoteAudioTrack,
+    audioPlaying,
+    needsAudioUnlock,
     debugInfo,
     connect,
     disconnect,
@@ -496,5 +697,6 @@ export const useLiveKit = ({
     setRemoteVideoRef,
     forceReconnect,
     forceResyncTracks,
+    unlockAudio,
   };
 };
