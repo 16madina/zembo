@@ -16,6 +16,7 @@ import MicrophoneTest from "@/components/random-call/MicrophoneTest";
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [hasPlayedZemboSound, setHasPlayedZemboSound] = useState(false);
   
   const {
     status,
@@ -49,13 +50,18 @@ const Random = () => {
   };
 
   const handleStartSearch = async (preference: string) => {
-    playZemboVoice();
+    // Only play zembo voice once per search session
+    if (!hasPlayedZemboSound) {
+      playZemboVoice();
+      setHasPlayedZemboSound(true);
+    }
     await startSearch(preference);
   };
 
   const handleReset = () => {
     endCall();
     setIsSelecting(false);
+    setHasPlayedZemboSound(false); // Reset for next search
   };
 
   const renderContent = () => {
