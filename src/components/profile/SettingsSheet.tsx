@@ -517,6 +517,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
   const handlePushToggle = (enabled: boolean) => {
     setPushEnabled(enabled);
     localStorage.setItem("zembo-push", String(enabled));
+    window.dispatchEvent(new Event("zembo-push-changed"));
     toast.success(t.saved);
   };
 
