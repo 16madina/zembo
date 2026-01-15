@@ -14,6 +14,7 @@ import {
   Hand,
   Settings2,
   RefreshCw,
+  Volume2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -146,6 +147,7 @@ const LiveRoom = () => {
     isMuted: liveKitMuted,
     isVideoOff: liveKitVideoOff,
     remoteVideoTrack,
+    needsAudioUnlock,
     debugInfo: liveKitDebugInfo,
     connect: connectLiveKit,
     disconnect: disconnectLiveKit,
@@ -156,6 +158,7 @@ const LiveRoom = () => {
     setRemoteVideoRef,
     forceReconnect: liveKitForceReconnect,
     forceResyncTracks: liveKitResyncTracks,
+    unlockAudio,
   } = useLiveKit({
     roomName,
     isStreamer,
@@ -619,6 +622,28 @@ const LiveRoom = () => {
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Reconnecter la vidéo
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Audio unlock button for iOS/mobile */}
+      <AnimatePresence>
+        {needsAudioUnlock && !isStreamer && liveKitConnected && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute top-44 left-1/2 -translate-x-1/2 z-50"
+          >
+            <Button
+              variant="default"
+              size="sm"
+              onClick={unlockAudio}
+              className="shadow-lg bg-primary hover:bg-primary/90 animate-pulse"
+            >
+              <Volume2 className="w-4 h-4 mr-2" />
+              Activer le son
             </Button>
           </motion.div>
         )}
