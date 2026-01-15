@@ -551,102 +551,126 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     setIsMuted(newMuted);
   }, [isMuted]);
 
+
   // Subscribe to session updates for decision synchronization
-  const subscribeToSessionUpdates = useCallback((currentSessionId: string) => {
-    console.log("[random-call-lk]", "subscribing to session updates", { sessionId: currentSessionId });
-
-    const channel = supabase
-      .channel(`random-call-session-${currentSessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "random_call_sessions",
-          filter: `id=eq.${currentSessionId}`,
-        },
-        async (payload) => {
-          const updated = payload.new as {
-            status: string;
-            user1_decision: string | null;
-            user2_decision: string | null;
-            user1_id: string;
-            user2_id: string;
-          };
-          console.log("[random-call-lk]", "session update received", updated);
-
-          // Check if session is completed
-          if (updated.status === "completed") {
-            const bothYes = updated.user1_decision === "yes" && updated.user2_decision === "yes";
-            const anyContinue = updated.user1_decision === "continue" || updated.user2_decision === "continue";
-            
-            if (bothYes) {
-              console.log("[random-call-lk]", "MATCH via realtime!");
-              setDecisionResult("matched");
-            } else if (anyContinue && updated.user1_decision !== "no" && updated.user2_decision !== "no") {
-              setDecisionResult("continued");
-            } else {
-              setDecisionResult("rejected");
-            }
-            
-            await cleanup(true);
-            setStatus("completed");
-          }
-        }
-      )
-      .subscribe((state) => {
-        console.log("[random-call-lk]", "session channel state", state);
+  const subscribeToSessionUpdates = useCallback(
+    (currentSessionId: string) => {
+      console.log("[random-call-lk]", "subscribing to session updates", {
+        sessionId: currentSessionId,
       });
 
-    sessionChannelRef.current = channel;
-  }, [cleanup]);
+      const channel = supabase
+        .channel(`random-call-session-${currentSessionId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "random_call_sessions",
+            filter: `id=eq.${currentSessionId}`,
+          },
+          async (payload) => {
+            const updated = payload.new as {
+              status: string;
+              user1_decision: string | null;
+              user2_decision: string | null;
+              user1_id: string;
+              user2_id: string;
+            };
+
+            console.log("[random-call-lk]", "session update received", updated);
+
+            // Check if session is completed
+            if (updated.status === "completed") {
+              const bothYes =
+                updated.user1_decision === "yes" && updated.user2_decision === "yes";
+              const anyContinue =
+                updated.user1_decision === "continue" ||
+                updated.user2_decision === "continue";
+
+              if (bothYes) {
+                console.log("[random-call-lk]", "MATCH via realtime!");
+                setDecisionResult("matched");
+              } else if (
+                anyContinue &&
+                updated.user1_decision !== "no" &&
+                updated.user2_decision !== "no"
+              ) {
+                setDecisionResult("continued");
+              } else {
+                setDecisionResult("rejected");
+              }
+
+              await cleanup(true);
+              setStatus("completed");
+            }
+          }
+        )
+        .subscribe((state) => {
+          console.log("[random-call-lk]", "session channel state", state);
+        });
+
+      sessionChannelRef.current = channel;
+    },
+    [cleanup]
+  );
 
   // Submit decision
-  const submitDecision = useCallback(async (decision: "yes" | "no" | "continue") => {
-    if (!sessionId || !user?.id) return;
+  const submitDecision = useCallback(
+    async (decision: "yes" | "no" | "continue") => {
+      if (!sessionId || !user?.id) return;
 
-    console.log("[random-call-lk]", "submitDecision", { decision, sessionId });
+      console.log("[random-call-lk]", "submitDecision", { decision, sessionId });
 
-    // Subscribe to session updates BEFORE submitting decision
-    if (!sessionChannelRef.current) {
-      subscribeToSessionUpdates(sessionId);
-    }
-
-    try {
-      const { data, error: rpcError } = await supabase.rpc("submit_random_call_decision", {
-        p_session_id: sessionId,
-        p_user_id: user.id,
-        p_decision: decision,
-      });
-
-      if (rpcError) {
-        console.error("[random-call-lk]", "decision error", rpcError);
-        return;
+      // Subscribe to session updates BEFORE submitting decision
+      if (!sessionChannelRef.current) {
+        subscribeToSessionUpdates(sessionId);
       }
 
-      const result = data as RpcResult;
-      console.log("[random-call-lk]", "decision result", result);
+      try {
+        const { data, error: rpcError } = await supabase.rpc(
+          "submit_random_call_decision",
+          {
+            p_session_id: sessionId,
+            p_user_id: user.id,
+            p_decision: decision,
+          }
+        );
 
-      if (result.completed) {
-        // Decision is final
-        if (result.matched) {
-          console.log("[random-call-lk]", "MATCH!");
-          setDecisionResult("matched");
-        } else if (result.continued) {
-          setDecisionResult("continued");
-        } else {
-          setDecisionResult("rejected");
+        if (rpcError) {
+          console.error("[random-call-lk]", "decision error", rpcError);
+          return;
         }
-        await cleanup(true);
-        setStatus("completed");
-      } else if (result.waiting) {
-        // Waiting for other user - the realtime subscription will handle the update
-        console.log("[random-call-lk]", "waiting for other user decision...");
+
+        const result = data as RpcResult;
+        console.log("[random-call-lk]", "decision result", result);
+
+        if (result.completed) {
+          // Decision is final
+          if (result.matched) {
+            console.log("[random-call-lk]", "MATCH!");
+            setDecisionResult("matched");
+          } else if (result.continued) {
+            setDecisionResult("continued");
+          } else {
+            setDecisionResult("rejected");
+          }
+
+          await cleanup(true);
+          setStatus("completed");
+        } else if (result.waiting) {
+          // Waiting for other user - the realtime subscription will handle the update
+          console.log(
+            "[random-call-lk]",
+            "waiting for other user decision..."
+          );
+        }
+      } catch (err) {
+        console.error("[random-call-lk]", "submitDecision error", err);
       }
-    } catch (err) {
-      console.error("[random-call-lk]", "submitDecision error", err);
-    }
-  }, [sessionId, user?.id, cleanup, subscribeToSessionUpdates]);
+    },
+    [sessionId, user?.id, cleanup, subscribeToSessionUpdates]
+  );
 
   // Cleanup on unmount - but don't cancel queue (user might be just navigating)
   useEffect(() => {
@@ -673,3 +697,4 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     submitDecision,
   };
 };
+
