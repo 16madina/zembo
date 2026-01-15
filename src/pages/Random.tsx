@@ -212,7 +212,7 @@ const Random = () => {
         <ZemboLogo />
       </motion.header>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-8 text-center overflow-hidden min-h-0 max-w-2xl md:mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-8 pb-4 text-center overflow-hidden min-h-0 max-w-2xl md:mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div key={status} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col items-center w-full">
             {renderContent()}
