@@ -23,14 +23,17 @@ const Random = () => {
     matchedUserId,
     isConnected,
     isMuted,
+    isSpeakerOn,
     audioLevel,
     error,
     timeRemaining,
     decisionResult,
+    waitingForOther,
     startSearch,
     cancelSearch,
     endCall,
     toggleMute,
+    toggleSpeaker,
     submitDecision,
   } = useRandomCallLiveKit();
   
@@ -84,11 +87,13 @@ const Random = () => {
             timeRemaining={timeRemaining}
             isConnected={isConnected}
             isMuted={isMuted}
+            isSpeakerOn={isSpeakerOn}
             audioLevel={audioLevel}
             error={error}
             matchedUserId={matchedUserId || undefined}
             sessionId={sessionId || undefined}
             onToggleMute={toggleMute}
+            onToggleSpeaker={toggleSpeaker}
             onEndCall={handleReset}
           />
         );
@@ -100,16 +105,18 @@ const Random = () => {
               timeRemaining={0}
               isConnected={isConnected}
               isMuted={isMuted}
+              isSpeakerOn={isSpeakerOn}
               audioLevel={audioLevel}
               error={error}
               matchedUserId={matchedUserId || undefined}
               sessionId={sessionId || undefined}
               onToggleMute={toggleMute}
+              onToggleSpeaker={toggleSpeaker}
               onEndCall={handleReset}
             />
             <DecisionOverlay 
               onDecide={submitDecision} 
-              waitingForOther={false}
+              waitingForOther={waitingForOther}
               timeRemaining={0}
             />
           </div>
