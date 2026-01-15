@@ -76,7 +76,7 @@ const JoinRequestButton = ({ liveId, streamerId, onAccepted }: JoinRequestButton
               className="text-muted-foreground hover:text-destructive"
             >
               <X className="w-4 h-4 mr-1" />
-              Annuler
+              Annuler ma demande
             </Button>
           </motion.div>
         ) : (
@@ -121,7 +121,7 @@ const JoinRequestButton = ({ liveId, streamerId, onAccepted }: JoinRequestButton
 
           <div className="space-y-4 py-4">
             <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
-              <span className="text-muted-foreground">Coût de la demande</span>
+              <span className="text-muted-foreground">Coût si accepté</span>
               <div className="flex items-center gap-2 text-lg font-bold text-primary">
                 <Coins className="w-5 h-5" />
                 {joinCost} coins
@@ -148,9 +148,10 @@ const JoinRequestButton = ({ liveId, streamerId, onAccepted }: JoinRequestButton
                 <strong>Comment ça marche :</strong>
               </p>
               <ul className="space-y-1 list-disc list-inside">
-                <li>Le streamer a 60s pour répondre</li>
-                <li>Si accepté, vous rejoignez le live en vidéo</li>
-                <li>Si refusé ou pas de réponse, remboursement à 100%</li>
+                <li>L'hôte reçoit votre demande instantanément</li>
+                <li>Les coins ne sont prélevés que si l'hôte accepte</li>
+                <li>Vous pouvez annuler votre demande à tout moment</li>
+                <li>Si refusé, aucun prélèvement</li>
               </ul>
             </div>
           </div>
@@ -170,9 +171,9 @@ const JoinRequestButton = ({ liveId, streamerId, onAccepted }: JoinRequestButton
               {sendingRequest ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Coins className="w-4 h-4" />
+                <Hand className="w-4 h-4" />
               )}
-              Envoyer ({joinCost} coins)
+              Envoyer la demande
             </Button>
           </DialogFooter>
         </DialogContent>
