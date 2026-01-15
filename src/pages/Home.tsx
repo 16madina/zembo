@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal, SearchX, Loader2, MapPin } from "lucide-react";
+import { SlidersHorizontal, SearchX, Loader2, MapPin, Coins } from "lucide-react";
+import ShopButton from "@/components/shop/ShopButton";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -369,16 +370,7 @@ const Home = () => {
       >
         <div className="flex items-center gap-2">
           <ZemboLogo />
-          {userLocation.latitude && userLocation.longitude && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30"
-            >
-              <MapPin className="w-3 h-3 text-green-500" />
-              <span className="text-xs text-green-500 font-medium">GPS</span>
-            </motion.div>
-          )}
+          <ShopButton variant="compact" className="ml-1" />
         </div>
         <motion.button 
           onClick={() => setIsFilterOpen(true)}
@@ -399,7 +391,7 @@ const Home = () => {
 
       {/* Navigation Tabs */}
       <motion.div 
-        className="flex justify-center gap-2 px-4 mb-1.5 flex-shrink-0"
+        className="flex justify-center items-center gap-2 px-4 mb-1.5 flex-shrink-0"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
@@ -431,6 +423,18 @@ const Home = () => {
             <span className="relative z-10">{tab.label}</span>
           </motion.button>
         ))}
+        
+        {/* GPS indicator next to nearby tab */}
+        {userLocation.latitude && userLocation.longitude && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 border border-green-500/30"
+          >
+            <MapPin className="w-3 h-3 text-green-500" />
+            <span className="text-xs text-green-500 font-medium">GPS</span>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Card Stack or Map */}
