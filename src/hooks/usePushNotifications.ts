@@ -205,10 +205,10 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       await PushNotifications.removeAllListeners();
 
       // Listen for registration success
-      PushNotifications.addListener("registration", (token: PushNotificationToken) => {
-        console.log("Push registration success, token:", token.value);
-        setToken(token.value);
-        registerToken(token.value);
+      PushNotifications.addListener("registration", (tokenData: PushNotificationToken) => {
+        console.log("Push registration success, token:", tokenData.value);
+        setToken(tokenData.value);
+        registerToken(tokenData.value);
       });
 
       // Listen for registration errors
@@ -252,7 +252,23 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
         if (permission.receive !== "granted") return;
       }
 
-      await PushNotifications.register();
+      // Register for push notifications - this may trigger "registration" event
+      // or return the token directly if already registered
+      const result = await PushNotifications.register();
+      console.log("PushNotifications.register() result:", result);
+
+      // On iOS, the token might already be available from a previous session
+      // Try to get the delivery token using a short delay
+      setTimeout(async () => {
+        try {
+          // Attempt to get the token by calling register again
+          // The registration event should have fired by now
+          const checkResult = await PushNotifications.checkPermissions();
+          console.log("Permission check after register:", checkResult);
+        } catch (e) {
+          console.log("Post-register check:", e);
+        }
+      }, 1000);
     } catch (error) {
       console.error("Error initializing push notifications:", error);
     }
