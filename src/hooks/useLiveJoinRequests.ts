@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCoins } from "@/hooks/useCoins";
@@ -7,14 +7,13 @@ import { toast } from "sonner";
 const JOIN_REQUEST_COST = 50;
 const STREAMER_SHARE = 0.7; // 70% to streamer
 const PLATFORM_SHARE = 0.3; // 30% platform fee
-const REQUEST_TIMEOUT = 60000; // 60 seconds
 
 export interface JoinRequest {
   id: string;
   live_id: string;
   user_id: string;
   coins_spent: number;
-  status: "pending" | "accepted" | "rejected" | "expired";
+  status: "pending" | "accepted" | "rejected";
   created_at: string;
   responded_at: string | null;
   profile?: {
@@ -30,7 +29,6 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
   const [myRequest, setMyRequest] = useState<JoinRequest | null>(null);
   const [loading, setLoading] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
-  const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const isStreamer = user?.id === streamerId;
 
@@ -64,11 +62,6 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
     );
 
     setRequests(requestsWithProfiles);
-
-    // Set up timeouts for each request
-    requestsWithProfiles.forEach((request) => {
-      setupRequestTimeout(request);
-    });
   }, [liveId, isStreamer]);
 
   // Fetch my request (for viewer)
@@ -90,61 +83,11 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
     }
   }, [liveId, user, isStreamer]);
 
-  // Setup timeout for a request
-  const setupRequestTimeout = useCallback((request: JoinRequest) => {
-    // Clear existing timeout if any
-    const existingTimeout = timeoutsRef.current.get(request.id);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
-
-    const createdAt = new Date(request.created_at).getTime();
-    const timeLeft = REQUEST_TIMEOUT - (Date.now() - createdAt);
-
-    if (timeLeft > 0) {
-      const timeout = setTimeout(async () => {
-        // Auto-expire the request
-        await handleExpireRequest(request.id, request.user_id, request.coins_spent);
-      }, timeLeft);
-
-      timeoutsRef.current.set(request.id, timeout);
-    } else {
-      // Already expired, handle it
-      handleExpireRequest(request.id, request.user_id, request.coins_spent);
-    }
-  }, []);
-
-  // Handle request expiration
-  const handleExpireRequest = async (requestId: string, userId: string, coinsSpent: number) => {
-    // Update request status
-    await supabase
-      .from("live_join_requests")
-      .update({ status: "expired", responded_at: new Date().toISOString() })
-      .eq("id", requestId);
-
-    // Refund coins to user
-    const { data: currentCoins } = await supabase
-      .from("user_coins")
-      .select("balance")
-      .eq("user_id", userId)
-      .single();
-
-    if (currentCoins) {
-      await supabase
-        .from("user_coins")
-        .update({ balance: currentCoins.balance + coinsSpent })
-        .eq("user_id", userId);
-    }
-
-    // Remove from local state
-    setRequests(prev => prev.filter(r => r.id !== requestId));
-    timeoutsRef.current.delete(requestId);
-  };
-
-  // Send join request (viewer)
+  // Send join request (viewer) - only verify coins, don't deduct
   const sendJoinRequest = async (): Promise<boolean> => {
     if (!user || !liveId || sendingRequest) return false;
 
+    // Only verify the user has enough coins
     if (balance < JOIN_REQUEST_COST) {
       toast.error(`Solde insuffisant. Il vous faut ${JOIN_REQUEST_COST} coins.`);
       return false;
@@ -153,14 +96,7 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
     setSendingRequest(true);
 
     try {
-      // Deduct coins first
-      const coinSuccess = await spendCoins(JOIN_REQUEST_COST);
-      if (!coinSuccess) {
-        toast.error("Erreur lors du paiement");
-        return false;
-      }
-
-      // Create the join request
+      // Create the join request (no coin deduction yet)
       const { data, error } = await supabase
         .from("live_join_requests")
         .insert({
@@ -173,20 +109,9 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
         .single();
 
       if (error) {
-        // Refund coins on error
-        await addCoins(JOIN_REQUEST_COST);
         toast.error("Erreur lors de l'envoi de la demande");
         return false;
       }
-
-      // Record transaction
-      await supabase.from("coin_transactions").insert({
-        user_id: user.id,
-        amount: -JOIN_REQUEST_COST,
-        type: "join_request",
-        reference_id: data.id,
-        description: "Demande de participation au live"
-      });
 
       setMyRequest(data as JoinRequest);
       toast.success("Demande envoyée ! En attente de réponse...");
@@ -200,33 +125,21 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
     }
   };
 
-  // Cancel my request (viewer)
+  // Cancel my request (viewer) - no refund needed since coins weren't deducted
   const cancelRequest = async (): Promise<boolean> => {
     if (!myRequest || !user) return false;
 
     try {
-      // Update status
+      // Simply delete the request
       const { error } = await supabase
         .from("live_join_requests")
-        .update({ status: "rejected", responded_at: new Date().toISOString() })
+        .delete()
         .eq("id", myRequest.id);
 
       if (error) throw error;
 
-      // Refund coins
-      await addCoins(myRequest.coins_spent);
-
-      // Record refund transaction
-      await supabase.from("coin_transactions").insert({
-        user_id: user.id,
-        amount: myRequest.coins_spent,
-        type: "refund",
-        reference_id: myRequest.id,
-        description: "Annulation de demande de participation"
-      });
-
       setMyRequest(null);
-      toast.info("Demande annulée, coins remboursés");
+      toast.info("Demande annulée");
       return true;
     } catch (error) {
       console.error("Error canceling request:", error);
@@ -234,11 +147,48 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
     }
   };
 
-  // Accept request (streamer)
+  // Accept request (streamer) - deduct coins from requester NOW
   const acceptRequest = async (request: JoinRequest): Promise<boolean> => {
     if (!user || !isStreamer) return false;
 
     try {
+      // First, verify the requester still has enough coins
+      const { data: requesterCoins } = await supabase
+        .from("user_coins")
+        .select("balance")
+        .eq("user_id", request.user_id)
+        .single();
+
+      if (!requesterCoins || requesterCoins.balance < request.coins_spent) {
+        // Requester no longer has enough coins, delete request
+        await supabase
+          .from("live_join_requests")
+          .delete()
+          .eq("id", request.id);
+
+        setRequests(prev => prev.filter(r => r.id !== request.id));
+        toast.error("L'utilisateur n'a plus assez de coins");
+        return false;
+      }
+
+      // Deduct coins from requester
+      await supabase
+        .from("user_coins")
+        .update({ 
+          balance: requesterCoins.balance - request.coins_spent,
+          total_spent: (requesterCoins as any).total_spent + request.coins_spent 
+        })
+        .eq("user_id", request.user_id);
+
+      // Record transaction for requester
+      await supabase.from("coin_transactions").insert({
+        user_id: request.user_id,
+        amount: -request.coins_spent,
+        type: "join_request",
+        reference_id: request.id,
+        description: "Demande de participation au live acceptée"
+      });
+
       // Update request status
       const { error } = await supabase
         .from("live_join_requests")
@@ -249,28 +199,18 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
 
       // Calculate shares
       const streamerAmount = Math.floor(request.coins_spent * STREAMER_SHARE);
-      const platformAmount = request.coins_spent - streamerAmount;
 
       // Add coins to streamer
       await addCoins(streamerAmount);
 
-      // Record transactions
-      await supabase.from("coin_transactions").insert([
-        {
-          user_id: user.id,
-          amount: streamerAmount,
-          type: "gift_received",
-          reference_id: request.id,
-          description: `Participation acceptée (${STREAMER_SHARE * 100}%)`
-        }
-      ]);
-
-      // Clear timeout
-      const timeout = timeoutsRef.current.get(request.id);
-      if (timeout) {
-        clearTimeout(timeout);
-        timeoutsRef.current.delete(request.id);
-      }
+      // Record transaction for streamer
+      await supabase.from("coin_transactions").insert({
+        user_id: user.id,
+        amount: streamerAmount,
+        type: "gift_received",
+        reference_id: request.id,
+        description: `Participation acceptée (${STREAMER_SHARE * 100}%)`
+      });
 
       // Remove from local state
       setRequests(prev => prev.filter(r => r.id !== request.id));
@@ -284,44 +224,23 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
     }
   };
 
-  // Reject request (streamer)
+  // Reject request (streamer) - just delete, no refund needed
   const rejectRequest = async (request: JoinRequest): Promise<boolean> => {
     if (!user || !isStreamer) return false;
 
     try {
-      // Update request status
+      // Simply delete the request (no coins were deducted)
       const { error } = await supabase
         .from("live_join_requests")
-        .update({ status: "rejected", responded_at: new Date().toISOString() })
+        .delete()
         .eq("id", request.id);
 
       if (error) throw error;
 
-      // Refund coins to requester
-      const { data: requesterCoins } = await supabase
-        .from("user_coins")
-        .select("balance")
-        .eq("user_id", request.user_id)
-        .single();
-
-      if (requesterCoins) {
-        await supabase
-          .from("user_coins")
-          .update({ balance: requesterCoins.balance + request.coins_spent })
-          .eq("user_id", request.user_id);
-      }
-
-      // Clear timeout
-      const timeout = timeoutsRef.current.get(request.id);
-      if (timeout) {
-        clearTimeout(timeout);
-        timeoutsRef.current.delete(request.id);
-      }
-
       // Remove from local state
       setRequests(prev => prev.filter(r => r.id !== request.id));
 
-      toast.info("Demande refusée, coins remboursés");
+      toast.info("Demande refusée");
       return true;
     } catch (error) {
       console.error("Error rejecting request:", error);
@@ -360,7 +279,6 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
 
             const requestWithProfile = { ...newRequest, profile } as JoinRequest;
             setRequests(prev => [...prev, requestWithProfile]);
-            setupRequestTimeout(requestWithProfile);
 
             toast.info(`${profile?.display_name || "Quelqu'un"} veut rejoindre le live !`);
           }
@@ -375,17 +293,24 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
             if (updated.user_id === user.id) {
               if (updated.status === "accepted") {
                 setMyRequest(null);
+                refetchCoins(); // Refresh coin balance after deduction
                 toast.success("🎉 Votre demande a été acceptée !");
-                // Trigger stage join logic here if needed
               } else if (updated.status === "rejected") {
                 setMyRequest(null);
-                refetchCoins();
-                toast.info("Demande refusée, coins remboursés");
-              } else if (updated.status === "expired") {
-                setMyRequest(null);
-                refetchCoins();
-                toast.info("Temps écoulé, coins remboursés");
+                toast.info("Demande refusée");
               }
+            }
+          }
+
+          if (payload.eventType === "DELETE") {
+            const deleted = payload.old as JoinRequest;
+
+            // Remove from local state
+            setRequests(prev => prev.filter(r => r.id !== deleted.id));
+
+            // If this was my request
+            if (deleted.user_id === user.id) {
+              setMyRequest(null);
             }
           }
         }
@@ -394,11 +319,8 @@ export const useLiveJoinRequests = (liveId: string, streamerId?: string) => {
 
     return () => {
       supabase.removeChannel(channel);
-      // Clear all timeouts
-      timeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
-      timeoutsRef.current.clear();
     };
-  }, [liveId, user, isStreamer, setupRequestTimeout, refetchCoins]);
+  }, [liveId, user, isStreamer, refetchCoins]);
 
   // Initial fetch
   useEffect(() => {

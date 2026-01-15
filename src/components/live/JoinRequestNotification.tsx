@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Coins, Clock, User } from "lucide-react";
+import { Check, X, Coins, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { JoinRequest } from "@/hooks/useLiveJoinRequests";
@@ -16,27 +16,7 @@ const JoinRequestNotification = ({
   onAccept,
   onReject
 }: JoinRequestNotificationProps) => {
-  const [timeLeft, setTimeLeft] = useState(60);
   const [processing, setProcessing] = useState(false);
-
-  useEffect(() => {
-    const createdAt = new Date(request.created_at).getTime();
-    const elapsed = Math.floor((Date.now() - createdAt) / 1000);
-    const remaining = Math.max(0, 60 - elapsed);
-    setTimeLeft(remaining);
-
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [request.created_at]);
 
   const handleAccept = async () => {
     setProcessing(true);
@@ -50,9 +30,6 @@ const JoinRequestNotification = ({
     setProcessing(false);
   };
 
-  const progressPercent = (timeLeft / 60) * 100;
-  const isUrgent = timeLeft <= 15;
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 100, scale: 0.9 }}
@@ -60,26 +37,12 @@ const JoinRequestNotification = ({
       exit={{ opacity: 0, x: 100, scale: 0.9 }}
       className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card to-card/80 border border-border/50 shadow-xl"
     >
-      {/* Progress bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-muted/30">
-        <motion.div
-          className={`h-full ${isUrgent ? "bg-destructive" : "bg-primary"}`}
-          initial={{ width: "100%" }}
-          animate={{ width: `${progressPercent}%` }}
-          transition={{ duration: 1 }}
-        />
-      </div>
-
       <div className="p-4 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Demande de participation
           </span>
-          <div className={`flex items-center gap-1 text-sm ${isUrgent ? "text-destructive" : "text-muted-foreground"}`}>
-            <Clock className="w-3 h-3" />
-            <span className="font-mono">{timeLeft}s</span>
-          </div>
         </div>
 
         {/* User info */}
@@ -110,7 +73,7 @@ const JoinRequestNotification = ({
             variant="outline"
             size="sm"
             onClick={handleReject}
-            disabled={processing || timeLeft === 0}
+            disabled={processing}
             className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10"
           >
             <X className="w-4 h-4 mr-1" />
@@ -119,7 +82,7 @@ const JoinRequestNotification = ({
           <Button
             size="sm"
             onClick={handleAccept}
-            disabled={processing || timeLeft === 0}
+            disabled={processing}
             className="flex-1 bg-green-600 hover:bg-green-700"
           >
             <Check className="w-4 h-4 mr-1" />
