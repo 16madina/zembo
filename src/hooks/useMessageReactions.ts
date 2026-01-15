@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -22,17 +22,27 @@ export const useMessageReactions = (messageIds: string[]) => {
   const { toast } = useToast();
   const [reactions, setReactions] = useState<Record<string, MessageReaction[]>>({});
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Store messageIds in a ref to prevent dependency changes on every render
+  const messageIdsRef = useRef<string[]>([]);
+  const lastFetchedIdsRef = useRef<string>("");
 
-  // Fetch reactions for all messages
-  const fetchReactions = useCallback(async () => {
-    if (!messageIds.length) return;
+  // Fetch reactions for all messages - with deduplication
+  const fetchReactions = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
 
+    const idsKey = ids.sort().join(",");
+    // Skip if we already fetched these exact IDs
+    if (idsKey === lastFetchedIdsRef.current) return;
+    
+    lastFetchedIdsRef.current = idsKey;
     setIsLoading(true);
+    
     try {
       const { data, error } = await supabase
         .from("message_reactions")
         .select("*")
-        .in("message_id", messageIds);
+        .in("message_id", ids);
 
       if (error) throw error;
 
@@ -51,7 +61,7 @@ export const useMessageReactions = (messageIds: string[]) => {
     } finally {
       setIsLoading(false);
     }
-  }, [messageIds]);
+  }, []);
 
   // Add a reaction
   const addReaction = async (messageId: string, emoji: string) => {
@@ -138,14 +148,24 @@ export const useMessageReactions = (messageIds: string[]) => {
     }));
   };
 
+  // Stable memoized messageIds key to prevent unnecessary re-subscriptions
+  const messageIdsKey = useMemo(() => messageIds.sort().join(","), [messageIds]);
+
   // Subscribe to realtime changes
   useEffect(() => {
     if (!messageIds.length) return;
+    
+    // Update ref for use in callbacks
+    messageIdsRef.current = messageIds;
 
-    fetchReactions();
+    // Fetch only if IDs changed
+    fetchReactions(messageIds);
 
+    // Use a stable channel name based on conversation context, not all message IDs
+    const channelName = `message-reactions-${messageIdsKey.slice(0, 50)}`;
+    
     const channel = supabase
-      .channel("message-reactions")
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -156,16 +176,17 @@ export const useMessageReactions = (messageIds: string[]) => {
         (payload) => {
           const reaction = payload.new as MessageReaction | null;
           const oldReaction = payload.old as MessageReaction | null;
+          const currentIds = messageIdsRef.current;
 
           if (payload.eventType === "INSERT" && reaction) {
-            if (messageIds.includes(reaction.message_id)) {
+            if (currentIds.includes(reaction.message_id)) {
               setReactions((prev) => ({
                 ...prev,
                 [reaction.message_id]: [...(prev[reaction.message_id] || []), reaction],
               }));
             }
           } else if (payload.eventType === "DELETE" && oldReaction) {
-            if (messageIds.includes(oldReaction.message_id)) {
+            if (currentIds.includes(oldReaction.message_id)) {
               setReactions((prev) => ({
                 ...prev,
                 [oldReaction.message_id]: (prev[oldReaction.message_id] || []).filter(
@@ -181,7 +202,7 @@ export const useMessageReactions = (messageIds: string[]) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [messageIds.join(",")]);
+  }, [messageIdsKey, fetchReactions]);
 
   return {
     reactions,

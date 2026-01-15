@@ -898,10 +898,11 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     }
   }, [status, sessionId, subscribeToSessionUpdates]);
 
-  // Cleanup on unmount - but don't cancel queue (user might be just navigating)
+  // Cleanup on unmount - cancel queue to release user
   useEffect(() => {
     return () => {
-      cleanup(false);
+      // Always cancel queue on unmount to ensure user is freed
+      cleanup(true);
     };
   }, [cleanup]);
 

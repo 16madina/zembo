@@ -510,7 +510,10 @@ const LiveRoom = () => {
     }, 1000);
   }, [liveKitForceReconnect, connectLiveKit, id, navigate]);
 
-  // Fetch and subscribe to messages
+  // Maximum messages to keep in memory for performance
+  const MAX_LIVE_MESSAGES = 100;
+
+  // Fetch and subscribe to messages with pagination
   useEffect(() => {
     if (!id) return;
 
@@ -519,12 +522,15 @@ const LiveRoom = () => {
         .from("live_messages")
         .select("*")
         .eq("live_id", id)
-        .order("created_at", { ascending: true })
-        .limit(100);
+        .order("created_at", { ascending: false })
+        .limit(MAX_LIVE_MESSAGES);
 
       if (messagesData && messagesData.length > 0) {
+        // Reverse to show oldest first
+        const orderedMessages = [...messagesData].reverse();
+        
         // Fetch profiles for all message authors
-        const userIds = [...new Set(messagesData.map((m) => m.user_id))];
+        const userIds = [...new Set(orderedMessages.map((m) => m.user_id))];
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, display_name, avatar_url")
@@ -534,7 +540,7 @@ const LiveRoom = () => {
           profiles?.map((p) => [p.user_id, p]) || []
         );
 
-        const messagesWithProfiles: LiveMessage[] = messagesData.map((msg) => ({
+        const messagesWithProfiles: LiveMessage[] = orderedMessages.map((msg) => ({
           ...msg,
           profile: profileMap.get(msg.user_id) || {
             display_name: null,
@@ -573,7 +579,14 @@ const LiveRoom = () => {
             profile: profile || { display_name: null, avatar_url: null },
           };
 
-          setMessages((prev) => [...prev, messageWithProfile]);
+          // Add new message and trim to max limit to prevent memory bloat
+          setMessages((prev) => {
+            const updated = [...prev, messageWithProfile];
+            if (updated.length > MAX_LIVE_MESSAGES) {
+              return updated.slice(-MAX_LIVE_MESSAGES);
+            }
+            return updated;
+          });
         }
       )
       .subscribe();
