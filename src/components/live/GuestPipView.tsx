@@ -61,7 +61,7 @@ const GuestPipView = ({
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0, opacity: 0 }}
-      className={`absolute bottom-56 right-4 ${pipSize} rounded-2xl overflow-hidden shadow-2xl border-2 border-primary/50 z-30 cursor-grab active:cursor-grabbing`}
+      className={`absolute top-[45%] -translate-y-1/2 right-4 ${pipSize} rounded-2xl overflow-hidden shadow-2xl border-2 border-primary/50 z-30 cursor-grab active:cursor-grabbing`}
       style={{
         background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%)",
       }}
