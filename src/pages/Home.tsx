@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal, SearchX, Loader2, MapPin, Coins } from "lucide-react";
+import { SlidersHorizontal, SearchX, Loader2, MapPin, Coins, Undo2, Crown } from "lucide-react";
 import ShopButton from "@/components/shop/ShopButton";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
@@ -22,6 +22,7 @@ import { useGifts } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { useRoseReceived } from "@/hooks/useRoseReceived";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
@@ -44,6 +45,7 @@ const Home = () => {
   const { toast } = useToast();
   const { gifts, sendGift } = useGifts();
   const { balance } = useCoins();
+  const { isPremium } = useSubscription();
   const { 
     roseReceived, 
     isModalOpen: isRoseReceivedModalOpen, 
@@ -65,6 +67,13 @@ const Home = () => {
   const [isRoseModalOpen, setIsRoseModalOpen] = useState(false);
   const [roseTargetProfile, setRoseTargetProfile] = useState<Profile | null>(null);
   const [isSendingRose, setIsSendingRose] = useState(false);
+  
+  // Undo functionality - store last swipe
+  const [lastSwipe, setLastSwipe] = useState<{
+    profile: Profile;
+    direction: "left" | "right" | "up";
+    index: number;
+  } | null>(null);
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
@@ -175,6 +184,13 @@ const Home = () => {
     const swipedProfile = currentProfile;
     if (!swipedProfile || !user) return;
     
+    // Store for undo
+    setLastSwipe({
+      profile: swipedProfile,
+      direction,
+      index: currentIndex
+    });
+    
     if (direction === "right" || direction === "up") {
       const isSuperLike = direction === "up";
       
@@ -226,6 +242,52 @@ const Home = () => {
       }
       setCurrentIndex(0);
     }
+  };
+
+  // Undo last swipe - Premium only
+  const handleUndo = async () => {
+    if (!lastSwipe || !user) return;
+    
+    // Revert to previous profile
+    setCurrentIndex(lastSwipe.index);
+    
+    // If it was a like/super like, remove from database
+    if (lastSwipe.direction === "right" || lastSwipe.direction === "up") {
+      try {
+        await supabase
+          .from("likes")
+          .delete()
+          .eq("liker_id", user.id)
+          .eq("liked_id", lastSwipe.profile.id);
+        
+        // Remove from liked profiles set
+        setLikedProfiles((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(lastSwipe.profile.id);
+          return newSet;
+        });
+        
+        toast({
+          title: "Annulé ↩️",
+          description: `Swipe sur ${lastSwipe.profile.name} annulé`,
+        });
+      } catch (err) {
+        console.error("Error undoing like:", err);
+        toast({
+          title: "Erreur",
+          description: "Impossible d'annuler le swipe",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Annulé ↩️",
+        description: `Retour à ${lastSwipe.profile.name}`,
+      });
+    }
+    
+    // Clear last swipe
+    setLastSwipe(null);
   };
 
   const handlePass = () => handleSwipe("left");
@@ -490,16 +552,33 @@ const Home = () => {
                     </h3>
                   </motion.div>
                 ) : currentProfile ? (
-                  <ProfileCard
-                    key={currentProfile.id}
-                    profile={currentProfile}
-                    onSwipe={handleSwipe}
-                    onInfoClick={handleInfoClick}
-                    onLike={handleLike}
-                    onPass={handlePass}
-                    onSuperLike={handleSuperLike}
-                    onSendRose={handleOpenRoseModalFromCard}
-                  />
+                  <>
+                    {/* Undo Button - Premium only, positioned at top left of card */}
+                    {isPremium && lastSwipe && (
+                      <motion.button
+                        onClick={handleUndo}
+                        initial={{ opacity: 0, scale: 0, x: -20 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0, x: -20 }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="absolute top-2 left-2 z-20 p-2.5 glass rounded-full text-amber-500 border border-amber-500/30 shadow-lg"
+                      >
+                        <Undo2 className="w-5 h-5" />
+                        <Crown className="absolute -top-1 -right-1 w-3 h-3 text-amber-500" fill="currentColor" />
+                      </motion.button>
+                    )}
+                    <ProfileCard
+                      key={currentProfile.id}
+                      profile={currentProfile}
+                      onSwipe={handleSwipe}
+                      onInfoClick={handleInfoClick}
+                      onLike={handleLike}
+                      onPass={handlePass}
+                      onSuperLike={handleSuperLike}
+                      onSendRose={handleOpenRoseModalFromCard}
+                    />
+                  </>
                 ) : (
                   <motion.div
                     key="empty"
