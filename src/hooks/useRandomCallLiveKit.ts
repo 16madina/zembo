@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Room, RoomEvent, Track } from "livekit-client";
 import { RealtimeChannel } from "@supabase/supabase-js";
+import { haptics, isNative } from "@/lib/capacitor";
 
 export type RandomCallStatus = 
   | "idle"
@@ -618,6 +619,10 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           setStatus((prevStatus) => {
             if (prevStatus === "in_call") {
               console.log("[random-call-lk]", "60s elapsed - showing decision overlay");
+              // Trigger strong haptic feedback to alert user
+              if (isNative) {
+                haptics.notification('warning');
+              }
               return "in_call_deciding";
             }
             return prevStatus;
@@ -641,6 +646,10 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           // At 30s remaining, show decision overlay
           if (prev === DECISION_TRIGGER_SECONDS) {
             console.log("[random-call-lk]", "60s elapsed (local) - showing decision overlay");
+            // Trigger strong haptic feedback to alert user
+            if (isNative) {
+              haptics.notification('warning');
+            }
             setStatus("in_call_deciding");
           }
           
