@@ -139,123 +139,89 @@ const MicrophoneTest = ({ onTestComplete }: MicrophoneTestProps) => {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center gap-4 p-4 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50"
+      className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50"
     >
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Volume2 className="w-4 h-4" />
-        <span>Test du microphone</span>
-      </div>
-
-      {/* VU Meter */}
-      <div className="flex items-end justify-center gap-1 h-10 px-4">
+      {/* VU Meter - compact horizontal */}
+      <div className="flex items-center gap-0.5 h-6">
         {Array.from({ length: barCount }).map((_, i) => {
           const height = getBarHeight(i);
           const isActive = status === "testing" && audioLevel > 10;
           return (
             <motion.div
               key={i}
-              className={`w-2 rounded-full transition-colors ${
+              className={`w-1.5 rounded-full transition-colors ${
                 status === "success" ? "bg-green-500" :
                 status === "error" ? "bg-destructive" :
                 isActive ? "bg-primary" : "bg-muted-foreground/30"
               }`}
-              animate={{ height }}
+              animate={{ height: Math.max(4, height * 0.8) }}
               transition={{ type: "spring", stiffness: 400, damping: 15 }}
             />
           );
         })}
       </div>
 
-      {/* Status indicator */}
-      <AnimatePresence mode="wait">
-        {status === "idle" && (
-          <motion.p
-            key="idle"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-xs text-muted-foreground text-center"
-          >
-            Testez votre micro avant l'appel
-          </motion.p>
-        )}
-        
-        {status === "testing" && (
-          <motion.p
-            key="testing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-xs text-primary text-center flex items-center gap-2"
-          >
-            <Loader2 className="w-3 h-3 animate-spin" />
-            Parlez maintenant...
-          </motion.p>
-        )}
-        
-        {status === "success" && (
-          <motion.p
-            key="success"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-xs text-green-500 text-center flex items-center gap-2"
-          >
-            <Check className="w-4 h-4" />
-            Microphone fonctionnel !
-          </motion.p>
-        )}
-        
-        {status === "error" && (
-          <motion.p
-            key="error"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-xs text-destructive text-center flex items-center gap-2"
-          >
-            <X className="w-4 h-4" />
-            {errorMessage}
-          </motion.p>
-        )}
-      </AnimatePresence>
-
-      {/* Action button */}
-      <div className="flex gap-2">
+      {/* Status + Action in one row */}
+      <div className="flex items-center gap-2">
         {status === "idle" && (
           <Button
             onClick={startTest}
             size="sm"
             variant="outline"
-            className="gap-2"
+            className="gap-1.5 h-8 text-xs px-3"
           >
-            <Mic className="w-4 h-4" />
-            Tester le micro
+            <Mic className="w-3.5 h-3.5" />
+            Tester micro
           </Button>
         )}
         
         {status === "testing" && (
-          <Button
-            onClick={cleanup}
-            size="sm"
-            variant="ghost"
-            className="gap-2"
-          >
-            <MicOff className="w-4 h-4" />
-            Annuler
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-primary flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Parlez...
+            </span>
+            <Button
+              onClick={cleanup}
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         )}
         
-        {(status === "success" || status === "error") && (
-          <Button
-            onClick={handleRetry}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
-            <Mic className="w-4 h-4" />
-            Retester
-          </Button>
+        {status === "success" && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-green-500 flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" />
+              OK
+            </span>
+            <Button
+              onClick={handleRetry}
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+            >
+              <Mic className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
+        
+        {status === "error" && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-destructive">Erreur</span>
+            <Button
+              onClick={handleRetry}
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 gap-1"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              Réessayer
+            </Button>
+          </div>
         )}
       </div>
     </motion.div>
