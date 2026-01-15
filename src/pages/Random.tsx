@@ -178,29 +178,29 @@ const Random = () => {
               Aucun profil. Aucune photo.<br /><span className="text-foreground font-medium">Juste une voix.</span>
             </motion.p>
 
+            {/* Microphone Test - Above the button for visibility */}
+            <motion.div
+              className="z-10 mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+            >
+              <MicrophoneTest />
+            </motion.div>
+
             {/* Commencer Button - Always visible */}
             <motion.button 
               onClick={handleCommencer} 
-              className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10 mb-4" 
+              className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10" 
               initial={{ opacity: 0, y: 20 }} 
               animate={{ opacity: 1, y: 0 }} 
-              transition={{ delay: 0.55 }} 
+              transition={{ delay: 0.6 }} 
               whileHover={{ scale: 1.03 }} 
               whileTap={{ scale: 0.97 }}
             >
               <Play className="w-5 h-5 text-primary-foreground" />
               <span className="text-primary-foreground">Commencer</span>
             </motion.button>
-
-            {/* Microphone Test - Optional, below the button */}
-            <motion.div
-              className="z-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <MicrophoneTest />
-            </motion.div>
           </>
         );
     }
