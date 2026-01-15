@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { isNative } from "@/lib/capacitor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+
+const FCM_TOKEN_KEY = "fcm_token";
 
 // Dynamic import for Push Notifications to avoid errors on web
 const getPushNotifications = async () => {
@@ -40,14 +42,31 @@ interface UsePushNotificationsOptions {
 
 export const usePushNotifications = (options: UsePushNotificationsOptions = {}) => {
   const { user } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(FCM_TOKEN_KEY);
+    }
+    return null;
+  });
   const [permissionStatus, setPermissionStatus] = useState<string>("prompt");
   const enabled = options.enabled ?? true;
+  const tokenReceivedRef = useRef(false);
 
   const registerToken = useCallback(async (fcmToken: string) => {
-    if (!user) return;
+    if (!user) {
+      console.log("[Push] Cannot register token - no user");
+      return false;
+    }
 
     try {
+      // Verify Supabase session is active
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        console.error("[Push] No active session, cannot register token");
+        return false;
+      }
+
       // Detect device type
       const userAgent = navigator.userAgent.toLowerCase();
       let deviceType = "unknown";
@@ -57,32 +76,49 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
         deviceType = "android";
       }
 
-      // Generate a simple device name
       const deviceName = `${deviceType.toUpperCase()} Device`;
+      const now = new Date().toISOString();
 
-      // Upsert device token in user_devices table
-      const { error } = await supabase
+      console.log(`[Push] Registering token for ${deviceType}: ${fcmToken.slice(0, 20)}...`);
+
+      // Try INSERT first
+      const { error: insertError } = await supabase
         .from("user_devices")
-        .upsert(
-          {
-            user_id: user.id,
-            fcm_token: fcmToken,
-            device_type: deviceType,
-            device_name: deviceName,
-            last_used_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "user_id,fcm_token",
-          }
-        );
+        .insert({
+          user_id: user.id,
+          fcm_token: fcmToken,
+          device_type: deviceType,
+          device_name: deviceName,
+          last_used_at: now,
+        });
 
-      if (error) {
-        console.error("Error saving device token:", error);
+      if (insertError) {
+        // If duplicate, try UPDATE
+        if (insertError.code === "23505") {
+          console.log("[Push] Token exists, updating last_used_at...");
+          const { error: updateError } = await supabase
+            .from("user_devices")
+            .update({ last_used_at: now, device_name: deviceName })
+            .eq("user_id", user.id)
+            .eq("fcm_token", fcmToken);
+
+          if (updateError) {
+            console.error("[Push] Update failed:", updateError.message);
+            return false;
+          }
+          console.log("[Push] Token updated successfully");
+        } else {
+          console.error("[Push] Insert failed:", insertError.message, insertError.code);
+          return false;
+        }
       } else {
-        console.log("Device token registered successfully for", deviceType);
+        console.log("[Push] Token registered successfully");
       }
+
+      return true;
     } catch (err) {
-      console.error("Error registering token:", err);
+      console.error("[Push] Error registering token:", err);
+      return false;
     }
   }, [user]);
 
@@ -197,52 +233,53 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
   }, []);
 
   const initializePushNotifications = useCallback(async () => {
-    // DEBUG TOAST 1: Hook started
-    console.log("DEBUG: initializePushNotifications called");
+    console.log("[Push] Initializing push notifications...");
 
     const PushNotifications = await getPushNotifications();
     if (!PushNotifications) {
-      console.log("DEBUG: PushNotifications not available");
-      toast.error("❌ PushNotifications non disponible", { duration: 3000 });
+      console.log("[Push] Not available on this platform");
       return;
     }
     
     if (!user) {
-      console.log("DEBUG: User not connected");
-      toast.error("❌ User non connecté", { duration: 3000 });
+      console.log("[Push] No user, skipping initialization");
       return;
     }
 
-    toast.info("🔔 Push init - user: " + user.id.slice(0, 8), { duration: 2000 });
+    console.log("[Push] User authenticated:", user.id.slice(0, 8));
 
     try {
-      // Avoid duplicate listeners on fast refresh / re-mounts
+      // Remove any existing listeners to avoid duplicates
       await PushNotifications.removeAllListeners();
 
+      tokenReceivedRef.current = false;
+
       // Listen for registration success
-      PushNotifications.addListener("registration", (tokenData: PushNotificationToken) => {
-        console.log("DEBUG: registration listener TRIGGERED, token:", tokenData.value);
-        toast.success("🎉 TOKEN REÇU via listener! " + tokenData.value.slice(0, 15) + "...", { 
-          duration: 8000 
-        });
+      PushNotifications.addListener("registration", async (tokenData: PushNotificationToken) => {
+        console.log("[Push] Token received via listener:", tokenData.value.slice(0, 20));
+        tokenReceivedRef.current = true;
+        
+        // Store token in localStorage for future sessions
+        localStorage.setItem(FCM_TOKEN_KEY, tokenData.value);
         setToken(tokenData.value);
-        registerToken(tokenData.value);
+        
+        const success = await registerToken(tokenData.value);
+        if (success) {
+          toast.success("Notifications activées", { duration: 3000 });
+        }
       });
 
       // Listen for registration errors
       PushNotifications.addListener("registrationError", (error: any) => {
-        console.error("DEBUG: registrationError:", error);
-        toast.error("❌ Erreur registration: " + JSON.stringify(error), { duration: 8000 });
+        console.error("[Push] Registration error:", error);
+        toast.error("Erreur d'enregistrement des notifications");
       });
 
       // Listen for push notifications received while app is in foreground
       PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
-        console.log("DEBUG: pushNotificationReceived:", notification);
-        toast.success("📬 Notif reçue: " + notification.title, { duration: 5000 });
-
+        console.log("[Push] Notification received:", notification);
         const data: NotificationData = notification.data || {};
 
-        // Show in-app toast with action
         toast(notification.title, {
           description: notification.body,
           action: {
@@ -255,9 +292,7 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
 
       // Listen for push notification action (user tapped on notification)
       PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
-        console.log("DEBUG: pushNotificationActionPerformed:", notification);
-        toast.info("👆 Notif tapped", { duration: 3000 });
-
+        console.log("[Push] Notification tapped:", notification);
         const data: NotificationData = notification.notification?.data || {};
         handleNotificationNavigation(data);
       });
@@ -265,43 +300,41 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       // Check current permission status
       const current = await PushNotifications.checkPermissions();
       setPermissionStatus(current.receive);
-      toast.info("🔐 Permission: " + current.receive, { duration: 2000 });
+      console.log("[Push] Current permission:", current.receive);
 
       if (current.receive !== "granted") {
         const permission = await PushNotifications.requestPermissions();
         setPermissionStatus(permission.receive);
         if (permission.receive !== "granted") {
-          toast.error("❌ Permission refusée", { duration: 5000 });
+          console.log("[Push] Permission denied");
           return;
         }
       }
 
-      // Register for push notifications - this should trigger the registration listener
-      toast.info("📝 Appel register()...", { duration: 2000 });
+      // Register for push notifications
+      console.log("[Push] Calling register()...");
       await PushNotifications.register();
       
-      // WORKAROUND: On iOS, the token might already exist from Firebase swizzling
-      // Try to get the delivery status which contains the token on some versions
+      // iOS WORKAROUND: The registration listener may not fire due to Firebase swizzling
+      // Wait 3 seconds and check if we got the token, if not try to use stored token
       setTimeout(async () => {
-        // If we still don't have a token after 3 seconds, try to get it another way
-        if (!token) {
-          console.log("DEBUG: Token not received after 3s, checking getDeliveredNotifications...");
-          toast.warning("⏰ Token non reçu via listener après 3s", { duration: 3000 });
+        if (!tokenReceivedRef.current) {
+          console.log("[Push] Token not received via listener after 3s, trying stored token");
           
-          // Try to check if we can get notifications (this confirms registration worked)
-          try {
-            const delivered = await PushNotifications.getDeliveredNotifications();
-            console.log("DEBUG: getDeliveredNotifications worked, registration seems OK:", delivered);
-            toast.info("📋 getDeliveredNotifications OK: " + delivered.notifications.length + " notifs", { duration: 3000 });
-          } catch (e) {
-            console.error("DEBUG: getDeliveredNotifications failed:", e);
+          // Check if there's a stored token in localStorage from a previous session
+          const storedToken = localStorage.getItem(FCM_TOKEN_KEY);
+          if (storedToken) {
+            console.log("[Push] Using stored token from localStorage:", storedToken.slice(0, 20));
+            setToken(storedToken);
+            await registerToken(storedToken);
+          } else {
+            console.log("[Push] No stored token available");
           }
         }
       }, 3000);
 
     } catch (error) {
-      console.error("DEBUG: Error initializing push notifications:", error);
-      toast.error("💥 Erreur init: " + String(error), { duration: 8000 });
+      console.error("[Push] Error initializing:", error);
     }
   }, [user, token, registerToken, handleNotificationNavigation]);
 
