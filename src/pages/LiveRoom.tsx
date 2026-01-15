@@ -368,6 +368,28 @@ const LiveRoom = () => {
     }
   }, [liveKitConnected, liveKitError]);
 
+  // Proactive audio unlock on first user interaction (for mobile)
+  useEffect(() => {
+    if (isStreamer) return; // Streamers don't need this
+    
+    const handleFirstInteraction = () => {
+      console.log("[LiveRoom] First user interaction detected, unlocking audio proactively...");
+      unlockAudio();
+      // Remove listeners after first interaction
+      document.removeEventListener("touchstart", handleFirstInteraction);
+      document.removeEventListener("click", handleFirstInteraction);
+    };
+    
+    // Add listeners for first touch/click
+    document.addEventListener("touchstart", handleFirstInteraction, { once: true, passive: true });
+    document.addEventListener("click", handleFirstInteraction, { once: true });
+    
+    return () => {
+      document.removeEventListener("touchstart", handleFirstInteraction);
+      document.removeEventListener("click", handleFirstInteraction);
+    };
+  }, [isStreamer, unlockAudio]);
+
   // Auto-reconnect for viewers if connected but no video after 10 seconds
   useEffect(() => {
     if (isStreamer || !liveKitConnected || remoteVideoTrack) {
@@ -692,24 +714,70 @@ const LiveRoom = () => {
         )}
       </AnimatePresence>
 
-      {/* Audio unlock button for iOS/mobile */}
+      {/* PROMINENT Audio unlock overlay for iOS/Android mobile */}
       <AnimatePresence>
         {needsAudioUnlock && !isStreamer && liveKitConnected && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-44 left-1/2 -translate-x-1/2 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={unlockAudio}
           >
-            <Button
-              variant="default"
-              size="sm"
-              onClick={unlockAudio}
-              className="shadow-lg bg-primary hover:bg-primary/90 animate-pulse"
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="flex flex-col items-center gap-4 p-8"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Volume2 className="w-4 h-4 mr-2" />
-              Activer le son
-            </Button>
+              {/* Animated speaker icon */}
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center"
+              >
+                <Volume2 className="w-12 h-12 text-primary" />
+              </motion.div>
+              
+              {/* Main text */}
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Activer le son
+                </h3>
+                <p className="text-white/70 text-sm max-w-[250px]">
+                  Appuyez sur le bouton ci-dessous pour entendre le stream
+                </p>
+              </div>
+              
+              {/* Big prominent button */}
+              <Button
+                variant="default"
+                size="lg"
+                onClick={unlockAudio}
+                className="shadow-xl bg-primary hover:bg-primary/90 text-lg px-8 py-6 rounded-full animate-pulse"
+              >
+                <Volume2 className="w-6 h-6 mr-3" />
+                Activer le son
+              </Button>
+              
+              {/* Skip option */}
+              <button
+                onClick={() => {
+                  // Force dismiss without unlocking (rare case)
+                  console.log("[LiveRoom] User dismissed audio unlock overlay");
+                }}
+                className="text-white/50 text-xs mt-2 underline"
+              >
+                Continuer sans son
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

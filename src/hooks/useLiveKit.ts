@@ -54,6 +54,9 @@ const isAndroid = (): boolean => {
   return /Android/.test(navigator.userAgent);
 };
 
+// Helper to detect mobile
+const isMobile = (): boolean => isIOS() || isAndroid();
+
 export const useLiveKit = ({
   roomName,
   isStreamer,
@@ -97,52 +100,81 @@ export const useLiveKit = ({
     audioPlaying: false,
   });
 
-  // Unlock audio for iOS - must be called on user interaction
+  // Unlock audio for iOS/Android - MUST be called on user interaction (tap/click)
   const unlockAudio = useCallback(async () => {
-    if (hasUnlockedAudioRef.current) return;
-    
-    console.log("[LiveKit] 🔊 Unlocking audio for iOS/mobile...");
+    console.log("[LiveKit] 🔊 Unlocking audio for mobile...", {
+      alreadyUnlocked: hasUnlockedAudioRef.current,
+      isIOS: isIOS(),
+      isAndroid: isAndroid(),
+    });
     
     try {
-      // Create or resume AudioContext (needed for iOS)
+      // Step 1: Create or resume AudioContext (CRITICAL for iOS)
       if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContextRef.current = new AudioContextClass();
+          console.log("[LiveKit] Created new AudioContext, state:", audioContextRef.current.state);
+        }
       }
       
-      if (audioContextRef.current.state === "suspended") {
+      if (audioContextRef.current && audioContextRef.current.state === "suspended") {
         await audioContextRef.current.resume();
-        console.log("[LiveKit] ✓ AudioContext resumed");
+        console.log("[LiveKit] ✓ AudioContext resumed to state:", audioContextRef.current.state);
       }
       
-      // Create a silent audio element and play it (iOS trick)
-      const silentAudio = new Audio();
-      silentAudio.src = "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBj+Y2vPEcyUELH/NLNiJOQgYZrrv6markup";
-      silentAudio.volume = 0.01;
-      silentAudio.muted = false;
+      // Step 2: Play a silent audio to unlock the audio session (iOS Safari requirement)
+      const silentAudio = document.createElement("audio");
       silentAudio.setAttribute("playsinline", "");
+      silentAudio.setAttribute("webkit-playsinline", "");
+      silentAudio.muted = false;
+      silentAudio.volume = 0.001; // Nearly silent but not muted
+      // Tiny valid WAV file (44 bytes header + minimal data)
+      silentAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
       
-      await silentAudio.play().catch(() => {});
+      try {
+        await silentAudio.play();
+        console.log("[LiveKit] ✓ Silent audio played successfully");
+      } catch (e) {
+        console.warn("[LiveKit] Silent audio play failed (may be expected on first call):", e);
+      }
       silentAudio.pause();
       silentAudio.remove();
       
       hasUnlockedAudioRef.current = true;
       setNeedsAudioUnlock(false);
+      setAudioPlaying(true);
       console.log("[LiveKit] ✓ Audio unlocked successfully");
       
-      // If we have an audio track waiting, try to play it now
+      // Step 3: If we have an audio element waiting, unmute and play it
       if (audioElementRef.current) {
-        audioElementRef.current.play().catch(e => {
-          console.warn("[LiveKit] Audio play after unlock failed:", e);
-        });
+        audioElementRef.current.muted = false;
+        audioElementRef.current.volume = 1.0;
+        
+        try {
+          await audioElementRef.current.play();
+          console.log("[LiveKit] ✓ Existing audio element now playing");
+          setAudioPlaying(true);
+        } catch (e) {
+          console.warn("[LiveKit] Existing audio play failed:", e);
+        }
       }
+      
+      return true;
     } catch (e) {
-      console.warn("[LiveKit] Audio unlock failed:", e);
+      console.error("[LiveKit] Audio unlock failed:", e);
+      return false;
     }
   }, []);
 
-  // Attach audio track with proper mobile handling
+  // Attach audio track with proper mobile handling (iOS + Android)
   const attachAudioTrack = useCallback((track: Track) => {
-    console.log("[LiveKit] 🎵 Attaching audio track...");
+    console.log("[LiveKit] 🎵 Attaching audio track...", {
+      isMobile: isMobile(),
+      isIOS: isIOS(),
+      isAndroid: isAndroid(),
+      audioUnlocked: hasUnlockedAudioRef.current,
+    });
     
     // Clean up existing audio element
     if (audioElementRef.current) {
@@ -152,14 +184,23 @@ export const useLiveKit = ({
       audioElementRef.current = null;
     }
     
-    // Create new audio element with mobile-friendly attributes
+    // Create new audio element with ALL mobile-friendly attributes
     const audioElement = document.createElement("audio");
-    audioElement.id = "livekit-remote-audio";
-    audioElement.style.display = "none";
+    audioElement.id = "livekit-remote-audio-" + Date.now();
+    audioElement.style.cssText = "position:absolute;left:-9999px;"; // Hidden but in DOM
+    
+    // Critical attributes for iOS Safari
     audioElement.setAttribute("playsinline", "");
-    audioElement.setAttribute("autoplay", "");
-    audioElement.muted = false;
+    audioElement.setAttribute("webkit-playsinline", "");
+    audioElement.setAttribute("x-webkit-airplay", "allow");
+    audioElement.autoplay = true;
+    
+    // Start muted on mobile if audio not unlocked (to allow autoplay)
+    // We'll unmute after user interaction
+    const startMuted = isMobile() && !hasUnlockedAudioRef.current;
+    audioElement.muted = startMuted;
     audioElement.volume = 1.0;
+    
     document.body.appendChild(audioElement);
     audioElementRef.current = audioElement;
     
@@ -167,48 +208,76 @@ export const useLiveKit = ({
     track.attach(audioElement);
     
     console.log("[LiveKit] Audio element created:", {
+      id: audioElement.id,
       muted: audioElement.muted,
       volume: audioElement.volume,
       readyState: audioElement.readyState,
-      isIOS: isIOS(),
-      isAndroid: isAndroid(),
+      startedMuted: startMuted,
     });
     
     // Try to play the audio
-    const tryPlay = async () => {
+    const tryPlay = async (attempt = 1) => {
+      console.log(`[LiveKit] Attempting audio play (attempt ${attempt})...`);
+      
       try {
+        // On mobile, if we started muted, audio context should work now
+        if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+          await audioContextRef.current.resume();
+        }
+        
         await audioElement.play();
-        console.log("[LiveKit] ✓ Remote audio playing successfully");
-        setAudioPlaying(true);
-        setNeedsAudioUnlock(false);
+        
+        // If we started muted, check if we can unmute now
+        if (audioElement.muted && hasUnlockedAudioRef.current) {
+          audioElement.muted = false;
+          console.log("[LiveKit] ✓ Audio unmuted after successful play");
+        }
+        
+        console.log("[LiveKit] ✓ Remote audio playing successfully", {
+          muted: audioElement.muted,
+          paused: audioElement.paused,
+        });
+        
+        // Only set audio as playing if it's not muted
+        if (!audioElement.muted) {
+          setAudioPlaying(true);
+          setNeedsAudioUnlock(false);
+        } else {
+          // Playing but muted - user needs to tap to unmute
+          setAudioPlaying(false);
+          setNeedsAudioUnlock(true);
+        }
       } catch (err) {
-        console.warn("[LiveKit] ⚠️ Remote audio play blocked:", String(err));
+        console.warn(`[LiveKit] ⚠️ Remote audio play blocked (attempt ${attempt}):`, String(err));
+        
+        // On mobile, this is expected before user interaction
         setAudioPlaying(false);
         setNeedsAudioUnlock(true);
         
-        // Set up listeners for user gesture to unlock audio
-        const retryOnGesture = async () => {
-          await unlockAudio();
-          try {
-            await audioElement.play();
-            console.log("[LiveKit] ✓ Remote audio playing after user gesture");
-            setAudioPlaying(true);
-            setNeedsAudioUnlock(false);
-          } catch (e) {
-            console.warn("[LiveKit] Audio still blocked after gesture:", e);
-          }
-          document.removeEventListener("touchstart", retryOnGesture);
-          document.removeEventListener("click", retryOnGesture);
-        };
-        
-        document.addEventListener("touchstart", retryOnGesture, { once: true, passive: true });
-        document.addEventListener("click", retryOnGesture, { once: true });
+        // Retry with exponential backoff (up to 3 attempts)
+        if (attempt < 3) {
+          setTimeout(() => tryPlay(attempt + 1), attempt * 500);
+        }
       }
     };
     
-    // Give track a moment to initialize, then play
-    setTimeout(tryPlay, 100);
-  }, [unlockAudio]);
+    // Start playback attempt (slight delay for track to initialize)
+    setTimeout(() => tryPlay(1), 150);
+    
+    // Also listen for track enabled/mute changes
+    const handleTrackMuted = () => {
+      console.log("[LiveKit] Track muted event");
+    };
+    const handleTrackUnmuted = () => {
+      console.log("[LiveKit] Track unmuted event");
+      if (audioElement && !audioElement.paused && !audioElement.muted) {
+        setAudioPlaying(true);
+      }
+    };
+    
+    track.on("muted", handleTrackMuted);
+    track.on("unmuted", handleTrackUnmuted);
+  }, []);
 
   // Update debug info
   const updateDebugInfo = useCallback((currentRoom: Room | null) => {
