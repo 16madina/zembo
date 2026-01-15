@@ -67,19 +67,23 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
 
     let direction: "left" | "right" | "up" | null = null;
 
-    // Check for up swipe (super like) first
-    if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
-      if (absY > absX * 0.8) { // Prioritize vertical if dominant
-        direction = "up";
-      }
-    }
-    
-    // Check for horizontal swipe
-    if (!direction) {
+    // Determine if horizontal or vertical movement is dominant
+    const isVerticalDominant = absY > absX * 1.5; // Must be significantly more vertical
+    const isHorizontalDominant = absX > absY * 0.8; // Horizontal is dominant if X > Y
+
+    // Check for horizontal swipe FIRST (most common action)
+    if (isHorizontalDominant) {
       if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
         direction = "right";
       } else if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
         direction = "left";
+      }
+    }
+    
+    // Check for up swipe (super like) ONLY if clearly vertical
+    if (!direction && isVerticalDominant) {
+      if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
+        direction = "up";
       }
     }
 
