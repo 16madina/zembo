@@ -233,51 +233,68 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
   }, []);
 
   const initializePushNotifications = useCallback(async () => {
-    console.log("[Push] Initializing push notifications...");
+    console.log("[Push] ====== INIT START ======");
+    console.log("[Push] isNative:", isNative);
+    console.log("[Push] user:", user?.id?.slice(0, 8) || "null");
+    console.log("[Push] enabled:", enabled);
 
     const PushNotifications = await getPushNotifications();
     if (!PushNotifications) {
-      console.log("[Push] Not available on this platform");
+      console.log("[Push] ❌ PushNotifications module not available");
       return;
     }
+    console.log("[Push] ✅ PushNotifications module loaded");
     
     if (!user) {
-      console.log("[Push] No user, skipping initialization");
+      console.log("[Push] ❌ No user, skipping initialization");
       return;
     }
 
-    console.log("[Push] User authenticated:", user.id.slice(0, 8));
+    console.log("[Push] ✅ User authenticated:", user.id);
+    console.log("[Push] User email:", user.email);
 
     try {
       // Remove any existing listeners to avoid duplicates
+      console.log("[Push] Removing existing listeners...");
       await PushNotifications.removeAllListeners();
+      console.log("[Push] ✅ Listeners removed");
 
       tokenReceivedRef.current = false;
 
       // Listen for registration success
+      console.log("[Push] Adding 'registration' listener...");
       PushNotifications.addListener("registration", async (tokenData: PushNotificationToken) => {
-        console.log("[Push] Token received via listener:", tokenData.value.slice(0, 20));
+        console.log("[Push] 🎉 REGISTRATION LISTENER TRIGGERED!");
+        console.log("[Push] Token received:", tokenData.value);
         tokenReceivedRef.current = true;
         
         // Store token in localStorage for future sessions
         localStorage.setItem(FCM_TOKEN_KEY, tokenData.value);
         setToken(tokenData.value);
         
+        console.log("[Push] Calling registerToken()...");
         const success = await registerToken(tokenData.value);
+        console.log("[Push] registerToken result:", success);
+        
         if (success) {
           toast.success("Notifications activées", { duration: 3000 });
+        } else {
+          toast.error("Erreur enregistrement token", { duration: 3000 });
         }
       });
+      console.log("[Push] ✅ Registration listener added");
 
       // Listen for registration errors
+      console.log("[Push] Adding 'registrationError' listener...");
       PushNotifications.addListener("registrationError", (error: any) => {
-        console.error("[Push] Registration error:", error);
-        toast.error("Erreur d'enregistrement des notifications");
+        console.error("[Push] ❌ REGISTRATION ERROR:", JSON.stringify(error));
+        toast.error("Erreur d'enregistrement: " + JSON.stringify(error));
       });
+      console.log("[Push] ✅ RegistrationError listener added");
 
       // Listen for push notifications received while app is in foreground
       PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
-        console.log("[Push] Notification received:", notification);
+        console.log("[Push] 📬 Notification received in foreground:", notification);
         const data: NotificationData = notification.data || {};
 
         toast(notification.title, {
@@ -292,51 +309,70 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
 
       // Listen for push notification action (user tapped on notification)
       PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
-        console.log("[Push] Notification tapped:", notification);
+        console.log("[Push] 👆 Notification tapped:", notification);
         const data: NotificationData = notification.notification?.data || {};
         handleNotificationNavigation(data);
       });
 
       // Check current permission status
+      console.log("[Push] Checking permissions...");
       const current = await PushNotifications.checkPermissions();
       setPermissionStatus(current.receive);
-      console.log("[Push] Current permission:", current.receive);
+      console.log("[Push] Current permission status:", current.receive);
 
       if (current.receive !== "granted") {
+        console.log("[Push] Requesting permissions...");
         const permission = await PushNotifications.requestPermissions();
         setPermissionStatus(permission.receive);
+        console.log("[Push] Permission response:", permission.receive);
         if (permission.receive !== "granted") {
-          console.log("[Push] Permission denied");
+          console.log("[Push] ❌ Permission denied by user");
           return;
         }
       }
+      console.log("[Push] ✅ Permission granted");
 
       // Register for push notifications
-      console.log("[Push] Calling register()...");
+      console.log("[Push] Calling PushNotifications.register()...");
       await PushNotifications.register();
+      console.log("[Push] ✅ register() called - waiting for listener...");
       
       // iOS WORKAROUND: The registration listener may not fire due to Firebase swizzling
-      // Wait 3 seconds and check if we got the token, if not try to use stored token
+      // Wait 3 seconds and check if we got the token
       setTimeout(async () => {
+        console.log("[Push] ⏰ 3s timeout - checking tokenReceivedRef:", tokenReceivedRef.current);
+        
         if (!tokenReceivedRef.current) {
-          console.log("[Push] Token not received via listener after 3s, trying stored token");
+          console.log("[Push] ⚠️ Token NOT received via listener after 3s");
           
-          // Check if there's a stored token in localStorage from a previous session
+          // Check if there's a stored token in localStorage
           const storedToken = localStorage.getItem(FCM_TOKEN_KEY);
+          console.log("[Push] Stored token in localStorage:", storedToken ? storedToken.slice(0, 20) + "..." : "null");
+          
           if (storedToken) {
-            console.log("[Push] Using stored token from localStorage:", storedToken.slice(0, 20));
+            console.log("[Push] Using stored token, calling registerToken...");
             setToken(storedToken);
-            await registerToken(storedToken);
+            const success = await registerToken(storedToken);
+            console.log("[Push] registerToken with stored token result:", success);
+            if (success) {
+              toast.success("Token enregistré (fallback)", { duration: 3000 });
+            }
           } else {
-            console.log("[Push] No stored token available");
+            console.log("[Push] ❌ No stored token available - user must use debug screen");
+            toast.warning("Token non capturé automatiquement", { duration: 5000 });
           }
+        } else {
+          console.log("[Push] ✅ Token was received via listener");
         }
       }, 3000);
 
+      console.log("[Push] ====== INIT COMPLETE ======");
+
     } catch (error) {
-      console.error("[Push] Error initializing:", error);
+      console.error("[Push] ❌ Error during initialization:", error);
+      toast.error("Erreur init notifications: " + String(error));
     }
-  }, [user, token, registerToken, handleNotificationNavigation]);
+  }, [user, enabled, registerToken, handleNotificationNavigation]);
 
   useEffect(() => {
     if (isNative && user && enabled) {
