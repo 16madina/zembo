@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { isNative } from "@/lib/capacitor";
+import { isNative, isIOS } from "@/lib/capacitor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -11,6 +11,18 @@ const getPushNotifications = async () => {
   if (!isNative) return null;
   const mod = await import("@capacitor/push-notifications");
   return mod.PushNotifications;
+};
+
+// Dynamic import for Firebase Messaging (better iOS support)
+const getFirebaseMessaging = async () => {
+  if (!isNative) return null;
+  try {
+    const mod = await import("@capacitor-firebase/messaging");
+    return mod.FirebaseMessaging;
+  } catch (e) {
+    console.log("[Push] Firebase Messaging not available:", e);
+    return null;
+  }
 };
 
 export interface PushNotificationToken {
@@ -235,15 +247,14 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
   const initializePushNotifications = useCallback(async () => {
     console.log("[Push] ====== INIT START ======");
     console.log("[Push] isNative:", isNative);
+    console.log("[Push] isIOS:", isIOS);
     console.log("[Push] user:", user?.id?.slice(0, 8) || "null");
     console.log("[Push] enabled:", enabled);
 
-    const PushNotifications = await getPushNotifications();
-    if (!PushNotifications) {
-      console.log("[Push] ❌ PushNotifications module not available");
+    if (!isNative) {
+      console.log("[Push] ❌ Not native platform");
       return;
     }
-    console.log("[Push] ✅ PushNotifications module loaded");
     
     if (!user) {
       console.log("[Push] ❌ No user, skipping initialization");
@@ -251,120 +262,149 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
     }
 
     console.log("[Push] ✅ User authenticated:", user.id);
-    console.log("[Push] User email:", user.email);
 
     try {
-      // Remove any existing listeners to avoid duplicates
-      console.log("[Push] Removing existing listeners...");
-      await PushNotifications.removeAllListeners();
-      console.log("[Push] ✅ Listeners removed");
-
       tokenReceivedRef.current = false;
-
-      // Listen for registration success
-      console.log("[Push] Adding 'registration' listener...");
-      PushNotifications.addListener("registration", async (tokenData: PushNotificationToken) => {
-        console.log("[Push] 🎉 REGISTRATION LISTENER TRIGGERED!");
-        console.log("[Push] Token received:", tokenData.value);
-        tokenReceivedRef.current = true;
+      
+      // Try Firebase Messaging first (better iOS support)
+      const FirebaseMessaging = await getFirebaseMessaging();
+      
+      if (FirebaseMessaging) {
+        console.log("[Push] ✅ Using Firebase Messaging (better iOS support)");
         
-        // Store token in localStorage for future sessions
-        localStorage.setItem(FCM_TOKEN_KEY, tokenData.value);
-        setToken(tokenData.value);
+        // Remove existing listeners
+        await FirebaseMessaging.removeAllListeners();
         
-        console.log("[Push] Calling registerToken()...");
-        const success = await registerToken(tokenData.value);
-        console.log("[Push] registerToken result:", success);
-        
-        if (success) {
-          toast.success("Notifications activées", { duration: 3000 });
-        } else {
-          toast.error("Erreur enregistrement token", { duration: 3000 });
-        }
-      });
-      console.log("[Push] ✅ Registration listener added");
-
-      // Listen for registration errors
-      console.log("[Push] Adding 'registrationError' listener...");
-      PushNotifications.addListener("registrationError", (error: any) => {
-        console.error("[Push] ❌ REGISTRATION ERROR:", JSON.stringify(error));
-        toast.error("Erreur d'enregistrement: " + JSON.stringify(error));
-      });
-      console.log("[Push] ✅ RegistrationError listener added");
-
-      // Listen for push notifications received while app is in foreground
-      PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
-        console.log("[Push] 📬 Notification received in foreground:", notification);
-        const data: NotificationData = notification.data || {};
-
-        toast(notification.title, {
-          description: notification.body,
-          action: {
-            label: "Voir",
-            onClick: () => handleNotificationNavigation(data),
-          },
-          duration: 5000,
+        // Add listener for token refresh
+        FirebaseMessaging.addListener("tokenReceived", async (event: { token: string }) => {
+          console.log("[Push] 🎉 Firebase tokenReceived:", event.token.slice(0, 30));
+          tokenReceivedRef.current = true;
+          localStorage.setItem(FCM_TOKEN_KEY, event.token);
+          setToken(event.token);
+          await registerToken(event.token);
         });
-      });
-
-      // Listen for push notification action (user tapped on notification)
-      PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
-        console.log("[Push] 👆 Notification tapped:", notification);
-        const data: NotificationData = notification.notification?.data || {};
-        handleNotificationNavigation(data);
-      });
-
-      // Check current permission status
-      console.log("[Push] Checking permissions...");
-      const current = await PushNotifications.checkPermissions();
-      setPermissionStatus(current.receive);
-      console.log("[Push] Current permission status:", current.receive);
-
-      if (current.receive !== "granted") {
-        console.log("[Push] Requesting permissions...");
-        const permission = await PushNotifications.requestPermissions();
-        setPermissionStatus(permission.receive);
-        console.log("[Push] Permission response:", permission.receive);
-        if (permission.receive !== "granted") {
-          console.log("[Push] ❌ Permission denied by user");
+        
+        // Add listener for notifications
+        FirebaseMessaging.addListener("notificationReceived", (event: any) => {
+          console.log("[Push] 📬 Firebase notification received:", event);
+          const notification = event.notification || {};
+          const data: NotificationData = notification.data || event.data || {};
+          
+          toast(notification.title || "Notification", {
+            description: notification.body,
+            action: {
+              label: "Voir",
+              onClick: () => handleNotificationNavigation(data),
+            },
+            duration: 5000,
+          });
+        });
+        
+        FirebaseMessaging.addListener("notificationActionPerformed", (event: any) => {
+          console.log("[Push] 👆 Firebase notification tapped:", event);
+          const data: NotificationData = event.notification?.data || {};
+          handleNotificationNavigation(data);
+        });
+        
+        // Check permissions
+        const permResult = await FirebaseMessaging.checkPermissions();
+        console.log("[Push] Firebase permission status:", permResult.receive);
+        setPermissionStatus(permResult.receive);
+        
+        if (permResult.receive !== "granted") {
+          console.log("[Push] Requesting Firebase permissions...");
+          const reqResult = await FirebaseMessaging.requestPermissions();
+          console.log("[Push] Firebase permission result:", reqResult.receive);
+          setPermissionStatus(reqResult.receive);
+          
+          if (reqResult.receive !== "granted") {
+            console.log("[Push] ❌ Permission denied");
+            return;
+          }
+        }
+        
+        // Get the token directly from Firebase
+        console.log("[Push] Getting FCM token directly from Firebase...");
+        try {
+          const tokenResult = await FirebaseMessaging.getToken();
+          console.log("[Push] 🎉 FCM Token obtained:", tokenResult.token.slice(0, 30));
+          
+          tokenReceivedRef.current = true;
+          localStorage.setItem(FCM_TOKEN_KEY, tokenResult.token);
+          setToken(tokenResult.token);
+          
+          const success = await registerToken(tokenResult.token);
+          console.log("[Push] registerToken result:", success);
+          
+          if (success) {
+            toast.success("Notifications activées", { duration: 3000 });
+          }
+        } catch (tokenError) {
+          console.error("[Push] ❌ Failed to get Firebase token:", tokenError);
+        }
+        
+      } else {
+        // Fallback to Capacitor PushNotifications
+        console.log("[Push] ⚠️ Firebase Messaging not available, using Capacitor fallback");
+        
+        const PushNotifications = await getPushNotifications();
+        if (!PushNotifications) {
+          console.log("[Push] ❌ PushNotifications module not available");
           return;
         }
-      }
-      console.log("[Push] ✅ Permission granted");
-
-      // Register for push notifications
-      console.log("[Push] Calling PushNotifications.register()...");
-      await PushNotifications.register();
-      console.log("[Push] ✅ register() called - waiting for listener...");
-      
-      // iOS WORKAROUND: The registration listener may not fire due to Firebase swizzling
-      // Wait 3 seconds and check if we got the token
-      setTimeout(async () => {
-        console.log("[Push] ⏰ 3s timeout - checking tokenReceivedRef:", tokenReceivedRef.current);
         
-        if (!tokenReceivedRef.current) {
-          console.log("[Push] ⚠️ Token NOT received via listener after 3s");
-          
-          // Check if there's a stored token in localStorage
-          const storedToken = localStorage.getItem(FCM_TOKEN_KEY);
-          console.log("[Push] Stored token in localStorage:", storedToken ? storedToken.slice(0, 20) + "..." : "null");
-          
-          if (storedToken) {
-            console.log("[Push] Using stored token, calling registerToken...");
-            setToken(storedToken);
-            const success = await registerToken(storedToken);
-            console.log("[Push] registerToken with stored token result:", success);
-            if (success) {
-              toast.success("Token enregistré (fallback)", { duration: 3000 });
-            }
-          } else {
-            console.log("[Push] ❌ No stored token available - user must use debug screen");
-            toast.warning("Token non capturé automatiquement", { duration: 5000 });
-          }
-        } else {
-          console.log("[Push] ✅ Token was received via listener");
+        await PushNotifications.removeAllListeners();
+        
+        PushNotifications.addListener("registration", async (tokenData: PushNotificationToken) => {
+          console.log("[Push] 🎉 Capacitor registration:", tokenData.value.slice(0, 30));
+          tokenReceivedRef.current = true;
+          localStorage.setItem(FCM_TOKEN_KEY, tokenData.value);
+          setToken(tokenData.value);
+          await registerToken(tokenData.value);
+          toast.success("Notifications activées", { duration: 3000 });
+        });
+        
+        PushNotifications.addListener("registrationError", (error: any) => {
+          console.error("[Push] ❌ Capacitor registration error:", error);
+        });
+        
+        PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
+          console.log("[Push] 📬 Capacitor notification:", notification);
+          const data: NotificationData = notification.data || {};
+          toast(notification.title, {
+            description: notification.body,
+            action: { label: "Voir", onClick: () => handleNotificationNavigation(data) },
+            duration: 5000,
+          });
+        });
+        
+        PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
+          console.log("[Push] 👆 Capacitor notification tapped:", notification);
+          handleNotificationNavigation(notification.notification?.data || {});
+        });
+        
+        const current = await PushNotifications.checkPermissions();
+        setPermissionStatus(current.receive);
+        
+        if (current.receive !== "granted") {
+          const permission = await PushNotifications.requestPermissions();
+          setPermissionStatus(permission.receive);
+          if (permission.receive !== "granted") return;
         }
-      }, 3000);
+        
+        await PushNotifications.register();
+        
+        // Fallback timeout for iOS
+        setTimeout(async () => {
+          if (!tokenReceivedRef.current) {
+            const storedToken = localStorage.getItem(FCM_TOKEN_KEY);
+            if (storedToken) {
+              setToken(storedToken);
+              await registerToken(storedToken);
+            }
+          }
+        }, 3000);
+      }
 
       console.log("[Push] ====== INIT COMPLETE ======");
 
@@ -376,11 +416,9 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
 
   useEffect(() => {
     if (isNative && user && enabled) {
-      // Small delay to ensure bridge is ready right after login
       const timer = setTimeout(() => {
         initializePushNotifications();
       }, 500);
-
       return () => clearTimeout(timer);
     }
   }, [user, enabled, initializePushNotifications]);
