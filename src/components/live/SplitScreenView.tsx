@@ -71,10 +71,25 @@ const SplitScreenView = ({
     };
   }, [streamerRemoteVideoTrack, streamerStream]);
 
-  // Attach guest stream
+  // Attach guest stream with debugging
   useEffect(() => {
+    console.log("[SplitScreenView] Guest stream effect:", {
+      hasRef: !!guestVideoRef.current,
+      hasStream: !!guestStream,
+      tracks: guestStream?.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })),
+    });
+    
     if (guestVideoRef.current && guestStream) {
+      console.log("[SplitScreenView] Attaching guest stream to video element");
       guestVideoRef.current.srcObject = guestStream;
+      
+      // Force play in case autoplay is blocked
+      guestVideoRef.current.play().catch(err => {
+        console.warn("[SplitScreenView] Guest video autoplay failed:", err);
+      });
+    } else if (guestVideoRef.current && !guestStream) {
+      console.log("[SplitScreenView] Clearing guest video srcObject");
+      guestVideoRef.current.srcObject = null;
     }
   }, [guestStream]);
 
