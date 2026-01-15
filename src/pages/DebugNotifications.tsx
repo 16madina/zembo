@@ -144,37 +144,76 @@ export default function DebugNotifications() {
   };
 
   const saveTokenToDb = async (fcmToken: string) => {
-    if (!user) return;
+    if (!user) {
+      addLog("❌ Cannot save: user is null");
+      toast.error("Utilisateur non connecté");
+      return;
+    }
 
     try {
       addLog("💾 Saving token to database...");
+      addLog(`   User ID: ${user.id}`);
+      addLog(`   Token: ${fcmToken.slice(0, 30)}...`);
       
       const deviceType = isIOS ? "ios" : isAndroid ? "android" : "unknown";
       const deviceName = `${deviceType.toUpperCase()} Device`;
 
-      const { error } = await supabase
-        .from("user_devices")
-        .upsert(
-          {
-            user_id: user.id,
-            fcm_token: fcmToken,
-            device_type: deviceType,
-            device_name: deviceName,
-            last_used_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,fcm_token" }
-        );
+      addLog(`   Device: ${deviceType} - ${deviceName}`);
 
-      if (error) {
-        addLog(`❌ DB save error: ${error.message}`);
-        toast.error("Failed to save token");
+      // First try a simple INSERT to see if it works
+      const { data: insertData, error: insertError } = await supabase
+        .from("user_devices")
+        .insert({
+          user_id: user.id,
+          fcm_token: fcmToken,
+          device_type: deviceType,
+          device_name: deviceName,
+          last_used_at: new Date().toISOString(),
+        })
+        .select();
+
+      if (insertError) {
+        addLog(`⚠️ INSERT error: ${insertError.message}`);
+        addLog(`   Code: ${insertError.code}`);
+        addLog(`   Details: ${insertError.details || 'none'}`);
+        addLog(`   Hint: ${insertError.hint || 'none'}`);
+        
+        // If duplicate, try UPDATE instead
+        if (insertError.code === '23505') {
+          addLog("🔄 Token exists, trying UPDATE...");
+          
+          const { error: updateError } = await supabase
+            .from("user_devices")
+            .update({
+              device_name: deviceName,
+              last_used_at: new Date().toISOString(),
+            })
+            .eq("user_id", user.id)
+            .eq("fcm_token", fcmToken);
+
+          if (updateError) {
+            addLog(`❌ UPDATE error: ${updateError.message}`);
+            addLog(`   Code: ${updateError.code}`);
+            toast.error(`Erreur update: ${updateError.message}`);
+          } else {
+            addLog("✅ Token updated successfully");
+            setDebugInfo(prev => ({ ...prev, registeredInDb: true }));
+            toast.success("Token mis à jour!");
+          }
+        } else {
+          // RLS or other error
+          addLog(`❌ RLS/Permission error detected`);
+          toast.error(`Erreur RLS: ${insertError.message}`);
+        }
       } else {
-        addLog("✅ Token saved to database");
+        addLog(`✅ Token inserted successfully`);
+        addLog(`   Inserted data: ${JSON.stringify(insertData)}`);
         setDebugInfo(prev => ({ ...prev, registeredInDb: true }));
-        toast.success("Token saved!");
+        toast.success("Token enregistré!");
       }
     } catch (e) {
-      addLog(`💥 DB error: ${e}`);
+      addLog(`💥 Exception: ${e}`);
+      toast.error(`Exception: ${String(e)}`);
     }
   };
 
