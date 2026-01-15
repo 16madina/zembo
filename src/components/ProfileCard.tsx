@@ -1,7 +1,7 @@
-import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from "framer-motion";
 import { MapPin, BadgeCheck, X, Star, Heart } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
-import { useRef } from "react";
+import { useRef, useState, useCallback } from "react";
 
 interface ProfileCardProps {
   profile: Profile;
@@ -16,54 +16,135 @@ interface ProfileCardProps {
 const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLike, onSendRose }: ProfileCardProps) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+  const controls = useAnimation();
   const isDragging = useRef(false);
-  const dragStartPos = useRef({ x: 0, y: 0 });
+  const hasTriggeredSwipe = useRef(false);
+  const [exitDirection, setExitDirection] = useState<"left" | "right" | "up" | null>(null);
   
-  const rotate = useTransform(x, [-200, 200], [-12, 12]);
-  const likeOpacity = useTransform(x, [0, 100], [0, 1]);
-  const nopeOpacity = useTransform(x, [-100, 0], [1, 0]);
-  const superLikeOpacity = useTransform(y, [-100, 0], [1, 0]);
-  const scale = useTransform(
+  // Smooth rotation following swipe direction
+  const rotate = useTransform(x, [-300, 0, 300], [-25, 0, 25]);
+  
+  // Opacity for overlays - smoother transition
+  const likeOpacity = useTransform(x, [0, 50, 150], [0, 0.5, 1]);
+  const nopeOpacity = useTransform(x, [-150, -50, 0], [1, 0.5, 0]);
+  const superLikeOpacity = useTransform(y, [-150, -50, 0], [1, 0.5, 0]);
+  
+  // Background color tint based on swipe direction
+  const cardBgOpacity = useTransform(
     x,
-    [-200, 0, 200],
-    [0.95, 1, 0.95]
+    [-150, -50, 0, 50, 150],
+    [0.3, 0.15, 0, 0.15, 0.3]
   );
 
-  const handleDragStart = (_: any, info: PanInfo) => {
+  const handleDragStart = useCallback(() => {
     isDragging.current = true;
-    dragStartPos.current = { x: info.point.x, y: info.point.y };
-  };
+    hasTriggeredSwipe.current = false;
+  }, []);
 
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    const threshold = 100;
-    const velocity = 500;
-
-    // Check if it was a significant drag
-    const dragDistance = Math.sqrt(
-      Math.pow(info.offset.x, 2) + Math.pow(info.offset.y, 2)
-    );
-
-    if (dragDistance > 10) {
-      if (info.offset.y < -threshold || info.velocity.y < -velocity) {
-        onSwipe("up");
-      } else if (info.offset.x > threshold || info.velocity.x > velocity) {
-        onSwipe("right");
-      } else if (info.offset.x < -threshold || info.velocity.x < -velocity) {
-        onSwipe("left");
+  const handleDrag = useCallback((_: any, info: PanInfo) => {
+    // Provide haptic feedback at threshold on mobile (if not already triggered)
+    if (!hasTriggeredSwipe.current) {
+      const threshold = 80;
+      if (Math.abs(info.offset.x) > threshold || info.offset.y < -threshold) {
+        hasTriggeredSwipe.current = true;
+        // Trigger haptic on native
+        if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
       }
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(async (_: any, info: PanInfo) => {
+    const swipeThreshold = 80;
+    const velocityThreshold = 400;
+
+    // Determine swipe direction based on offset and velocity
+    const absX = Math.abs(info.offset.x);
+    const absY = Math.abs(info.offset.y);
+    const velocityX = Math.abs(info.velocity.x);
+    const velocityY = Math.abs(info.velocity.y);
+
+    let direction: "left" | "right" | "up" | null = null;
+
+    // Check for up swipe (super like) first
+    if (info.offset.y < -swipeThreshold || info.velocity.y < -velocityThreshold) {
+      if (absY > absX * 0.8) { // Prioritize vertical if dominant
+        direction = "up";
+      }
+    }
+    
+    // Check for horizontal swipe
+    if (!direction) {
+      if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+        direction = "right";
+      } else if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+        direction = "left";
+      }
+    }
+
+    if (direction) {
+      setExitDirection(direction);
+      
+      // Animate card flying off screen
+      const flyDistance = 500;
+      const exitX = direction === "right" ? flyDistance : direction === "left" ? -flyDistance : 0;
+      const exitY = direction === "up" ? -flyDistance : 0;
+      const exitRotation = direction === "right" ? 30 : direction === "left" ? -30 : 0;
+
+      await controls.start({
+        x: exitX,
+        y: exitY,
+        rotate: exitRotation,
+        opacity: 0,
+        transition: { 
+          duration: 0.35, 
+          ease: [0.32, 0.72, 0, 1] 
+        }
+      });
+
+      onSwipe(direction);
+    } else {
+      // Snap back to center with spring animation
+      controls.start({
+        x: 0,
+        y: 0,
+        rotate: 0,
+        transition: { type: "spring", stiffness: 500, damping: 30 }
+      });
     }
 
     setTimeout(() => {
       isDragging.current = false;
     }, 50);
-  };
+  }, [controls, onSwipe]);
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     // Only open modal if it wasn't a drag
     if (!isDragging.current) {
       onInfoClick();
     }
-  };
+  }, [onInfoClick]);
+
+  // Handle button swipe animations
+  const triggerSwipeAnimation = useCallback(async (direction: "left" | "right" | "up") => {
+    setExitDirection(direction);
+    
+    const flyDistance = 500;
+    const exitX = direction === "right" ? flyDistance : direction === "left" ? -flyDistance : 0;
+    const exitY = direction === "up" ? -flyDistance : 0;
+    const exitRotation = direction === "right" ? 30 : direction === "left" ? -30 : 0;
+
+    await controls.start({
+      x: exitX,
+      y: exitY,
+      rotate: exitRotation,
+      opacity: 0,
+      transition: { duration: 0.35, ease: [0.32, 0.72, 0, 1] }
+    });
+
+    onSwipe(direction);
+  }, [controls, onSwipe]);
 
   const buttonVariants = {
     hover: { scale: 1.1 },
@@ -72,22 +153,18 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
 
   return (
     <motion.div
-      className="absolute w-full h-full cursor-pointer"
-      style={{ x, y, rotate, scale }}
+      className="absolute w-full h-full cursor-grab active:cursor-grabbing touch-none"
+      style={{ x, y, rotate }}
       drag
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.9}
+      dragElastic={1}
+      dragMomentum={false}
       onDragStart={handleDragStart}
+      onDrag={handleDrag}
       onDragEnd={handleDragEnd}
+      animate={controls}
       initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{
-        x: x.get() > 0 ? 400 : x.get() < 0 ? -400 : 0,
-        y: y.get() < -50 ? -400 : 0,
-        opacity: 0,
-        scale: 0.8,
-        transition: { duration: 0.4, ease: [0.32, 0.72, 0, 1] }
-      }}
+      whileDrag={{ cursor: "grabbing" }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
     >
       <div 
@@ -172,7 +249,8 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
           <div className="flex items-center justify-center gap-4 pt-2 pointer-events-auto">
             {/* Pass Button */}
             <motion.button
-              onClick={(e) => { e.stopPropagation(); onPass(); }}
+              onClick={(e) => { e.stopPropagation(); triggerSwipeAnimation("left"); }}
+              onTouchEnd={(e) => { e.stopPropagation(); }}
               variants={buttonVariants}
               whileHover="hover"
               whileTap="tap"
@@ -184,7 +262,8 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
 
             {/* Super Like Button */}
             <motion.button
-              onClick={(e) => { e.stopPropagation(); onSuperLike(); }}
+              onClick={(e) => { e.stopPropagation(); triggerSwipeAnimation("up"); }}
+              onTouchEnd={(e) => { e.stopPropagation(); }}
               variants={buttonVariants}
               whileHover="hover"
               whileTap="tap"
@@ -198,6 +277,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
             {onSendRose && (
               <motion.button
                 onClick={(e) => { e.stopPropagation(); onSendRose(); }}
+                onTouchEnd={(e) => { e.stopPropagation(); }}
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
@@ -210,7 +290,8 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
 
             {/* Like Button */}
             <motion.button
-              onClick={(e) => { e.stopPropagation(); onLike(); }}
+              onClick={(e) => { e.stopPropagation(); triggerSwipeAnimation("right"); }}
+              onTouchEnd={(e) => { e.stopPropagation(); }}
               variants={buttonVariants}
               whileHover="hover"
               whileTap="tap"
@@ -220,6 +301,15 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
             </motion.button>
           </div>
         </div>
+
+        {/* Swipe direction tint overlay */}
+        <motion.div 
+          className="absolute inset-0 rounded-3xl pointer-events-none"
+          style={{
+            background: `linear-gradient(${x.get() > 0 ? '90deg' : '-90deg'}, transparent 0%, ${x.get() > 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'} 100%)`,
+            opacity: cardBgOpacity
+          }}
+        />
       </div>
     </motion.div>
   );
