@@ -10,8 +10,12 @@ interface DiceDotProps {
 
 const DiceDot = ({ position, isRed = false }: DiceDotProps) => (
   <mesh position={position}>
-    <sphereGeometry args={[0.08, 16, 16]} />
-    <meshStandardMaterial color={isRed ? "#e63946" : "#1a1a2e"} />
+    <sphereGeometry args={[0.06, 32, 32]} />
+    <meshStandardMaterial 
+      color={isRed ? "#c41e3a" : "#1a1a2e"} 
+      roughness={0.3}
+      metalness={0.2}
+    />
   </mesh>
 );
 
@@ -55,13 +59,27 @@ const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
   });
 
   return (
-    <group ref={meshRef}>
-      {/* Main dice body with gradient-like effect */}
-      <RoundedBox args={[1, 1, 1]} radius={0.12} smoothness={4}>
-        <meshStandardMaterial 
-          color="#f8f8fc" 
-          roughness={0.2}
+    <group ref={meshRef} scale={0.7}>
+      {/* Main dice body - premium glossy white with gold edges */}
+      <RoundedBox args={[1, 1, 1]} radius={0.15} smoothness={8}>
+        <meshPhysicalMaterial 
+          color="#ffffff" 
+          roughness={0.05}
           metalness={0.1}
+          clearcoat={1}
+          clearcoatRoughness={0.1}
+          reflectivity={0.9}
+        />
+      </RoundedBox>
+      
+      {/* Gold edge highlight */}
+      <RoundedBox args={[1.02, 1.02, 1.02]} radius={0.16} smoothness={8}>
+        <meshStandardMaterial 
+          color="#d4af37" 
+          roughness={0.3}
+          metalness={0.8}
+          transparent
+          opacity={0.15}
         />
       </RoundedBox>
 
@@ -119,17 +137,18 @@ interface Dice3DProps {
 
 const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
   return (
-    <div className="w-52 h-52">
-      <Canvas camera={{ position: [0, 0, 3.2], fov: 45 }}>
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[5, 5, 5]} intensity={1.2} />
-        <directionalLight position={[-3, -3, -3]} intensity={0.4} />
-        <pointLight position={[0, 2, 2]} intensity={0.6} color="#d4af37" />
+    <div className="w-20 h-20">
+      <Canvas camera={{ position: [0, 0, 2.8], fov: 40 }}>
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
+        <directionalLight position={[-3, -3, -3]} intensity={0.3} />
+        <pointLight position={[0, 2, 2]} intensity={0.8} color="#d4af37" />
+        <pointLight position={[-2, -1, 1]} intensity={0.4} color="#ffffff" />
         
         <Float
-          speed={isAnimating ? 0 : 2}
-          rotationIntensity={isAnimating ? 0 : 0.3}
-          floatIntensity={isAnimating ? 0 : 0.5}
+          speed={isAnimating ? 0 : 1.5}
+          rotationIntensity={isAnimating ? 0 : 0.2}
+          floatIntensity={isAnimating ? 0 : 0.3}
         >
           <AnimatedDice isAnimating={isAnimating} />
         </Float>
@@ -137,10 +156,10 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
         {/* Golden sparkles around the dice */}
         {isAnimating && (
           <Sparkles
-            count={50}
-            scale={3}
-            size={3}
-            speed={2}
+            count={30}
+            scale={2}
+            size={2}
+            speed={3}
             color="#d4af37"
           />
         )}

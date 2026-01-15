@@ -31,23 +31,23 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       className="relative w-72 h-80 z-10 flex items-center justify-center"
     >
       {/* Two 3D Dice positioned at the palm of the hand */}
-      <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex gap-0">
+      <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center gap-1">
         {/* First Dice */}
         <motion.div 
-          className="scale-[0.4] -mr-6"
           animate={isExiting ? {
             rotateZ: [0, 360, 720],
-            scale: [0.4, 0.6, 0.2],
-            x: [-20, -40, -100],
+            scale: [1, 1.2, 0.3],
+            x: [-10, -30, -80],
+            y: [0, -20, -50],
           } : {
-            y: [0, -3, 0],
-            rotate: [0, 5, -5, 0],
+            y: [0, -2, 0],
+            rotate: [0, 3, -3, 0],
           }}
           transition={isExiting ? {
             duration: 0.8,
             ease: "easeOut"
           } : {
-            duration: 2,
+            duration: 2.5,
             repeat: Infinity,
             ease: "easeInOut"
           }}
@@ -57,23 +57,23 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
 
         {/* Second Dice */}
         <motion.div 
-          className="scale-[0.4] -ml-6"
           animate={isExiting ? {
             rotateZ: [0, -360, -720],
-            scale: [0.4, 0.6, 0.2],
-            x: [20, 40, 100],
+            scale: [1, 1.2, 0.3],
+            x: [10, 30, 80],
+            y: [0, -20, -50],
           } : {
-            y: [0, -3, 0],
-            rotate: [0, -5, 5, 0],
+            y: [0, -2, 0],
+            rotate: [0, -3, 3, 0],
           }}
           transition={isExiting ? {
             duration: 0.8,
             ease: "easeOut"
           } : {
-            duration: 2,
+            duration: 2.5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 0.3
+            delay: 0.4
           }}
         >
           <Dice3D isAnimating={isExiting} />
