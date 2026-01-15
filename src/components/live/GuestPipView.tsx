@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, useDragControls, PanInfo, AnimatePresence } from "framer-motion";
 import { X, Loader2, Maximize2, Minimize2, Mic, MicOff, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ConnectionQualityIndicator from "./ConnectionQualityIndicator";
+import { useWebRTCQuality } from "@/hooks/useWebRTCQuality";
 
 interface GuestPipViewProps {
   guestName: string | null;
@@ -15,6 +17,7 @@ interface GuestPipViewProps {
   onRemoveGuest?: () => void;
   isConnecting?: boolean;
   isConnected?: boolean;
+  peerConnection?: RTCPeerConnection | null;
 }
 
 // Particle component for the entry animation
@@ -87,12 +90,19 @@ const GuestPipView = ({
   onRemoveGuest,
   isConnecting = false,
   isConnected = false,
+  peerConnection = null,
 }: GuestPipViewProps) => {
   const guestVideoRef = useRef<HTMLVideoElement>(null);
   const dragControls = useDragControls();
   const [isExpanded, setIsExpanded] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [showEntryEffect, setShowEntryEffect] = useState(true);
+
+  // WebRTC quality monitoring
+  const { quality, stats, qualityScore } = useWebRTCQuality(
+    peerConnection,
+    isConnected
+  );
 
   // Hide entry effects after animation completes
   useEffect(() => {
@@ -206,13 +216,22 @@ const GuestPipView = ({
         {/* Bottom gradient overlay */}
         <div className="absolute inset-x-0 bottom-0 h-8 sm:h-10 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
-        {/* Guest name label */}
+        {/* Guest name label with connection quality */}
         <div className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 rounded-full bg-background/60 backdrop-blur-sm">
-          <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-green-500" : isConnecting ? "bg-yellow-500 animate-pulse" : "bg-gray-400"}`} />
-          <span className="text-[9px] sm:text-[10px] font-medium text-foreground truncate max-w-[60px] sm:max-w-[80px]">
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isConnected ? "bg-green-500" : isConnecting ? "bg-yellow-500 animate-pulse" : "bg-gray-400"}`} />
+          <span className="text-[9px] sm:text-[10px] font-medium text-foreground truncate max-w-[40px] sm:max-w-[60px]">
             {guestName || "Invité"}
           </span>
-          {isMuted && <MicOff className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-destructive" />}
+          {isMuted && <MicOff className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-destructive flex-shrink-0" />}
+          {/* Connection quality indicator */}
+          {isConnected && peerConnection && (
+            <ConnectionQualityIndicator
+              quality={quality}
+              score={qualityScore}
+              stats={stats}
+              size="sm"
+            />
+          )}
         </div>
 
         {/* Controls */}

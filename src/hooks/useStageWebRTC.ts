@@ -541,6 +541,9 @@ export const useStageWebRTC = ({
     }
   }, [localStream, isMuted]);
 
+  // Expose peer connection for quality monitoring
+  const getPeerConnection = useCallback(() => peerConnectionRef.current, []);
+
   return {
     guestStream,
     localStream,
@@ -550,5 +553,6 @@ export const useStageWebRTC = ({
     error,
     cleanup,
     toggleMute,
+    getPeerConnection,
   };
 };
