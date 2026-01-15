@@ -490,6 +490,9 @@ const LiveRoom = () => {
     };
   }, [id]);
 
+  // Ref to store presence channel for cleanup
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   // Subscribe to live updates and realtime presence
   useEffect(() => {
     if (!id || !user) return;
@@ -518,26 +521,88 @@ const LiveRoom = () => {
       )
       .subscribe();
 
-    // Presence channel for realtime viewer count
+    // Presence channel for realtime viewer count with proper tracking
     const presenceChannel = supabase.channel(`presence-live-${id}`, {
       config: { presence: { key: user.id } },
     });
+    presenceChannelRef.current = presenceChannel;
 
     presenceChannel
       .on("presence", { event: "sync" }, () => {
         const state = presenceChannel.presenceState();
         const count = Object.keys(state).length;
+        console.log("[Presence] Sync - viewers:", count, "state:", state);
         setRealtimeViewers(count);
+      })
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        console.log("[Presence] User joined:", key, newPresences);
+      })
+      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+        console.log("[Presence] User left:", key, leftPresences);
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          await presenceChannel.track({ user_id: user.id });
+          console.log("[Presence] Subscribed, tracking user:", user.id);
+          await presenceChannel.track({ 
+            user_id: user.id,
+            joined_at: new Date().toISOString(),
+          });
         }
       });
 
-    return () => {
+    // Cleanup function - explicitly untrack before removing channel
+    const cleanup = async () => {
+      console.log("[Presence] Cleanup - untracking user:", user.id);
+      try {
+        await presenceChannel.untrack();
+      } catch (e) {
+        console.warn("[Presence] Untrack failed:", e);
+      }
       supabase.removeChannel(channel);
       supabase.removeChannel(presenceChannel);
+      presenceChannelRef.current = null;
+    };
+
+    return () => {
+      cleanup();
+    };
+  }, [id, user]);
+
+  // Handle beforeunload to ensure presence is cleaned up on page close/refresh
+  useEffect(() => {
+    if (!id || !user) return;
+
+    const handleBeforeUnload = () => {
+      console.log("[Presence] beforeunload - cleaning up presence");
+      // Use sendBeacon for reliable cleanup on page unload
+      if (presenceChannelRef.current) {
+        try {
+          presenceChannelRef.current.untrack();
+        } catch (e) {
+          console.warn("[Presence] beforeunload untrack failed:", e);
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && presenceChannelRef.current) {
+        console.log("[Presence] Page hidden - untracking");
+        presenceChannelRef.current.untrack();
+      } else if (document.visibilityState === "visible" && presenceChannelRef.current && user) {
+        console.log("[Presence] Page visible - re-tracking");
+        presenceChannelRef.current.track({ 
+          user_id: user.id,
+          joined_at: new Date().toISOString(),
+        });
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [id, user]);
 
