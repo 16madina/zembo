@@ -198,6 +198,50 @@ export const useSoundEffects = () => {
     }
   }, []);
 
+  // Sad rejection sound when match is declined
+  const playRejectionSound = useCallback(async () => {
+    try {
+      // Trigger warning haptic feedback on mobile
+      if (isNative) {
+        haptics.notification('warning');
+      }
+      
+      // Generate sad/rejection sound via ElevenLabs
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            prompt: "Sad descending piano notes, melancholic rejection sound, gentle disappointment tone, soft and brief",
+            duration: 2,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        // Fallback: create a simple sad tone using Web Audio API
+        console.warn("ElevenLabs failed for rejection sound");
+        return;
+      }
+      
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      audio.volume = 0.7;
+      audio.play().catch((err) => {
+        console.warn("Failed to play rejection sound:", err);
+      });
+    } catch (error) {
+      console.error("Error playing rejection sound:", error);
+    }
+  }, []);
+
   return {
     playDiceSound,
     playZemboVoice,
@@ -205,6 +249,7 @@ export const useSoundEffects = () => {
     playNotificationSound,
     playMatchSound,
     playRoseSound,
+    playRejectionSound,
     isDrumrollPlaying,
   };
 };
