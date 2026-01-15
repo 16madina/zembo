@@ -27,6 +27,7 @@ import { useFaceTracking } from "@/hooks/useFaceTracking";
 import { useLiveStage } from "@/hooks/useLiveStage";
 import { useStageWebRTC } from "@/hooks/useStageWebRTC";
 import { useLiveAccess } from "@/hooks/useLiveAccess";
+import { useLiveJoinRequests } from "@/hooks/useLiveJoinRequests";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,6 +45,8 @@ import SplitScreenView from "@/components/live/SplitScreenView";
 import GuestViewModeSelector, { type GuestViewMode } from "@/components/live/GuestViewModeSelector";
 import JoinLiveModal from "@/components/live/JoinLiveModal";
 import LiveDebugPanel from "@/components/live/LiveDebugPanel";
+import JoinRequestButton from "@/components/live/JoinRequestButton";
+import { JoinRequestQueue } from "@/components/live/JoinRequestNotification";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -212,9 +215,20 @@ const LiveRoom = () => {
   } = useStageWebRTC({
     liveId: id || "",
     guestId: currentGuest?.user_id || null,
-    isStreamer,
+    isStreamer: !!isStreamer,
     isOnStage,
   });
+
+  // Join requests with coins (for viewers requesting to join, and streamers managing requests)
+  const {
+    requests: joinRequests,
+    myRequest: myJoinRequest,
+    sendingRequest: sendingJoinRequest,
+    sendJoinRequest,
+    cancelRequest: cancelJoinRequest,
+    acceptRequest: acceptJoinRequest,
+    rejectRequest: rejectJoinRequest,
+  } = useLiveJoinRequests(id || "", live?.streamer_id);
 
   useEffect(() => {
     const fetchLive = async () => {
@@ -578,7 +592,17 @@ const LiveRoom = () => {
         onResyncTracks={liveKitResyncTracks}
       />
 
-      {/* Reconnect Button for Viewers with video issues */}
+      {/* Join Request Notifications for Streamer */}
+      {isStreamer && (
+        <JoinRequestQueue
+          liveId={id || ""}
+          streamerId={live.streamer_id}
+          requests={joinRequests}
+          onAccept={acceptJoinRequest}
+          onReject={rejectJoinRequest}
+        />
+      )}
+
       <AnimatePresence>
         {showReconnectButton && !isStreamer && (
           <motion.div
@@ -832,7 +856,7 @@ const LiveRoom = () => {
           )}
 
           {/* Stage Request Button for Viewers (après Share) */}
-          {!isStreamer && (
+          {!isStreamer && hasAccess && (
             <StageRequestButton
               hasRequest={!!myRequest}
               isOnStage={isOnStage}
@@ -840,6 +864,14 @@ const LiveRoom = () => {
               onRequest={requestStage}
               onCancel={cancelRequest}
               onLeave={leaveStage}
+            />
+          )}
+
+          {/* Join Request Button (50 coins) for viewers without access */}
+          {!isStreamer && !hasAccess && !showJoinModal && (
+            <JoinRequestButton
+              liveId={id || ""}
+              streamerId={live.streamer_id}
             />
           )}
 
