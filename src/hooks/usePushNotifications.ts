@@ -197,29 +197,55 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
   }, []);
 
   const initializePushNotifications = useCallback(async () => {
+    // DEBUG TOAST 1: Hook started
+    toast.info("🔔 DEBUG: Initialisation push...", { duration: 3000 });
+    console.log("DEBUG: initializePushNotifications called");
+
     const PushNotifications = await getPushNotifications();
-    if (!PushNotifications || !user) return;
+    if (!PushNotifications) {
+      toast.error("❌ DEBUG: PushNotifications non disponible");
+      console.log("DEBUG: PushNotifications not available");
+      return;
+    }
+    
+    if (!user) {
+      toast.error("❌ DEBUG: User non connecté");
+      console.log("DEBUG: User not connected");
+      return;
+    }
+
+    toast.info("✅ DEBUG: PushNotifications chargé, user: " + user.id.slice(0, 8), { duration: 3000 });
 
     try {
       // Avoid duplicate listeners on fast refresh / re-mounts
       await PushNotifications.removeAllListeners();
+      toast.info("🔄 DEBUG: Listeners nettoyés", { duration: 2000 });
 
       // Listen for registration success
       PushNotifications.addListener("registration", (tokenData: PushNotificationToken) => {
-        console.log("Push registration success, token:", tokenData.value);
+        console.log("DEBUG: registration listener TRIGGERED, token:", tokenData.value);
+        // DEBUG TOAST: Registration success
+        toast.success("🎉 DEBUG: TOKEN REÇU! " + tokenData.value.slice(0, 20) + "...", { 
+          duration: 10000 
+        });
         setToken(tokenData.value);
         registerToken(tokenData.value);
       });
 
       // Listen for registration errors
       PushNotifications.addListener("registrationError", (error: any) => {
-        console.error("Push registration error:", error);
-        toast.error("Erreur lors de l'enregistrement des notifications");
+        console.error("DEBUG: registrationError listener TRIGGERED:", error);
+        // DEBUG TOAST: Registration error
+        toast.error("❌ DEBUG: ERREUR REGISTRATION: " + JSON.stringify(error), { 
+          duration: 10000 
+        });
       });
 
       // Listen for push notifications received while app is in foreground
       PushNotifications.addListener("pushNotificationReceived", (notification: any) => {
-        console.log("Push notification received:", notification);
+        console.log("DEBUG: pushNotificationReceived:", notification);
+        // DEBUG TOAST: Notification received
+        toast.success("📬 DEBUG: NOTIF REÇUE: " + notification.title, { duration: 5000 });
 
         const data: NotificationData = notification.data || {};
 
@@ -236,41 +262,48 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
 
       // Listen for push notification action (user tapped on notification)
       PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
-        console.log("Push notification action performed:", notification);
+        console.log("DEBUG: pushNotificationActionPerformed:", notification);
+        toast.info("👆 DEBUG: Notif tapped", { duration: 3000 });
 
         const data: NotificationData = notification.notification?.data || {};
         handleNotificationNavigation(data);
       });
 
+      toast.info("👂 DEBUG: Listeners ajoutés", { duration: 2000 });
+
       // Check current permission status
       const current = await PushNotifications.checkPermissions();
       setPermissionStatus(current.receive);
+      toast.info("🔐 DEBUG: Permission actuelle: " + current.receive, { duration: 3000 });
 
       if (current.receive !== "granted") {
+        toast.info("🙏 DEBUG: Demande de permission...", { duration: 2000 });
         const permission = await PushNotifications.requestPermissions();
         setPermissionStatus(permission.receive);
-        if (permission.receive !== "granted") return;
+        toast.info("🔐 DEBUG: Permission après demande: " + permission.receive, { duration: 3000 });
+        if (permission.receive !== "granted") {
+          toast.error("❌ DEBUG: Permission refusée!", { duration: 5000 });
+          return;
+        }
       }
 
-      // Register for push notifications - this may trigger "registration" event
-      // or return the token directly if already registered
+      // Register for push notifications
+      toast.info("📝 DEBUG: Appel register()...", { duration: 2000 });
       const result = await PushNotifications.register();
-      console.log("PushNotifications.register() result:", result);
+      console.log("DEBUG: PushNotifications.register() result:", result);
+      toast.info("📝 DEBUG: register() terminé", { duration: 3000 });
 
-      // On iOS, the token might already be available from a previous session
-      // Try to get the delivery token using a short delay
-      setTimeout(async () => {
-        try {
-          // Attempt to get the token by calling register again
-          // The registration event should have fired by now
-          const checkResult = await PushNotifications.checkPermissions();
-          console.log("Permission check after register:", checkResult);
-        } catch (e) {
-          console.log("Post-register check:", e);
-        }
-      }, 1000);
+      // Wait and check if registration event fired
+      setTimeout(() => {
+        console.log("DEBUG: Timeout check - registration event should have fired by now");
+        toast.info("⏰ DEBUG: 2s écoulées - vérifiez si 🎉 TOKEN REÇU est apparu", { 
+          duration: 5000 
+        });
+      }, 2000);
+
     } catch (error) {
-      console.error("Error initializing push notifications:", error);
+      console.error("DEBUG: Error initializing push notifications:", error);
+      toast.error("💥 DEBUG: ERREUR INIT: " + String(error), { duration: 10000 });
     }
   }, [user, registerToken, handleNotificationNavigation]);
 
