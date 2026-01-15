@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
@@ -184,7 +184,19 @@ export const useLives = () => {
     }
   };
 
-  // Subscribe to live changes
+  // Debounced fetch to prevent excessive API calls with 100+ viewers
+  const debouncedFetchRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const debouncedFetchLives = useCallback(() => {
+    if (debouncedFetchRef.current) {
+      clearTimeout(debouncedFetchRef.current);
+    }
+    debouncedFetchRef.current = setTimeout(() => {
+      fetchLives();
+    }, 500); // Debounce 500ms
+  }, [fetchLives]);
+
+  // Subscribe to live changes with debounced updates
   useEffect(() => {
     fetchLives();
     checkCanGoLive();
@@ -199,15 +211,19 @@ export const useLives = () => {
           table: "lives",
         },
         () => {
-          fetchLives();
+          // Debounce to prevent excessive fetches with many concurrent updates
+          debouncedFetchLives();
         }
       )
       .subscribe();
 
     return () => {
+      if (debouncedFetchRef.current) {
+        clearTimeout(debouncedFetchRef.current);
+      }
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, debouncedFetchLives]);
 
   return {
     lives,
