@@ -158,33 +158,42 @@ const Random = () => {
 
             <DiceAnimation isExiting={isExiting} />
 
-            <motion.div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6 z-10" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
+            <motion.div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4 z-10" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
               <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-2 h-2 rounded-full bg-primary" />
               <span className="text-sm text-primary font-medium">Mode Ghost activé</span>
             </motion.div>
             
-            <motion.p className="text-muted-foreground mb-4 max-w-xs leading-relaxed text-center z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <motion.p className="text-muted-foreground mb-3 max-w-xs leading-relaxed text-center z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
               Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
-            <motion.p className="text-muted-foreground/70 mb-6 max-w-xs text-center text-sm z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+            <motion.p className="text-muted-foreground/70 mb-4 max-w-xs text-center text-sm z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
               Aucun profil. Aucune photo.<br /><span className="text-foreground font-medium">Juste une voix.</span>
             </motion.p>
 
-            {/* Microphone Test */}
-            <motion.div
-              className="mb-6 z-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
+            {/* Commencer Button - Always visible */}
+            <motion.button 
+              onClick={handleCommencer} 
+              className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10 mb-4" 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ delay: 0.55 }} 
+              whileHover={{ scale: 1.03 }} 
+              whileTap={{ scale: 0.97 }}
             >
-              <MicrophoneTest />
-            </motion.div>
-
-            <motion.button onClick={handleCommencer} className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Play className="w-5 h-5 text-primary-foreground" />
               <span className="text-primary-foreground">Commencer</span>
             </motion.button>
+
+            {/* Microphone Test - Optional, below the button */}
+            <motion.div
+              className="z-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <MicrophoneTest />
+            </motion.div>
           </>
         );
     }
