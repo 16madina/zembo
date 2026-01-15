@@ -30,26 +30,55 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       }}
       className="relative w-72 h-80 z-10 flex items-center justify-center"
     >
-      {/* 3D Dice positioned above the hand */}
-      <motion.div 
-        className="absolute -top-8 left-1/2 -translate-x-1/2 z-20"
-        animate={isExiting ? {
-          rotateZ: [0, 360, 720],
-          scale: [1, 1.3, 0.5],
-        } : {
-          y: [0, -5, 0],
-        }}
-        transition={isExiting ? {
-          duration: 0.8,
-          ease: "easeOut"
-        } : {
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      >
-        <Dice3D isAnimating={isExiting} />
-      </motion.div>
+      {/* Two 3D Dice positioned at the palm of the hand */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex gap-1">
+        {/* First Dice */}
+        <motion.div 
+          className="scale-50"
+          animate={isExiting ? {
+            rotateZ: [0, 360, 720],
+            scale: [0.5, 0.7, 0.3],
+            x: [-20, -40, -100],
+          } : {
+            y: [0, -5, 0],
+            rotate: [0, 5, -5, 0],
+          }}
+          transition={isExiting ? {
+            duration: 0.8,
+            ease: "easeOut"
+          } : {
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          <Dice3D isAnimating={isExiting} />
+        </motion.div>
+
+        {/* Second Dice */}
+        <motion.div 
+          className="scale-50"
+          animate={isExiting ? {
+            rotateZ: [0, -360, -720],
+            scale: [0.5, 0.7, 0.3],
+            x: [20, 40, 100],
+          } : {
+            y: [0, -5, 0],
+            rotate: [0, -5, 5, 0],
+          }}
+          transition={isExiting ? {
+            duration: 0.8,
+            ease: "easeOut"
+          } : {
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.3
+          }}
+        >
+          <Dice3D isAnimating={isExiting} />
+        </motion.div>
+      </div>
 
       {/* Golden Hand Image */}
       <motion.img
