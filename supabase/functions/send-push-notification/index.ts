@@ -129,13 +129,24 @@ serve(async (req) => {
         body: JSON.stringify({
           message: {
             token,
+            // Cross-platform notification
             notification: {
               title,
               body,
             },
+            // iOS/APNs: add explicit headers for newer iOS requirements
             apns: {
+              headers: {
+                "apns-priority": "10",
+                "apns-push-type": "alert",
+              },
               payload: {
                 aps: {
+                  // Explicit alert payload (helps some iOS setups)
+                  alert: {
+                    title,
+                    body,
+                  },
                   sound: "default",
                   badge: 1,
                 },
