@@ -48,6 +48,7 @@ import JoinLiveModal from "@/components/live/JoinLiveModal";
 import LiveDebugPanel from "@/components/live/LiveDebugPanel";
 import JoinRequestButton from "@/components/live/JoinRequestButton";
 import { JoinRequestQueue } from "@/components/live/JoinRequestNotification";
+import LiveEndedScreen from "@/components/live/LiveEndedScreen";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -91,6 +92,14 @@ const LiveRoom = () => {
   const [hasIncrementedViewer, setHasIncrementedViewer] = useState(false);
   const [hasShownStageToast, setHasShownStageToast] = useState(false);
   const [liveEnded, setLiveEnded] = useState(false);
+  const [showEndedScreen, setShowEndedScreen] = useState(false);
+  const [endedLiveData, setEndedLiveData] = useState<{
+    startedAt: string | null;
+    endedAt: string | null;
+    maxViewers: number;
+    streamerName: string | null;
+    streamerAvatar: string | null;
+  } | null>(null);
   
   // SECURITY: Ultra simple - only compare IDs directly
   const isStreamer = live?.streamer_id === user?.id;
@@ -433,9 +442,16 @@ const LiveRoom = () => {
 
       if (!liveCheck || liveCheck.status === "ended") {
         console.log("[LiveRoom] Live ended or not found, stopping reconnect attempts");
+        // Store minimal data for ended screen (viewer case)
+        setEndedLiveData({
+          startedAt: live?.started_at || null,
+          endedAt: new Date().toISOString(),
+          maxViewers: live?.max_viewers || 0,
+          streamerName: live?.streamer?.display_name || null,
+          streamerAvatar: live?.streamer?.avatar_url || null,
+        });
         setLiveEnded(true);
-        toast.info("Ce live est terminé", { duration: 3000 });
-        setTimeout(() => navigate("/live"), 3000);
+        setShowEndedScreen(true);
         return;
       }
 
@@ -472,9 +488,15 @@ const LiveRoom = () => {
 
     if (!liveCheck || liveCheck.status === "ended") {
       console.log("[LiveRoom] Live ended, cannot reconnect");
+      setEndedLiveData({
+        startedAt: live?.started_at || null,
+        endedAt: new Date().toISOString(),
+        maxViewers: live?.max_viewers || 0,
+        streamerName: live?.streamer?.display_name || null,
+        streamerAvatar: live?.streamer?.avatar_url || null,
+      });
       setLiveEnded(true);
-      toast.info("Ce live est terminé", { duration: 3000 });
-      setTimeout(() => navigate("/live"), 3000);
+      setShowEndedScreen(true);
       return;
     }
 
@@ -581,9 +603,16 @@ const LiveRoom = () => {
           const updated = payload.new as Tables<"lives">;
           if (updated.status === "ended") {
             console.log("[LiveRoom] Live ended via realtime update");
+            // Store live data for ended screen
+            setEndedLiveData({
+              startedAt: updated.started_at,
+              endedAt: updated.ended_at,
+              maxViewers: updated.max_viewers,
+              streamerName: live?.streamer?.display_name || null,
+              streamerAvatar: live?.streamer?.avatar_url || null,
+            });
             setLiveEnded(true);
-            toast.info("Le live est terminé");
-            setTimeout(() => navigate("/live"), 2000);
+            setShowEndedScreen(true);
           } else {
             setLive((prev) =>
               prev ? { ...prev, ...updated } : null
@@ -696,16 +725,28 @@ const LiveRoom = () => {
   };
 
   const handleEndLive = async () => {
-    if (!id) return;
+    if (!id || !live) return;
+
+    // Store live data before ending for the ended screen
+    const endedAt = new Date().toISOString();
+    setEndedLiveData({
+      startedAt: live.started_at,
+      endedAt,
+      maxViewers: Math.max(live.max_viewers, realtimeViewers),
+      streamerName: live.streamer?.display_name || null,
+      streamerAvatar: live.streamer?.avatar_url || null,
+    });
 
     const { error } = await endLive(id);
     if (error) {
       toast.error("Erreur lors de la fin du live");
+      setEndedLiveData(null);
       return;
     }
 
-    toast.success("Live terminé");
-    navigate("/live");
+    // Show the ended screen instead of navigating directly
+    setLiveEnded(true);
+    setShowEndedScreen(true);
   };
 
   if (isLoading) {
@@ -719,6 +760,25 @@ const LiveRoom = () => {
   if (!live) return null;
 
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${live.streamer_id}`;
+
+  // Show ended screen with stats and animations
+  if (showEndedScreen && endedLiveData) {
+    return (
+      <AnimatePresence mode="wait">
+        <LiveEndedScreen
+          liveId={id || ""}
+          streamerId={live.streamer_id}
+          streamerName={endedLiveData.streamerName}
+          streamerAvatar={endedLiveData.streamerAvatar}
+          startedAt={endedLiveData.startedAt}
+          endedAt={endedLiveData.endedAt}
+          maxViewers={endedLiveData.maxViewers}
+          isStreamer={isStreamer}
+          onClose={() => navigate("/live")}
+        />
+      </AnimatePresence>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black">
