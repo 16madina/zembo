@@ -50,6 +50,7 @@ const SplitScreenView = ({
 }: SplitScreenViewProps) => {
   const streamerVideoRef = useRef<HTMLVideoElement>(null);
   const guestVideoRef = useRef<HTMLVideoElement>(null);
+  const guestAudioRef = useRef<HTMLAudioElement>(null);
 
   // Attach streamer stream (streamer local preview)
   useEffect(() => {
@@ -71,25 +72,60 @@ const SplitScreenView = ({
     };
   }, [streamerRemoteVideoTrack, streamerStream]);
 
-  // Attach guest stream with debugging
+  // Attach guest stream to VIDEO
   useEffect(() => {
-    console.log("[SplitScreenView] Guest stream effect:", {
-      hasRef: !!guestVideoRef.current,
+    console.log("[SplitScreenView] Guest stream -> video effect:", {
+      hasVideoRef: !!guestVideoRef.current,
       hasStream: !!guestStream,
-      tracks: guestStream?.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })),
+      tracks:
+        guestStream?.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState, id: t.id })) ??
+        [],
     });
-    
-    if (guestVideoRef.current && guestStream) {
-      console.log("[SplitScreenView] Attaching guest stream to video element");
-      guestVideoRef.current.srcObject = guestStream;
-      
-      // Force play in case autoplay is blocked
-      guestVideoRef.current.play().catch(err => {
-        console.warn("[SplitScreenView] Guest video autoplay failed:", err);
+
+    const el = guestVideoRef.current;
+    if (!el) return;
+
+    if (guestStream) {
+      console.log("[SplitScreenView] Attaching guest stream to VIDEO element");
+      el.srcObject = guestStream;
+      el.muted = false;
+      el.playsInline = true;
+      el.setAttribute("playsinline", "true");
+      // iOS Safari specific
+      el.setAttribute("webkit-playsinline", "true");
+
+      el.play().catch((err) => {
+        console.warn("[SplitScreenView] Guest VIDEO play() failed:", err);
       });
-    } else if (guestVideoRef.current && !guestStream) {
-      console.log("[SplitScreenView] Clearing guest video srcObject");
-      guestVideoRef.current.srcObject = null;
+    } else {
+      console.log("[SplitScreenView] Clearing guest VIDEO srcObject");
+      el.srcObject = null;
+    }
+  }, [guestStream]);
+
+  // Attach guest stream to AUDIO (helps when browsers are picky about audio on <video>)
+  useEffect(() => {
+    console.log("[SplitScreenView] Guest stream -> audio effect:", {
+      hasAudioRef: !!guestAudioRef.current,
+      hasStream: !!guestStream,
+      audioTracks: guestStream?.getAudioTracks().map((t) => ({ id: t.id, enabled: t.enabled, readyState: t.readyState })) ?? [],
+    });
+
+    const audioEl = guestAudioRef.current;
+    if (!audioEl) return;
+
+    if (guestStream) {
+      audioEl.srcObject = guestStream;
+      audioEl.muted = false;
+      audioEl.autoplay = true;
+      audioEl.setAttribute("playsinline", "true");
+      audioEl.setAttribute("webkit-playsinline", "true");
+
+      audioEl.play().catch((err) => {
+        console.warn("[SplitScreenView] Guest AUDIO play() failed:", err);
+      });
+    } else {
+      audioEl.srcObject = null;
     }
   }, [guestStream]);
 
@@ -132,6 +168,9 @@ const SplitScreenView = ({
 
       {/* Bottom video - Guest */}
       <div className="relative flex-1">
+        {/* Dedicated audio element for guest */}
+        <audio ref={guestAudioRef} autoPlay playsInline />
+
         {guestStream ? (
           <video
             ref={guestVideoRef}
