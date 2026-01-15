@@ -1,7 +1,7 @@
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from "framer-motion";
 import { MapPin, BadgeCheck, X, Star, Heart } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
-import { useRef, useState, useCallback } from "react";
 
 interface ProfileCardProps {
   profile: Profile;
@@ -151,9 +151,14 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
     tap: { scale: 0.9 },
   };
 
+  // Animate entrance on mount
+  React.useEffect(() => {
+    controls.start({ scale: 1, opacity: 1 });
+  }, [controls]);
+
   return (
     <motion.div
-      className="absolute w-full h-full cursor-grab active:cursor-grabbing touch-none"
+      className="absolute w-full h-full cursor-grab active:cursor-grabbing touch-none select-none"
       style={{ x, y, rotate }}
       drag
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
@@ -164,7 +169,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
       onDragEnd={handleDragEnd}
       animate={controls}
       initial={{ scale: 0.95, opacity: 0 }}
-      whileDrag={{ cursor: "grabbing" }}
+      whileDrag={{ scale: 1.02 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
     >
       <div 
