@@ -31,7 +31,7 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       className="relative w-72 h-80 z-10 flex items-center justify-center"
     >
       {/* Two 3D Dice positioned at the palm of the hand */}
-      <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center gap-1">
+      <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center -space-x-6">
         {/* First Dice */}
         <motion.div 
           animate={isExiting ? {
