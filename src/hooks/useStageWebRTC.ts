@@ -43,6 +43,7 @@ export const useStageWebRTC = ({
   const hasInitializedRef = useRef(false);
   const userIdRef = useRef<string | null>(null);
   const liveIdRef = useRef<string | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
 
   // Keep refs updated for cleanup
   useEffect(() => {
@@ -53,27 +54,34 @@ export const useStageWebRTC = ({
   // Cleanup function - only cleans local resources, not signals
   const cleanup = useCallback(() => {
     console.log("[StageWebRTC] Cleaning up local resources...");
-    
+
+    // Stop local tracks (guest side)
     if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+      localStream.getTracks().forEach((track) => track.stop());
     }
     setLocalStream(null);
 
+    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
 
+    // Remove realtime channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
 
+    // Reset refs/state
     pendingCandidatesRef.current = [];
+    remoteStreamRef.current = null;
     hasInitializedRef.current = false;
+
     setGuestStream(null);
     setIsConnected(false);
     setIsConnecting(false);
+
     onGuestDisconnected?.();
   }, [localStream, onGuestDisconnected]);
 
@@ -205,34 +213,61 @@ export const useStageWebRTC = ({
       const pc = new RTCPeerConnection(ICE_SERVERS);
       peerConnectionRef.current = pc;
 
-      // Handle remote stream (guest video) - critical for receiving video
+      // Handle remote tracks (guest video + audio)
+      // IMPORTANT: Safari/mobile can fire ontrack without event.streams[0].
+      // We merge tracks into a stable stream ref, then emit a *fresh* MediaStream
+      // to force <video>.srcObject reattachment when tracks arrive later.
       pc.ontrack = (event) => {
-        console.log("[StageWebRTC] 🎥 Received track from guest:", event.track.kind, {
-          trackId: event.track.id,
-          enabled: event.track.enabled,
-          readyState: event.track.readyState,
-          streams: event.streams.length,
+        const track = event.track;
+        const incomingStream = event.streams?.[0] ?? null;
+
+        console.log("[StageWebRTC] 🎥 ontrack from guest:", track.kind, {
+          trackId: track.id,
+          enabled: track.enabled,
+          readyState: track.readyState,
+          hasIncomingStream: !!incomingStream,
+          incomingTracks: incomingStream?.getTracks().map((t) => ({ kind: t.kind, id: t.id })) ?? [],
         });
-        
-        // Get or create the remote stream
-        if (event.streams && event.streams[0]) {
-          const remoteStream = event.streams[0];
-          console.log("[StageWebRTC] 🎥 Setting guest stream with", remoteStream.getTracks().length, "tracks");
-          setGuestStream(remoteStream);
-          onGuestStreamReady?.(remoteStream);
-        } else {
-          // Fallback: create a new MediaStream with the track
-          console.log("[StageWebRTC] 🎥 Creating new MediaStream for track");
-          const newStream = new MediaStream([event.track]);
-          setGuestStream(prev => {
-            if (prev) {
-              prev.addTrack(event.track);
-              return prev;
-            }
-            return newStream;
-          });
-          onGuestStreamReady?.(newStream);
+
+        track.onunmute = () => {
+          console.log("[StageWebRTC] Track unmuted:", track.kind, track.id);
+        };
+        track.onmute = () => {
+          console.log("[StageWebRTC] Track muted:", track.kind, track.id);
+        };
+        track.onended = () => {
+          console.log("[StageWebRTC] Track ended:", track.kind, track.id);
+        };
+
+        // Initialize / reconcile the remote stream
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = incomingStream ?? new MediaStream();
         }
+
+        // Ensure we capture ALL tracks if the browser provides a stream
+        if (incomingStream) {
+          for (const t of incomingStream.getTracks()) {
+            const already = remoteStreamRef.current.getTracks().some((x) => x.id === t.id);
+            if (!already) remoteStreamRef.current.addTrack(t);
+          }
+        }
+
+        // Ensure the individual track is present too
+        const hasTrack = remoteStreamRef.current.getTracks().some((t) => t.id === track.id);
+        if (!hasTrack) remoteStreamRef.current.addTrack(track);
+
+        const mergedTracks = remoteStreamRef.current.getTracks();
+        console.log("[StageWebRTC] ✅ Remote stream merged tracks:", mergedTracks.map((t) => ({
+          kind: t.kind,
+          id: t.id,
+          enabled: t.enabled,
+          readyState: t.readyState,
+        })));
+
+        // Emit a fresh MediaStream so React effects re-run and video elements re-attach reliably.
+        const freshStream = new MediaStream(mergedTracks);
+        setGuestStream(freshStream);
+        onGuestStreamReady?.(freshStream);
       };
 
       // Handle ICE candidates
@@ -341,16 +376,26 @@ export const useStageWebRTC = ({
           autoGainControl: true,
         },
       });
-      console.log("[StageWebRTC] Guest got camera stream");
+
+      console.log("[StageWebRTC] Guest got camera stream", {
+        videoTracks: stream.getVideoTracks().map((t) => ({ id: t.id, enabled: t.enabled, readyState: t.readyState })),
+        audioTracks: stream.getAudioTracks().map((t) => ({ id: t.id, enabled: t.enabled, readyState: t.readyState })),
+      });
+
+      if (stream.getAudioTracks().length === 0) {
+        console.warn("[StageWebRTC] Guest stream has NO audio track - user may have denied mic permission");
+      }
+
       setLocalStream(stream);
 
       // Create peer connection
       const pc = new RTCPeerConnection(ICE_SERVERS);
       peerConnectionRef.current = pc;
 
-      // Add local stream tracks
-      stream.getTracks().forEach(track => {
-        console.log("[StageWebRTC] Guest adding track:", track.kind, {
+      // Add local stream tracks (video + audio)
+      stream.getTracks().forEach((track) => {
+        console.log("[StageWebRTC] Guest addTrack:", track.kind, {
+          trackId: track.id,
           enabled: track.enabled,
           readyState: track.readyState,
         });

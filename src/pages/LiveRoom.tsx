@@ -368,27 +368,33 @@ const LiveRoom = () => {
     }
   }, [liveKitConnected, liveKitError]);
 
-  // Proactive audio unlock on first user interaction (for mobile)
+  // Proactive audio unlock on first user interaction (mobile autoplay policies)
+  // - Viewers: needed for the main LiveKit stream audio
+  // - Streamer: needed when a guest is on stage (DUO) so guest audio can play on iOS/Android
   useEffect(() => {
-    if (isStreamer) return; // Streamers don't need this
-    
+    if (!user) return;
+
+    // Streamer only needs this when there's a stage guest (DUO)
+    if (isStreamer && !currentGuest) return;
+
     const handleFirstInteraction = () => {
-      console.log("[LiveRoom] First user interaction detected, unlocking audio proactively...");
+      console.log("[LiveRoom] First user interaction detected -> unlocking audio...", {
+        isStreamer,
+        hasGuest: !!currentGuest,
+      });
       unlockAudio();
-      // Remove listeners after first interaction
       document.removeEventListener("touchstart", handleFirstInteraction);
       document.removeEventListener("click", handleFirstInteraction);
     };
-    
-    // Add listeners for first touch/click
+
     document.addEventListener("touchstart", handleFirstInteraction, { once: true, passive: true });
     document.addEventListener("click", handleFirstInteraction, { once: true });
-    
+
     return () => {
       document.removeEventListener("touchstart", handleFirstInteraction);
       document.removeEventListener("click", handleFirstInteraction);
     };
-  }, [isStreamer, unlockAudio]);
+  }, [user, isStreamer, currentGuest?.user_id, unlockAudio]);
 
   // Auto-reconnect for viewers if connected but no video after 10 seconds
   useEffect(() => {
