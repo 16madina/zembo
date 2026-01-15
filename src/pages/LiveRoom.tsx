@@ -225,6 +225,7 @@ const LiveRoom = () => {
     isConnecting: stageConnecting,
     isMuted: guestMuted,
     toggleMute: toggleGuestMute,
+    getPeerConnection,
   } = useStageWebRTC({
     liveId: id || "",
     guestId: currentGuest?.user_id || null,
@@ -957,6 +958,7 @@ const LiveRoom = () => {
                   onRemoveGuest={removeFromStage}
                   isConnecting={stageConnecting}
                   isConnected={stageConnected}
+                  peerConnection={getPeerConnection()}
                 />
               )}
             </AnimatePresence>
