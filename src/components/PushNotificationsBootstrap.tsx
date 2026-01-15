@@ -9,6 +9,7 @@ export default function PushNotificationsBootstrap() {
     return saved ? saved === "true" : true;
   });
 
+  // Initialize push notifications - the hook handles everything
   usePushNotifications({ enabled });
 
   useEffect(() => {
