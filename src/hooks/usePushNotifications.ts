@@ -126,6 +126,19 @@ export const usePushNotifications = () => {
         }
         window.location.href = "/messages";
         break;
+
+      case "missed_call":
+        // Navigate to messages and show missed call info
+        if (data.callerName) {
+          sessionStorage.setItem("missedCall", JSON.stringify({
+            callId: data.callId,
+            callerName: data.callerName,
+            callerPhoto: data.callerPhoto,
+            callType: data.callType || "audio",
+          }));
+        }
+        window.location.href = "/messages";
+        break;
         
       default:
         // Default navigation

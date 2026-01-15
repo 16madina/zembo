@@ -41,6 +41,10 @@ export const useVoiceCall = () => {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Call timeout duration: 60 seconds
+  const CALL_TIMEOUT_MS = 60000;
 
   // Clean up on unmount
   useEffect(() => {
@@ -327,6 +331,46 @@ export const useVoiceCall = () => {
         isMuted: false,
         duration: 0,
       });
+
+      // Start call timeout - mark as missed after 60 seconds
+      callTimeoutRef.current = setTimeout(async () => {
+        console.log("Call timeout reached, marking as missed");
+        
+        // Update call status to missed
+        await (supabase as any)
+          .from("call_sessions")
+          .update({ status: "missed", ended_at: new Date().toISOString() })
+          .eq("id", call.id);
+
+        // Send missed call notification
+        try {
+          await supabase.functions.invoke("notify-missed-call", {
+            body: {
+              calleeId: targetUserId,
+              callerName: callerProfile?.display_name || "Utilisateur",
+              callerPhoto: callerProfile?.avatar_url || null,
+              callId: call.id,
+              callType: type,
+            },
+          });
+        } catch (notifError) {
+          console.warn("Could not send missed call notification:", notifError);
+        }
+
+        // Reset call state
+        setCallState({
+          isInCall: false,
+          isRinging: false,
+          isIncoming: false,
+          callId: null,
+          callType: "audio",
+          remoteUserId: null,
+          remoteUserName: null,
+          remoteUserPhoto: null,
+          isMuted: false,
+          duration: 0,
+        });
+      }, CALL_TIMEOUT_MS);
     } catch (error) {
       console.error("Error initiating call:", error);
     }
@@ -334,6 +378,12 @@ export const useVoiceCall = () => {
 
   const acceptCall = useCallback(async () => {
     if (!callState.callId) return;
+
+    // Clear any existing call timeout (for incoming calls that were answered)
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
 
     try {
       await (supabase as any)
@@ -374,6 +424,12 @@ export const useVoiceCall = () => {
   }, [callState.callId]);
 
   const endCall = useCallback(async () => {
+    // Stop call timeout
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+
     // Stop duration timer
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);

@@ -20,7 +20,6 @@ interface ServiceAccountKey {
   client_x509_cert_url: string;
 }
 
-// Generate OAuth2 access token from Service Account
 async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   
@@ -105,7 +104,6 @@ serve(async (req) => {
       );
     }
 
-    // Get callee's FCM token
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     const { data: calleeProfile, error: profileError } = await supabase
@@ -130,10 +128,9 @@ serve(async (req) => {
     const serviceAccount: ServiceAccountKey = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
     const accessToken = await getAccessToken(serviceAccount);
 
-    const title = callType === "video" ? "📹 Appel vidéo entrant" : "📞 Appel entrant";
-    const body = `${callerName} vous appelle`;
+    const title = callType === "video" ? "📹 Appel vidéo manqué" : "📞 Appel manqué";
+    const body = `Vous avez manqué un appel de ${callerName}`;
 
-    // Send push notification via FCM HTTP v1 API
     const fcmResponse = await fetch(
       `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
       {
@@ -152,35 +149,20 @@ serve(async (req) => {
             apns: {
               payload: {
                 aps: {
-                  // Use custom ringtone sound for calls
-                  sound: "ringtone.caf",
+                  sound: "default",
                   badge: 1,
-                  "content-available": 1,
-                  // Enable critical alert for calls (requires special entitlement)
-                  "interruption-level": "time-sensitive",
                 },
-              },
-              headers: {
-                "apns-priority": "10",
-                "apns-push-type": "alert",
               },
             },
             android: {
               priority: "high",
               notification: {
-                // Use custom ringtone sound for calls
-                sound: "ringtone",
-                channel_id: "incoming_calls",
-                // Keep notification visible
-                visibility: "public",
-                // High importance for calls
-                notification_priority: "PRIORITY_MAX",
+                sound: "default",
+                channel_id: "missed_calls",
               },
-              // Time to live: 60 seconds (call timeout)
-              ttl: "60s",
             },
             data: {
-              type: "incoming_call",
+              type: "missed_call",
               callId,
               callType: callType || "audio",
               callerName,
@@ -201,7 +183,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Call notification sent successfully to:", calleeProfile.display_name);
+    console.log("Missed call notification sent successfully to:", calleeProfile.display_name);
 
     return new Response(
       JSON.stringify({ success: true, result: fcmResult }),
@@ -209,7 +191,7 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error sending call notification:", error);
+    console.error("Error sending missed call notification:", error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -38,19 +38,22 @@ const VoiceCallModal = ({
   remoteAudioRef,
 }: VoiceCallModalProps) => {
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const outgoingToneRef = useRef<HTMLAudioElement | null>(null);
 
-  // Play ringtone when ringing
+  // Play ringtone when ringing (incoming call)
   useEffect(() => {
-    if (isRinging) {
-      // Create and play ringtone
-      ringtoneRef.current = new Audio("/sounds/ringtone.mp3");
+    if (isRinging && isIncoming) {
+      // Incoming call - play ringtone
+      ringtoneRef.current = new Audio("/sounds/incoming-call.mp3");
       ringtoneRef.current.loop = true;
+      ringtoneRef.current.volume = 1.0;
       ringtoneRef.current.play().catch(() => {});
-    } else {
-      if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-        ringtoneRef.current = null;
-      }
+    } else if (isRinging && !isIncoming) {
+      // Outgoing call - play dialing tone
+      outgoingToneRef.current = new Audio("/sounds/outgoing-call.mp3");
+      outgoingToneRef.current.loop = true;
+      outgoingToneRef.current.volume = 0.5;
+      outgoingToneRef.current.play().catch(() => {});
     }
 
     return () => {
@@ -58,8 +61,26 @@ const VoiceCallModal = ({
         ringtoneRef.current.pause();
         ringtoneRef.current = null;
       }
+      if (outgoingToneRef.current) {
+        outgoingToneRef.current.pause();
+        outgoingToneRef.current = null;
+      }
     };
-  }, [isRinging]);
+  }, [isRinging, isIncoming]);
+
+  // Stop tones when call is answered
+  useEffect(() => {
+    if (isInCall) {
+      if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+        ringtoneRef.current = null;
+      }
+      if (outgoingToneRef.current) {
+        outgoingToneRef.current.pause();
+        outgoingToneRef.current = null;
+      }
+    }
+  }, [isInCall]);
 
   if (!isOpen) return null;
 
