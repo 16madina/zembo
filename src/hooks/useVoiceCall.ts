@@ -278,7 +278,14 @@ export const useVoiceCall = () => {
     if (!user?.id) return;
 
     try {
-      // Use type assertion for new table
+      // Get caller's name for notification
+      const { data: callerProfile } = await supabase
+        .from("profiles")
+        .select("display_name, avatar_url")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Create call session
       const { data: call, error } = await (supabase as any)
         .from("call_sessions")
         .insert({
@@ -291,6 +298,22 @@ export const useVoiceCall = () => {
         .single();
 
       if (error) throw error;
+
+      // Send push notification to callee
+      try {
+        await supabase.functions.invoke("notify-call", {
+          body: {
+            calleeId: targetUserId,
+            callerName: callerProfile?.display_name || "Utilisateur",
+            callerPhoto: callerProfile?.avatar_url || null,
+            callId: call.id,
+            callType: type,
+          },
+        });
+      } catch (notifError) {
+        console.warn("Could not send call notification:", notifError);
+        // Don't fail the call if notification fails
+      }
 
       setCallState({
         isInCall: false,
