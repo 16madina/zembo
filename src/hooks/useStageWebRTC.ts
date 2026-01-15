@@ -148,31 +148,38 @@ export const useStageWebRTC = ({
     }
 
     try {
-      console.log(`[StageWebRTC] Handling ${signalType} from ${senderId}`);
+      console.log(`[StageWebRTC] Handling ${signalType} from ${senderId}`, {
+        signalingState: pc.signalingState,
+        connectionState: pc.connectionState,
+      });
       
       if (signalType === "offer") {
-        console.log("[StageWebRTC] Guest received offer, creating answer...");
+        console.log("[StageWebRTC] Guest received offer, SDP length:", signalData?.sdp?.length);
         await pc.setRemoteDescription(new RTCSessionDescription(signalData));
         await processPendingCandidates();
         
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        console.log("[StageWebRTC] Guest sending answer...");
-        await sendSignal("answer", answer, senderId);
+        console.log("[StageWebRTC] Guest sending answer, SDP length:", answer.sdp?.length);
+        await sendSignal("answer", { type: answer.type, sdp: answer.sdp }, senderId);
         
       } else if (signalType === "answer") {
-        console.log("[StageWebRTC] Streamer received answer");
+        console.log("[StageWebRTC] Streamer received answer, SDP length:", signalData?.sdp?.length);
         await pc.setRemoteDescription(new RTCSessionDescription(signalData));
         await processPendingCandidates();
         
       } else if (signalType === "ice-candidate" && signalData) {
-        const candidate = new RTCIceCandidate(signalData);
-        if (pc.remoteDescription) {
-          await pc.addIceCandidate(candidate);
-          console.log("[StageWebRTC] Added ICE candidate");
-        } else {
-          pendingCandidatesRef.current.push(candidate);
-          console.log("[StageWebRTC] Queued ICE candidate (no remote description yet)");
+        try {
+          const candidate = new RTCIceCandidate(signalData);
+          if (pc.remoteDescription) {
+            await pc.addIceCandidate(candidate);
+            console.log("[StageWebRTC] Added ICE candidate successfully");
+          } else {
+            pendingCandidatesRef.current.push(candidate);
+            console.log("[StageWebRTC] Queued ICE candidate (no remote description yet), total queued:", pendingCandidatesRef.current.length);
+          }
+        } catch (candidateErr) {
+          console.warn("[StageWebRTC] Failed to add ICE candidate:", candidateErr);
         }
       }
     } catch (err) {
@@ -198,19 +205,41 @@ export const useStageWebRTC = ({
       const pc = new RTCPeerConnection(ICE_SERVERS);
       peerConnectionRef.current = pc;
 
-      // Handle remote stream (guest video)
+      // Handle remote stream (guest video) - critical for receiving video
       pc.ontrack = (event) => {
-        console.log("[StageWebRTC] Received track from guest:", event.track.kind);
-        const [remoteStream] = event.streams;
-        setGuestStream(remoteStream);
-        onGuestStreamReady?.(remoteStream);
+        console.log("[StageWebRTC] 🎥 Received track from guest:", event.track.kind, {
+          trackId: event.track.id,
+          enabled: event.track.enabled,
+          readyState: event.track.readyState,
+          streams: event.streams.length,
+        });
+        
+        // Get or create the remote stream
+        if (event.streams && event.streams[0]) {
+          const remoteStream = event.streams[0];
+          console.log("[StageWebRTC] 🎥 Setting guest stream with", remoteStream.getTracks().length, "tracks");
+          setGuestStream(remoteStream);
+          onGuestStreamReady?.(remoteStream);
+        } else {
+          // Fallback: create a new MediaStream with the track
+          console.log("[StageWebRTC] 🎥 Creating new MediaStream for track");
+          const newStream = new MediaStream([event.track]);
+          setGuestStream(prev => {
+            if (prev) {
+              prev.addTrack(event.track);
+              return prev;
+            }
+            return newStream;
+          });
+          onGuestStreamReady?.(newStream);
+        }
       };
 
       // Handle ICE candidates
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log("[StageWebRTC] Streamer sending ICE candidate");
-          sendSignal("ice-candidate", event.candidate, targetGuestId);
+          console.log("[StageWebRTC] Streamer sending ICE candidate:", event.candidate.candidate?.substring(0, 50));
+          sendSignal("ice-candidate", event.candidate.toJSON(), targetGuestId);
         }
       };
 
@@ -225,12 +254,28 @@ export const useStageWebRTC = ({
         } else if (state === "disconnected" || state === "failed") {
           setIsConnected(false);
           setIsConnecting(false);
+          if (state === "failed") {
+            setError("Connection failed");
+          }
         }
       };
 
       pc.oniceconnectionstatechange = () => {
         console.log("[StageWebRTC] ICE connection state:", pc.iceConnectionState);
       };
+
+      pc.onicegatheringstatechange = () => {
+        console.log("[StageWebRTC] ICE gathering state:", pc.iceGatheringState);
+      };
+
+      pc.onnegotiationneeded = () => {
+        console.log("[StageWebRTC] Negotiation needed event");
+      };
+
+      // Add transceiver for receiving video (important for receive-only)
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+      console.log("[StageWebRTC] Added recvonly transceivers for audio/video");
 
       // Subscribe to signals
       const channel = supabase
@@ -259,13 +304,10 @@ export const useStageWebRTC = ({
 
       // Create and send offer to guest
       console.log("[StageWebRTC] Creating offer for guest...");
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
+      const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      console.log("[StageWebRTC] Sending offer to guest:", targetGuestId);
-      await sendSignal("offer", offer, targetGuestId);
+      console.log("[StageWebRTC] Sending offer to guest:", targetGuestId, "SDP length:", offer.sdp?.length);
+      await sendSignal("offer", { type: offer.type, sdp: offer.sdp }, targetGuestId);
 
     } catch (err: any) {
       console.error("[StageWebRTC] Error starting as streamer:", err);
@@ -308,15 +350,18 @@ export const useStageWebRTC = ({
 
       // Add local stream tracks
       stream.getTracks().forEach(track => {
-        console.log("[StageWebRTC] Guest adding track:", track.kind);
+        console.log("[StageWebRTC] Guest adding track:", track.kind, {
+          enabled: track.enabled,
+          readyState: track.readyState,
+        });
         pc.addTrack(track, stream);
       });
 
       // Handle ICE candidates
       pc.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log("[StageWebRTC] Guest sending ICE candidate");
-          sendSignal("ice-candidate", event.candidate, streamerId);
+          console.log("[StageWebRTC] Guest sending ICE candidate:", event.candidate.candidate?.substring(0, 50));
+          sendSignal("ice-candidate", event.candidate.toJSON(), streamerId);
         }
       };
 
