@@ -13,6 +13,7 @@ import {
   Mail,
   UserCheck,
   Bell,
+  Wrench,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -29,6 +30,7 @@ import AdminSettingsTab from "@/components/admin/AdminSettingsTab";
 import AdminEmailPreviewTab from "@/components/admin/AdminEmailPreviewTab";
 import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
 import AdminNotificationsTab from "@/components/admin/AdminNotificationsTab";
+import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
 
 interface Report {
   id: string;
@@ -174,7 +176,7 @@ const Admin = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-8 mb-4">
+          <TabsList className="grid w-full grid-cols-9 mb-4">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden sm:inline">Signalements</span>
@@ -208,6 +210,10 @@ const Admin = () => {
               <Mail className="w-4 h-4" />
               <span className="hidden sm:inline">Emails</span>
             </TabsTrigger>
+            <TabsTrigger value="maintenance" className="flex items-center gap-2">
+              <Wrench className="w-4 h-4" />
+              <span className="hidden sm:inline">Maintenance</span>
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Paramètres</span>
@@ -240,6 +246,10 @@ const Admin = () => {
 
           <TabsContent value="emails">
             <AdminEmailPreviewTab />
+          </TabsContent>
+
+          <TabsContent value="maintenance">
+            <AdminMaintenanceTab />
           </TabsContent>
 
           <TabsContent value="settings">
