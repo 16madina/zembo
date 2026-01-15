@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { Heart, HeartCrack, MessageCircle, RotateCcw, User } from "lucide-react";
+import { MessageCircle, RotateCcw, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import RejectedScreen from "./RejectedScreen";
 
 interface ResultScreenProps {
   matched: boolean;
@@ -230,39 +231,8 @@ const ResultScreen = ({ matched, onRetry, otherUserId, onRevealSound }: ResultSc
     );
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center gap-8"
-    >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", damping: 15 }}
-        className="w-28 h-28 rounded-full glass flex items-center justify-center"
-      >
-        <HeartCrack className="w-14 h-14 text-muted-foreground" />
-      </motion.div>
-
-      <div className="text-center space-y-3">
-        <h2 className="text-2xl font-semibold text-foreground">
-          Pas cette fois...
-        </h2>
-        <p className="text-muted-foreground max-w-xs">
-          L'un de vous n'a pas souhaité matcher. Ce n'est pas grave, réessayez !
-        </p>
-      </div>
-
-      <Button
-        onClick={onRetry}
-        className="btn-gold gap-2"
-      >
-        <RotateCcw className="w-5 h-5" />
-        Réessayer
-      </Button>
-    </motion.div>
-  );
+  // Use the enhanced RejectedScreen component for rejections
+  return <RejectedScreen onRetry={onRetry} />;
 };
 
 export default ResultScreen;

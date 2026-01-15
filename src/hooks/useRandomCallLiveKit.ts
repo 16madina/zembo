@@ -591,6 +591,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       console.error("[random-call-lk]", "audio monitoring error", err);
     }
   }, []);
+  
   const startCallTimer = useCallback(() => {
     // Calculate remaining time from session ends_at if available
     if (sessionEndsAtRef.current) {
@@ -842,6 +843,15 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     },
     [sessionId, user?.id, cleanup, subscribeToSessionUpdates]
   );
+
+  // CRITICAL: Subscribe to session updates as soon as we enter "deciding" state
+  // This ensures we catch the other user's decision immediately
+  useEffect(() => {
+    if (status === "deciding" && sessionId && !sessionChannelRef.current) {
+      console.log("[random-call-lk]", "Auto-subscribing to session updates on deciding state");
+      subscribeToSessionUpdates(sessionId);
+    }
+  }, [status, sessionId, subscribeToSessionUpdates]);
 
   // Cleanup on unmount - but don't cancel queue (user might be just navigating)
   useEffect(() => {
