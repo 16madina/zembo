@@ -23,6 +23,7 @@ import {
   Clock,
   Shield,
   Settings,
+  Coins,
 } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
 import PhotoGallery from "@/components/profile/PhotoGallery";
@@ -30,6 +31,7 @@ import ProfileCompletionRing from "@/components/profile/ProfileCompletionRing";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import SettingsSheet from "@/components/profile/SettingsSheet";
 import IdentityVerificationBanner from "@/components/profile/IdentityVerificationBanner";
+import ShopButton from "@/components/shop/ShopButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -331,7 +333,10 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <h1 className="text-xl font-bold text-primary-foreground">Mon Profil</h1>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
+            {/* Shop Button - Coin Balance */}
+            <ShopButton variant="compact" className="bg-primary/20 backdrop-blur-sm border-primary/30 text-primary-foreground hover:bg-primary/30" />
+            
             {isAdmin && (
               <motion.button
                 className="p-3 bg-amber-500/80 backdrop-blur-sm rounded-full"
