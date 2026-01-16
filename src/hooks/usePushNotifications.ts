@@ -296,8 +296,29 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       });
       
       PushNotifications.addListener("pushNotificationActionPerformed", (notification: any) => {
-        console.log("[Push] 👆 Notification tapped:", notification);
-        handleNotificationNavigation(notification.notification?.data || {});
+        console.log("[Push] 👆 Notification tapped - FULL PAYLOAD:", JSON.stringify(notification, null, 2));
+        
+        // Try multiple paths to find the data (iOS vs Android structure can differ)
+        const data: NotificationData = 
+          notification.notification?.data || 
+          notification.data || 
+          notification.actionId === 'tap' && notification.notification?.data ||
+          {};
+        
+        console.log("[Push] 👆 Extracted data:", JSON.stringify(data, null, 2));
+        console.log("[Push] 👆 data.type:", data.type);
+        console.log("[Push] 👆 data.sender_id:", data.sender_id);
+        
+        if (!data.type) {
+          console.error("[Push] ⚠️ No type in notification data! Full notification:", JSON.stringify(notification));
+          // Try to parse from different locations
+          const possibleData = notification.notification || notification;
+          if (possibleData.data) {
+            console.log("[Push] 👆 Found data in possibleData:", JSON.stringify(possibleData.data));
+          }
+        }
+        
+        handleNotificationNavigation(data);
       });
       
       // Check permissions
