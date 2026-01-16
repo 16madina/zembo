@@ -154,7 +154,7 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
             <motion.div 
               className="absolute inset-0"
               drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
+              dragConstraints={{ left: -100, right: 100 }}
               dragElastic={0.3}
               onDragEnd={handlePhotoSwipe}
             >
