@@ -4,11 +4,31 @@ import { isNative, isIOS, isAndroid } from "./capacitor";
 const REVENUECAT_IOS_API_KEY = "appl_IUfWQEYxbRpEbcSfhBQFLYuZlpq";
 const REVENUECAT_ANDROID_API_KEY = ""; // Add Android key when available
 
-// Product identifiers
-export const PRODUCT_IDS = {
+// Subscription Product identifiers
+export const SUBSCRIPTION_PRODUCT_IDS = {
   gold: "zembo_gold_monthly",
   platinum: "zembo_platinum_monthly",
 } as const;
+
+// Consumable Coin Product identifiers
+export const COIN_PRODUCT_IDS = {
+  coins_50: "zembo_coins_50",
+  coins_150: "zembo_coins_150",
+  coins_500: "zembo_coins_500",
+  coins_1200: "zembo_coins_1200",
+  coins_3000: "zembo_coins_3000",
+  coins_10000: "zembo_coins_10000",
+} as const;
+
+// Map coin pack IDs to RevenueCat product IDs
+export const COIN_PACK_TO_PRODUCT: Record<string, { productId: string; coins: number; bonus: number }> = {
+  starter: { productId: COIN_PRODUCT_IDS.coins_50, coins: 50, bonus: 0 },
+  basic: { productId: COIN_PRODUCT_IDS.coins_150, coins: 150, bonus: 10 },
+  popular: { productId: COIN_PRODUCT_IDS.coins_500, coins: 500, bonus: 50 },
+  premium: { productId: COIN_PRODUCT_IDS.coins_1200, coins: 1200, bonus: 200 },
+  vip: { productId: COIN_PRODUCT_IDS.coins_3000, coins: 3000, bonus: 600 },
+  whale: { productId: COIN_PRODUCT_IDS.coins_10000, coins: 10000, bonus: 2500 },
+};
 
 // Entitlements
 export const ENTITLEMENTS = {
@@ -279,4 +299,78 @@ export const getSubscriptionTier = (customerInfo: CustomerInfo | null): "free" |
 // Check if RevenueCat is available
 export const isRevenueCatAvailable = (): boolean => {
   return isNative && _revenueCatInitialized;
+};
+
+// Purchase a consumable product (coins)
+export const purchaseConsumable = async (
+  productId: string
+): Promise<{ success: boolean; customerInfo?: CustomerInfo; error?: string }> => {
+  if (!isNative || !_revenueCatInitialized) {
+    return { success: false, error: "RevenueCat not initialized" };
+  }
+
+  try {
+    const Purchases = await getPurchasesModule();
+    if (!Purchases) {
+      return { success: false, error: "RevenueCat module not available" };
+    }
+
+    // For consumables, we use purchaseStoreProduct with the product ID
+    const { products } = await Purchases.Purchases.getProducts({ 
+      productIdentifiers: [productId] 
+    });
+
+    if (!products || products.length === 0) {
+      return { success: false, error: `Product ${productId} not found` };
+    }
+
+    const product = products[0];
+
+    // Make the purchase
+    const { customerInfo } = await Purchases.Purchases.purchaseStoreProduct({ 
+      product 
+    });
+    
+    console.log("RevenueCat: Consumable purchase successful", productId);
+    return { success: true, customerInfo: customerInfo as CustomerInfo };
+  } catch (error: any) {
+    console.error("RevenueCat: Consumable purchase failed:", error);
+    
+    // Handle user cancellation
+    if (error.userCancelled || error.code === "1" || error.message?.includes("cancelled")) {
+      return { success: false, error: "Achat annulé" };
+    }
+    
+    return { success: false, error: error.message || "Purchase failed" };
+  }
+};
+
+// Get coin product prices from store
+export const getCoinProductPrices = async (): Promise<Record<string, { priceString: string; price: number }> | null> => {
+  if (!isNative || !_revenueCatInitialized) return null;
+
+  try {
+    const Purchases = await getPurchasesModule();
+    if (!Purchases) return null;
+
+    const productIds = Object.values(COIN_PRODUCT_IDS);
+    const { products } = await Purchases.Purchases.getProducts({ 
+      productIdentifiers: productIds 
+    });
+
+    if (!products) return null;
+
+    const prices: Record<string, { priceString: string; price: number }> = {};
+    for (const product of products) {
+      prices[product.identifier] = {
+        priceString: product.priceString,
+        price: product.price,
+      };
+    }
+
+    return prices;
+  } catch (error) {
+    console.error("RevenueCat: Failed to get coin product prices:", error);
+    return null;
+  }
 };
