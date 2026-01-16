@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, MapPin, BadgeCheck, Heart, Star, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import SubscriptionBadge from "./SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
 
@@ -47,6 +47,7 @@ const interestColors = [
 const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRose }: ProfileModalProps) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const didSwipeRef = useRef(false);
   
   // Get subscription status for this profile
   const { tier } = useUserSubscription(profile?.id);
@@ -72,13 +73,27 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
   };
 
   const handlePhotoSwipe = (_: any, info: PanInfo) => {
-    // Swipe left = next photo (reduced threshold for better responsiveness)
+    // Note: with dragConstraints left/right = 0, Framer Motion can clamp offset to 0.
+    // We keep some horizontal room so offset/velocity reflect the gesture.
+
+    // Swipe left = next photo
     if (info.offset.x < -30 || info.velocity.x < -200) {
+      didSwipeRef.current = true;
       nextPhoto();
+      // avoid triggering a click after a swipe
+      setTimeout(() => {
+        didSwipeRef.current = false;
+      }, 0);
+      return;
     }
+
     // Swipe right = previous photo
-    else if (info.offset.x > 30 || info.velocity.x > 200) {
+    if (info.offset.x > 30 || info.velocity.x > 200) {
+      didSwipeRef.current = true;
       prevPhoto();
+      setTimeout(() => {
+        didSwipeRef.current = false;
+      }, 0);
     }
   };
 
@@ -170,27 +185,33 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
               <motion.div
                 className="absolute inset-0 z-10 flex"
                 drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.3}
+                dragConstraints={{ left: -120, right: 120 }}
+                dragElastic={0.35}
                 dragMomentum={false}
                 onDragEnd={handlePhotoSwipe}
                 style={{ touchAction: "pan-y" }}
               >
                 {/* Left tap zone - 30% */}
-                <div 
+                <div
                   className="w-[30%] h-full cursor-pointer"
+                  role="button"
+                  aria-label="Photo précédente"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (didSwipeRef.current) return;
                     prevPhoto();
                   }}
                 />
                 {/* Middle zone - 40% (no tap action) */}
                 <div className="w-[40%] h-full" />
                 {/* Right tap zone - 30% */}
-                <div 
+                <div
                   className="w-[30%] h-full cursor-pointer"
+                  role="button"
+                  aria-label="Photo suivante"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (didSwipeRef.current) return;
                     nextPhoto();
                   }}
                 />
