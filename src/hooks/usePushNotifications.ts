@@ -5,12 +5,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const FCM_TOKEN_KEY = "fcm_token";
+const PENDING_NOTIFICATION_KEY = "pending_notification_data";
 
 // Dynamic import for Push Notifications to avoid errors on web
 const getPushNotifications = async () => {
   if (!isNative) return null;
   const mod = await import("@capacitor/push-notifications");
   return mod.PushNotifications;
+};
+
+// Dynamic import for App plugin
+const getAppPlugin = async () => {
+  if (!isNative) return null;
+  const mod = await import("@capacitor/app");
+  return mod.App;
 };
 
 export interface PushNotificationToken {
@@ -320,6 +328,66 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
         
         handleNotificationNavigation(data);
       });
+      
+      // iOS WORKAROUND: Check delivered notifications on app launch/resume
+      // This helps when pushNotificationActionPerformed doesn't fire due to Firebase swizzling
+      const checkDeliveredNotifications = async () => {
+        try {
+          console.log("[Push] 🔍 Checking delivered notifications...");
+          const delivered = await PushNotifications.getDeliveredNotifications();
+          console.log("[Push] 📋 Delivered notifications:", JSON.stringify(delivered, null, 2));
+          
+          if (delivered.notifications && delivered.notifications.length > 0) {
+            // Get the most recent notification
+            const latestNotif = delivered.notifications[0];
+            console.log("[Push] 📬 Latest delivered notification:", JSON.stringify(latestNotif, null, 2));
+            
+            // Check if this notification has data we can use
+            const data = latestNotif.data || {};
+            if (data.type) {
+              console.log("[Push] ✅ Found notification with type:", data.type);
+              // Clear delivered notifications after handling
+              await PushNotifications.removeAllDeliveredNotifications();
+              handleNotificationNavigation(data);
+            }
+          }
+        } catch (err) {
+          console.error("[Push] Error checking delivered notifications:", err);
+        }
+      };
+      
+      // Check for pending notification stored before app was fully loaded
+      const pendingData = localStorage.getItem(PENDING_NOTIFICATION_KEY);
+      if (pendingData) {
+        console.log("[Push] 📦 Found pending notification data:", pendingData);
+        try {
+          const data = JSON.parse(pendingData);
+          localStorage.removeItem(PENDING_NOTIFICATION_KEY);
+          if (data.type) {
+            handleNotificationNavigation(data);
+          }
+        } catch (e) {
+          console.error("[Push] Error parsing pending notification:", e);
+        }
+      }
+      
+      // Setup App state change listener for iOS
+      if (isIOS) {
+        const App = await getAppPlugin();
+        if (App) {
+          App.addListener('appStateChange', async ({ isActive }) => {
+            console.log("[Push] 📱 App state changed, isActive:", isActive);
+            if (isActive) {
+              // When app becomes active, check for delivered notifications
+              await checkDeliveredNotifications();
+            }
+          });
+          console.log("[Push] ✅ App state listener added for iOS");
+        }
+      }
+      
+      // Initial check for delivered notifications
+      await checkDeliveredNotifications();
       
       // Check permissions
       const current = await PushNotifications.checkPermissions();
