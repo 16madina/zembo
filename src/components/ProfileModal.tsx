@@ -150,51 +150,68 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
               <X className="w-5 h-5 text-white" />
             </motion.button>
 
-            {/* Full screen photo with swipe */}
-            <motion.div 
-              className="absolute inset-0"
-              drag="x"
-              dragConstraints={{ left: -100, right: 100 }}
-              dragElastic={0.3}
-              onDragEnd={handlePhotoSwipe}
-            >
+            {/* Full screen photo */}
+            <div className="absolute inset-0">
               <AnimatePresence mode="wait">
                 <motion.img
                   key={currentPhotoIndex}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ opacity: 0, scale: 1.02 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
                   src={profile.photos[currentPhotoIndex]}
                   alt={profile.name}
-                  className="w-full h-full object-cover pointer-events-none"
+                  className="w-full h-full object-cover"
+                  draggable={false}
                 />
               </AnimatePresence>
               
-              {/* Photo navigation zones (tap) */}
-              <div className="absolute inset-0 flex pointer-events-auto">
-                <div className="w-1/3 h-full cursor-pointer" onClick={prevPhoto} />
-                <div className="w-1/3 h-full" />
-                <div className="w-1/3 h-full cursor-pointer" onClick={nextPhoto} />
-              </div>
+              {/* Photo navigation zones (tap) - 30% each side */}
+              <div 
+                className="absolute left-0 top-0 w-[30%] h-full z-10 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prevPhoto();
+                }}
+              />
+              <div 
+                className="absolute right-0 top-0 w-[30%] h-full z-10 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextPhoto();
+                }}
+              />
+
+              {/* Swipe overlay for horizontal photo navigation */}
+              <motion.div
+                className="absolute inset-0 z-5"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.5}
+                dragMomentum={false}
+                onDragEnd={handlePhotoSwipe}
+                style={{ touchAction: "pan-y" }}
+              />
 
               {/* Photo indicators */}
-              <div className="absolute top-12 left-4 right-4 flex gap-1.5 z-20">
+              <div className="absolute top-12 left-4 right-4 flex gap-1.5 z-20 pointer-events-none">
                 {profile.photos.map((_, index) => (
                   <motion.div
                     key={index}
                     className={`h-1 flex-1 rounded-full transition-all duration-300 ${
                       index === currentPhotoIndex 
-                        ? "bg-white" 
+                        ? "bg-white shadow-lg" 
                         : "bg-white/40"
                     }`}
+                    animate={index === currentPhotoIndex ? { scale: [1, 1.05, 1] } : {}}
+                    transition={{ duration: 0.3 }}
                   />
                 ))}
               </div>
 
               {/* Strong gradient overlay at bottom */}
               <div className="absolute bottom-0 left-0 right-0 h-[50%] bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none" />
-            </motion.div>
+            </div>
 
             {/* Profile info overlay at bottom */}
             <div className="absolute bottom-0 left-0 right-0 z-10 p-6 pb-32">
