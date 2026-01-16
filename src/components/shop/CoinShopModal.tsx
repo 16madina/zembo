@@ -40,18 +40,9 @@ interface CoinPack {
 
 const coinPacks: CoinPack[] = [
   {
-    id: "starter",
-    coins: 50,
-    priceUSD: 0.99,
-    bonus: 0,
-    icon: <Coins className="w-6 h-6" />,
-    color: "text-amber-400",
-    gradient: "from-amber-500/20 to-yellow-500/20",
-  },
-  {
     id: "basic",
     coins: 150,
-    priceUSD: 2.49,
+    priceUSD: 2,
     bonus: 10,
     icon: <Zap className="w-6 h-6" />,
     color: "text-blue-400",
@@ -60,7 +51,7 @@ const coinPacks: CoinPack[] = [
   {
     id: "popular",
     coins: 500,
-    priceUSD: 6.99,
+    priceUSD: 7,
     bonus: 50,
     popular: true,
     icon: <Star className="w-6 h-6" />,
@@ -70,7 +61,7 @@ const coinPacks: CoinPack[] = [
   {
     id: "premium",
     coins: 1200,
-    priceUSD: 14.99,
+    priceUSD: 15,
     bonus: 200,
     icon: <Crown className="w-6 h-6" />,
     color: "text-orange-400",
@@ -79,21 +70,12 @@ const coinPacks: CoinPack[] = [
   {
     id: "vip",
     coins: 3000,
-    priceUSD: 29.99,
+    priceUSD: 30,
     bonus: 600,
     bestValue: true,
     icon: <Sparkles className="w-6 h-6" />,
     color: "text-pink-400",
     gradient: "from-pink-500/20 to-rose-500/20",
-  },
-  {
-    id: "whale",
-    coins: 10000,
-    priceUSD: 79.99,
-    bonus: 2500,
-    icon: <Gift className="w-6 h-6" />,
-    color: "text-emerald-400",
-    gradient: "from-emerald-500/20 to-teal-500/20",
   },
 ];
 
