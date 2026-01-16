@@ -209,7 +209,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const { user } = useAuth();
   const { balance, addCoins } = useCoins();
   const { subscription, fetchSubscription } = useSubscription();
-  const { subscribe, isProcessing, processingPlan, isStripe, isStoreKit } = usePayment();
+  const { subscribe, isProcessing, processingPlan, isStripe, isRevenueCat } = usePayment();
   const [userCountry, setUserCountry] = useState<string>("US");
   const [currency, setCurrency] = useState<CurrencyInfo | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);

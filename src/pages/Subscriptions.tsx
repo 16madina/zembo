@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
   Crown, 
@@ -18,17 +18,19 @@ import {
   Undo2,
   Filter,
   Lock,
-  Clock,
-  Headphones
+  Headphones,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { usePayment } from "@/hooks/usePayment";
+import { useRevenueCat } from "@/hooks/useRevenueCat";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
+import { isNative } from "@/lib/capacitor";
 
 type PlanType = "free" | "gold" | "platinum";
 
@@ -144,11 +146,29 @@ const features: PlanFeature[] = [
 const Subscriptions = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { subscription, isPremium, isVip, fetchSubscription } = useSubscription();
+  const { subscription, fetchSubscription } = useSubscription();
+  const { subscribe: stripeSubscribe, isProcessing: isStripeProcessing } = usePayment();
+  const { 
+    subscribe: revenueCatSubscribe, 
+    restore, 
+    isLoading: isRevenueCatLoading, 
+    packages 
+  } = useRevenueCat();
+  
   const [selectedPlan, setSelectedPlan] = useState<PlanType>("gold");
-  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const currentTier = subscription?.tier || "free";
+  const isSubscribing = isStripeProcessing || isRevenueCatLoading;
+
+  // Get prices from RevenueCat packages if available (iOS native)
+  const getPrice = (plan: "gold" | "platinum") => {
+    if (packages && isNative) {
+      const pkg = packages.find(p => p.identifier === plan);
+      if (pkg) return pkg.priceString;
+    }
+    return plan === "gold" ? "8.99$" : "17.99$";
+  };
 
   const handleSubscribe = async (plan: PlanType) => {
     if (!user) {
@@ -166,66 +186,47 @@ const Subscriptions = () => {
       return;
     }
 
-    setIsSubscribing(true);
-
     try {
-      // For demo purposes, we'll create/update the subscription directly
-      // In production, this would go through Stripe
-      const periodStart = new Date();
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-      if (subscription) {
-        // Update existing subscription
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .update({
-            tier,
-            is_active: true,
-            current_period_start: periodStart.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", user.id);
-
-        if (error) throw error;
+      let result;
+      
+      if (isNative) {
+        // iOS/Android native: use RevenueCat
+        result = await revenueCatSubscribe(plan);
       } else {
-        // Create new subscription
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .insert({
-            user_id: user.id,
-            tier,
-            is_active: true,
-            current_period_start: periodStart.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-          });
-
-        if (error) throw error;
+        // Web: use Stripe
+        result = await stripeSubscribe(plan);
       }
 
-      // Fire confetti
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: plan === "platinum" 
-          ? ["#8B5CF6", "#C4B5FD", "#7C3AED", "#DDD6FE"] 
-          : ["#F59E0B", "#FCD34D", "#D97706", "#FDE68A"],
-      });
+      if (result.success) {
+        // Fire confetti
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: plan === "platinum" 
+            ? ["#8B5CF6", "#C4B5FD", "#7C3AED", "#DDD6FE"] 
+            : ["#F59E0B", "#FCD34D", "#D97706", "#FDE68A"],
+        });
 
-      toast.success(
-        `🎉 Bienvenue dans ZEMBO ${plan === "gold" ? "Gold" : "Platinum"}!`,
-        { description: "Profitez de tous vos nouveaux avantages" }
-      );
-
-      await fetchSubscription();
+        await fetchSubscription();
+      }
     } catch (error) {
       console.error("Subscription error:", error);
       toast.error("Erreur lors de la souscription");
-    } finally {
-      setIsSubscribing(false);
     }
+  };
+
+  const handleRestorePurchases = async () => {
+    setIsRestoring(true);
+    try {
+      const result = await restore();
+      if (result.success) {
+        await fetchSubscription();
+      }
+    } finally {
+      setIsRestoring(false);
+    }
+  };
   };
 
   const renderFeatureValue = (value: string | boolean, plan: PlanType) => {
@@ -318,7 +319,7 @@ const Subscriptions = () => {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-amber-400">8.99$</div>
+                <div className="text-2xl font-bold text-amber-400">{getPrice("gold")}</div>
                 <div className="text-xs text-muted-foreground">/mois</div>
               </div>
             </div>
@@ -351,7 +352,7 @@ const Subscriptions = () => {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-purple-400">17.99$</div>
+                <div className="text-2xl font-bold text-purple-400">{getPrice("platinum")}</div>
                 <div className="text-xs text-muted-foreground">/mois</div>
               </div>
             </div>
@@ -392,6 +393,23 @@ const Subscriptions = () => {
           <p className="text-center text-xs text-muted-foreground mt-2">
             Annulez à tout moment • Paiement sécurisé
           </p>
+          
+          {/* Restore Purchases Button (iOS only) */}
+          {isNative && (
+            <Button
+              variant="ghost"
+              className="w-full mt-3 text-muted-foreground"
+              onClick={handleRestorePurchases}
+              disabled={isRestoring}
+            >
+              {isRestoring ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Restaurer mes achats
+            </Button>
+          )}
         </motion.div>
 
         {/* Feature Comparison Table */}

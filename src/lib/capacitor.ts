@@ -32,7 +32,7 @@ const getCapacitorPlugins = async () => {
 };
 
 // Initialize Capacitor plugins - call this after React mounts
-export const initializeCapacitor = async () => {
+export const initializeCapacitor = async (userId?: string) => {
   if (!isNative) return;
   if (_capacitorInitialized) return;
   _capacitorInitialized = true;
@@ -83,6 +83,18 @@ export const initializeCapacitor = async () => {
     Keyboard.addListener('keyboardDidHide', () => {
       setKeyboardState(0);
     });
+
+    // Initialize RevenueCat for in-app purchases
+    try {
+      const { initializeRevenueCat, loginRevenueCat } = await import('./revenuecat');
+      const initialized = await initializeRevenueCat(userId);
+      if (initialized && userId) {
+        await loginRevenueCat(userId);
+        console.log('RevenueCat: Initialized and logged in');
+      }
+    } catch (e) {
+      console.log('RevenueCat: Not available or initialization failed', e);
+    }
 
   } catch (error) {
     console.error('Error initializing Capacitor:', error);

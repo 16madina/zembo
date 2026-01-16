@@ -6,12 +6,6 @@ import { isIOS, isAndroid, isNative } from "@/lib/capacitor";
 // Stripe public key for Android
 const STRIPE_PUBLIC_KEY = "pk_live_51Sq1BlGedsNwxjoeoHkEMvLmFbvhK1Mm2ZMI2cpFoV1tv0PNLJejIUR7Wb0SUqeDCgMTiE10HXsBBZwrZnoPDBek00P5XQjCR7";
 
-// StoreKit Product IDs for iOS
-const IOS_PRODUCTS = {
-  gold: "com.zembo.gold.monthly",
-  platinum: "com.zembo.platinum.monthly",
-};
-
 type Plan = "gold" | "platinum";
 
 interface PaymentResult {
@@ -62,106 +56,34 @@ export const usePayment = () => {
     }
   };
 
-  // Handle StoreKit payment (iOS only)
-  // Note: StoreKit requires native iOS setup with Xcode and App Store Connect
-  // For now, iOS falls back to Stripe until native app is configured
-  const handleStoreKitPayment = async (plan: Plan): Promise<PaymentResult> => {
+  // Handle RevenueCat payment (iOS native)
+  const handleRevenueCatPayment = async (plan: Plan): Promise<PaymentResult> => {
     try {
-      // StoreKit is only available in native iOS builds
-      // In web/preview, we fallback to Stripe
-      // To enable StoreKit:
-      // 1. Install @capacitor-community/in-app-purchases in your native project
-      // 2. Configure products in App Store Connect
-      // 3. Build native iOS app with Xcode
+      const { purchasePackage, PACKAGE_IDS, isRevenueCatAvailable } = await import("@/lib/revenuecat");
       
-      // For now, fallback to Stripe for iOS web testing
-      if (!isNative) {
+      if (!isRevenueCatAvailable()) {
+        console.log("RevenueCat not available, falling back to Stripe");
         return handleStripePayment(plan);
       }
 
-      // Dynamic import for native iOS only - this will only work in native builds
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let InAppPurchases: any = null;
-      try {
-        // Use Function constructor to avoid static analysis by bundler
-        const dynamicImport = new Function('modulePath', 'return import(modulePath)');
-        InAppPurchases = await dynamicImport("@capacitor-community/in-app-purchases");
-      } catch {
-        // Module not available - fallback to Stripe
-        console.log("StoreKit not available, falling back to Stripe");
-        return handleStripePayment(plan);
-      }
-      
-      if (!InAppPurchases?.InAppPurchase2) {
-        return handleStripePayment(plan);
-      }
+      const packageId = PACKAGE_IDS[plan];
+      const result = await purchasePackage(packageId);
 
-      const { InAppPurchase2 } = InAppPurchases;
-      const productId = IOS_PRODUCTS[plan];
-      
-      // Get product info
-      await InAppPurchase2.getProducts({ productIdentifiers: [productId] });
-      
-      // Make purchase
-      const result = await InAppPurchase2.purchaseProduct({ productIdentifier: productId });
-      
-      if (result.transactionId) {
-        // Purchase successful - update subscription in Supabase
-        const tier = plan === "gold" ? "premium" : "vip";
-        const periodStart = new Date();
-        const periodEnd = new Date();
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("User not authenticated");
-
-        const { data: existingSub } = await supabase
-          .from("user_subscriptions")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (existingSub) {
-          await supabase
-            .from("user_subscriptions")
-            .update({
-              tier,
-              is_active: true,
-              current_period_start: periodStart.toISOString(),
-              current_period_end: periodEnd.toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", user.id);
-        } else {
-          await supabase
-            .from("user_subscriptions")
-            .insert({
-              user_id: user.id,
-              tier,
-              is_active: true,
-              current_period_start: periodStart.toISOString(),
-              current_period_end: periodEnd.toISOString(),
-            });
-        }
-
-        // Complete the transaction
-        await InAppPurchase2.finishTransaction({ transactionId: result.transactionId });
-        
+      if (result.success) {
+        // Subscription is automatically synced by useRevenueCat hook
         return { success: true };
       }
+
+      return { success: false, error: result.error };
+    } catch (err: any) {
+      console.error("RevenueCat payment error:", err);
       
-      return { success: false, error: "Purchase was not completed" };
-    } catch (err: unknown) {
-      console.error("StoreKit payment error:", err);
-      
-      const error = err as { message?: string; code?: string };
-      
-      // Handle user cancellation gracefully
-      if (error.message?.includes("cancelled") || error.code === "E_USER_CANCELLED") {
+      // Handle user cancellation
+      if (err.message?.includes("cancelled") || err.userCancelled) {
         return { success: false, error: "Achat annulé" };
       }
       
-      return { success: false, error: error.message || "Payment error" };
+      return { success: false, error: err.message || "Payment error" };
     }
   };
 
@@ -175,8 +97,8 @@ export const usePayment = () => {
       let result: PaymentResult;
 
       if (platform === "ios" && isNative) {
-        // iOS uses StoreKit
-        result = await handleStoreKitPayment(plan);
+        // iOS native uses RevenueCat
+        result = await handleRevenueCatPayment(plan);
       } else {
         // Android and Web use Stripe
         result = await handleStripePayment(plan);
@@ -201,6 +123,6 @@ export const usePayment = () => {
     processingPlan,
     platform: getPlatform(),
     isStripe: !isIOS || !isNative,
-    isStoreKit: isIOS && isNative,
+    isRevenueCat: isIOS && isNative,
   };
 };
