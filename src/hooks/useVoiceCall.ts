@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface CallState {
   isInCall: boolean;
@@ -121,6 +122,39 @@ export const useVoiceCall = () => {
     // Check immediately and after a short delay (in case of race conditions)
     checkPendingCall();
     const timer = setTimeout(checkPendingCall, 500);
+
+    return () => clearTimeout(timer);
+  }, [user?.id]);
+
+  // Check for missed call from push notification (deep linking)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const checkMissedCall = () => {
+      const missedCallData = sessionStorage.getItem("missedCall");
+      if (!missedCallData) return;
+
+      console.log("[VoiceCall] Found missed call from notification:", missedCallData);
+      sessionStorage.removeItem("missedCall");
+
+      try {
+        const missedCall = JSON.parse(missedCallData);
+        const callerName = missedCall.callerName || "Utilisateur";
+        const callType = missedCall.callType === "video" ? "vidéo" : "vocal";
+
+        toast({
+          title: "📞 Appel manqué",
+          description: `Vous avez manqué un appel ${callType} de ${callerName}`,
+          variant: "destructive",
+        });
+      } catch (err) {
+        console.error("[VoiceCall] Error processing missed call:", err);
+      }
+    };
+
+    // Check immediately and after a short delay
+    checkMissedCall();
+    const timer = setTimeout(checkMissedCall, 500);
 
     return () => clearTimeout(timer);
   }, [user?.id]);
