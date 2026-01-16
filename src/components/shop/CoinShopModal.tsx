@@ -42,7 +42,7 @@ const coinPacks: CoinPack[] = [
   {
     id: "basic",
     coins: 150,
-    priceUSD: 2,
+    priceUSD: 1.99,
     bonus: 10,
     icon: <Zap className="w-6 h-6" />,
     color: "text-blue-400",
@@ -51,7 +51,7 @@ const coinPacks: CoinPack[] = [
   {
     id: "popular",
     coins: 500,
-    priceUSD: 7,
+    priceUSD: 6.99,
     bonus: 50,
     popular: true,
     icon: <Star className="w-6 h-6" />,
@@ -61,7 +61,7 @@ const coinPacks: CoinPack[] = [
   {
     id: "premium",
     coins: 1200,
-    priceUSD: 15,
+    priceUSD: 14.99,
     bonus: 200,
     icon: <Crown className="w-6 h-6" />,
     color: "text-orange-400",
@@ -70,7 +70,7 @@ const coinPacks: CoinPack[] = [
   {
     id: "vip",
     coins: 3000,
-    priceUSD: 30,
+    priceUSD: 29.99,
     bonus: 600,
     bestValue: true,
     icon: <Sparkles className="w-6 h-6" />,
