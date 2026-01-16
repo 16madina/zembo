@@ -2,6 +2,8 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, MapPin, BadgeCheck, Heart, Star, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp } from "lucide-react";
 import { useState } from "react";
+import SubscriptionBadge from "./SubscriptionBadge";
+import { useUserSubscription } from "@/hooks/useUserSubscription";
 
 interface ProfileData {
   id: string;
@@ -45,6 +47,9 @@ const interestColors = [
 const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRose }: ProfileModalProps) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  
+  // Get subscription status for this profile
+  const { tier } = useUserSubscription(profile?.id);
 
   if (!profile) return null;
 
@@ -195,7 +200,7 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
             <div className="absolute bottom-0 left-0 right-0 z-10 p-6 pb-32">
               {/* Name, age, verified */}
               <motion.div 
-                className="flex items-center gap-3 mb-2"
+                className="flex items-center gap-3 flex-wrap mb-2"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -206,6 +211,7 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                 {profile.isVerified && (
                   <BadgeCheck className="w-7 h-7 text-primary" />
                 )}
+                <SubscriptionBadge tier={tier} size="md" />
                 {profile.isOnline && (
                   <span className="flex items-center gap-1.5">
                     <span className="relative">

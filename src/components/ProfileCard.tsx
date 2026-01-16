@@ -2,6 +2,8 @@ import React, { useRef, useState, useCallback, useEffect } from "react";
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from "framer-motion";
 import { MapPin, BadgeCheck, X, Star, Heart } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
+import SubscriptionBadge from "./SubscriptionBadge";
+import { useUserSubscription } from "@/hooks/useUserSubscription";
 
 interface ProfileCardProps {
   profile: Profile;
@@ -20,6 +22,9 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
   const isDragging = useRef(false);
   const hasTriggeredSwipe = useRef(false);
   const [exitDirection, setExitDirection] = useState<"left" | "right" | "up" | null>(null);
+  
+  // Get subscription status for this profile
+  const { tier } = useUserSubscription(profile.id);
   
   // Smooth rotation following swipe direction
   const rotate = useTransform(x, [-300, 0, 300], [-25, 0, 25]);
@@ -221,7 +226,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
 
         {/* Profile Info */}
         <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2 pointer-events-none">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl font-bold text-foreground drop-shadow-lg">
               {profile.name}, {profile.age}
             </h2>
@@ -234,6 +239,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
                 <BadgeCheck className="w-5 h-5 text-primary drop-shadow-lg" />
               </motion.div>
             )}
+            <SubscriptionBadge tier={tier} size="sm" />
           </div>
 
           <div className="flex items-center gap-3">
