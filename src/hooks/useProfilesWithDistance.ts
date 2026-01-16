@@ -159,19 +159,24 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
           // Fetch all photos from storage for this user
           let photos: string[] = [];
           try {
-            const { data: photoFiles } = await supabase.storage
+            const { data: photoFiles, error: listError } = await supabase.storage
               .from("profile-photos")
               .list(p.user_id);
             
+            if (listError) {
+              console.error("Error listing photos for user:", p.user_id, listError);
+            }
+            
             if (photoFiles && photoFiles.length > 0) {
               photos = photoFiles
-                .filter(file => !file.name.startsWith('.'))
+                .filter(file => !file.name.startsWith('.') && file.name !== '.emptyFolderPlaceholder')
                 .map((file) => {
                   const { data: { publicUrl } } = supabase.storage
                     .from("profile-photos")
                     .getPublicUrl(`${p.user_id}/${file.name}`);
                   return publicUrl;
                 });
+              console.log(`📸 Loaded ${photos.length} photos for ${p.display_name}:`, photos);
             }
           } catch (err) {
             console.error("Error fetching photos for user:", p.user_id, err);
