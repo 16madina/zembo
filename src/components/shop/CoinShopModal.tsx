@@ -18,6 +18,13 @@ import { getCurrencyByCountry, formatPrice, CurrencyInfo } from "@/data/currenci
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
+import { isNative } from "@/lib/capacitor";
+import { 
+  purchaseConsumable, 
+  getCoinProductPrices, 
+  isRevenueCatAvailable,
+  COIN_PACK_TO_PRODUCT 
+} from "@/lib/revenuecat";
 
 interface CoinPack {
   id: string;
@@ -214,8 +221,10 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const [currency, setCurrency] = useState<CurrencyInfo | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState<{ coins: number; bonus: number } | null>(null);
+  const [revenueCatPrices, setRevenueCatPrices] = useState<Record<string, { priceString: string; price: number }> | null>(null);
 
   const currentTier = subscription?.tier || "free";
+  const useRevenueCatForCoins = isNative && isRevenueCatAvailable();
 
   useEffect(() => {
     const fetchUserCountry = async () => {
@@ -238,27 +247,93 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     fetchUserCountry();
   }, [user]);
 
+  // Fetch RevenueCat coin prices on iOS
+  useEffect(() => {
+    const fetchRevenueCatPrices = async () => {
+      if (isNative && isOpen) {
+        const prices = await getCoinProductPrices();
+        if (prices) {
+          setRevenueCatPrices(prices);
+        }
+      }
+    };
+    
+    fetchRevenueCatPrices();
+  }, [isOpen]);
+
+  // Get display price for a coin pack
+  const getPackPrice = (pack: CoinPack): string => {
+    if (useRevenueCatForCoins && revenueCatPrices) {
+      const productMapping = COIN_PACK_TO_PRODUCT[pack.id];
+      if (productMapping) {
+        const price = revenueCatPrices[productMapping.productId];
+        if (price) return price.priceString;
+      }
+    }
+    // Fallback to local currency conversion
+    return formatPrice(pack.priceUSD, userCountry);
+  };
+
   const handlePurchase = async (pack: CoinPack) => {
+    if (!user) {
+      toast.error("Vous devez être connecté pour acheter");
+      return;
+    }
+
     setPurchasing(pack.id);
     
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const totalCoins = pack.coins + pack.bonus;
-    const success = await addCoins(totalCoins);
-    
-    if (success) {
-      setShowSuccess({ coins: pack.coins, bonus: pack.bonus });
-      toast.success(`🎉 ${totalCoins} coins ajoutés à votre compte !`);
-      
-      setTimeout(() => {
-        setShowSuccess(null);
-      }, 3000);
-    } else {
-      toast.error("Erreur lors de l'achat. Veuillez réessayer.");
+    try {
+      const totalCoins = pack.coins + pack.bonus;
+
+      if (useRevenueCatForCoins) {
+        // iOS: Use RevenueCat for in-app purchase
+        const productMapping = COIN_PACK_TO_PRODUCT[pack.id];
+        if (!productMapping) {
+          throw new Error("Product not found");
+        }
+
+        const result = await purchaseConsumable(productMapping.productId);
+        
+        if (result.success) {
+          // Add coins to user's balance after successful purchase
+          const success = await addCoins(totalCoins);
+          
+          if (success) {
+            setShowSuccess({ coins: pack.coins, bonus: pack.bonus });
+            toast.success(`🎉 ${totalCoins} coins ajoutés à votre compte !`);
+            
+            setTimeout(() => {
+              setShowSuccess(null);
+            }, 3000);
+          }
+        } else if (result.error && result.error !== "Achat annulé") {
+          toast.error(result.error);
+        }
+      } else {
+        // Web: Simulate payment (would integrate with Stripe in production)
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const success = await addCoins(totalCoins);
+        
+        if (success) {
+          setShowSuccess({ coins: pack.coins, bonus: pack.bonus });
+          toast.success(`🎉 ${totalCoins} coins ajoutés à votre compte !`);
+          
+          setTimeout(() => {
+            setShowSuccess(null);
+          }, 3000);
+        } else {
+          toast.error("Erreur lors de l'achat. Veuillez réessayer.");
+        }
+      }
+    } catch (error: any) {
+      console.error("Purchase error:", error);
+      if (error.message !== "Achat annulé") {
+        toast.error("Erreur lors de l'achat. Veuillez réessayer.");
+      }
+    } finally {
+      setPurchasing(null);
     }
-    
-    setPurchasing(null);
   };
 
   const handleSubscribe = async (plan: "gold" | "platinum") => {
@@ -445,7 +520,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
 
                 {/* Price */}
                 <div className="text-sm font-semibold text-foreground mt-auto">
-                  {formatPrice(pack.priceUSD, userCountry)}
+                  {getPackPrice(pack)}
                 </div>
 
                 {/* Loading state */}
@@ -471,6 +546,21 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
             <li>🎥 Rejoindre un streamer sur scène</li>
             <li>💎 Booster votre profil</li>
           </ul>
+          
+          {/* Payment method indicator */}
+          <div className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+            {useRevenueCatForCoins ? (
+              <>
+                <Apple className="w-3 h-3" />
+                <span>Paiement sécurisé via App Store</span>
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-3 h-3" />
+                <span>Paiement sécurisé par carte</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Separator */}
