@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal, SearchX, Loader2, MapPin, Coins, Undo2, Crown } from "lucide-react";
+import { SlidersHorizontal, SearchX, Loader2, MapPin, Coins, Undo2, Crown, Heart } from "lucide-react";
 import ShopButton from "@/components/shop/ShopButton";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
@@ -23,6 +23,7 @@ import { useCoins } from "@/hooks/useCoins";
 import { useRoseReceived } from "@/hooks/useRoseReceived";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useDailyLikes } from "@/hooks/useDailyLikes";
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
@@ -46,6 +47,14 @@ const Home = () => {
   const { gifts, sendGift } = useGifts();
   const { balance } = useCoins();
   const { isPremium } = useSubscription();
+  const { 
+    canLike, 
+    likesRemaining, 
+    maxDailyLikes, 
+    isPremium: hasPremiumLikes,
+    incrementLikesUsed,
+    decrementLikesUsed 
+  } = useDailyLikes();
   const { 
     roseReceived, 
     isModalOpen: isRoseReceivedModalOpen, 
@@ -184,6 +193,16 @@ const Home = () => {
     const swipedProfile = currentProfile;
     if (!swipedProfile || !user) return;
     
+    // Check if user can like (for right and up swipes)
+    if ((direction === "right" || direction === "up") && !canLike) {
+      toast({
+        title: "Limite atteinte 💔",
+        description: "Vous avez utilisé tous vos likes aujourd'hui. Passez à Gold pour des likes illimités !",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Store for undo
     setLastSwipe({
       profile: swipedProfile,
@@ -193,6 +212,9 @@ const Home = () => {
     
     if (direction === "right" || direction === "up") {
       const isSuperLike = direction === "up";
+      
+      // Increment likes counter (for free users)
+      incrementLikesUsed();
       
       // Trigger super like explosion animation
       if (isSuperLike) {
@@ -210,6 +232,7 @@ const Home = () => {
         
         if (likeError) {
           console.error("Error saving like:", likeError);
+          decrementLikesUsed(); // Revert on error
         } else {
           setLikedProfiles((prev) => new Set([...prev, swipedProfile.id]));
           
@@ -230,6 +253,7 @@ const Home = () => {
         }
       } catch (err) {
         console.error("Error processing like:", err);
+        decrementLikesUsed(); // Revert on error
       }
     }
 
@@ -251,8 +275,10 @@ const Home = () => {
     // Revert to previous profile
     setCurrentIndex(lastSwipe.index);
     
-    // If it was a like/super like, remove from database
+    // If it was a like/super like, remove from database and decrement counter
     if (lastSwipe.direction === "right" || lastSwipe.direction === "up") {
+      decrementLikesUsed();
+      
       try {
         await supabase
           .from("likes")
@@ -273,6 +299,7 @@ const Home = () => {
         });
       } catch (err) {
         console.error("Error undoing like:", err);
+        incrementLikesUsed(); // Re-increment if undo fails
         toast({
           title: "Erreur",
           description: "Impossible d'annuler le swipe",
@@ -495,6 +522,24 @@ const Home = () => {
           >
             <MapPin className="w-3 h-3 text-green-500" />
             <span className="text-xs text-green-500 font-medium">GPS</span>
+          </motion.div>
+        )}
+        
+        {/* Likes remaining indicator for free users */}
+        {!hasPremiumLikes && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
+              likesRemaining <= 3 
+                ? 'bg-red-500/20 border-red-500/30' 
+                : 'bg-primary/20 border-primary/30'
+            }`}
+          >
+            <Heart className={`w-3 h-3 ${likesRemaining <= 3 ? 'text-red-500' : 'text-primary'}`} />
+            <span className={`text-xs font-medium ${likesRemaining <= 3 ? 'text-red-500' : 'text-primary'}`}>
+              {likesRemaining}/{maxDailyLikes}
+            </span>
           </motion.div>
         )}
       </motion.div>

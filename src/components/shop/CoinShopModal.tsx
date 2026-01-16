@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, Coins, Sparkles, Crown, Gift, Zap, Star, Check, TrendingUp,
   Heart, Eye, Rocket, Undo2, Shield, MapPin, Filter, MessageCircle,
-  Lock, Headphones
+  Lock, Headphones, CreditCard, Apple
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCoins } from "@/hooks/useCoins";
 import { useSubscription } from "@/hooks/useSubscription";
+import { usePayment } from "@/hooks/usePayment";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrencyByCountry, formatPrice, CurrencyInfo } from "@/data/currencies";
@@ -208,10 +209,10 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const { user } = useAuth();
   const { balance, addCoins } = useCoins();
   const { subscription, fetchSubscription } = useSubscription();
+  const { subscribe, isProcessing, processingPlan, isStripe, isStoreKit } = usePayment();
   const [userCountry, setUserCountry] = useState<string>("US");
   const [currency, setCurrency] = useState<CurrencyInfo | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [subscribing, setSubscribing] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState<{ coins: number; bonus: number } | null>(null);
 
   const currentTier = subscription?.tier || "free";
@@ -273,40 +274,10 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
       return;
     }
 
-    setSubscribing(plan);
-
-    try {
-      const periodStart = new Date();
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-      if (subscription) {
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .update({
-            tier,
-            is_active: true,
-            current_period_start: periodStart.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", user.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("user_subscriptions")
-          .insert({
-            user_id: user.id,
-            tier,
-            is_active: true,
-            current_period_start: periodStart.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-          });
-
-        if (error) throw error;
-      }
-
+    // Use the payment hook which handles platform-specific payments
+    const result = await subscribe(plan);
+    
+    if (result.success) {
       confetti({
         particleCount: 100,
         spread: 70,
@@ -315,18 +286,9 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           ? ["#8B5CF6", "#C4B5FD", "#7C3AED", "#DDD6FE"] 
           : ["#F59E0B", "#FCD34D", "#D97706", "#FDE68A"],
       });
-
-      toast.success(
-        `🎉 Bienvenue dans ZEMBO ${plan === "gold" ? "Gold" : "Platinum"}!`,
-        { description: "Profitez de tous vos nouveaux avantages" }
-      );
-
+      
       await fetchSubscription();
-    } catch (error) {
-      console.error("Subscription error:", error);
-      toast.error("Erreur lors de la souscription");
-    } finally {
-      setSubscribing(null);
+      onClose();
     }
   };
 
@@ -526,6 +488,20 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
             <p className="text-sm text-muted-foreground mt-1">
               Débloquez toutes les fonctionnalités
             </p>
+            {/* Payment method indicator */}
+            <div className="flex items-center justify-center gap-1 mt-2 text-xs text-muted-foreground">
+              {isStoreKit ? (
+                <>
+                  <Apple className="w-3 h-3" />
+                  <span>Paiement via App Store</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-3 h-3" />
+                  <span>Paiement sécurisé par Stripe</span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Plan Cards */}
@@ -559,9 +535,9 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
                   size="sm"
                   className="w-full mt-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white"
                   onClick={() => handleSubscribe("gold")}
-                  disabled={subscribing !== null || currentTier === "premium"}
+                  disabled={isProcessing || currentTier === "premium"}
                 >
-                  {subscribing === "gold" ? (
+                  {processingPlan === "gold" ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : currentTier === "premium" ? (
                     "Actif"
@@ -599,9 +575,9 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
                   size="sm"
                   className="w-full mt-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                   onClick={() => handleSubscribe("platinum")}
-                  disabled={subscribing !== null || currentTier === "vip"}
+                  disabled={isProcessing || currentTier === "vip"}
                 >
-                  {subscribing === "platinum" ? (
+                  {processingPlan === "platinum" ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : currentTier === "vip" ? (
                     "Actif"
