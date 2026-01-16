@@ -72,12 +72,12 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
   };
 
   const handlePhotoSwipe = (_: any, info: PanInfo) => {
-    // Swipe left = next photo
-    if (info.offset.x < -50 || info.velocity.x < -300) {
+    // Swipe left = next photo (reduced threshold for better responsiveness)
+    if (info.offset.x < -30 || info.velocity.x < -200) {
       nextPhoto();
     }
     // Swipe right = previous photo
-    else if (info.offset.x > 50 || info.velocity.x > 300) {
+    else if (info.offset.x > 30 || info.velocity.x > 200) {
       prevPhoto();
     }
   };
@@ -166,32 +166,35 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                 />
               </AnimatePresence>
               
-              {/* Photo navigation zones (tap) - 30% each side */}
-              <div 
-                className="absolute left-0 top-0 w-[30%] h-full z-10 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  prevPhoto();
-                }}
-              />
-              <div 
-                className="absolute right-0 top-0 w-[30%] h-full z-10 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  nextPhoto();
-                }}
-              />
-
-              {/* Swipe overlay for horizontal photo navigation */}
+              {/* Single interactive layer for both tap and swipe */}
               <motion.div
-                className="absolute inset-0 z-5"
+                className="absolute inset-0 z-10 flex"
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.5}
+                dragElastic={0.3}
                 dragMomentum={false}
                 onDragEnd={handlePhotoSwipe}
                 style={{ touchAction: "pan-y" }}
-              />
+              >
+                {/* Left tap zone - 30% */}
+                <div 
+                  className="w-[30%] h-full cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevPhoto();
+                  }}
+                />
+                {/* Middle zone - 40% (no tap action) */}
+                <div className="w-[40%] h-full" />
+                {/* Right tap zone - 30% */}
+                <div 
+                  className="w-[30%] h-full cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextPhoto();
+                  }}
+                />
+              </motion.div>
 
               {/* Photo indicators */}
               <div className="absolute top-12 left-4 right-4 flex gap-1.5 z-20 pointer-events-none">
