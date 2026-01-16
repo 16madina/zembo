@@ -14,6 +14,24 @@ export interface Profile {
 
 export const mockProfiles: Profile[] = [
   {
+    id: "demo-4photos",
+    name: "Lina",
+    age: 26,
+    gender: "female",
+    location: "Paris, France",
+    distance: "1 km",
+    bio: "📸 Profil démo avec 4 photos pour tester la navigation ! Swipe ou tape sur les côtés pour voir les photos suivantes.",
+    photos: [
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=800&fit=crop",
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&h=800&fit=crop",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&h=800&fit=crop",
+      "https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=600&h=800&fit=crop"
+    ],
+    isOnline: true,
+    isVerified: true,
+    interests: ["Test", "Navigation", "Swipe", "Photos"]
+  },
+  {
     id: "1",
     name: "Amara",
     age: 24,
