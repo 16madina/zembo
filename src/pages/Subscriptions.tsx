@@ -227,7 +227,6 @@ const Subscriptions = () => {
       setIsRestoring(false);
     }
   };
-  };
 
   const renderFeatureValue = (value: string | boolean, plan: PlanType) => {
     if (typeof value === "boolean") {

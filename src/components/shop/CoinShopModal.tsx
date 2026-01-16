@@ -490,7 +490,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
             </p>
             {/* Payment method indicator */}
             <div className="flex items-center justify-center gap-1 mt-2 text-xs text-muted-foreground">
-              {isStoreKit ? (
+              {isRevenueCat ? (
                 <>
                   <Apple className="w-3 h-3" />
                   <span>Paiement via App Store</span>
