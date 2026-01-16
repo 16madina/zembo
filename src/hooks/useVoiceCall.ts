@@ -505,5 +505,7 @@ export const useVoiceCall = () => {
     toggleMute,
     formatDuration,
     remoteAudioRef,
+    localStreamRef,
+    remoteStreamRef,
   };
 };
