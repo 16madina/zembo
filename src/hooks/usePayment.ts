@@ -63,20 +63,36 @@ export const usePayment = () => {
   };
 
   // Handle StoreKit payment (iOS only)
+  // Note: StoreKit requires native iOS setup with Xcode and App Store Connect
+  // For now, iOS falls back to Stripe until native app is configured
   const handleStoreKitPayment = async (plan: Plan): Promise<PaymentResult> => {
     try {
-      // Try to dynamically import StoreKit plugin - only available on native iOS
+      // StoreKit is only available in native iOS builds
+      // In web/preview, we fallback to Stripe
+      // To enable StoreKit:
+      // 1. Install @capacitor-community/in-app-purchases in your native project
+      // 2. Configure products in App Store Connect
+      // 3. Build native iOS app with Xcode
+      
+      // For now, fallback to Stripe for iOS web testing
+      if (!isNative) {
+        return handleStripePayment(plan);
+      }
+
+      // Dynamic import for native iOS only - this will only work in native builds
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let InAppPurchases: any = null;
       try {
-        InAppPurchases = await import("@capacitor-community/in-app-purchases" as string);
+        // Use Function constructor to avoid static analysis by bundler
+        const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+        InAppPurchases = await dynamicImport("@capacitor-community/in-app-purchases");
       } catch {
         // Module not available - fallback to Stripe
+        console.log("StoreKit not available, falling back to Stripe");
         return handleStripePayment(plan);
       }
       
-      if (!InAppPurchases) {
-        // Fallback to Stripe on iOS web/simulator
+      if (!InAppPurchases?.InAppPurchase2) {
         return handleStripePayment(plan);
       }
 
