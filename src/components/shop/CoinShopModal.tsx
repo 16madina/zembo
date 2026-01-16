@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Coins, Sparkles, Crown, Gift, Zap, Star, Check, TrendingUp } from "lucide-react";
+import { 
+  X, Coins, Sparkles, Crown, Gift, Zap, Star, Check, TrendingUp,
+  Heart, Eye, Rocket, Undo2, Shield, MapPin, Filter, MessageCircle,
+  Lock, Headphones
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useCoins } from "@/hooks/useCoins";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrencyByCountry, formatPrice, CurrencyInfo } from "@/data/currencies";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import confetti from "canvas-confetti";
 
 interface CoinPack {
   id: string;
@@ -80,6 +89,116 @@ const coinPacks: CoinPack[] = [
   },
 ];
 
+// Subscription features
+interface PlanFeature {
+  name: string;
+  icon: React.ReactNode;
+  free: string | boolean;
+  gold: string | boolean;
+  platinum: string | boolean;
+}
+
+const subscriptionFeatures: PlanFeature[] = [
+  {
+    name: "Likes par jour",
+    icon: <Heart className="w-4 h-4" />,
+    free: "10",
+    gold: "Illimités",
+    platinum: "Illimités",
+  },
+  {
+    name: "Super Likes",
+    icon: <Star className="w-4 h-4" />,
+    free: "1/semaine",
+    gold: "5/jour",
+    platinum: "Illimités",
+  },
+  {
+    name: "Voir qui vous a liké",
+    icon: <Eye className="w-4 h-4" />,
+    free: "Flouté",
+    gold: true,
+    platinum: true,
+  },
+  {
+    name: "Boosts gratuits",
+    icon: <Rocket className="w-4 h-4" />,
+    free: false,
+    gold: "1/mois",
+    platinum: "5/mois",
+  },
+  {
+    name: "Retour en arrière",
+    icon: <Undo2 className="w-4 h-4" />,
+    free: false,
+    gold: true,
+    platinum: true,
+  },
+  {
+    name: "Sans publicités",
+    icon: <Shield className="w-4 h-4" />,
+    free: false,
+    gold: true,
+    platinum: true,
+  },
+  {
+    name: "Passeport",
+    icon: <MapPin className="w-4 h-4" />,
+    free: false,
+    gold: true,
+    platinum: true,
+  },
+  {
+    name: "Filtres avancés",
+    icon: <Filter className="w-4 h-4" />,
+    free: false,
+    gold: true,
+    platinum: true,
+  },
+  {
+    name: "Messages prioritaires",
+    icon: <MessageCircle className="w-4 h-4" />,
+    free: false,
+    gold: false,
+    platinum: true,
+  },
+  {
+    name: "Badge Platinum",
+    icon: <Sparkles className="w-4 h-4" />,
+    free: false,
+    gold: false,
+    platinum: true,
+  },
+  {
+    name: "Accusés de lecture",
+    icon: <Check className="w-4 h-4" />,
+    free: false,
+    gold: false,
+    platinum: true,
+  },
+  {
+    name: "Mode Incognito",
+    icon: <Lock className="w-4 h-4" />,
+    free: false,
+    gold: false,
+    platinum: true,
+  },
+  {
+    name: "Matchs prioritaires",
+    icon: <Zap className="w-4 h-4" />,
+    free: false,
+    gold: false,
+    platinum: true,
+  },
+  {
+    name: "Support prioritaire",
+    icon: <Headphones className="w-4 h-4" />,
+    free: false,
+    gold: false,
+    platinum: true,
+  },
+];
+
 interface CoinShopModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -88,10 +207,14 @@ interface CoinShopModalProps {
 const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const { user } = useAuth();
   const { balance, addCoins } = useCoins();
+  const { subscription, fetchSubscription } = useSubscription();
   const [userCountry, setUserCountry] = useState<string>("US");
   const [currency, setCurrency] = useState<CurrencyInfo | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState<{ coins: number; bonus: number } | null>(null);
+
+  const currentTier = subscription?.tier || "free";
 
   useEffect(() => {
     const fetchUserCountry = async () => {
@@ -135,6 +258,99 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     }
     
     setPurchasing(null);
+  };
+
+  const handleSubscribe = async (plan: "gold" | "platinum") => {
+    if (!user) {
+      toast.error("Vous devez être connecté pour souscrire");
+      return;
+    }
+
+    const tier = plan === "gold" ? "premium" : "vip";
+
+    if (currentTier === tier) {
+      toast.info("Vous êtes déjà abonné à ce plan");
+      return;
+    }
+
+    setSubscribing(plan);
+
+    try {
+      const periodStart = new Date();
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+      if (subscription) {
+        const { error } = await supabase
+          .from("user_subscriptions")
+          .update({
+            tier,
+            is_active: true,
+            current_period_start: periodStart.toISOString(),
+            current_period_end: periodEnd.toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("user_subscriptions")
+          .insert({
+            user_id: user.id,
+            tier,
+            is_active: true,
+            current_period_start: periodStart.toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          });
+
+        if (error) throw error;
+      }
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: plan === "platinum" 
+          ? ["#8B5CF6", "#C4B5FD", "#7C3AED", "#DDD6FE"] 
+          : ["#F59E0B", "#FCD34D", "#D97706", "#FDE68A"],
+      });
+
+      toast.success(
+        `🎉 Bienvenue dans ZEMBO ${plan === "gold" ? "Gold" : "Platinum"}!`,
+        { description: "Profitez de tous vos nouveaux avantages" }
+      );
+
+      await fetchSubscription();
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast.error("Erreur lors de la souscription");
+    } finally {
+      setSubscribing(null);
+    }
+  };
+
+  const renderFeatureValue = (value: string | boolean, plan: "free" | "gold" | "platinum") => {
+    if (typeof value === "boolean") {
+      return value ? (
+        <Check className={cn(
+          "w-4 h-4",
+          plan === "platinum" ? "text-purple-400" : 
+          plan === "gold" ? "text-amber-400" : "text-muted-foreground"
+        )} />
+      ) : (
+        <X className="w-4 h-4 text-muted-foreground/40" />
+      );
+    }
+    return (
+      <span className={cn(
+        "text-xs font-medium",
+        plan === "platinum" ? "text-purple-300" : 
+        plan === "gold" ? "text-amber-300" : "text-muted-foreground"
+      )}>
+        {value}
+      </span>
+    );
   };
 
   if (!currency) return null;
@@ -293,6 +509,151 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
             <li>🎥 Rejoindre un streamer sur scène</li>
             <li>💎 Booster votre profil</li>
           </ul>
+        </div>
+
+        {/* Separator */}
+        <div className="my-6">
+          <Separator className="bg-border/50" />
+        </div>
+
+        {/* Premium Subscriptions Section */}
+        <div className="space-y-4">
+          <div className="text-center">
+            <h3 className="text-xl font-bold flex items-center justify-center gap-2">
+              <Crown className="w-6 h-6 text-amber-400" />
+              Abonnements Premium
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Débloquez toutes les fonctionnalités
+            </p>
+          </div>
+
+          {/* Plan Cards */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Gold Plan */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={cn(
+                "relative p-3 rounded-xl border-2 transition-all",
+                currentTier === "premium" 
+                  ? "border-amber-400 bg-amber-400/10" 
+                  : "border-border/50 bg-card hover:border-amber-400/50"
+              )}
+            >
+              {currentTier === "premium" && (
+                <Badge className="absolute -top-2 right-2 bg-amber-500 text-xs">
+                  Actuel
+                </Badge>
+              )}
+              <div className="text-center">
+                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-amber-400">Gold</h4>
+                <div className="text-lg font-bold text-amber-400 mt-1">
+                  {formatPrice(8.99, userCountry)}
+                </div>
+                <div className="text-xs text-muted-foreground">/mois</div>
+                <Button
+                  size="sm"
+                  className="w-full mt-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white"
+                  onClick={() => handleSubscribe("gold")}
+                  disabled={subscribing !== null || currentTier === "premium"}
+                >
+                  {subscribing === "gold" ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : currentTier === "premium" ? (
+                    "Actif"
+                  ) : (
+                    "Souscrire"
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+
+            {/* Platinum Plan */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={cn(
+                "relative p-3 rounded-xl border-2 transition-all",
+                currentTier === "vip" 
+                  ? "border-purple-400 bg-purple-400/10" 
+                  : "border-border/50 bg-card hover:border-purple-400/50"
+              )}
+            >
+              <Badge className="absolute -top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-xs">
+                {currentTier === "vip" ? "Actuel" : "Populaire"}
+              </Badge>
+              <div className="text-center">
+                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-purple-400">Platinum</h4>
+                <div className="text-lg font-bold text-purple-400 mt-1">
+                  {formatPrice(17.99, userCountry)}
+                </div>
+                <div className="text-xs text-muted-foreground">/mois</div>
+                <Button
+                  size="sm"
+                  className="w-full mt-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                  onClick={() => handleSubscribe("platinum")}
+                  disabled={subscribing !== null || currentTier === "vip"}
+                >
+                  {subscribing === "platinum" ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : currentTier === "vip" ? (
+                    "Actif"
+                  ) : (
+                    "Souscrire"
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Features Comparison Table */}
+          <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+            <div className="p-3 border-b border-border/50 bg-muted/30">
+              <h4 className="font-semibold text-sm text-center">Comparaison des plans</h4>
+            </div>
+
+            {/* Table Header */}
+            <div className="grid grid-cols-4 gap-1 p-2 bg-muted/20 text-center text-xs font-medium">
+              <div className="text-left pl-2">Fonction</div>
+              <div className="text-muted-foreground">Gratuit</div>
+              <div className="text-amber-400">Gold</div>
+              <div className="text-purple-400">Platinum</div>
+            </div>
+
+            {/* Table Body */}
+            <div className="divide-y divide-border/20 max-h-60 overflow-y-auto">
+              {subscriptionFeatures.map((feature, index) => (
+                <motion.div
+                  key={feature.name}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.02 }}
+                  className="grid grid-cols-4 gap-1 p-2 text-center items-center hover:bg-muted/10 transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 text-left">
+                    <span className="text-muted-foreground shrink-0">{feature.icon}</span>
+                    <span className="text-xs truncate">{feature.name}</span>
+                  </div>
+                  <div className="flex justify-center">
+                    {renderFeatureValue(feature.free, "free")}
+                  </div>
+                  <div className="flex justify-center">
+                    {renderFeatureValue(feature.gold, "gold")}
+                  </div>
+                  <div className="flex justify-center">
+                    {renderFeatureValue(feature.platinum, "platinum")}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Close Button */}
