@@ -1,8 +1,7 @@
-import { useRef, useMemo, useState, Suspense } from "react";
+import { useRef, useMemo, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { RoundedBox, Float, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
-import { Dice1 } from "lucide-react";
 
 interface DiceDotProps {
   position: [number, number, number];
@@ -138,81 +137,25 @@ interface Dice3DProps {
   isAnimating?: boolean;
 }
 
-// Fallback component when WebGL fails - now the primary visual
-const DiceFallback = ({ isAnimating }: { isAnimating: boolean }) => (
+// Simple loading placeholder
+const DiceLoading = () => (
   <div className="w-full h-full flex items-center justify-center">
-    <div 
-      className={`relative w-14 h-14 bg-gradient-to-br from-white to-gray-100 rounded-xl shadow-xl border border-primary/30 flex items-center justify-center transform ${isAnimating ? 'animate-spin' : ''}`}
-      style={{
-        boxShadow: '0 4px 20px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(255,255,255,0.8)',
-      }}
-    >
-      {/* Dots pattern like a dice face */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-3 h-3 rounded-full bg-primary shadow-sm" />
-      </div>
-      {/* Gold glow effect */}
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/10 to-transparent" />
-    </div>
+    <div className="w-12 h-12 rounded-xl bg-primary/20 animate-pulse" />
   </div>
 );
 
-interface Dice3DProps {
-  isAnimating?: boolean;
-}
-
 const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
-  const [hasError, setHasError] = useState(false);
-  const [renderAttempted, setRenderAttempted] = useState(false);
-
-  // Check if WebGL is supported
-  const isWebGLSupported = useMemo(() => {
-    try {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      return !!gl;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // Use fallback for mobile or if WebGL check fails
-  const shouldUseFallback = hasError || !isWebGLSupported;
-
-  // Timeout to detect render failure
-  useMemo(() => {
-    const timeout = setTimeout(() => {
-      if (!renderAttempted) {
-        setHasError(true);
-      }
-    }, 2000);
-    return () => clearTimeout(timeout);
-  }, [renderAttempted]);
-
-  if (shouldUseFallback) {
-    return (
-      <div className="w-32 h-32">
-        <DiceFallback isAnimating={isAnimating} />
-      </div>
-    );
-  }
-
   return (
     <div className="w-32 h-32">
-      <Suspense fallback={<DiceFallback isAnimating={isAnimating} />}>
+      <Suspense fallback={<DiceLoading />}>
         <Canvas 
           camera={{ position: [0, 0, 2.3], fov: 45 }}
-          onCreated={() => setRenderAttempted(true)}
-          onError={() => setHasError(true)}
           gl={{ 
             antialias: true,
             alpha: true,
             failIfMajorPerformanceCaveat: false,
-            powerPreference: 'low-power',
           }}
-          style={{ 
-            background: 'transparent',
-          }}
+          style={{ background: 'transparent' }}
         >
           <ambientLight intensity={0.8} />
           <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
