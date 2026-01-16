@@ -147,31 +147,59 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
       }
       
       // Transform and calculate distances
-      const transformedProfiles: ProfileWithDistance[] = data.map((p) => {
-        let distanceKm = 9999;
-        
-        // Calculate real distance if both have coordinates
-        if (userLat !== null && userLng !== null && p.latitude && p.longitude) {
-          distanceKm = calculateDistanceKm(userLat, userLng, p.latitude, p.longitude);
-        }
-        
-        return {
-          id: p.user_id,
-          name: p.display_name || "Utilisateur",
-          age: p.age || 25,
-          gender: (p.gender === "homme" ? "male" : p.gender === "femme" ? "female" : "female") as 'male' | 'female',
-          location: p.location || "Non spécifié",
-          distance: distanceKm < 9999 ? formatDistance(distanceKm) : "Distance inconnue",
-          distanceKm,
-          bio: p.bio || "",
-          photos: p.avatar_url ? [p.avatar_url] : [],
-          isOnline: p.is_online || false,
-          isVerified: p.is_verified || false,
-          interests: p.interests || [],
-          latitude: p.latitude,
-          longitude: p.longitude,
-        };
-      });
+      const transformedProfiles: ProfileWithDistance[] = await Promise.all(
+        data.map(async (p) => {
+          let distanceKm = 9999;
+          
+          // Calculate real distance if both have coordinates
+          if (userLat !== null && userLng !== null && p.latitude && p.longitude) {
+            distanceKm = calculateDistanceKm(userLat, userLng, p.latitude, p.longitude);
+          }
+          
+          // Fetch all photos from storage for this user
+          let photos: string[] = [];
+          try {
+            const { data: photoFiles } = await supabase.storage
+              .from("profile-photos")
+              .list(p.user_id);
+            
+            if (photoFiles && photoFiles.length > 0) {
+              photos = photoFiles
+                .filter(file => !file.name.startsWith('.'))
+                .map((file) => {
+                  const { data: { publicUrl } } = supabase.storage
+                    .from("profile-photos")
+                    .getPublicUrl(`${p.user_id}/${file.name}`);
+                  return publicUrl;
+                });
+            }
+          } catch (err) {
+            console.error("Error fetching photos for user:", p.user_id, err);
+          }
+          
+          // Fallback to avatar_url if no photos in storage
+          if (photos.length === 0 && p.avatar_url) {
+            photos = [p.avatar_url];
+          }
+          
+          return {
+            id: p.user_id,
+            name: p.display_name || "Utilisateur",
+            age: p.age || 25,
+            gender: (p.gender === "homme" ? "male" : p.gender === "femme" ? "female" : "female") as 'male' | 'female',
+            location: p.location || "Non spécifié",
+            distance: distanceKm < 9999 ? formatDistance(distanceKm) : "Distance inconnue",
+            distanceKm,
+            bio: p.bio || "",
+            photos,
+            isOnline: p.is_online || false,
+            isVerified: p.is_verified || false,
+            interests: p.interests || [],
+            latitude: p.latitude,
+            longitude: p.longitude,
+          };
+        })
+      );
       
       // Filter by max distance (only if we have user coordinates)
       const filteredByDistance = userLat !== null && userLng !== null
