@@ -150,7 +150,7 @@ export const getCurrencyByCountry = (countryCode: string): CurrencyInfo => {
 export const formatPrice = (
   priceInUSD: number,
   countryCode: string,
-  showDecimals: boolean = false
+  showDecimals: boolean = true
 ): string => {
   const currency = getCurrencyByCountry(countryCode);
   const localPrice = priceInUSD * currency.rate;
@@ -167,14 +167,14 @@ export const formatPrice = (
     // For moderate currencies, round to nearest whole number
     displayPrice = Math.round(localPrice);
   } else {
-    // For strong currencies, show decimals
+    // For strong currencies (USD, EUR, GBP), keep decimals
     displayPrice = Math.round(localPrice * 100) / 100;
   }
   
   // Format the number with appropriate separators
   const formatted = showDecimals && currency.rate < 10
-    ? displayPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : displayPrice.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+    ? displayPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : displayPrice.toLocaleString('en-US', { maximumFractionDigits: 0 });
   
   // Position symbol based on currency conventions
   const symbolAfter = ['FCFA', 'DH', 'DA', 'DT', 'kr', 'zł', 'Kč', 'Ft', 'lei', 'лв'].includes(currency.symbol);
