@@ -18,6 +18,8 @@ interface VoiceCallModalProps {
   onToggleMute: () => void;
   formatDuration: (seconds: number) => string;
   remoteAudioRef: React.RefObject<HTMLAudioElement>;
+  localStreamRef?: React.RefObject<MediaStream | null>;
+  remoteStreamRef?: React.RefObject<MediaStream | null>;
 }
 
 const VoiceCallModal = ({
@@ -36,9 +38,13 @@ const VoiceCallModal = ({
   onToggleMute,
   formatDuration,
   remoteAudioRef,
+  localStreamRef,
+  remoteStreamRef,
 }: VoiceCallModalProps) => {
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
   const outgoingToneRef = useRef<HTMLAudioElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Play ringtone when ringing (incoming call)
   useEffect(() => {
@@ -82,7 +88,26 @@ const VoiceCallModal = ({
     }
   }, [isInCall]);
 
+  // Attach local video stream
+  useEffect(() => {
+    if (callType === "video" && isInCall && localVideoRef.current && localStreamRef?.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+      localVideoRef.current.play().catch(console.error);
+    }
+  }, [isInCall, callType, localStreamRef?.current]);
+
+  // Attach remote video stream
+  useEffect(() => {
+    if (callType === "video" && isInCall && remoteVideoRef.current && remoteStreamRef?.current) {
+      remoteVideoRef.current.srcObject = remoteStreamRef.current;
+      remoteVideoRef.current.play().catch(console.error);
+    }
+  }, [isInCall, callType, remoteStreamRef?.current]);
+
   if (!isOpen) return null;
+
+  const isVideoCall = callType === "video";
+  const showVideoUI = isVideoCall && isInCall;
 
   return (
     <AnimatePresence>
@@ -93,77 +118,118 @@ const VoiceCallModal = ({
         className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center"
         style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {/* Hidden audio element for remote stream */}
+        {/* Hidden audio element for remote stream (for audio-only or fallback) */}
         <audio ref={remoteAudioRef} autoPlay playsInline />
 
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/20 via-background to-background" />
+        {/* Video call UI */}
+        {showVideoUI ? (
+          <>
+            {/* Remote video - fullscreen */}
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover bg-black"
+            />
+            
+            {/* Overlay gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+            
+            {/* Local video - PiP in corner */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="absolute top-20 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-primary/50 shadow-xl z-20"
+            >
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover bg-muted"
+              />
+            </motion.div>
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-8">
-          {/* Profile Picture */}
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="relative mb-8"
-          >
-            <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-primary/30">
-              {remoteUserPhoto ? (
-                <img
-                  src={remoteUserPhoto}
-                  alt={remoteUserName || "User"}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-muted flex items-center justify-center">
-                  <span className="text-4xl font-bold text-muted-foreground">
-                    {remoteUserName?.charAt(0) || "?"}
-                  </span>
-                </div>
-              )}
+            {/* Call info overlay */}
+            <div className="absolute top-8 left-0 right-0 z-10 flex flex-col items-center">
+              <h2 className="text-xl font-bold text-white drop-shadow-lg">
+                {remoteUserName || "Utilisateur"}
+              </h2>
+              <p className="text-white/80 text-sm">{formatDuration(duration)}</p>
             </div>
+          </>
+        ) : (
+          <>
+            {/* Background gradient for audio call */}
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/20 via-background to-background" />
 
-            {/* Ringing animation */}
-            {isRinging && (
-              <>
-                <motion.div
-                  className="absolute inset-0 rounded-full border-4 border-primary"
-                  animate={{ scale: [1, 1.3, 1.3], opacity: [0.5, 0, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-                <motion.div
-                  className="absolute inset-0 rounded-full border-4 border-primary"
-                  animate={{ scale: [1, 1.5, 1.5], opacity: [0.3, 0, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
-                />
-              </>
-            )}
-          </motion.div>
+            {/* Audio call content */}
+            <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-8">
+              {/* Profile Picture */}
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="relative mb-8"
+              >
+                <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-primary/30">
+                  {remoteUserPhoto ? (
+                    <img
+                      src={remoteUserPhoto}
+                      alt={remoteUserName || "User"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <span className="text-4xl font-bold text-muted-foreground">
+                        {remoteUserName?.charAt(0) || "?"}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-          {/* Name */}
-          <h2 className="text-2xl font-bold text-foreground mb-2">
-            {remoteUserName || "Utilisateur"}
-          </h2>
+                {/* Ringing animation */}
+                {isRinging && (
+                  <>
+                    <motion.div
+                      className="absolute inset-0 rounded-full border-4 border-primary"
+                      animate={{ scale: [1, 1.3, 1.3], opacity: [0.5, 0, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                    <motion.div
+                      className="absolute inset-0 rounded-full border-4 border-primary"
+                      animate={{ scale: [1, 1.5, 1.5], opacity: [0.3, 0, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                    />
+                  </>
+                )}
+              </motion.div>
 
-          {/* Status */}
-          <p className="text-muted-foreground mb-8">
-            {isRinging && isIncoming && "Appel entrant..."}
-            {isRinging && !isIncoming && "Appel en cours..."}
-            {isInCall && formatDuration(duration)}
-          </p>
+              {/* Name */}
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                {remoteUserName || "Utilisateur"}
+              </h2>
 
-          {/* Call type indicator */}
-          <div className="flex items-center gap-2 mb-8">
-            {callType === "video" ? (
-              <Video className="w-5 h-5 text-primary" />
-            ) : (
-              <Phone className="w-5 h-5 text-primary" />
-            )}
-            <span className="text-sm text-muted-foreground">
-              {callType === "video" ? "Appel vidéo" : "Appel vocal"}
-            </span>
-          </div>
-        </div>
+              {/* Status */}
+              <p className="text-muted-foreground mb-8">
+                {isRinging && isIncoming && "Appel entrant..."}
+                {isRinging && !isIncoming && "Appel en cours..."}
+                {isInCall && formatDuration(duration)}
+              </p>
+
+              {/* Call type indicator */}
+              <div className="flex items-center gap-2 mb-8">
+                {callType === "video" ? (
+                  <Video className="w-5 h-5 text-primary" />
+                ) : (
+                  <Phone className="w-5 h-5 text-primary" />
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {callType === "video" ? "Appel vidéo" : "Appel vocal"}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Controls */}
         <div className="relative z-10 pb-12 px-8">

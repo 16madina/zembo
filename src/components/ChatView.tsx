@@ -52,7 +52,9 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     endCall, 
     toggleMute, 
     formatDuration,
-    remoteAudioRef 
+    remoteAudioRef,
+    localStreamRef,
+    remoteStreamRef,
   } = useVoiceCall();
   
   const [newMessage, setNewMessage] = useState("");
@@ -1034,6 +1036,8 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         onToggleMute={toggleMute}
         formatDuration={formatDuration}
         remoteAudioRef={remoteAudioRef}
+        localStreamRef={localStreamRef}
+        remoteStreamRef={remoteStreamRef}
       />
     </>
   );
