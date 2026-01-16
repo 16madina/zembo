@@ -199,15 +199,11 @@ const Random = () => {
 
             <motion.div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4 z-10" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
               <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-sm text-primary font-medium">Mode Ghost activé</span>
+              <span className="text-sm text-primary font-medium">Es-tu prêt(e) à jouer ?</span>
             </motion.div>
             
-            <motion.p className="text-muted-foreground mb-3 max-w-xs leading-relaxed text-center z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-              Tu vas être connecté(e) avec une personne choisie par le hasard.
-            </motion.p>
-
-            <motion.p className="text-muted-foreground/70 mb-4 max-w-xs text-center text-sm z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-              Aucun profil. Aucune photo.<br /><span className="text-foreground font-medium">Juste une voix.</span>
+            <motion.p className="text-muted-foreground mb-4 max-w-xs leading-relaxed text-center z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+              <span className="text-foreground font-medium">Aucun profil, juste une voix.</span> Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
             {/* Microphone Test - Above the button for visibility */}
@@ -215,7 +211,7 @@ const Random = () => {
               className="z-10 mb-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
+              transition={{ delay: 0.5 }}
             >
               <MicrophoneTest />
             </motion.div>
