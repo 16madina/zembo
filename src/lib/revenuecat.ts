@@ -12,22 +12,18 @@ export const SUBSCRIPTION_PRODUCT_IDS = {
 
 // Consumable Coin Product identifiers
 export const COIN_PRODUCT_IDS = {
-  coins_50: "zembo_coins_50",
   coins_150: "zembo_coins_150",
   coins_500: "zembo_coins_500",
   coins_1200: "zembo_coins_1200",
   coins_3000: "zembo_coins_3000",
-  coins_10000: "zembo_coins_10000",
 } as const;
 
 // Map coin pack IDs to RevenueCat product IDs
 export const COIN_PACK_TO_PRODUCT: Record<string, { productId: string; coins: number; bonus: number }> = {
-  starter: { productId: COIN_PRODUCT_IDS.coins_50, coins: 50, bonus: 0 },
   basic: { productId: COIN_PRODUCT_IDS.coins_150, coins: 150, bonus: 10 },
   popular: { productId: COIN_PRODUCT_IDS.coins_500, coins: 500, bonus: 50 },
   premium: { productId: COIN_PRODUCT_IDS.coins_1200, coins: 1200, bonus: 200 },
   vip: { productId: COIN_PRODUCT_IDS.coins_3000, coins: 3000, bonus: 600 },
-  whale: { productId: COIN_PRODUCT_IDS.coins_10000, coins: 10000, bonus: 2500 },
 };
 
 // Entitlements
