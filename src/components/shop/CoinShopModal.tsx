@@ -268,7 +268,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
       const totalCoins = pack.coins + pack.bonus;
 
       if (useRevenueCatForCoins) {
-        // iOS: Use RevenueCat for in-app purchase
+        // iOS native: Use RevenueCat for in-app purchase
         const productMapping = COIN_PACK_TO_PRODUCT[pack.id];
         if (!productMapping) {
           throw new Error("Product not found");
@@ -292,21 +292,24 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           toast.error(result.error);
         }
       } else {
-        // Web: Simulate payment (would integrate with Stripe in production)
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const success = await addCoins(totalCoins);
-        
-        if (success) {
-          setShowSuccess({ coins: pack.coins, bonus: pack.bonus });
-          toast.success(`🎉 ${totalCoins} coins ajoutés à votre compte !`);
-          
-          setTimeout(() => {
-            setShowSuccess(null);
-          }, 3000);
-        } else {
-          toast.error("Erreur lors de l'achat. Veuillez réessayer.");
+        // Web + Android: Use Stripe Checkout
+        const { data, error } = await supabase.functions.invoke("create-coin-checkout", {
+          body: { 
+            packId: pack.id,
+            coins: pack.coins,
+            bonus: pack.bonus,
+            priceUSD: pack.priceUSD,
+            successUrl: window.location.origin + "/?coin_purchase=success",
+            cancelUrl: window.location.origin + "/?coin_purchase=cancelled",
+          },
+        });
+
+        if (error || !data?.url) {
+          throw new Error(error?.message || "Failed to create checkout session");
         }
+
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
       }
     } catch (error: any) {
       console.error("Purchase error:", error);
