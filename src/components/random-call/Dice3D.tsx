@@ -1,7 +1,8 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { RoundedBox, Float, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
+import { Dice1 } from "lucide-react";
 
 interface DiceDotProps {
   position: [number, number, number];
@@ -137,35 +138,92 @@ interface Dice3DProps {
   isAnimating?: boolean;
 }
 
+// Fallback component when WebGL fails
+const DiceFallback = ({ isAnimating }: { isAnimating: boolean }) => (
+  <div className="w-full h-full flex items-center justify-center">
+    <div 
+      className={`w-16 h-16 bg-white rounded-xl shadow-lg border-2 border-primary/30 flex items-center justify-center ${isAnimating ? 'animate-spin' : 'animate-pulse'}`}
+    >
+      <Dice1 className="w-10 h-10 text-primary" />
+    </div>
+  </div>
+);
+
+// Loading component
+const DiceLoading = () => (
+  <div className="w-full h-full flex items-center justify-center">
+    <div className="w-12 h-12 rounded-xl bg-primary/20 animate-pulse" />
+  </div>
+);
+
 const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
+  const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Check if WebGL is supported
+  const isWebGLSupported = useMemo(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      return !!gl;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  if (hasError || !isWebGLSupported) {
+    return (
+      <div className="w-32 h-32">
+        <DiceFallback isAnimating={isAnimating} />
+      </div>
+    );
+  }
+
   return (
     <div className="w-32 h-32">
-      <Canvas camera={{ position: [0, 0, 2.3], fov: 45 }}>
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
-        <directionalLight position={[-3, -3, -3]} intensity={0.3} />
-        <pointLight position={[0, 2, 2]} intensity={0.8} color="#d4af37" />
-        <pointLight position={[-2, -1, 1]} intensity={0.4} color="#ffffff" />
-        
-        <Float
-          speed={isAnimating ? 0 : 1.5}
-          rotationIntensity={isAnimating ? 0 : 0.2}
-          floatIntensity={isAnimating ? 0 : 0.3}
+      <Suspense fallback={<DiceLoading />}>
+        <Canvas 
+          camera={{ position: [0, 0, 2.3], fov: 45 }}
+          onCreated={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
+          gl={{ 
+            antialias: true,
+            alpha: true,
+            failIfMajorPerformanceCaveat: false,
+          }}
+          style={{ 
+            background: 'transparent',
+            opacity: isLoaded ? 1 : 0,
+            transition: 'opacity 0.3s ease-in'
+          }}
         >
-          <AnimatedDice isAnimating={isAnimating} />
-        </Float>
-        
-        {/* Golden sparkles around the dice */}
-        {isAnimating && (
-          <Sparkles
-            count={30}
-            scale={2}
-            size={2}
-            speed={3}
-            color="#d4af37"
-          />
-        )}
-      </Canvas>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
+          <directionalLight position={[-3, -3, -3]} intensity={0.3} />
+          <pointLight position={[0, 2, 2]} intensity={0.8} color="#d4af37" />
+          <pointLight position={[-2, -1, 1]} intensity={0.4} color="#ffffff" />
+          
+          <Float
+            speed={isAnimating ? 0 : 1.5}
+            rotationIntensity={isAnimating ? 0 : 0.2}
+            floatIntensity={isAnimating ? 0 : 0.3}
+          >
+            <AnimatedDice isAnimating={isAnimating} />
+          </Float>
+          
+          {/* Golden sparkles around the dice */}
+          {isAnimating && (
+            <Sparkles
+              count={30}
+              scale={2}
+              size={2}
+              speed={3}
+              color="#d4af37"
+            />
+          )}
+        </Canvas>
+      </Suspense>
+      {!isLoaded && <DiceLoading />}
     </div>
   );
 };
