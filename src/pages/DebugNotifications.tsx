@@ -469,27 +469,46 @@ export default function DebugNotifications() {
         <CardContent className="space-y-3">
           <textarea
             className="w-full bg-muted p-2 rounded text-xs font-mono h-20"
-            placeholder="Paste FCM token here for manual testing..."
+            placeholder="Colle le token FCM ici (depuis les logs Xcode)..."
             onChange={(e) => {
-              if (e.target.value.length > 50) {
-                setDebugInfo(prev => ({ ...prev, fcmToken: e.target.value.trim() }));
+              const value = e.target.value.trim();
+              if (value.length > 20) {
+                setDebugInfo(prev => ({ ...prev, fcmToken: value }));
+                addLog(`📝 Token manuel saisi: ${value.slice(0, 30)}...`);
               }
             }}
             defaultValue={debugInfo.fcmToken || ""}
           />
+          <div className="text-xs text-muted-foreground mb-2">
+            ⚠️ Fonctionne depuis le web preview - colle le token des logs Xcode et clique sur le bouton
+          </div>
           <Button 
-            onClick={() => {
-              if (debugInfo.fcmToken) {
-                saveTokenToDb(debugInfo.fcmToken);
-              } else {
+            onClick={async () => {
+              if (!debugInfo.fcmToken) {
                 toast.error("Aucun token à enregistrer");
+                return;
               }
+              if (!user) {
+                toast.error("Utilisateur non connecté");
+                return;
+              }
+              addLog(`🚀 Forçage enregistrement manuel pour user: ${user.id.slice(0, 8)}...`);
+              await saveTokenToDb(debugInfo.fcmToken);
             }}
             disabled={!debugInfo.fcmToken || !user}
             className="w-full"
+            variant="default"
+          >
+            🚀 Forcer enregistrement manuel
+          </Button>
+          <Button 
+            onClick={sendTestNotification}
+            disabled={testLoading || !debugInfo.fcmToken}
+            className="w-full"
             variant="secondary"
           >
-            💾 Forcer l'enregistrement en base
+            <Send className={`w-4 h-4 mr-2 ${testLoading ? 'animate-pulse' : ''}`} />
+            Envoyer notification test
           </Button>
         </CardContent>
       </Card>
