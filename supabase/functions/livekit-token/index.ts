@@ -35,18 +35,19 @@ serve(async (req) => {
       }
     );
 
-    // Validate the user using getUser (more reliable than getClaims)
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Validate the JWT using getClaims (more reliable in edge environment)
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
 
-    if (userError || !user) {
-      console.error("Token validation failed:", userError);
+    if (claimsError || !claimsData?.claims) {
+      console.error("Token validation failed:", claimsError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = user.id;
+    const userId = claimsData.claims.sub as string;
 
     const { roomName, isStreamer, isRandomCall } = await req.json();
 
@@ -75,11 +76,11 @@ serve(async (req) => {
     // Get user profile for display name
     const { data: profile } = await supabaseClient
       .from("profiles")
-      .select("display_name")
+      .select("display_name, email")
       .eq("user_id", userId)
       .single();
 
-    const participantName = profile?.display_name || user.email || "Anonyme";
+    const participantName = profile?.display_name || profile?.email || "Anonyme";
     const participantIdentity = userId;
 
     // Create access token
