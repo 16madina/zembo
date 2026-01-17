@@ -321,19 +321,29 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       tokenReceivedRef.current = false;
       
       console.log("[Push] Loading PushNotifications module...");
-      const PushNotifications = await getPushNotifications();
-      console.log("[Push] Module result:", PushNotifications ? "loaded" : "null");
+      let PushNotifications: any = null;
+      try {
+        PushNotifications = await getPushNotifications();
+        console.log("[Push] Module loaded successfully:", !!PushNotifications);
+      } catch (moduleError) {
+        console.error("[Push] Module loading error:", moduleError);
+        return;
+      }
       
       if (!PushNotifications) {
         console.log("[Push] ❌ PushNotifications module not available");
         return;
       }
       
-      console.log("[Push] ✅ PushNotifications module loaded");
+      console.log("[Push] ✅ PushNotifications module available");
       
-      console.log("[Push] Removing all listeners...");
-      await PushNotifications.removeAllListeners();
-      console.log("[Push] ✅ Listeners cleared");
+      console.log("[Push] Step 1: Removing all listeners...");
+      try {
+        await PushNotifications.removeAllListeners();
+        console.log("[Push] ✅ Step 1 complete - Listeners cleared");
+      } catch (listenerError) {
+        console.error("[Push] Error removing listeners:", listenerError);
+      }
       
       // Listen for registration success
       PushNotifications.addListener("registration", async (tokenData: PushNotificationToken) => {
