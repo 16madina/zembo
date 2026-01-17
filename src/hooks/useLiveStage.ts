@@ -36,58 +36,68 @@ export const useLiveStage = ({ liveId, streamerId, isStreamer }: UseLiveStagePro
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const guestVideoRef = useRef<HTMLVideoElement | null>(null);
 
+  // Fetch requests function (reusable)
+  const fetchRequests = useCallback(async () => {
+    console.log("[useLiveStage] Fetching requests for live:", liveId);
+    
+    const { data, error } = await supabase
+      .from("live_stage_requests")
+      .select("*")
+      .eq("live_id", liveId)
+      .in("status", ["pending", "accepted", "on_stage"]);
+
+    if (error) {
+      console.error("[useLiveStage] Error fetching stage requests:", error);
+      return;
+    }
+
+    console.log("[useLiveStage] Fetched requests:", data?.length || 0, data);
+
+    if (data && data.length > 0) {
+      // Fetch profiles for all requesters
+      const userIds = [...new Set(data.map((r) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, avatar_url")
+        .in("user_id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+
+      const requestsWithProfiles: StageRequest[] = data.map((r) => ({
+        ...r,
+        status: r.status as StageRequest["status"],
+        profile: profileMap.get(r.user_id) || { display_name: null, avatar_url: null },
+      }));
+
+      setRequests(requestsWithProfiles.filter((r) => r.status === "pending"));
+      
+      const onStage = requestsWithProfiles.find((r) => r.status === "on_stage");
+      if (onStage) {
+        setCurrentGuest(onStage);
+        if (onStage.user_id === user?.id) {
+          setIsOnStage(true);
+        }
+      }
+
+      const mine = requestsWithProfiles.find((r) => r.user_id === user?.id);
+      if (mine) {
+        setMyRequest(mine);
+      }
+    } else {
+      // Reset state if no requests found
+      setRequests([]);
+    }
+  }, [liveId, user?.id]);
+
   // Fetch initial requests
   useEffect(() => {
-    const fetchRequests = async () => {
-      const { data, error } = await supabase
-        .from("live_stage_requests")
-        .select("*")
-        .eq("live_id", liveId)
-        .in("status", ["pending", "accepted", "on_stage"]);
-
-      if (error) {
-        console.error("Error fetching stage requests:", error);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        // Fetch profiles for all requesters
-        const userIds = [...new Set(data.map((r) => r.user_id))];
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, display_name, avatar_url")
-          .in("user_id", userIds);
-
-        const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
-
-        const requestsWithProfiles: StageRequest[] = data.map((r) => ({
-          ...r,
-          status: r.status as StageRequest["status"],
-          profile: profileMap.get(r.user_id) || { display_name: null, avatar_url: null },
-        }));
-
-        setRequests(requestsWithProfiles.filter((r) => r.status === "pending"));
-        
-        const onStage = requestsWithProfiles.find((r) => r.status === "on_stage");
-        if (onStage) {
-          setCurrentGuest(onStage);
-          if (onStage.user_id === user?.id) {
-            setIsOnStage(true);
-          }
-        }
-
-        const mine = requestsWithProfiles.find((r) => r.user_id === user?.id);
-        if (mine) {
-          setMyRequest(mine);
-        }
-      }
-    };
-
     fetchRequests();
-  }, [liveId, user?.id]);
+  }, [fetchRequests]);
 
   // Subscribe to realtime updates
   useEffect(() => {
+    console.log("[useLiveStage] Setting up realtime subscription for live:", liveId);
+    
     const channel = supabase
       .channel(`live-stage-${liveId}`)
       .on(
@@ -99,6 +109,8 @@ export const useLiveStage = ({ liveId, streamerId, isStreamer }: UseLiveStagePro
           filter: `live_id=eq.${liveId}`,
         },
         async (payload) => {
+          console.log("[useLiveStage] Realtime event received:", payload.eventType, payload);
+          
           if (payload.eventType === "INSERT") {
             const newRequest = payload.new as StageRequest;
             
@@ -120,8 +132,15 @@ export const useLiveStage = ({ liveId, streamerId, isStreamer }: UseLiveStagePro
             }
 
             if (newRequest.status === "pending") {
-              setRequests((prev) => [...prev, requestWithProfile]);
+              setRequests((prev) => {
+                // Avoid duplicates
+                if (prev.some(r => r.id === requestWithProfile.id)) {
+                  return prev;
+                }
+                return [...prev, requestWithProfile];
+              });
               if (isStreamer) {
+                console.log("[useLiveStage] Streamer received new request, showing toast");
                 toast.info(`${profile?.display_name || "Quelqu'un"} veut monter sur scène !`);
               }
             }
@@ -181,12 +200,19 @@ export const useLiveStage = ({ liveId, streamerId, isStreamer }: UseLiveStagePro
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[useLiveStage] Subscription status:", status);
+        // Refetch when subscribed to ensure we have latest data
+        if (status === "SUBSCRIBED") {
+          fetchRequests();
+        }
+      });
 
     return () => {
+      console.log("[useLiveStage] Cleaning up channel for live:", liveId);
       supabase.removeChannel(channel);
     };
-  }, [liveId, user?.id, isStreamer, currentGuest?.id]);
+  }, [liveId, user?.id, isStreamer, currentGuest?.id, fetchRequests]);
 
   // Request to join stage
   const requestStage = useCallback(async () => {
