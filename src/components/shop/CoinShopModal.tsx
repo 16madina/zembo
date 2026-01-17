@@ -18,13 +18,13 @@ import { getCurrencyByCountry, formatPrice, CurrencyInfo } from "@/data/currenci
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { isNative, isIOS } from "@/lib/capacitor";
+import { isNative } from "@/lib/capacitor";
 import { 
   purchaseConsumable, 
   getCoinProductPrices, 
+  isRevenueCatAvailable,
   COIN_PACK_TO_PRODUCT 
 } from "@/lib/revenuecat";
-import { useRevenueCat } from "@/hooks/useRevenueCat";
 
 interface CoinPack {
   id: string;
@@ -199,7 +199,6 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const { balance, addCoins } = useCoins();
   const { subscription, fetchSubscription } = useSubscription();
   const { subscribe, isProcessing, processingPlan, isStripe, isRevenueCat } = usePayment();
-  const { isInitialized: isRevenueCatInitialized, isLoading: isRevenueCatLoading } = useRevenueCat();
   const [userCountry, setUserCountry] = useState<string>("US");
   const [currency, setCurrency] = useState<CurrencyInfo | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
@@ -207,8 +206,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const [revenueCatPrices, setRevenueCatPrices] = useState<Record<string, { priceString: string; price: number }> | null>(null);
 
   const currentTier = subscription?.tier || "free";
-  // On iOS native, always use RevenueCat for in-app purchases (App Store requirement)
-  const useRevenueCatForCoins = isIOS;
+  const useRevenueCatForCoins = isNative && isRevenueCatAvailable();
 
   useEffect(() => {
     const fetchUserCountry = async () => {
@@ -231,10 +229,10 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     fetchUserCountry();
   }, [user]);
 
-  // Fetch RevenueCat coin prices on iOS when initialized
+  // Fetch RevenueCat coin prices on iOS
   useEffect(() => {
     const fetchRevenueCatPrices = async () => {
-      if (isIOS && isOpen && isRevenueCatInitialized) {
+      if (isNative && isOpen) {
         const prices = await getCoinProductPrices();
         if (prices) {
           setRevenueCatPrices(prices);
@@ -243,7 +241,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     };
     
     fetchRevenueCatPrices();
-  }, [isOpen, isRevenueCatInitialized]);
+  }, [isOpen]);
 
   // Get display price for a coin pack
   const getPackPrice = (pack: CoinPack): string => {
@@ -264,23 +262,13 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
       return;
     }
 
-    // Check if RevenueCat is ready on iOS
-    if (useRevenueCatForCoins && !isRevenueCatInitialized) {
-      if (isRevenueCatLoading) {
-        toast.error("Chargement en cours, veuillez patienter...");
-      } else {
-        toast.error("Le système d'achat n'est pas disponible. Veuillez redémarrer l'application.");
-      }
-      return;
-    }
-
     setPurchasing(pack.id);
     
     try {
       const totalCoins = pack.coins + pack.bonus;
 
       if (useRevenueCatForCoins) {
-        // iOS native: Use RevenueCat for in-app purchase
+        // iOS: Use RevenueCat for in-app purchase
         const productMapping = COIN_PACK_TO_PRODUCT[pack.id];
         if (!productMapping) {
           throw new Error("Product not found");
@@ -304,24 +292,21 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           toast.error(result.error);
         }
       } else {
-        // Web + Android: Use Stripe Checkout
-        const { data, error } = await supabase.functions.invoke("create-coin-checkout", {
-          body: { 
-            packId: pack.id,
-            coins: pack.coins,
-            bonus: pack.bonus,
-            priceUSD: pack.priceUSD,
-            successUrl: window.location.origin + "/?coin_purchase=success",
-            cancelUrl: window.location.origin + "/?coin_purchase=cancelled",
-          },
-        });
-
-        if (error || !data?.url) {
-          throw new Error(error?.message || "Failed to create checkout session");
+        // Web: Simulate payment (would integrate with Stripe in production)
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const success = await addCoins(totalCoins);
+        
+        if (success) {
+          setShowSuccess({ coins: pack.coins, bonus: pack.bonus });
+          toast.success(`🎉 ${totalCoins} coins ajoutés à votre compte !`);
+          
+          setTimeout(() => {
+            setShowSuccess(null);
+          }, 3000);
+        } else {
+          toast.error("Erreur lors de l'achat. Veuillez réessayer.");
         }
-
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
       }
     } catch (error: any) {
       console.error("Purchase error:", error);

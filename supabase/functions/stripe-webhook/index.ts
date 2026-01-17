@@ -51,70 +51,11 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        const userId = session.metadata?.supabase_user_id || session.metadata?.user_id;
-        const purchaseType = session.metadata?.type;
-
-        if (!userId) {
-          console.error("Missing user_id in session metadata");
-          break;
-        }
-
-        // Handle coin purchase
-        if (purchaseType === "coin_purchase") {
-          const coins = parseInt(session.metadata?.coins || "0");
-          const bonus = parseInt(session.metadata?.bonus || "0");
-          const totalCoins = coins + bonus;
-          const packId = session.metadata?.pack_id;
-
-          console.log(`Processing coin purchase for user ${userId}: ${totalCoins} coins (pack: ${packId})`);
-
-          // Get or create user_coins record
-          const { data: existingCoins } = await supabase
-            .from("user_coins")
-            .select("*")
-            .eq("user_id", userId)
-            .single();
-
-          if (existingCoins) {
-            // Update existing balance
-            await supabase
-              .from("user_coins")
-              .update({
-                balance: existingCoins.balance + totalCoins,
-                total_earned: existingCoins.total_earned + totalCoins,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("user_id", userId);
-          } else {
-            // Create new record
-            await supabase
-              .from("user_coins")
-              .insert({
-                user_id: userId,
-                balance: totalCoins,
-                total_earned: totalCoins,
-              });
-          }
-
-          // Record transaction
-          await supabase
-            .from("coin_transactions")
-            .insert({
-              user_id: userId,
-              amount: totalCoins,
-              type: "purchase",
-              description: `Achat de ${coins} coins + ${bonus} bonus (pack ${packId})`,
-              reference_id: session.id,
-            });
-
-          console.log(`Coins added for user ${userId}: ${totalCoins} coins`);
-          break;
-        }
-
-        // Handle subscription purchase
+        const userId = session.metadata?.supabase_user_id;
         const plan = session.metadata?.plan;
-        if (!plan) {
-          console.error("Missing plan in session metadata for subscription");
+
+        if (!userId || !plan) {
+          console.error("Missing metadata in session");
           break;
         }
 

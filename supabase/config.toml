@@ -6,12 +6,3 @@ verify_jwt = false
 [functions.cleanup-random-calls]
 verify_jwt = false
 schedule = "*/5 * * * *"
-
-[functions.create-coin-checkout]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.revenuecat-webhook]
-verify_jwt = false
