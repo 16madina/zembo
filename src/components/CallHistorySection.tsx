@@ -177,18 +177,9 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
     }
   };
 
-  if (isLoading) {
-    return null;
-  }
-
   const missedCount = calls.filter(c => 
     (c.status === "missed" || c.status === "rejected") && c.direction === "incoming"
   ).length;
-
-  // Don't show anything if no calls
-  if (calls.length === 0) {
-    return null;
-  }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -196,7 +187,7 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
         <motion.button
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mx-4 md:mx-8 mb-4 flex items-center gap-2 px-4 py-2.5 rounded-full bg-card border border-border shadow-sm hover:bg-accent/50 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted hover:bg-accent/50 transition-colors"
         >
           <Phone className="w-4 h-4 text-primary" />
           <span className="text-sm font-medium text-foreground">Appels</span>
