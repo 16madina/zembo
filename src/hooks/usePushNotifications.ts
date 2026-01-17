@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 const FCM_TOKEN_KEY = "fcm_token";
 const PENDING_NOTIFICATION_KEY = "pending_notification_data";
+const LAST_TOKEN_REFRESH_KEY = "fcm_token_last_refresh";
+const TOKEN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // Dynamic import for Push Notifications to avoid errors on web
 const getPushNotifications = async () => {
@@ -60,6 +62,7 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
   const [permissionStatus, setPermissionStatus] = useState<string>("prompt");
   const enabled = options.enabled ?? true;
   const tokenReceivedRef = useRef(false);
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const registerToken = useCallback(async (fcmToken: string) => {
     if (!user) {
@@ -129,6 +132,49 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       return false;
     }
   }, [user]);
+
+  // Force refresh token function
+  const forceRefreshToken = useCallback(async () => {
+    console.log("[Push] 🔄 Force refreshing FCM token...");
+    
+    const PushNotifications = await getPushNotifications();
+    if (!PushNotifications) {
+      console.log("[Push] ❌ Cannot refresh - no PushNotifications module");
+      return false;
+    }
+
+    try {
+      // Clear listeners and re-register
+      await PushNotifications.removeAllListeners();
+      
+      // Re-add registration listener
+      PushNotifications.addListener("registration", async (tokenData: PushNotificationToken) => {
+        console.log("[Push] 🎉 Refresh - New token received:", tokenData.value.slice(0, 25));
+        tokenReceivedRef.current = true;
+        localStorage.setItem(FCM_TOKEN_KEY, tokenData.value);
+        localStorage.setItem(LAST_TOKEN_REFRESH_KEY, Date.now().toString());
+        setToken(tokenData.value);
+        
+        const success = await registerToken(tokenData.value);
+        if (success) {
+          console.log("[Push] ✅ Token refreshed and registered");
+        }
+      });
+
+      PushNotifications.addListener("registrationError", (error: any) => {
+        console.error("[Push] ❌ Refresh registration error:", JSON.stringify(error));
+      });
+
+      // Call register to get a fresh token
+      await PushNotifications.register();
+      console.log("[Push] ✅ Refresh register() called");
+      
+      return true;
+    } catch (error) {
+      console.error("[Push] ❌ Error refreshing token:", error);
+      return false;
+    }
+  }, [registerToken]);
 
   const handleNotificationNavigation = useCallback((data: NotificationData) => {
     console.log("Handling notification navigation:", data);
@@ -415,6 +461,9 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       await PushNotifications.register();
       console.log("[Push] ✅ register() completed");
       
+      // Store the refresh time
+      localStorage.setItem(LAST_TOKEN_REFRESH_KEY, Date.now().toString());
+      
       // iOS WORKAROUND: If listener doesn't fire after 3s, try stored token
       setTimeout(async () => {
         console.log("[Push] ⏰ 3s check - tokenReceived:", tokenReceivedRef.current);
@@ -433,24 +482,50 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
             }
           } else {
             console.log("[Push] ❌ No stored token - manual registration needed via /debug-notifications");
-            // Don't show toast to avoid confusing users
           }
         }
       }, 3000);
+
+      // Setup automatic token refresh every 5 minutes
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+      
+      refreshIntervalRef.current = setInterval(async () => {
+        const lastRefresh = localStorage.getItem(LAST_TOKEN_REFRESH_KEY);
+        const lastRefreshTime = lastRefresh ? parseInt(lastRefresh, 10) : 0;
+        const timeSinceRefresh = Date.now() - lastRefreshTime;
+        
+        console.log("[Push] ⏱️ Auto-refresh check - time since last refresh:", Math.round(timeSinceRefresh / 1000), "s");
+        
+        // If more than 5 minutes since last refresh, force refresh
+        if (timeSinceRefresh >= TOKEN_REFRESH_INTERVAL) {
+          console.log("[Push] 🔄 Auto-refreshing token (5 min interval)...");
+          await forceRefreshToken();
+        }
+      }, TOKEN_REFRESH_INTERVAL);
 
       console.log("[Push] ====== INIT COMPLETE ======");
 
     } catch (error) {
       console.error("[Push] ❌ Error during initialization:", error);
     }
-  }, [user, enabled, registerToken, handleNotificationNavigation]);
+  }, [user, enabled, registerToken, handleNotificationNavigation, forceRefreshToken]);
 
   useEffect(() => {
     if (isNative && user && enabled) {
       const timer = setTimeout(() => {
         initializePushNotifications();
       }, 500);
-      return () => clearTimeout(timer);
+      
+      return () => {
+        clearTimeout(timer);
+        // Cleanup interval on unmount
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+          refreshIntervalRef.current = null;
+        }
+      };
     }
   }, [user, enabled, initializePushNotifications]);
 
@@ -458,6 +533,7 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
     token,
     permissionStatus,
     requestPermissions,
+    forceRefreshToken,
     isSupported: isNative,
   };
 };
