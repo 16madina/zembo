@@ -15,6 +15,7 @@ import {
   Settings2,
   RefreshCw,
   Volume2,
+  AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +32,16 @@ import { useLiveAccess } from "@/hooks/useLiveAccess";
 import { useLiveJoinRequests } from "@/hooks/useLiveJoinRequests";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import GiftPanel from "@/components/live/GiftPanel";
@@ -94,6 +105,7 @@ const LiveRoom = () => {
   const [liveEnded, setLiveEnded] = useState(false);
   const [showEndedScreen, setShowEndedScreen] = useState(false);
   const [isEndingLive, setIsEndingLive] = useState(false);
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [endedLiveData, setEndedLiveData] = useState<{
     startedAt: string | null;
     endedAt: string | null;
@@ -1142,7 +1154,7 @@ const LiveRoom = () => {
             {showStreamerControls ? (
               <Button
                 variant="destructive"
-                onClick={handleEndLive}
+                onClick={() => setShowEndConfirmation(true)}
                 disabled={isEndingLive}
                 className="h-7 px-2 text-xs"
               >
@@ -1410,6 +1422,31 @@ const LiveRoom = () => {
           }}
         />
       )}
+
+      {/* End Live Confirmation Modal */}
+      <AlertDialog open={showEndConfirmation} onOpenChange={setShowEndConfirmation}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Terminer le live ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir terminer ce live ? Cette action est irréversible et tous les spectateurs seront déconnectés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isEndingLive}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEndLive}
+              disabled={isEndingLive}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isEndingLive ? "Fermeture..." : "Oui, terminer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
