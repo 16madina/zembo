@@ -11,9 +11,20 @@ const TOKEN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // Dynamic import for Push Notifications to avoid errors on web
 const getPushNotifications = async () => {
-  if (!isNative) return null;
-  const mod = await import("@capacitor/push-notifications");
-  return mod.PushNotifications;
+  if (!isNative) {
+    console.log("[Push] getPushNotifications: not native, returning null");
+    return null;
+  }
+  try {
+    console.log("[Push] getPushNotifications: starting import...");
+    const mod = await import("@capacitor/push-notifications");
+    console.log("[Push] getPushNotifications: import success, mod:", !!mod);
+    console.log("[Push] getPushNotifications: PushNotifications:", !!mod?.PushNotifications);
+    return mod.PushNotifications;
+  } catch (error) {
+    console.error("[Push] getPushNotifications: import error:", error);
+    return null;
+  }
 };
 
 // Dynamic import for App plugin
