@@ -19,7 +19,7 @@ export const useLives = () => {
   const [canGoLive, setCanGoLive] = useState(false);
 
   // Fetch active lives
-  const fetchLives = async () => {
+  const fetchLives = useCallback(async () => {
     setLoading(true);
     const { data: livesData, error } = await supabase
       .from("lives")
@@ -31,6 +31,12 @@ export const useLives = () => {
       // Fetch streamer profiles separately
       const streamerIds = [...new Set(livesData.map((l) => l.streamer_id))];
       
+      if (streamerIds.length === 0) {
+        setLives([]);
+        setLoading(false);
+        return;
+      }
+
       const [profilesResult, subscriptionsResult] = await Promise.all([
         supabase
           .from("profiles")
@@ -74,9 +80,11 @@ export const useLives = () => {
       });
       
       setLives(mappedLives);
+    } else {
+      console.error("Error fetching lives:", error);
     }
     setLoading(false);
-  };
+  }, []);
 
   // Check if user can go live (now free for all authenticated users)
   const checkCanGoLive = async () => {
@@ -194,7 +202,7 @@ export const useLives = () => {
     debouncedFetchRef.current = setTimeout(() => {
       fetchLives();
     }, 500); // Debounce 500ms
-  }, [fetchLives]);
+  }, []);
 
   // Subscribe to live changes with debounced updates
   useEffect(() => {
@@ -223,7 +231,7 @@ export const useLives = () => {
       }
       supabase.removeChannel(channel);
     };
-  }, [user, debouncedFetchLives]);
+  }, [user, fetchLives, debouncedFetchLives]);
 
   return {
     lives,
