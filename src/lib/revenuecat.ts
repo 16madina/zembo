@@ -108,10 +108,15 @@ export const initializeRevenueCat = async (userId?: string): Promise<boolean> =>
     }
 
     const apiKey = isIOS ? REVENUECAT_IOS_API_KEY : REVENUECAT_ANDROID_API_KEY;
-    
+
     if (!apiKey) {
       console.log("RevenueCat: No API key configured for this platform");
       return false;
+    }
+
+    // Debug aid (doesn't expose the full key)
+    if (import.meta.env.DEV) {
+      console.log("RevenueCat: Configuring with key ending:", apiKey.slice(-6), "platform:", isIOS ? "ios" : "android");
     }
 
     await Purchases.Purchases.configure({
