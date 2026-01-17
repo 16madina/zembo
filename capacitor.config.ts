@@ -33,7 +33,9 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: "always",
     preferredContentMode: "mobile",
-    backgroundColor: "#0a0c14"
+    backgroundColor: "#0a0c14",
+    allowsLinkPreview: true,
+    scrollEnabled: true
   },
   android: {
     backgroundColor: "#0a0c14",
