@@ -93,6 +93,7 @@ const GuestPipView = ({
   peerConnection = null,
 }: GuestPipViewProps) => {
   const guestVideoRef = useRef<HTMLVideoElement>(null);
+  const guestAudioRef = useRef<HTMLAudioElement>(null);
   const dragControls = useDragControls();
   const [isExpanded, setIsExpanded] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -112,10 +113,40 @@ const GuestPipView = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Attach guest stream
+  // Attach guest stream (robust: force playsInline + play() and separate audio element)
   useEffect(() => {
-    if (guestVideoRef.current && guestStream) {
-      guestVideoRef.current.srcObject = guestStream;
+    const videoEl = guestVideoRef.current;
+    if (!videoEl) return;
+
+    if (guestStream) {
+      videoEl.srcObject = guestStream;
+      videoEl.muted = false;
+      videoEl.playsInline = true;
+      videoEl.setAttribute("playsinline", "true");
+      videoEl.setAttribute("webkit-playsinline", "true");
+      videoEl.play().catch((err) => {
+        console.warn("[GuestPipView] Guest VIDEO play() failed:", err);
+      });
+    } else {
+      videoEl.srcObject = null;
+    }
+  }, [guestStream]);
+
+  useEffect(() => {
+    const audioEl = guestAudioRef.current;
+    if (!audioEl) return;
+
+    if (guestStream) {
+      audioEl.srcObject = guestStream;
+      audioEl.muted = false;
+      audioEl.autoplay = true;
+      audioEl.setAttribute("playsinline", "true");
+      audioEl.setAttribute("webkit-playsinline", "true");
+      audioEl.play().catch((err) => {
+        console.warn("[GuestPipView] Guest AUDIO play() failed:", err);
+      });
+    } else {
+      audioEl.srcObject = null;
     }
   }, [guestStream]);
 
@@ -179,6 +210,9 @@ const GuestPipView = ({
 
       {/* Main content container with overflow hidden */}
       <div className="absolute inset-0 rounded-2xl overflow-hidden">
+        {/* Dedicated audio element for guest (mobile/Safari reliability) */}
+        <audio ref={guestAudioRef} autoPlay playsInline className="hidden" />
+
         {/* Video or Avatar */}
         {guestStream ? (
           <video
