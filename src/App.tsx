@@ -10,6 +10,8 @@ import { initializeCapacitor } from "@/lib/capacitor";
 import SplashScreen from "@/components/SplashScreen";
 import HelpButton from "@/components/HelpButton";
 import PushNotificationsBootstrap from "@/components/PushNotificationsBootstrap";
+import CallOverlay from "@/components/CallOverlay";
+import { VoiceCallProvider } from "@/contexts/VoiceCallContext";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
 import LiveRoom from "./pages/LiveRoom";
@@ -118,7 +120,10 @@ const AppContent = () => {
       <BrowserRouter>
         <AuthProvider>
           <PushNotificationsBootstrap />
-          <AppRoutes />
+          <VoiceCallProvider>
+            <CallOverlay />
+            <AppRoutes />
+          </VoiceCallProvider>
         </AuthProvider>
       </BrowserRouter>
     </>

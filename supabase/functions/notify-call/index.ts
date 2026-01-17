@@ -68,7 +68,7 @@ serve(async (req) => {
         apns: {
           payload: {
             aps: {
-              sound: "ringtone.caf",
+              sound: "default",
               badge: 1,
               "content-available": 1,
               "interruption-level": "time-sensitive",
@@ -82,7 +82,7 @@ serve(async (req) => {
         android: {
           priority: "high",
           notification: {
-            sound: "ringtone",
+            sound: "default",
             channel_id: "incoming_calls",
             visibility: "public",
             notification_priority: "PRIORITY_MAX",

@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatMessages, ChatMessage } from "@/hooks/useChatMessages";
-import { useVoiceCall } from "@/hooks/useVoiceCall";
+import { useVoiceCallContext } from "@/contexts/VoiceCallContext";
 import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import { useMessageReactions } from "@/hooks/useMessageReactions";
 import VoiceCallModal from "@/components/VoiceCallModal";
@@ -55,7 +55,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     remoteAudioRef,
     localStreamRef,
     remoteStreamRef,
-  } = useVoiceCall();
+  } = useVoiceCallContext();
   
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(user.isTyping);
