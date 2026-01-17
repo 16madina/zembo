@@ -178,12 +178,6 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                   alt={profile.name}
                   className="w-full h-full object-cover"
                   draggable={false}
-                  crossOrigin="anonymous"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`;
-                  }}
                 />
               </AnimatePresence>
               

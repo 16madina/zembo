@@ -34,12 +34,6 @@ const LiveCard = ({ live, onClick }: LiveCardProps) => {
             className="w-full h-full object-cover"
             whileHover={{ scale: 1.1 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            crossOrigin="anonymous"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.src = defaultThumbnail;
-            }}
           />
           
           {/* Animated overlay on hover */}
@@ -127,12 +121,6 @@ const LiveCard = ({ live, onClick }: LiveCardProps) => {
                   src={live.streamer?.avatar_url || defaultAvatar}
                   alt={live.streamer?.display_name || "Streamer"}
                   className="relative w-10 h-10 rounded-full border-2 border-primary object-cover"
-                  crossOrigin="anonymous"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    target.src = defaultAvatar;
-                  }}
                 />
                 {/* Online indicator */}
                 <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />

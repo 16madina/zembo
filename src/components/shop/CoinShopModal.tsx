@@ -18,13 +18,13 @@ import { getCurrencyByCountry, formatPrice, CurrencyInfo } from "@/data/currenci
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { isNative, isIOS } from "@/lib/capacitor";
+import { isNative } from "@/lib/capacitor";
 import { 
-  purchaseProduct, 
-  getCoinProducts, 
-  isStoreKitAvailable,
+  purchaseConsumable, 
+  getCoinProductPrices, 
+  isRevenueCatAvailable,
   COIN_PACK_TO_PRODUCT 
-} from "@/lib/storekit";
+} from "@/lib/revenuecat";
 
 interface CoinPack {
   id: string;
@@ -198,15 +198,15 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const { user } = useAuth();
   const { balance, addCoins } = useCoins();
   const { subscription, fetchSubscription } = useSubscription();
-  const { subscribe, isProcessing, processingPlan, isStripe, isStoreKit } = usePayment();
+  const { subscribe, isProcessing, processingPlan, isStripe, isRevenueCat } = usePayment();
   const [userCountry, setUserCountry] = useState<string>("US");
   const [currency, setCurrency] = useState<CurrencyInfo | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState<{ coins: number; bonus: number } | null>(null);
-  const [storeKitProducts, setStoreKitProducts] = useState<any[]>([]);
+  const [revenueCatPrices, setRevenueCatPrices] = useState<Record<string, { priceString: string; price: number }> | null>(null);
 
   const currentTier = subscription?.tier || "free";
-  const useStoreKitForCoins = isNative && isIOS && isStoreKitAvailable();
+  const useRevenueCatForCoins = isNative && isRevenueCatAvailable();
 
   useEffect(() => {
     const fetchUserCountry = async () => {
@@ -229,27 +229,27 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     fetchUserCountry();
   }, [user]);
 
-  // Fetch StoreKit coin prices on iOS
+  // Fetch RevenueCat coin prices on iOS
   useEffect(() => {
-    const fetchStoreKitPrices = async () => {
-      if (isNative && isIOS && isOpen) {
-        const products = getCoinProducts();
-        if (products.length > 0) {
-          setStoreKitProducts(products);
+    const fetchRevenueCatPrices = async () => {
+      if (isNative && isOpen) {
+        const prices = await getCoinProductPrices();
+        if (prices) {
+          setRevenueCatPrices(prices);
         }
       }
     };
     
-    fetchStoreKitPrices();
+    fetchRevenueCatPrices();
   }, [isOpen]);
 
   // Get display price for a coin pack
   const getPackPrice = (pack: CoinPack): string => {
-    if (useStoreKitForCoins && storeKitProducts.length > 0) {
+    if (useRevenueCatForCoins && revenueCatPrices) {
       const productMapping = COIN_PACK_TO_PRODUCT[pack.id];
       if (productMapping) {
-        const product = storeKitProducts.find(p => p.id === productMapping.productId);
-        if (product) return product.priceString;
+        const price = revenueCatPrices[productMapping.productId];
+        if (price) return price.priceString;
       }
     }
     // Fallback to local currency conversion
@@ -267,14 +267,14 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     try {
       const totalCoins = pack.coins + pack.bonus;
 
-      if (useStoreKitForCoins) {
-        // iOS: Use StoreKit for in-app purchase
+      if (useRevenueCatForCoins) {
+        // iOS: Use RevenueCat for in-app purchase
         const productMapping = COIN_PACK_TO_PRODUCT[pack.id];
         if (!productMapping) {
           throw new Error("Product not found");
         }
 
-        const result = await purchaseProduct(productMapping.productId);
+        const result = await purchaseConsumable(productMapping.productId);
         
         if (result.success) {
           // Add coins to user's balance after successful purchase
@@ -531,7 +531,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           
           {/* Payment method indicator */}
           <div className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-          {useStoreKitForCoins ? (
+            {useRevenueCatForCoins ? (
               <>
                 <Apple className="w-3 h-3" />
                 <span>Paiement sécurisé via App Store</span>
@@ -562,7 +562,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
             </p>
             {/* Payment method indicator */}
             <div className="flex items-center justify-center gap-1 mt-2 text-xs text-muted-foreground">
-            {isStoreKit ? (
+              {isRevenueCat ? (
                 <>
                   <Apple className="w-3 h-3" />
                   <span>Paiement via App Store</span>

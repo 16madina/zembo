@@ -26,11 +26,11 @@ import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePayment } from "@/hooks/usePayment";
-import { useStoreKit } from "@/hooks/useStoreKit";
+import { useRevenueCat } from "@/hooks/useRevenueCat";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { isNative, isIOS } from "@/lib/capacitor";
+import { isNative } from "@/lib/capacitor";
 
 type PlanType = "free" | "gold" | "platinum";
 
@@ -149,26 +149,23 @@ const Subscriptions = () => {
   const { subscription, fetchSubscription } = useSubscription();
   const { subscribe: stripeSubscribe, isProcessing: isStripeProcessing } = usePayment();
   const { 
-    subscribe: storeKitSubscribe, 
+    subscribe: revenueCatSubscribe, 
     restore, 
-    isLoading: isStoreKitLoading, 
-    subscriptionProducts 
-  } = useStoreKit();
+    isLoading: isRevenueCatLoading, 
+    packages 
+  } = useRevenueCat();
   
   const [selectedPlan, setSelectedPlan] = useState<PlanType>("gold");
   const [isRestoring, setIsRestoring] = useState(false);
 
   const currentTier = subscription?.tier || "free";
-  const isSubscribing = isStripeProcessing || isStoreKitLoading;
-  const useStoreKitPayment = isNative && isIOS;
+  const isSubscribing = isStripeProcessing || isRevenueCatLoading;
 
-  // Get prices from StoreKit products if available (iOS native)
+  // Get prices from RevenueCat packages if available (iOS native)
   const getPrice = (plan: "gold" | "platinum") => {
-    if (subscriptionProducts.length > 0 && useStoreKitPayment) {
-      const product = subscriptionProducts.find(p => 
-        p.id === (plan === "gold" ? "zembo_gold_monthly" : "zembo_platinum_monthly")
-      );
-      if (product) return product.priceString;
+    if (packages && isNative) {
+      const pkg = packages.find(p => p.identifier === plan);
+      if (pkg) return pkg.priceString;
     }
     return plan === "gold" ? "8.99$" : "17.99$";
   };
@@ -192,11 +189,11 @@ const Subscriptions = () => {
     try {
       let result;
       
-      if (useStoreKitPayment) {
-        // iOS native: use StoreKit
-        result = await storeKitSubscribe(plan);
+      if (isNative) {
+        // iOS/Android native: use RevenueCat
+        result = await revenueCatSubscribe(plan);
       } else {
-        // Web & Android: use Stripe
+        // Web: use Stripe
         result = await stripeSubscribe(plan);
       }
 
@@ -397,7 +394,7 @@ const Subscriptions = () => {
           </p>
           
           {/* Restore Purchases Button (iOS only) */}
-          {useStoreKitPayment && (
+          {isNative && (
             <Button
               variant="ghost"
               className="w-full mt-3 text-muted-foreground"
