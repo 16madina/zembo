@@ -22,9 +22,9 @@ import { isNative, isIOS } from "@/lib/capacitor";
 import { 
   purchaseConsumable, 
   getCoinProductPrices, 
-  isRevenueCatAvailable,
   COIN_PACK_TO_PRODUCT 
 } from "@/lib/revenuecat";
+import { useRevenueCat } from "@/hooks/useRevenueCat";
 
 interface CoinPack {
   id: string;
@@ -199,6 +199,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const { balance, addCoins } = useCoins();
   const { subscription, fetchSubscription } = useSubscription();
   const { subscribe, isProcessing, processingPlan, isStripe, isRevenueCat } = usePayment();
+  const { isInitialized: isRevenueCatInitialized, isLoading: isRevenueCatLoading } = useRevenueCat();
   const [userCountry, setUserCountry] = useState<string>("US");
   const [currency, setCurrency] = useState<CurrencyInfo | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
@@ -230,10 +231,10 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     fetchUserCountry();
   }, [user]);
 
-  // Fetch RevenueCat coin prices on iOS
+  // Fetch RevenueCat coin prices on iOS when initialized
   useEffect(() => {
     const fetchRevenueCatPrices = async () => {
-      if (isNative && isOpen) {
+      if (isIOS && isOpen && isRevenueCatInitialized) {
         const prices = await getCoinProductPrices();
         if (prices) {
           setRevenueCatPrices(prices);
@@ -242,7 +243,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     };
     
     fetchRevenueCatPrices();
-  }, [isOpen]);
+  }, [isOpen, isRevenueCatInitialized]);
 
   // Get display price for a coin pack
   const getPackPrice = (pack: CoinPack): string => {
@@ -260,6 +261,16 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const handlePurchase = async (pack: CoinPack) => {
     if (!user) {
       toast.error("Vous devez être connecté pour acheter");
+      return;
+    }
+
+    // Check if RevenueCat is ready on iOS
+    if (useRevenueCatForCoins && !isRevenueCatInitialized) {
+      if (isRevenueCatLoading) {
+        toast.error("Chargement en cours, veuillez patienter...");
+      } else {
+        toast.error("Le système d'achat n'est pas disponible. Veuillez redémarrer l'application.");
+      }
       return;
     }
 
