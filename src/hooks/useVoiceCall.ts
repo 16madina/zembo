@@ -59,71 +59,99 @@ export const useVoiceCall = () => {
     if (!user?.id) return;
 
     const checkPendingCall = async () => {
-      const pendingCallData = sessionStorage.getItem("pendingCall");
+      // Check sessionStorage first, then localStorage backup
+      let pendingCallData = sessionStorage.getItem("pendingCall");
+      let source = "sessionStorage";
+      
+      if (!pendingCallData) {
+        pendingCallData = localStorage.getItem("pendingCall_backup");
+        source = "localStorage_backup";
+      }
+      
       if (!pendingCallData) return;
 
-      console.log("[VoiceCall] Found pending call from notification:", pendingCallData);
+      console.log(`[VoiceCall] Found pending call from ${source}:`, pendingCallData);
       sessionStorage.removeItem("pendingCall");
+      localStorage.removeItem("pendingCall_backup");
 
       try {
         const pendingCall = JSON.parse(pendingCallData);
+        
+        // Check if this is a recent notification (within last 60 seconds)
+        const timestamp = pendingCall.timestamp || 0;
+        const age = Date.now() - timestamp;
+        if (timestamp && age > 60000) {
+          console.log("[VoiceCall] Pending call is too old, ignoring:", age, "ms");
+          return;
+        }
+
         const callId = pendingCall.callId;
+        const callerName = pendingCall.callerName || "Appel entrant";
+        const callerPhoto = pendingCall.callerPhoto || null;
+        const callType = pendingCall.callType || "audio";
 
-        if (!callId) {
-          console.log("[VoiceCall] No callId in pending call data");
-          return;
+        console.log("[VoiceCall] Processing pending call - callId:", callId, "callerName:", callerName);
+
+        // If we have a valid UUID callId, try to fetch from DB
+        const isValidUUID = callId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(callId);
+        
+        if (isValidUUID) {
+          // Fetch the active call from database
+          const { data: call, error } = await supabase
+            .from("call_sessions")
+            .select("*")
+            .eq("id", callId)
+            .single();
+
+          if (!error && call && call.status === "ringing" && call.callee_id === user.id) {
+            // Fetch caller info
+            const { data: callerProfile } = await supabase
+              .from("profiles")
+              .select("display_name, avatar_url")
+              .eq("user_id", call.caller_id)
+              .maybeSingle();
+
+            console.log("[VoiceCall] Setting incoming call state from DB");
+
+            setCallState({
+              isInCall: false,
+              isRinging: true,
+              isIncoming: true,
+              callId: call.id,
+              callType: call.call_type as "audio" | "video",
+              remoteUserId: call.caller_id,
+              remoteUserName: callerProfile?.display_name || callerName,
+              remoteUserPhoto: callerProfile?.avatar_url || callerPhoto,
+              isMuted: false,
+              duration: 0,
+            });
+            return;
+          }
+          console.log("[VoiceCall] Call not found in DB or not ringing, error:", error?.message);
         }
 
-        // Fetch the active call from database
-        const { data: call, error } = await supabase
-          .from("call_sessions")
-          .select("*")
-          .eq("id", callId)
-          .single();
+        // Fallback: Show notification-based incoming call UI (for test notifications or expired calls)
+        console.log("[VoiceCall] Showing incoming call from notification data only");
+        toast({
+          title: callType === "video" ? "📹 Appel vidéo manqué" : "📞 Appel manqué",
+          description: `${callerName} a essayé de vous appeler`,
+          variant: "default",
+        });
 
-        if (error || !call) {
-          console.log("[VoiceCall] Call not found or error:", error);
-          return;
-        }
-
-        console.log("[VoiceCall] Retrieved call from DB:", call);
-
-        // Only process if call is still ringing and user is the callee
-        if (call.status === "ringing" && call.callee_id === user.id) {
-          // Fetch caller info
-          const { data: callerProfile } = await supabase
-            .from("profiles")
-            .select("display_name, avatar_url")
-            .eq("user_id", call.caller_id)
-            .maybeSingle();
-
-          console.log("[VoiceCall] Setting incoming call state from pending notification");
-
-          setCallState({
-            isInCall: false,
-            isRinging: true,
-            isIncoming: true,
-            callId: call.id,
-            callType: call.call_type as "audio" | "video",
-            remoteUserId: call.caller_id,
-            remoteUserName: callerProfile?.display_name || pendingCall.callerName || "Utilisateur",
-            remoteUserPhoto: callerProfile?.avatar_url || pendingCall.callerPhoto || null,
-            isMuted: false,
-            duration: 0,
-          });
-        } else {
-          console.log("[VoiceCall] Call is no longer active:", call.status);
-        }
       } catch (err) {
         console.error("[VoiceCall] Error processing pending call:", err);
       }
     };
 
-    // Check immediately and after a short delay (in case of race conditions)
+    // Check immediately and after delays (in case of race conditions with app startup)
     checkPendingCall();
-    const timer = setTimeout(checkPendingCall, 500);
+    const timer1 = setTimeout(checkPendingCall, 500);
+    const timer2 = setTimeout(checkPendingCall, 1500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [user?.id]);
 
   // Check for missed call from push notification (deep linking)
