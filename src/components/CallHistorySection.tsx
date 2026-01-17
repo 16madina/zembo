@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, Video, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, ChevronRight } from "lucide-react";
+import { Phone, Video, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
 interface CallHistoryItem {
   id: string;
@@ -30,13 +32,12 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
   const { user } = useAuth();
   const [calls, setCalls] = useState<CallHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const fetchCallHistory = useCallback(async () => {
     if (!user?.id) return;
 
     try {
-      // Fetch call sessions where user is caller or callee
       const { data: callsData, error } = await supabase
         .from("call_sessions")
         .select("*")
@@ -55,12 +56,10 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
         return;
       }
 
-      // Get unique other user IDs
       const otherUserIds = [...new Set(callsData.map(call => 
         call.caller_id === user.id ? call.callee_id : call.caller_id
       ))];
 
-      // Fetch profiles for other users
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("user_id, display_name, avatar_url")
@@ -104,7 +103,6 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
     fetchCallHistory();
   }, [fetchCallHistory]);
 
-  // Real-time subscription for new calls
   useEffect(() => {
     if (!user?.id) return;
 
@@ -183,138 +181,136 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
     return null;
   }
 
+  const missedCount = calls.filter(c => 
+    (c.status === "missed" || c.status === "rejected") && c.direction === "incoming"
+  ).length;
+
+  // Don't show anything if no calls
   if (calls.length === 0) {
     return null;
   }
 
-  const displayedCalls = isExpanded ? calls : calls.slice(0, 3);
-  const missedCount = calls.filter(c => c.status === "missed" || c.status === "rejected").length;
-
   return (
-    <motion.div
-      className="px-4 md:px-8 mb-4"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 }}
-    >
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between w-full mb-3"
-      >
-        <div className="flex items-center gap-2">
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <motion.button
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mx-4 md:mx-8 mb-4 flex items-center gap-2 px-4 py-2.5 rounded-full bg-card border border-border shadow-sm hover:bg-accent/50 transition-colors"
+        >
           <Phone className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Historique des appels
-          </h3>
+          <span className="text-sm font-medium text-foreground">Appels</span>
           {missedCount > 0 && (
-            <span className="px-1.5 py-0.5 text-xs font-medium bg-destructive text-destructive-foreground rounded-full">
-              {missedCount} manqué{missedCount > 1 ? "s" : ""}
+            <span className="flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold bg-destructive text-destructive-foreground rounded-full animate-pulse">
+              {missedCount}
             </span>
           )}
-        </div>
-        <ChevronRight 
-          className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} 
-        />
-      </button>
+        </motion.button>
+      </SheetTrigger>
 
-      <AnimatePresence>
-        <motion.div 
-          className="space-y-2"
-          initial={false}
-        >
-          {displayedCalls.map((call, index) => {
-            const statusInfo = getCallStatusInfo(call);
-            const StatusIcon = statusInfo.icon;
-            const isMissed = call.status === "missed" || call.status === "rejected";
+      <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
+        <SheetHeader className="pb-4">
+          <SheetTitle className="flex items-center gap-2">
+            <Phone className="w-5 h-5 text-primary" />
+            Historique des appels
+            {missedCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-destructive text-destructive-foreground rounded-full">
+                {missedCount} manqué{missedCount > 1 ? "s" : ""}
+              </span>
+            )}
+          </SheetTitle>
+        </SheetHeader>
 
-            return (
-              <motion.div
-                key={call.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={`flex items-center gap-3 p-3 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 ${
-                  isMissed ? "border-destructive/30" : ""
-                }`}
-              >
-                {/* Avatar */}
-                <div className="relative">
-                  <img
-                    src={call.otherUser.photo}
-                    alt={call.otherUser.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div className={`absolute -bottom-1 -right-1 p-1 rounded-full bg-background ${statusInfo.color}`}>
-                    {call.callType === "video" ? (
-                      <Video className="w-3 h-3" />
-                    ) : (
-                      <Phone className="w-3 h-3" />
-                    )}
-                  </div>
-                </div>
+        <div className="overflow-y-auto h-full pb-8 space-y-2">
+          <AnimatePresence>
+            {calls.map((call, index) => {
+              const statusInfo = getCallStatusInfo(call);
+              const StatusIcon = statusInfo.icon;
+              const isMissed = call.status === "missed" || call.status === "rejected";
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium truncate ${isMissed ? "text-destructive" : "text-foreground"}`}>
-                      {call.otherUser.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
-                    <span className={statusInfo.color}>{statusInfo.label}</span>
-                    {call.duration && (
-                      <>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatDuration(call.duration)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Time & Action */}
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs text-muted-foreground">
-                    {formatTime(call.createdAt)}
-                  </span>
-                  {onCallUser && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCallUser(call.otherUser.id, call.callType);
-                      }}
-                      className={`p-2 rounded-full ${
-                        call.callType === "video" 
-                          ? "bg-primary/10 text-primary hover:bg-primary/20" 
-                          : "bg-success/10 text-success hover:bg-success/20"
-                      } transition-colors`}
-                    >
+              return (
+                <motion.div
+                  key={call.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className={`flex items-center gap-3 p-3 rounded-xl bg-muted/50 ${
+                    isMissed ? "border border-destructive/30" : ""
+                  }`}
+                >
+                  {/* Avatar */}
+                  <div className="relative">
+                    <img
+                      src={call.otherUser.photo}
+                      alt={call.otherUser.name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                    <div className={`absolute -bottom-1 -right-1 p-1 rounded-full bg-background ${statusInfo.color}`}>
                       {call.callType === "video" ? (
-                        <Video className="w-4 h-4" />
+                        <Video className="w-3 h-3" />
                       ) : (
-                        <Phone className="w-4 h-4" />
+                        <Phone className="w-3 h-3" />
                       )}
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      </AnimatePresence>
+                    </div>
+                  </div>
 
-      {calls.length > 3 && !isExpanded && (
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="w-full mt-2 py-2 text-xs text-primary font-medium hover:underline"
-        >
-          Voir tout ({calls.length} appels)
-        </button>
-      )}
-    </motion.div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium truncate ${isMissed ? "text-destructive" : "text-foreground"}`}>
+                        {call.otherUser.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
+                      <span className={statusInfo.color}>{statusInfo.label}</span>
+                      {call.duration && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatDuration(call.duration)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Time & Action */}
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs text-muted-foreground">
+                      {formatTime(call.createdAt)}
+                    </span>
+                    {onCallUser && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsOpen(false);
+                          onCallUser(call.otherUser.id, call.callType);
+                        }}
+                        className={`h-8 w-8 p-0 rounded-full ${
+                          call.callType === "video" 
+                            ? "text-primary hover:bg-primary/10" 
+                            : "text-success hover:bg-success/10"
+                        }`}
+                      >
+                        {call.callType === "video" ? (
+                          <Video className="w-4 h-4" />
+                        ) : (
+                          <Phone className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
