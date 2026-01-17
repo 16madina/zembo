@@ -240,32 +240,44 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
         break;
 
       case "incoming_call":
-        // Store call data and navigate - the CallOverlay will pick this up
+        // Store call data BEFORE any navigation - critical for cold start
         console.log("[Push] 📞 Handling incoming_call deep link");
         console.log("[Push] 📞 callId:", data.callId, "callerName:", data.callerName);
         
-        if (data.callId || data.callerName) {
-          const pendingCallData = {
-            callId: data.callId || "unknown",
-            callerName: data.callerName || "Appel entrant",
-            callerPhoto: data.callerPhoto || "",
-            callType: data.callType || "audio",
-            timestamp: Date.now(),
-          };
-          console.log("[Push] 📞 Storing pendingCall:", JSON.stringify(pendingCallData));
+        const pendingCallData = {
+          callId: data.callId || "unknown",
+          callerName: data.callerName || "Appel entrant",
+          callerPhoto: data.callerPhoto || "",
+          callType: data.callType || "audio",
+          timestamp: Date.now(),
+        };
+        
+        // Store in BOTH storages immediately (before any navigation)
+        console.log("[Push] 📞 Storing pendingCall:", JSON.stringify(pendingCallData));
+        try {
           sessionStorage.setItem("pendingCall", JSON.stringify(pendingCallData));
-          
-          // Also store in localStorage as backup (sessionStorage may be cleared)
           localStorage.setItem("pendingCall_backup", JSON.stringify(pendingCallData));
+          // Also store in a "fresh" key that will be checked on every render
+          localStorage.setItem("pendingCall_fresh", JSON.stringify(pendingCallData));
+        } catch (e) {
+          console.error("[Push] Error storing pendingCall:", e);
         }
         
-        // Force navigation to messages
-        if (window.location.pathname !== "/messages") {
-          window.location.href = "/messages";
-        } else {
-          // Already on messages - trigger a reload to process the pending call
-          window.location.reload();
-        }
+        // Dispatch a custom event that the CallOverlay can listen to immediately
+        window.dispatchEvent(new CustomEvent("incomingCallFromPush", { detail: pendingCallData }));
+        
+        // Small delay to ensure storage is written before navigation
+        setTimeout(() => {
+          // Navigate to home (where CallOverlay is mounted) - not messages
+          if (window.location.pathname !== "/") {
+            window.location.href = "/";
+          } else {
+            // Already on home - dispatch event again after a moment
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent("incomingCallFromPush", { detail: pendingCallData }));
+            }, 100);
+          }
+        }, 50);
         break;
 
       case "missed_call":

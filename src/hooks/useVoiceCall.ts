@@ -58,10 +58,78 @@ export const useVoiceCall = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    const processCallData = async (pendingCall: any) => {
+      // Check if this is a recent notification (within last 60 seconds)
+      const timestamp = pendingCall.timestamp || 0;
+      const age = Date.now() - timestamp;
+      if (timestamp && age > 60000) {
+        console.log("[VoiceCall] Pending call is too old, ignoring:", age, "ms");
+        return;
+      }
+
+      const callId = pendingCall.callId;
+      const callerName = pendingCall.callerName || "Appel entrant";
+      const callerPhoto = pendingCall.callerPhoto || null;
+      const callType = pendingCall.callType || "audio";
+
+      console.log("[VoiceCall] Processing pending call - callId:", callId, "callerName:", callerName);
+
+      // If we have a valid UUID callId, try to fetch from DB
+      const isValidUUID = callId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(callId);
+      
+      if (isValidUUID) {
+        // Fetch the active call from database
+        const { data: call, error } = await supabase
+          .from("call_sessions")
+          .select("*")
+          .eq("id", callId)
+          .single();
+
+        if (!error && call && call.status === "ringing" && call.callee_id === user.id) {
+          // Fetch caller info
+          const { data: callerProfile } = await supabase
+            .from("profiles")
+            .select("display_name, avatar_url")
+            .eq("user_id", call.caller_id)
+            .maybeSingle();
+
+          console.log("[VoiceCall] Setting incoming call state from DB");
+
+          setCallState({
+            isInCall: false,
+            isRinging: true,
+            isIncoming: true,
+            callId: call.id,
+            callType: call.call_type as "audio" | "video",
+            remoteUserId: call.caller_id,
+            remoteUserName: callerProfile?.display_name || callerName,
+            remoteUserPhoto: callerProfile?.avatar_url || callerPhoto,
+            isMuted: false,
+            duration: 0,
+          });
+          return;
+        }
+        console.log("[VoiceCall] Call not found in DB or not ringing, error:", error?.message);
+      }
+
+      // Fallback: Show missed call toast
+      console.log("[VoiceCall] Showing missed call toast");
+      toast({
+        title: callType === "video" ? "📹 Appel vidéo manqué" : "📞 Appel manqué",
+        description: `${callerName} a essayé de vous appeler`,
+        variant: "default",
+      });
+    };
+
     const checkPendingCall = async () => {
-      // Check sessionStorage first, then localStorage backup
+      // Check multiple storage locations
       let pendingCallData = sessionStorage.getItem("pendingCall");
       let source = "sessionStorage";
+      
+      if (!pendingCallData) {
+        pendingCallData = localStorage.getItem("pendingCall_fresh");
+        source = "localStorage_fresh";
+      }
       
       if (!pendingCallData) {
         pendingCallData = localStorage.getItem("pendingCall_backup");
@@ -71,86 +139,43 @@ export const useVoiceCall = () => {
       if (!pendingCallData) return;
 
       console.log(`[VoiceCall] Found pending call from ${source}:`, pendingCallData);
+      
+      // Clear all storage locations
       sessionStorage.removeItem("pendingCall");
       localStorage.removeItem("pendingCall_backup");
+      localStorage.removeItem("pendingCall_fresh");
 
       try {
         const pendingCall = JSON.parse(pendingCallData);
-        
-        // Check if this is a recent notification (within last 60 seconds)
-        const timestamp = pendingCall.timestamp || 0;
-        const age = Date.now() - timestamp;
-        if (timestamp && age > 60000) {
-          console.log("[VoiceCall] Pending call is too old, ignoring:", age, "ms");
-          return;
-        }
-
-        const callId = pendingCall.callId;
-        const callerName = pendingCall.callerName || "Appel entrant";
-        const callerPhoto = pendingCall.callerPhoto || null;
-        const callType = pendingCall.callType || "audio";
-
-        console.log("[VoiceCall] Processing pending call - callId:", callId, "callerName:", callerName);
-
-        // If we have a valid UUID callId, try to fetch from DB
-        const isValidUUID = callId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(callId);
-        
-        if (isValidUUID) {
-          // Fetch the active call from database
-          const { data: call, error } = await supabase
-            .from("call_sessions")
-            .select("*")
-            .eq("id", callId)
-            .single();
-
-          if (!error && call && call.status === "ringing" && call.callee_id === user.id) {
-            // Fetch caller info
-            const { data: callerProfile } = await supabase
-              .from("profiles")
-              .select("display_name, avatar_url")
-              .eq("user_id", call.caller_id)
-              .maybeSingle();
-
-            console.log("[VoiceCall] Setting incoming call state from DB");
-
-            setCallState({
-              isInCall: false,
-              isRinging: true,
-              isIncoming: true,
-              callId: call.id,
-              callType: call.call_type as "audio" | "video",
-              remoteUserId: call.caller_id,
-              remoteUserName: callerProfile?.display_name || callerName,
-              remoteUserPhoto: callerProfile?.avatar_url || callerPhoto,
-              isMuted: false,
-              duration: 0,
-            });
-            return;
-          }
-          console.log("[VoiceCall] Call not found in DB or not ringing, error:", error?.message);
-        }
-
-        // Fallback: Show notification-based incoming call UI (for test notifications or expired calls)
-        console.log("[VoiceCall] Showing incoming call from notification data only");
-        toast({
-          title: callType === "video" ? "📹 Appel vidéo manqué" : "📞 Appel manqué",
-          description: `${callerName} a essayé de vous appeler`,
-          variant: "default",
-        });
-
+        await processCallData(pendingCall);
       } catch (err) {
         console.error("[VoiceCall] Error processing pending call:", err);
       }
     };
 
+    // Listen for custom event from push notification handler
+    const handleIncomingCallEvent = async (event: CustomEvent) => {
+      console.log("[VoiceCall] Received incomingCallFromPush event:", event.detail);
+      // Clear storage to prevent double processing
+      sessionStorage.removeItem("pendingCall");
+      localStorage.removeItem("pendingCall_backup");
+      localStorage.removeItem("pendingCall_fresh");
+      await processCallData(event.detail);
+    };
+
+    window.addEventListener("incomingCallFromPush", handleIncomingCallEvent as EventListener);
+
     // Check immediately and after delays (in case of race conditions with app startup)
     checkPendingCall();
-    const timer1 = setTimeout(checkPendingCall, 500);
-    const timer2 = setTimeout(checkPendingCall, 1500);
+    const timer1 = setTimeout(checkPendingCall, 300);
+    const timer2 = setTimeout(checkPendingCall, 800);
+    const timer3 = setTimeout(checkPendingCall, 2000);
 
     return () => {
+      window.removeEventListener("incomingCallFromPush", handleIncomingCallEvent as EventListener);
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(timer3);
     };
   }, [user?.id]);
 
