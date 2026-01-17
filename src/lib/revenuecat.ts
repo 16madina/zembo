@@ -1,8 +1,9 @@
 import { isIOS, isAndroid } from "./capacitor";
 
 // RevenueCat configuration
-const REVENUECAT_IOS_API_KEY = "appl_IUfWQEYxbRpEbcSfhBQFLYuZ1pq";
-const REVENUECAT_ANDROID_API_KEY = ""; // Add Android key when available
+// Note: this repo's env files are managed by the platform; we still allow overriding via Vite env vars for local/native builds.
+const REVENUECAT_IOS_API_KEY = import.meta.env.VITE_REVENUECAT_IOS_API_KEY || "appl_IUfWQEYxbRpEbcSfhBQFLYuZ1pq";
+const REVENUECAT_ANDROID_API_KEY = import.meta.env.VITE_REVENUECAT_ANDROID_API_KEY || ""; // Add Android key when available
 
 // Subscription Product identifiers
 export const SUBSCRIPTION_PRODUCT_IDS = {
