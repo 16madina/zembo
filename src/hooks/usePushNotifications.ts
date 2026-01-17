@@ -240,17 +240,32 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
         break;
 
       case "incoming_call":
-        // Navigate to messages to handle the incoming call
-        // The call will be received via realtime subscription in useVoiceCall
-        if (data.sender_id || data.callId) {
-          sessionStorage.setItem("pendingCall", JSON.stringify({
-            callId: data.callId,
-            callerName: data.callerName,
-            callerPhoto: data.callerPhoto,
+        // Store call data and navigate - the CallOverlay will pick this up
+        console.log("[Push] 📞 Handling incoming_call deep link");
+        console.log("[Push] 📞 callId:", data.callId, "callerName:", data.callerName);
+        
+        if (data.callId || data.callerName) {
+          const pendingCallData = {
+            callId: data.callId || "unknown",
+            callerName: data.callerName || "Appel entrant",
+            callerPhoto: data.callerPhoto || "",
             callType: data.callType || "audio",
-          }));
+            timestamp: Date.now(),
+          };
+          console.log("[Push] 📞 Storing pendingCall:", JSON.stringify(pendingCallData));
+          sessionStorage.setItem("pendingCall", JSON.stringify(pendingCallData));
+          
+          // Also store in localStorage as backup (sessionStorage may be cleared)
+          localStorage.setItem("pendingCall_backup", JSON.stringify(pendingCallData));
         }
-        window.location.href = "/messages";
+        
+        // Force navigation to messages
+        if (window.location.pathname !== "/messages") {
+          window.location.href = "/messages";
+        } else {
+          // Already on messages - trigger a reload to process the pending call
+          window.location.reload();
+        }
         break;
 
       case "missed_call":
@@ -379,23 +394,44 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
         console.log("[Push] 👆 Notification tapped - FULL PAYLOAD:", JSON.stringify(notification, null, 2));
         
         // Try multiple paths to find the data (iOS vs Android structure can differ)
-        const data: NotificationData = 
+        let data: NotificationData = 
           notification.notification?.data || 
           notification.data || 
-          notification.actionId === 'tap' && notification.notification?.data ||
           {};
         
         console.log("[Push] 👆 Extracted data:", JSON.stringify(data, null, 2));
         console.log("[Push] 👆 data.type:", data.type);
-        console.log("[Push] 👆 data.sender_id:", data.sender_id);
         
+        // If no type found, try alternative paths for iOS
         if (!data.type) {
-          console.error("[Push] ⚠️ No type in notification data! Full notification:", JSON.stringify(notification));
-          // Try to parse from different locations
-          const possibleData = notification.notification || notification;
-          if (possibleData.data) {
-            console.log("[Push] 👆 Found data in possibleData:", JSON.stringify(possibleData.data));
+          console.log("[Push] ⚠️ No type found, trying alternative paths...");
+          
+          // iOS sometimes nests data differently
+          const alternatives = [
+            notification.notification,
+            notification.notification?.request?.content?.userInfo,
+            notification.notification?.request?.content?.userInfo?.aps,
+          ];
+          
+          for (const alt of alternatives) {
+            if (alt?.data?.type) {
+              data = alt.data;
+              console.log("[Push] ✅ Found data in alternative path:", JSON.stringify(data));
+              break;
+            }
+            // Direct type on object
+            if (alt?.type) {
+              data = alt;
+              console.log("[Push] ✅ Found type directly on object:", alt.type);
+              break;
+            }
           }
+        }
+        
+        // Final fallback: store raw notification for debugging
+        if (!data.type) {
+          console.error("[Push] ❌ Could not extract notification data! Storing for debug...");
+          localStorage.setItem("debug_last_notification", JSON.stringify(notification));
         }
         
         handleNotificationNavigation(data);
