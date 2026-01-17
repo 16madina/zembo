@@ -485,12 +485,31 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       // Store the refresh time
       localStorage.setItem(LAST_TOKEN_REFRESH_KEY, Date.now().toString());
       
-      // iOS WORKAROUND: If listener doesn't fire after 3s, try stored token
+      // iOS WORKAROUND: Listen for FCM token from AppDelegate via window event
+      // The AppDelegate posts the token via evaluateJavaScript when swizzling intercepts it
+      const handleFCMTokenFromNative = async (event: CustomEvent<{ token: string }>) => {
+        console.log("[Push] 🍎 Received FCM token from AppDelegate:", event.detail.token?.slice(0, 30));
+        if (event.detail.token && !tokenReceivedRef.current) {
+          tokenReceivedRef.current = true;
+          localStorage.setItem(FCM_TOKEN_KEY, event.detail.token);
+          setToken(event.detail.token);
+          const success = await registerToken(event.detail.token);
+          if (success) {
+            console.log("[Push] ✅ Token from AppDelegate registered successfully");
+            toast.success("Notifications activées", { duration: 3000 });
+          }
+        }
+      };
+      
+      window.addEventListener('fcmTokenReceived', handleFCMTokenFromNative as EventListener);
+      console.log("[Push] ✅ Listening for fcmTokenReceived event from AppDelegate");
+      
+      // iOS WORKAROUND: If listener doesn't fire after 5s, try stored token
       setTimeout(async () => {
-        console.log("[Push] ⏰ 3s check - tokenReceived:", tokenReceivedRef.current);
+        console.log("[Push] ⏰ 5s check - tokenReceived:", tokenReceivedRef.current);
         
         if (!tokenReceivedRef.current) {
-          console.log("[Push] ⚠️ Token not received via listener");
+          console.log("[Push] ⚠️ Token not received via listener or AppDelegate event");
           
           // Check localStorage for previously saved token
           const storedToken = localStorage.getItem(FCM_TOKEN_KEY);
@@ -502,10 +521,11 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
               console.log("[Push] ✅ Stored token registered successfully");
             }
           } else {
-            console.log("[Push] ❌ No stored token - manual registration needed via /debug-notifications");
+            console.log("[Push] ❌ No stored token - go to /debug-notifications to enter token manually");
+            console.log("[Push] 💡 Copy the token from Xcode logs: [Firebase] FCM Token received: xxxxx");
           }
         }
-      }, 3000);
+      }, 5000);
 
       // Setup automatic token refresh every 5 minutes
       if (refreshIntervalRef.current) {
