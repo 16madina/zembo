@@ -93,6 +93,7 @@ const LiveRoom = () => {
   const [hasShownStageToast, setHasShownStageToast] = useState(false);
   const [liveEnded, setLiveEnded] = useState(false);
   const [showEndedScreen, setShowEndedScreen] = useState(false);
+  const [isEndingLive, setIsEndingLive] = useState(false);
   const [endedLiveData, setEndedLiveData] = useState<{
     startedAt: string | null;
     endedAt: string | null;
@@ -738,8 +739,11 @@ const LiveRoom = () => {
     setNewMessage("");
   };
 
-  const handleEndLive = async () => {
-    if (!id || !live) return;
+  const handleEndLive = useCallback(async () => {
+    if (!id || !live || isEndingLive) return;
+    
+    setIsEndingLive(true);
+    console.log("[LiveRoom] handleEndLive called - ending live:", id);
 
     // Store live data before ending for the ended screen
     const endedAt = new Date().toISOString();
@@ -751,17 +755,95 @@ const LiveRoom = () => {
       streamerAvatar: live.streamer?.avatar_url || null,
     });
 
-    const { error } = await endLive(id);
-    if (error) {
+    try {
+      const { error } = await endLive(id);
+      if (error) {
+        console.error("[LiveRoom] Error ending live:", error);
+        toast.error("Erreur lors de la fin du live");
+        setEndedLiveData(null);
+        setIsEndingLive(false);
+        return;
+      }
+
+      console.log("[LiveRoom] Live ended successfully");
+      // Show the ended screen instead of navigating directly
+      setLiveEnded(true);
+      setShowEndedScreen(true);
+    } catch (err) {
+      console.error("[LiveRoom] Exception ending live:", err);
       toast.error("Erreur lors de la fin du live");
       setEndedLiveData(null);
-      return;
+      setIsEndingLive(false);
     }
+  }, [id, live, isEndingLive, realtimeViewers, endLive]);
 
-    // Show the ended screen instead of navigating directly
-    setLiveEnded(true);
-    setShowEndedScreen(true);
-  };
+  // Auto-end live if streamer closes/leaves the page
+  useEffect(() => {
+    if (!isStreamer || !id || !live) return;
+
+    const handleStreamerLeave = () => {
+      console.log("[LiveRoom] Streamer leaving page - auto-ending live");
+      // Use sendBeacon for reliable cleanup on page unload
+      const payload = JSON.stringify({
+        status: "ended",
+        ended_at: new Date().toISOString(),
+      });
+      
+      // Try sendBeacon first (most reliable for unload)
+      const beaconUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/lives?id=eq.${id}`;
+      const beaconSent = navigator.sendBeacon?.(
+        beaconUrl,
+        new Blob([payload], { type: "application/json" })
+      );
+      
+      if (!beaconSent) {
+        // Fallback: try synchronous fetch (less reliable but better than nothing)
+        console.log("[LiveRoom] sendBeacon failed, trying fetch");
+        fetch(beaconUrl, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            "Prefer": "return=minimal",
+          },
+          body: payload,
+          keepalive: true,
+        }).catch((e) => console.warn("[LiveRoom] Fetch fallback failed:", e));
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // On mobile, when app goes to background for extended time, try to end live
+      if (document.visibilityState === "hidden" && isStreamer) {
+        console.log("[LiveRoom] Streamer page hidden - scheduling auto-end");
+        // Give 10 seconds grace period, then end if still hidden
+        const timeoutId = setTimeout(() => {
+          if (document.visibilityState === "hidden") {
+            console.log("[LiveRoom] Still hidden after 10s - ending live via API");
+            endLive(id).catch((e) => console.warn("[LiveRoom] Auto-end failed:", e));
+          }
+        }, 10000);
+        
+        // Clear timeout if page becomes visible again
+        const clearOnVisible = () => {
+          if (document.visibilityState === "visible") {
+            clearTimeout(timeoutId);
+            document.removeEventListener("visibilitychange", clearOnVisible);
+          }
+        };
+        document.addEventListener("visibilitychange", clearOnVisible);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleStreamerLeave);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleStreamerLeave);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isStreamer, id, live, endLive]);
 
   if (isLoading) {
     return (
@@ -1061,9 +1143,10 @@ const LiveRoom = () => {
               <Button
                 variant="destructive"
                 onClick={handleEndLive}
+                disabled={isEndingLive}
                 className="h-7 px-2 text-xs"
               >
-                Terminer
+                {isEndingLive ? "Fermeture..." : "Terminer"}
               </Button>
             ) : (
               <Button
