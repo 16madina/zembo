@@ -1,7 +1,7 @@
 import { isIOS, isAndroid } from "./capacitor";
 
 // RevenueCat configuration
-const REVENUECAT_IOS_API_KEY = "appl_JFNPBdLsVWMbRchuKKCdXUnKiut";
+const REVENUECAT_IOS_API_KEY = "appl_IUfWQEYxbRpEbcSfhBQFLYuZ1pq";
 const REVENUECAT_ANDROID_API_KEY = ""; // Add Android key when available
 
 // Subscription Product identifiers
