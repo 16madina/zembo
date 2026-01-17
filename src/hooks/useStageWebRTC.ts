@@ -41,6 +41,7 @@ export const useStageWebRTC = ({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidate[]>([]);
   const hasInitializedRef = useRef(false);
+  const prevGuestIdRef = useRef<string | null>(null);
   const userIdRef = useRef<string | null>(null);
   const liveIdRef = useRef<string | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
@@ -485,15 +486,33 @@ export const useStageWebRTC = ({
     }
   }, [user, liveId, sendSignal, handleSignal]);
 
-  // Effect: Streamer starts connection when guest is accepted
+  // Effect: Streamer (re)starts connection when guest changes
   useEffect(() => {
-    if (!isStreamer || !guestId || !user || !liveId) return;
-    
+    if (!isStreamer || !user?.id || !liveId) return;
+
+    const prevGuestId = prevGuestIdRef.current;
+
+    // If guest is cleared, close any existing connection
+    if (!guestId) {
+      if (prevGuestId) {
+        console.log("[StageWebRTC] Streamer guest cleared -> cleanup");
+        prevGuestIdRef.current = null;
+        cleanup();
+      }
+      return;
+    }
+
+    // If a different guest is now on stage, reset and renegotiate
+    if (prevGuestId && prevGuestId !== guestId) {
+      console.log("[StageWebRTC] Streamer guest changed", { from: prevGuestId, to: guestId });
+      cleanup();
+    }
+
+    prevGuestIdRef.current = guestId;
+
     console.log("[StageWebRTC] Streamer effect triggered, guestId:", guestId);
     startAsStreamer(guestId);
-    
-    // No cleanup here - cleanup only on unmount
-  }, [isStreamer, guestId, user?.id, liveId]); // Use user?.id instead of user object
+  }, [isStreamer, guestId, user?.id, liveId, cleanup, startAsStreamer]);
 
   // Effect: Guest starts connection when they go on stage
   useEffect(() => {
