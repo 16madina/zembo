@@ -1,4 +1,4 @@
-import { isNative, isIOS, isAndroid } from "./capacitor";
+import { isIOS, isAndroid } from "./capacitor";
 
 // RevenueCat configuration
 const REVENUECAT_IOS_API_KEY = "appl_JFNPBdLsVWMbRchuKKCdXUnKiut";
@@ -71,10 +71,15 @@ let _purchasesModule: any = null;
 const getPurchasesModule = async () => {
   if (_purchasesModule) return _purchasesModule;
   
-  if (!isNative) return null;
+  // Only load on iOS (RevenueCat for iOS)
+  if (!isIOS) {
+    console.log("RevenueCat: Not iOS, skipping module load");
+    return null;
+  }
   
   try {
     _purchasesModule = await import("@revenuecat/purchases-capacitor");
+    console.log("RevenueCat: Module loaded successfully");
     return _purchasesModule;
   } catch (error) {
     console.log("RevenueCat module not available:", error);
@@ -84,8 +89,9 @@ const getPurchasesModule = async () => {
 
 // Initialize RevenueCat SDK
 export const initializeRevenueCat = async (userId?: string): Promise<boolean> => {
-  if (!isNative) {
-    console.log("RevenueCat: Not on native platform, skipping initialization");
+  // Only initialize on iOS
+  if (!isIOS) {
+    console.log("RevenueCat: Not on iOS platform, skipping initialization");
     return false;
   }
 
@@ -124,7 +130,7 @@ export const initializeRevenueCat = async (userId?: string): Promise<boolean> =>
 
 // Login user to RevenueCat (for syncing with Supabase user)
 export const loginRevenueCat = async (userId: string): Promise<CustomerInfo | null> => {
-  if (!isNative || !_revenueCatInitialized) return null;
+  if (!isIOS || !_revenueCatInitialized) return null;
 
   try {
     const Purchases = await getPurchasesModule();
@@ -140,7 +146,7 @@ export const loginRevenueCat = async (userId: string): Promise<CustomerInfo | nu
 
 // Logout user from RevenueCat
 export const logoutRevenueCat = async (): Promise<void> => {
-  if (!isNative || !_revenueCatInitialized) return;
+  if (!isIOS || !_revenueCatInitialized) return;
 
   try {
     const Purchases = await getPurchasesModule();
@@ -155,7 +161,7 @@ export const logoutRevenueCat = async (): Promise<void> => {
 
 // Get current customer info
 export const getCustomerInfo = async (): Promise<CustomerInfo | null> => {
-  if (!isNative || !_revenueCatInitialized) return null;
+  if (!isIOS || !_revenueCatInitialized) return null;
 
   try {
     const Purchases = await getPurchasesModule();
@@ -171,7 +177,7 @@ export const getCustomerInfo = async (): Promise<CustomerInfo | null> => {
 
 // Get available offerings (subscription packages)
 export const getOfferings = async (): Promise<RevenueCatPackage[] | null> => {
-  if (!isNative || !_revenueCatInitialized) return null;
+  if (!isIOS || !_revenueCatInitialized) return null;
 
   try {
     const Purchases = await getPurchasesModule();
@@ -205,7 +211,7 @@ export const getOfferings = async (): Promise<RevenueCatPackage[] | null> => {
 export const purchasePackage = async (
   packageIdentifier: string
 ): Promise<{ success: boolean; customerInfo?: CustomerInfo; error?: string }> => {
-  if (!isNative || !_revenueCatInitialized) {
+  if (!isIOS || !_revenueCatInitialized) {
     return { success: false, error: "RevenueCat not initialized" };
   }
 
@@ -249,7 +255,7 @@ export const purchasePackage = async (
 
 // Restore purchases
 export const restorePurchases = async (): Promise<{ success: boolean; customerInfo?: CustomerInfo; error?: string }> => {
-  if (!isNative || !_revenueCatInitialized) {
+  if (!isIOS || !_revenueCatInitialized) {
     return { success: false, error: "RevenueCat not initialized" };
   }
 
@@ -294,14 +300,14 @@ export const getSubscriptionTier = (customerInfo: CustomerInfo | null): "free" |
 
 // Check if RevenueCat is available
 export const isRevenueCatAvailable = (): boolean => {
-  return isNative && _revenueCatInitialized;
+  return isIOS && _revenueCatInitialized;
 };
 
 // Purchase a consumable product (coins)
 export const purchaseConsumable = async (
   productId: string
 ): Promise<{ success: boolean; customerInfo?: CustomerInfo; error?: string }> => {
-  if (!isNative || !_revenueCatInitialized) {
+  if (!isIOS || !_revenueCatInitialized) {
     return { success: false, error: "RevenueCat not initialized" };
   }
 
@@ -343,7 +349,7 @@ export const purchaseConsumable = async (
 
 // Get coin product prices from store
 export const getCoinProductPrices = async (): Promise<Record<string, { priceString: string; price: number }> | null> => {
-  if (!isNative || !_revenueCatInitialized) return null;
+  if (!isIOS || !_revenueCatInitialized) return null;
 
   try {
     const Purchases = await getPurchasesModule();
