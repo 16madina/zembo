@@ -18,7 +18,7 @@ import { getCurrencyByCountry, formatPrice, CurrencyInfo } from "@/data/currenci
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { isNative } from "@/lib/capacitor";
+import { isNative, isIOS } from "@/lib/capacitor";
 import { 
   purchaseConsumable, 
   getCoinProductPrices, 
@@ -206,7 +206,8 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const [revenueCatPrices, setRevenueCatPrices] = useState<Record<string, { priceString: string; price: number }> | null>(null);
 
   const currentTier = subscription?.tier || "free";
-  const useRevenueCatForCoins = isNative && isRevenueCatAvailable();
+  // On iOS native, always use RevenueCat for in-app purchases (App Store requirement)
+  const useRevenueCatForCoins = isIOS;
 
   useEffect(() => {
     const fetchUserCountry = async () => {
