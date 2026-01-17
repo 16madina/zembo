@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { isNative } from "@/lib/capacitor";
+import { isIOS } from "@/lib/capacitor";
 import {
   initializeRevenueCat,
   loginRevenueCat,
@@ -42,27 +42,35 @@ export const useRevenueCat = (): UseRevenueCatReturn => {
   // Initialize RevenueCat and login when user is available
   useEffect(() => {
     const init = async () => {
-      if (!isNative) {
+      // Only initialize on iOS
+      if (!isIOS) {
+        console.log("RevenueCat: Not iOS, skipping initialization");
         setIsLoading(false);
         return;
       }
 
+      console.log("RevenueCat: Starting initialization on iOS...");
       setIsLoading(true);
 
       try {
         // Initialize RevenueCat
         const initialized = await initializeRevenueCat(user?.id);
+        console.log("RevenueCat: Initialization result:", initialized);
         setIsInitialized(initialized);
 
         if (initialized && user?.id) {
           // Login with user ID to sync purchases
           await loginRevenueCat(user.id);
+          console.log("RevenueCat: Logged in with user:", user.id);
           
           // Get customer info and offerings
           const [info, offers] = await Promise.all([
             getCustomerInfo(),
             getOfferings(),
           ]);
+          
+          console.log("RevenueCat: Customer info:", info);
+          console.log("RevenueCat: Offerings:", offers);
           
           setCustomerInfo(info);
           setPackages(offers);
@@ -71,6 +79,9 @@ export const useRevenueCat = (): UseRevenueCatReturn => {
           if (info) {
             await syncSubscriptionToSupabase(user.id, info);
           }
+        } else if (initialized && !user?.id) {
+          // RevenueCat initialized but no user yet - still mark as ready
+          console.log("RevenueCat: Initialized without user login");
         }
       } catch (error) {
         console.error("RevenueCat init error:", error);
