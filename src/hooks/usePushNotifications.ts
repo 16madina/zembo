@@ -260,9 +260,13 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
     console.log("[Push] ✅ User authenticated:", user.id);
 
     try {
+      console.log("[Push] Starting try block...");
       tokenReceivedRef.current = false;
       
+      console.log("[Push] Loading PushNotifications module...");
       const PushNotifications = await getPushNotifications();
+      console.log("[Push] Module result:", PushNotifications ? "loaded" : "null");
+      
       if (!PushNotifications) {
         console.log("[Push] ❌ PushNotifications module not available");
         return;
@@ -270,6 +274,7 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       
       console.log("[Push] ✅ PushNotifications module loaded");
       
+      console.log("[Push] Removing all listeners...");
       await PushNotifications.removeAllListeners();
       console.log("[Push] ✅ Listeners cleared");
       
