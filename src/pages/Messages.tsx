@@ -8,6 +8,7 @@ import ProfileModal from "@/components/ProfileModal";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import RoseMessageModal from "@/components/RoseMessageModal";
 import RoseReceivedModal from "@/components/RoseReceivedModal";
+import CallHistorySection from "@/components/CallHistorySection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -548,6 +549,9 @@ const Messages = () => {
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl md:mx-auto w-full">
         
+        {/* Call History Section */}
+        <CallHistorySection />
+
         {/* Who Liked Me Section */}
         {likedByUsers.length > 0 && (
           <motion.div
