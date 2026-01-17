@@ -191,6 +191,12 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
           alt={profile.name}
           className="w-full h-full object-cover"
           draggable={false}
+          crossOrigin="anonymous"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.onerror = null;
+            target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`;
+          }}
         />
 
         {/* Shine overlay */}
