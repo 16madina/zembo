@@ -84,16 +84,15 @@ export const initializeCapacitor = async (userId?: string) => {
       setKeyboardState(0);
     });
 
-    // Initialize RevenueCat for in-app purchases
-    try {
-      const { initializeRevenueCat, loginRevenueCat } = await import('./revenuecat');
-      const initialized = await initializeRevenueCat(userId);
-      if (initialized && userId) {
-        await loginRevenueCat(userId);
-        console.log('RevenueCat: Initialized and logged in');
+    // Initialize StoreKit for iOS in-app purchases
+    if (isIOS) {
+      try {
+        const { initializeStoreKit } = await import('./storekit');
+        await initializeStoreKit();
+        console.log('StoreKit: Initialized successfully');
+      } catch (e) {
+        console.log('StoreKit: Not available or initialization failed', e);
       }
-    } catch (e) {
-      console.log('RevenueCat: Not available or initialization failed', e);
     }
 
   } catch (error) {
