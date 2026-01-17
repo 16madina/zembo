@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { isIOS, isAndroid, isNative } from "@/lib/capacitor";
 
-// Stripe public key for Android
+// Stripe public key for Android and Web
 const STRIPE_PUBLIC_KEY = "pk_live_51Sq1BlGedsNwxjoeoHkEMvLmFbvhK1Mm2ZMI2cpFoV1tv0PNLJejIUR7Wb0SUqeDCgMTiE10HXsBBZwrZnoPDBek00P5XQjCR7";
 
 type Plan = "gold" | "platinum";
@@ -56,27 +56,26 @@ export const usePayment = () => {
     }
   };
 
-  // Handle RevenueCat payment (iOS native)
-  const handleRevenueCatPayment = async (plan: Plan): Promise<PaymentResult> => {
+  // Handle StoreKit payment (iOS native)
+  const handleStoreKitPayment = async (plan: Plan): Promise<PaymentResult> => {
     try {
-      const { purchasePackage, PACKAGE_IDS, isRevenueCatAvailable } = await import("@/lib/revenuecat");
+      const { purchaseProduct, isStoreKitAvailable, SUBSCRIPTION_PRODUCT_IDS } = await import("@/lib/storekit");
       
-      if (!isRevenueCatAvailable()) {
-        console.log("RevenueCat not available, falling back to Stripe");
+      if (!isStoreKitAvailable()) {
+        console.log("StoreKit not available, falling back to Stripe");
         return handleStripePayment(plan);
       }
 
-      const packageId = PACKAGE_IDS[plan];
-      const result = await purchasePackage(packageId);
+      const productId = SUBSCRIPTION_PRODUCT_IDS[plan];
+      const result = await purchaseProduct(productId);
 
       if (result.success) {
-        // Subscription is automatically synced by useRevenueCat hook
         return { success: true };
       }
 
       return { success: false, error: result.error };
     } catch (err: any) {
-      console.error("RevenueCat payment error:", err);
+      console.error("StoreKit payment error:", err);
       
       // Handle user cancellation
       if (err.message?.includes("cancelled") || err.userCancelled) {
@@ -97,8 +96,8 @@ export const usePayment = () => {
       let result: PaymentResult;
 
       if (platform === "ios" && isNative) {
-        // iOS native uses RevenueCat
-        result = await handleRevenueCatPayment(plan);
+        // iOS native uses StoreKit
+        result = await handleStoreKitPayment(plan);
       } else {
         // Android and Web use Stripe
         result = await handleStripePayment(plan);
@@ -123,6 +122,6 @@ export const usePayment = () => {
     processingPlan,
     platform: getPlatform(),
     isStripe: !isIOS || !isNative,
-    isRevenueCat: isIOS && isNative,
+    isStoreKit: isIOS && isNative,
   };
 };
