@@ -542,15 +542,18 @@ const Messages = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
       >
-        <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-        <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} matchs</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+            <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} matchs</p>
+          </div>
+          {/* Call History Button */}
+          <CallHistorySection />
+        </div>
       </motion.div>
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl md:mx-auto w-full">
-        
-        {/* Call History Section */}
-        <CallHistorySection />
 
         {/* Who Liked Me Section */}
         {likedByUsers.length > 0 && (
