@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
-import { useEffect, useRef, useCallback } from "react";
+import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 interface VoiceCallModalProps {
   isOpen: boolean;
@@ -45,6 +45,9 @@ const VoiceCallModal = ({
   const outgoingToneRef = useRef<HTMLAudioElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  
+  // Audio connection status
+  const [audioStatus, setAudioStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
 
   // Force audio playback on iOS - must be triggered by user interaction
   const unlockAudio = useCallback(() => {
@@ -63,11 +66,22 @@ const VoiceCallModal = ({
       remoteAudioRef.current.volume = 1.0;
       remoteAudioRef.current.play().then(() => {
         console.log("[VoiceCall] Remote audio playback started");
+        setAudioStatus('connected');
       }).catch((err) => {
         console.warn("[VoiceCall] Failed to play remote audio:", err);
+        setAudioStatus('error');
       });
     }
   }, [remoteAudioRef]);
+
+  // Reset audio status when call starts
+  useEffect(() => {
+    if (isInCall) {
+      setAudioStatus('connecting');
+    } else {
+      setAudioStatus('connecting');
+    }
+  }, [isInCall]);
 
   // Play ringtone when ringing (incoming call)
   useEffect(() => {
@@ -138,12 +152,55 @@ const VoiceCallModal = ({
         remoteAudioRef.current.volume = 1.0;
         remoteAudioRef.current.play().then(() => {
           console.log("[VoiceCall] Remote audio attached and playing");
+          setAudioStatus('connected');
         }).catch((err) => {
           console.warn("[VoiceCall] Failed to play remote audio on attach:", err);
+          setAudioStatus('error');
         });
       }
     }
   }, [isInCall, callType, remoteStreamRef?.current, remoteAudioRef]);
+
+  // Audio status indicator component
+  const AudioStatusIndicator = () => {
+    if (!isInCall) return null;
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+          audioStatus === 'connected' 
+            ? 'bg-success/20 text-success' 
+            : audioStatus === 'error'
+            ? 'bg-destructive/20 text-destructive'
+            : 'bg-muted text-muted-foreground'
+        }`}
+      >
+        {audioStatus === 'connected' ? (
+          <>
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>Audio connecté</span>
+            <motion.div
+              className="w-2 h-2 rounded-full bg-success"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+          </>
+        ) : audioStatus === 'error' ? (
+          <>
+            <VolumeX className="w-3.5 h-3.5" />
+            <span>Erreur audio</span>
+          </>
+        ) : (
+          <>
+            <Wifi className="w-3.5 h-3.5 animate-pulse" />
+            <span>Connexion...</span>
+          </>
+        )}
+      </motion.div>
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -199,11 +256,12 @@ const VoiceCallModal = ({
             </motion.div>
 
             {/* Call info overlay */}
-            <div className="absolute top-8 left-0 right-0 z-10 flex flex-col items-center">
+            <div className="absolute top-8 left-0 right-0 z-10 flex flex-col items-center gap-2">
               <h2 className="text-xl font-bold text-white drop-shadow-lg">
                 {remoteUserName || "Utilisateur"}
               </h2>
               <p className="text-white/80 text-sm">{formatDuration(duration)}</p>
+              <AudioStatusIndicator />
             </div>
           </>
         ) : (
@@ -265,7 +323,7 @@ const VoiceCallModal = ({
               </p>
 
               {/* Call type indicator */}
-              <div className="flex items-center gap-2 mb-8">
+              <div className="flex items-center gap-2 mb-4">
                 {callType === "video" ? (
                   <Video className="w-5 h-5 text-primary" />
                 ) : (
@@ -275,6 +333,9 @@ const VoiceCallModal = ({
                   {callType === "video" ? "Appel vidéo" : "Appel vocal"}
                 </span>
               </div>
+              
+              {/* Audio status indicator */}
+              <AudioStatusIndicator />
             </div>
           </>
         )}
