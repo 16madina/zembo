@@ -307,10 +307,20 @@ export const useVoiceCall = () => {
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
+        console.log("[VoiceCall] ontrack received:", event.streams[0]);
         remoteStreamRef.current = event.streams[0];
+        
+        // Try to attach to audio element immediately
         if (remoteAudioRef.current) {
+          console.log("[VoiceCall] Attaching remote stream to audio element");
           remoteAudioRef.current.srcObject = event.streams[0];
-          remoteAudioRef.current.play().catch(console.error);
+          remoteAudioRef.current.muted = false;
+          remoteAudioRef.current.volume = 1.0;
+          remoteAudioRef.current.play().then(() => {
+            console.log("[VoiceCall] Remote audio playback started in ontrack");
+          }).catch((err) => {
+            console.warn("[VoiceCall] Failed to auto-play remote audio:", err);
+          });
         }
       };
 
@@ -351,10 +361,20 @@ export const useVoiceCall = () => {
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
+        console.log("[VoiceCall] ontrack received (answerer):", event.streams[0]);
         remoteStreamRef.current = event.streams[0];
+        
+        // Try to attach to audio element immediately
         if (remoteAudioRef.current) {
+          console.log("[VoiceCall] Attaching remote stream to audio element (answerer)");
           remoteAudioRef.current.srcObject = event.streams[0];
-          remoteAudioRef.current.play().catch(console.error);
+          remoteAudioRef.current.muted = false;
+          remoteAudioRef.current.volume = 1.0;
+          remoteAudioRef.current.play().then(() => {
+            console.log("[VoiceCall] Remote audio playback started in ontrack (answerer)");
+          }).catch((err) => {
+            console.warn("[VoiceCall] Failed to auto-play remote audio (answerer):", err);
+          });
         }
       };
 

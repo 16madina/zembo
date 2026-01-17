@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface VoiceCallModalProps {
   isOpen: boolean;
@@ -46,6 +46,29 @@ const VoiceCallModal = ({
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
+  // Force audio playback on iOS - must be triggered by user interaction
+  const unlockAudio = useCallback(() => {
+    if (remoteAudioRef.current) {
+      // Create silent audio context to unlock audio on iOS
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+      }
+      
+      // Try to play the audio element
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.volume = 1.0;
+      remoteAudioRef.current.play().then(() => {
+        console.log("[VoiceCall] Remote audio playback started");
+      }).catch((err) => {
+        console.warn("[VoiceCall] Failed to play remote audio:", err);
+      });
+    }
+  }, [remoteAudioRef]);
+
   // Play ringtone when ringing (incoming call)
   useEffect(() => {
     if (isRinging && isIncoming) {
@@ -74,7 +97,7 @@ const VoiceCallModal = ({
     };
   }, [isRinging, isIncoming]);
 
-  // Stop tones when call is answered
+  // Stop tones when call is answered and unlock audio
   useEffect(() => {
     if (isInCall) {
       if (ringtoneRef.current) {
@@ -85,8 +108,11 @@ const VoiceCallModal = ({
         outgoingToneRef.current.pause();
         outgoingToneRef.current = null;
       }
+      
+      // Force unlock audio playback when call connects
+      unlockAudio();
     }
-  }, [isInCall]);
+  }, [isInCall, unlockAudio]);
 
   // Attach local video stream
   useEffect(() => {
@@ -96,13 +122,28 @@ const VoiceCallModal = ({
     }
   }, [isInCall, callType, localStreamRef?.current]);
 
-  // Attach remote video stream
+  // Attach remote video/audio stream
   useEffect(() => {
-    if (callType === "video" && isInCall && remoteVideoRef.current && remoteStreamRef?.current) {
-      remoteVideoRef.current.srcObject = remoteStreamRef.current;
-      remoteVideoRef.current.play().catch(console.error);
+    if (isInCall && remoteStreamRef?.current) {
+      // Attach to video element for video calls
+      if (callType === "video" && remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        remoteVideoRef.current.play().catch(console.error);
+      }
+      
+      // Always attach to audio element for audio playback
+      if (remoteAudioRef.current && remoteStreamRef.current) {
+        remoteAudioRef.current.srcObject = remoteStreamRef.current;
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.play().then(() => {
+          console.log("[VoiceCall] Remote audio attached and playing");
+        }).catch((err) => {
+          console.warn("[VoiceCall] Failed to play remote audio on attach:", err);
+        });
+      }
     }
-  }, [isInCall, callType, remoteStreamRef?.current]);
+  }, [isInCall, callType, remoteStreamRef?.current, remoteAudioRef]);
 
   if (!isOpen) return null;
 
@@ -119,7 +160,14 @@ const VoiceCallModal = ({
         style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {/* Hidden audio element for remote stream (for audio-only or fallback) */}
-        <audio ref={remoteAudioRef} autoPlay playsInline />
+        <audio 
+          ref={remoteAudioRef} 
+          autoPlay 
+          playsInline
+          // @ts-ignore - webkit attribute for iOS
+          webkit-playsinline="true"
+          style={{ display: 'none' }}
+        />
 
         {/* Video call UI */}
         {showVideoUI ? (
