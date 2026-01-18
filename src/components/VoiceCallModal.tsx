@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi } from "lucide-react";
 import { useEffect, useRef, useCallback, useState } from "react";
+import { useZemboRingtone } from "@/hooks/useZemboRingtone";
 
 interface VoiceCallModalProps {
   isOpen: boolean;
@@ -41,8 +42,9 @@ const VoiceCallModal = ({
   localStreamRef,
   remoteStreamRef,
 }: VoiceCallModalProps) => {
-  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const { playRingtone, stopRingtone } = useZemboRingtone();
   const outgoingToneRef = useRef<HTMLAudioElement | null>(null);
+  const zemboRingtoneRef = useRef<HTMLAudioElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   
@@ -86,11 +88,10 @@ const VoiceCallModal = ({
   // Play ringtone when ringing (incoming call)
   useEffect(() => {
     if (isRinging && isIncoming) {
-      // Incoming call - play ringtone
-      ringtoneRef.current = new Audio("/sounds/incoming-call.mp3");
-      ringtoneRef.current.loop = true;
-      ringtoneRef.current.volume = 1.0;
-      ringtoneRef.current.play().catch(() => {});
+      // Incoming call - play Zembo premium ringtone
+      playRingtone(true).then((audio) => {
+        zemboRingtoneRef.current = audio;
+      });
     } else if (isRinging && !isIncoming) {
       // Outgoing call - play dialing tone
       outgoingToneRef.current = new Audio("/sounds/outgoing-call.mp3");
@@ -100,24 +101,18 @@ const VoiceCallModal = ({
     }
 
     return () => {
-      if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-        ringtoneRef.current = null;
-      }
+      stopRingtone();
       if (outgoingToneRef.current) {
         outgoingToneRef.current.pause();
         outgoingToneRef.current = null;
       }
     };
-  }, [isRinging, isIncoming]);
+  }, [isRinging, isIncoming, playRingtone, stopRingtone]);
 
   // Stop tones when call is answered and unlock audio
   useEffect(() => {
     if (isInCall) {
-      if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-        ringtoneRef.current = null;
-      }
+      stopRingtone();
       if (outgoingToneRef.current) {
         outgoingToneRef.current.pause();
         outgoingToneRef.current = null;
@@ -126,7 +121,7 @@ const VoiceCallModal = ({
       // Force unlock audio playback when call connects
       unlockAudio();
     }
-  }, [isInCall, unlockAudio]);
+  }, [isInCall, unlockAudio, stopRingtone]);
 
   // Attach local video stream
   useEffect(() => {
