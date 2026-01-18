@@ -1,8 +1,8 @@
-import { useRef, useMemo, Suspense, useState, useEffect } from "react";
+import { useRef, useMemo, Suspense, useState, useEffect, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { RoundedBox, Float, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface DiceDotProps {
   position: [number, number, number];
@@ -121,7 +121,45 @@ const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
   );
 };
 
-// Fallback 2D dice (toujours visible derrière le 3D si besoin)
+// Probe component to detect when first 3D frame is rendered
+const RenderReadyProbe = ({ onReady }: { onReady: () => void }) => {
+  const hasCalledRef = useRef(false);
+  
+  useFrame(() => {
+    if (!hasCalledRef.current) {
+      hasCalledRef.current = true;
+      onReady();
+    }
+  });
+  
+  return null;
+};
+
+// Loading placeholder (shimmer effect instead of 2D dice)
+const DiceLoadingPlaceholder = () => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.15 }}
+    className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center"
+  >
+    <motion.div
+      className="w-16 h-16 rounded-xl bg-primary/10"
+      animate={{ 
+        opacity: [0.3, 0.6, 0.3],
+        scale: [0.95, 1, 0.95]
+      }}
+      transition={{ 
+        duration: 1.5, 
+        repeat: Infinity, 
+        ease: "easeInOut" 
+      }}
+    />
+  </motion.div>
+);
+
+// Fallback 2D dice (only shown if WebGL fails permanently)
 const DiceFallback2D = ({ isAnimating }: { isAnimating: boolean }) => (
   <motion.div
     className="w-20 h-20 rounded-2xl bg-card shadow-lg border border-primary/40 flex items-center justify-center relative"
@@ -152,12 +190,6 @@ interface Dice3DProps {
   isAnimating?: boolean;
 }
 
-const DiceLoading = () => (
-  <div className="w-full h-full flex items-center justify-center">
-    <div className="w-12 h-12 rounded-xl bg-primary/20 animate-pulse" />
-  </div>
-);
-
 // Check if WebGL is available
 const isWebGLAvailable = (): boolean => {
   try {
@@ -172,12 +204,52 @@ const isWebGLAvailable = (): boolean => {
 const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
   const [webGLSupported, setWebGLSupported] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [is3DReady, setIs3DReady] = useState(false);
+  const [showPlaceholder, setShowPlaceholder] = useState(false);
+  const placeholderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const failsafeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    setWebGLSupported(isWebGLAvailable());
+  const handle3DReady = useCallback(() => {
+    setIs3DReady(true);
+    // Clear any pending timeouts
+    if (placeholderTimeoutRef.current) {
+      clearTimeout(placeholderTimeoutRef.current);
+      placeholderTimeoutRef.current = null;
+    }
+    if (failsafeTimeoutRef.current) {
+      clearTimeout(failsafeTimeoutRef.current);
+      failsafeTimeoutRef.current = null;
+    }
   }, []);
 
-  // If WebGL is not supported or there's an error, use 2D fallback
+  useEffect(() => {
+    const isSupported = isWebGLAvailable();
+    setWebGLSupported(isSupported);
+    
+    if (isSupported) {
+      // Show placeholder after 200ms if 3D not ready yet
+      placeholderTimeoutRef.current = setTimeout(() => {
+        if (!is3DReady) {
+          setShowPlaceholder(true);
+        }
+      }, 200);
+      
+      // Failsafe: if 3D not ready after 3s, switch to permanent 2D
+      failsafeTimeoutRef.current = setTimeout(() => {
+        if (!is3DReady) {
+          console.warn("Dice3D: 3D rendering failed after timeout, using 2D fallback");
+          setHasError(true);
+        }
+      }, 3000);
+    }
+    
+    return () => {
+      if (placeholderTimeoutRef.current) clearTimeout(placeholderTimeoutRef.current);
+      if (failsafeTimeoutRef.current) clearTimeout(failsafeTimeoutRef.current);
+    };
+  }, []);
+
+  // If WebGL is not supported or there's an error, use 2D fallback permanently
   if (!webGLSupported || hasError) {
     return (
       <div className="w-28 h-28 flex items-center justify-center">
@@ -188,14 +260,23 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
 
   return (
     <div className="relative w-28 h-28">
-      {/* Fallback 2D (reste visible si le 3D ne rend rien) */}
-      <div className="absolute inset-0 flex items-center justify-center z-0 opacity-80">
-        <DiceFallback2D isAnimating={isAnimating} />
-      </div>
+      {/* Loading placeholder - only shows briefly while 3D loads */}
+      <AnimatePresence>
+        {showPlaceholder && !is3DReady && (
+          <div className="absolute inset-0 flex items-center justify-center z-0">
+            <DiceLoadingPlaceholder />
+          </div>
+        )}
+      </AnimatePresence>
 
-      {/* Canvas 3D au-dessus */}
-      <div className="absolute inset-0 z-10">
-        <Suspense fallback={<DiceLoading />}>
+      {/* Canvas 3D with fade-in transition */}
+      <motion.div 
+        className="absolute inset-0 z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: is3DReady ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <Suspense fallback={null}>
           <Canvas
             className="w-full h-full"
             camera={{ position: [0, 0, 2], fov: 50 }}
@@ -208,11 +289,9 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
               preserveDrawingBuffer: false,
             }}
             style={{ background: "transparent", width: "100%", height: "100%" }}
-            onCreated={() => {
-              // Si tu vois ce log, le Canvas 3D a bien été monté.
-              console.log("Dice3D Canvas created successfully");
-            }}
           >
+            <RenderReadyProbe onReady={handle3DReady} />
+            
             <ambientLight intensity={0.9} />
             <directionalLight position={[5, 5, 5]} intensity={1.7} />
             <directionalLight position={[-3, -3, -3]} intensity={0.35} />
@@ -232,7 +311,7 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
             )}
           </Canvas>
         </Suspense>
-      </div>
+      </motion.div>
     </div>
   );
 };
