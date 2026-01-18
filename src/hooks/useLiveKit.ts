@@ -651,33 +651,46 @@ export const useLiveKit = ({
 
   // Toggle mute
   const toggleMute = useCallback(async () => {
-    if (!room) return;
-
-    const localParticipant = room.localParticipant;
-    const audioTrack = localParticipant.getTrackPublication(Track.Source.Microphone);
+    console.log("[LiveKit] toggleMute called, room:", !!room, "isMuted:", isMuted);
     
-    if (audioTrack) {
-      if (isMuted) {
-        await localParticipant.setMicrophoneEnabled(true);
-      } else {
-        await localParticipant.setMicrophoneEnabled(false);
-      }
-      setIsMuted(!isMuted);
+    if (!room) {
+      console.warn("[LiveKit] No room available for mute toggle");
+      return;
+    }
+
+    try {
+      const localParticipant = room.localParticipant;
+      const newMutedState = !isMuted;
+      
+      console.log("[LiveKit] Setting microphone enabled:", !newMutedState);
+      await localParticipant.setMicrophoneEnabled(!newMutedState);
+      setIsMuted(newMutedState);
+      console.log("[LiveKit] Microphone muted state updated to:", newMutedState);
+    } catch (error) {
+      console.error("[LiveKit] Error toggling mute:", error);
     }
   }, [room, isMuted]);
 
   // Toggle video
   const toggleVideo = useCallback(async () => {
-    if (!room) return;
-
-    const localParticipant = room.localParticipant;
+    console.log("[LiveKit] toggleVideo called, room:", !!room, "isVideoOff:", isVideoOff);
     
-    if (isVideoOff) {
-      await localParticipant.setCameraEnabled(true);
-    } else {
-      await localParticipant.setCameraEnabled(false);
+    if (!room) {
+      console.warn("[LiveKit] No room available for video toggle");
+      return;
     }
-    setIsVideoOff(!isVideoOff);
+
+    try {
+      const localParticipant = room.localParticipant;
+      const newVideoOffState = !isVideoOff;
+      
+      console.log("[LiveKit] Setting camera enabled:", !newVideoOffState);
+      await localParticipant.setCameraEnabled(!newVideoOffState);
+      setIsVideoOff(newVideoOffState);
+      console.log("[LiveKit] Camera off state updated to:", newVideoOffState);
+    } catch (error) {
+      console.error("[LiveKit] Error toggling video:", error);
+    }
   }, [room, isVideoOff]);
 
   // Switch camera
