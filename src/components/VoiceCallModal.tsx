@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi } from "lucide-react";
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useZemboRingtone } from "@/hooks/useZemboRingtone";
+import { useAudioLevel } from "@/hooks/useAudioLevel";
+import AudioLevelMeter from "@/components/random-call/AudioLevelMeter";
 
 interface VoiceCallModalProps {
   isOpen: boolean;
@@ -47,6 +49,10 @@ const VoiceCallModal = ({
   const zemboRingtoneRef = useRef<HTMLAudioElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  
+  // Audio level monitoring
+  const { audioLevel: remoteAudioLevel, isActive: remoteAudioActive } = useAudioLevel(remoteStreamRef?.current || null);
+  const { audioLevel: localAudioLevel, isActive: localAudioActive } = useAudioLevel(localStreamRef?.current || null);
   
   // Audio connection status
   const [audioStatus, setAudioStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
@@ -331,6 +337,16 @@ const VoiceCallModal = ({
               
               {/* Audio status indicator */}
               <AudioStatusIndicator />
+              
+              {/* Real-time audio level meter */}
+              {isInCall && (
+                <div className="mt-6 w-full max-w-xs">
+                  <AudioLevelMeter 
+                    level={remoteAudioActive ? remoteAudioLevel : localAudioLevel} 
+                    isActive={remoteAudioActive || localAudioActive} 
+                  />
+                </div>
+              )}
             </div>
           </>
         )}
