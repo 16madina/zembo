@@ -685,12 +685,19 @@ export const useVoiceCall = () => {
   }, [callState.callId, callState.duration]);
 
   const toggleMute = useCallback(() => {
+    console.log("[VoiceCall] toggleMute called, localStreamRef:", !!localStreamRef.current);
     if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setCallState((prev) => ({ ...prev, isMuted: !audioTrack.enabled }));
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      console.log("[VoiceCall] Audio tracks found:", audioTracks.length);
+      if (audioTracks.length > 0) {
+        const audioTrack = audioTracks[0];
+        const newEnabled = !audioTrack.enabled;
+        audioTrack.enabled = newEnabled;
+        console.log("[VoiceCall] Audio track enabled:", newEnabled);
+        setCallState((prev) => ({ ...prev, isMuted: !newEnabled }));
       }
+    } else {
+      console.warn("[VoiceCall] No local stream available for mute toggle");
     }
   }, []);
 
