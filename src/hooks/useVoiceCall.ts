@@ -44,6 +44,31 @@ export const useVoiceCall = () => {
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Create persistent audio element for remote stream playback
+  useEffect(() => {
+    if (!remoteAudioRef.current) {
+      const audioEl = document.createElement('audio');
+      audioEl.id = 'voice-call-remote-audio';
+      audioEl.autoplay = true;
+      (audioEl as any).playsInline = true;
+      audioEl.setAttribute('playsinline', 'true');
+      audioEl.setAttribute('webkit-playsinline', 'true');
+      audioEl.style.display = 'none';
+      document.body.appendChild(audioEl);
+      remoteAudioRef.current = audioEl;
+      console.log("[VoiceCall] Created persistent audio element");
+    }
+    
+    return () => {
+      // Only clean up on full unmount
+      if (remoteAudioRef.current && document.body.contains(remoteAudioRef.current)) {
+        document.body.removeChild(remoteAudioRef.current);
+        remoteAudioRef.current = null;
+        console.log("[VoiceCall] Removed persistent audio element");
+      }
+    };
+  }, []);
+
   // Call timeout duration: 60 seconds
   const CALL_TIMEOUT_MS = 60000;
 
