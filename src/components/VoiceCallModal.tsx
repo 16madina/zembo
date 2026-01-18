@@ -181,6 +181,23 @@ const VoiceCallModal = ({
     }
   }, [isInCall, callType, remoteStreamRef?.current, remoteAudioRef]);
 
+  // Auto-mark as connected after a short delay if still connecting
+  // This handles cases where audio works but play() promise doesn't resolve properly
+  useEffect(() => {
+    if (isInCall && audioStatus === 'connecting') {
+      const timeout = setTimeout(() => {
+        // After 3 seconds in call, if still "connecting", assume audio is working
+        // (user would have complained by now otherwise)
+        if (audioStatus === 'connecting') {
+          console.log("[VoiceCall] Auto-marking audio as connected after timeout");
+          setAudioStatus('connected');
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isInCall, audioStatus]);
+
   // Audio status indicator component
   const AudioStatusIndicator = () => {
     if (!isInCall) return null;

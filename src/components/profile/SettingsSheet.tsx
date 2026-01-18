@@ -36,6 +36,10 @@ import {
   UserPlus,
   Headphones,
   ExternalLink,
+  Music,
+  RefreshCw,
+  Play,
+  Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -66,6 +70,7 @@ import { toast } from "sonner";
 import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import { InviteFriendsModal } from "./InviteFriendsModal";
 import { isNative } from "@/lib/capacitor";
+import { useZemboRingtone } from "@/hooks/useZemboRingtone";
 
 type Theme = "dark" | "light" | "system";
 type ProfileVisibility = "all" | "matches" | "invisible";
@@ -497,6 +502,15 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
     getBiometryLabel,
   } = useBiometricAuth();
 
+  const {
+    previewRingtone,
+    regenerateRingtone,
+    stopRingtone,
+    hasCachedRingtone,
+    isGenerating: isGeneratingRingtone,
+    isPlaying: isPlayingRingtone,
+  } = useZemboRingtone();
+
   const dataInfo = dataCollectionInfo[language];
 
   useEffect(() => {
@@ -794,6 +808,70 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   />
                 }
               />
+              
+              {/* Zembo Premium Ringtone */}
+              <Separator className="my-3" />
+              <div className="py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Music className="w-5 h-5 text-primary" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">
+                        {language === "fr" ? "Sonnerie Zembo" : "Zembo Ringtone"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {hasCachedRingtone() 
+                          ? (language === "fr" ? "Sonnerie premium personnalisée" : "Custom premium ringtone")
+                          : (language === "fr" ? "Cliquez pour générer" : "Click to generate")
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (isPlayingRingtone) {
+                          stopRingtone();
+                        } else {
+                          previewRingtone();
+                        }
+                      }}
+                      disabled={isGeneratingRingtone}
+                      className="h-8 w-8 p-0"
+                    >
+                      {isGeneratingRingtone ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isPlayingRingtone ? (
+                        <X className="w-4 h-4" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await regenerateRingtone();
+                        toast.success(
+                          language === "fr" 
+                            ? "Nouvelle sonnerie générée !" 
+                            : "New ringtone generated!"
+                        );
+                      }}
+                      disabled={isGeneratingRingtone || isPlayingRingtone}
+                      className="h-8 w-8 p-0"
+                    >
+                      {isGeneratingRingtone ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Appearance Section */}
