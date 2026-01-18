@@ -1,6 +1,6 @@
 import { useRef, useMemo, Suspense, useState, useEffect, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { RoundedBox, Float, Sparkles } from "@react-three/drei";
+import { RoundedBox, Float, Sparkles, Preload } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -309,6 +309,9 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
             {isAnimating && (
               <Sparkles count={30} scale={2} size={2} speed={3} color="#d4af37" />
             )}
+            
+            {/* Preload all drei assets for faster initial render */}
+            <Preload all />
           </Canvas>
         </Suspense>
       </motion.div>
