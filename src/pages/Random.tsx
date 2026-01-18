@@ -177,7 +177,7 @@ const Random = () => {
       default:
         return (
           <>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+            <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none overflow-hidden">
               {[0, 1, 2].map((i) => (
                 <motion.div
                   key={i}
