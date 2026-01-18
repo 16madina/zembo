@@ -31,17 +31,15 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       }}
       className="relative w-80 h-96 z-10 flex items-center justify-center"
     >
-      {/* Two 3D Dice positioned at the palm of the hand */}
+      {/* Two 3D Dice positioned at the palm of the hand - synced with hand */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ 
-          type: "spring", 
-          damping: 15, 
-          stiffness: 100,
-          delay: 0
+          opacity: { duration: 0.3, delay: 0 },
+          scale: { type: "spring", damping: 15, stiffness: 100, delay: 0 }
         }}
-        className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center -space-x-10"
+        className="absolute top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center -space-x-8"
       >
         {/* First Dice */}
         <motion.div 
