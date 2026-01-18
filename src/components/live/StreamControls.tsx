@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Mic, MicOff, Video, VideoOff, SwitchCamera, PhoneOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 
 interface StreamControlsProps {
   isMuted: boolean;
@@ -32,6 +33,9 @@ const StreamControls = ({
           e.preventDefault();
           e.stopPropagation();
           console.log("Toggle mute clicked, current:", isMuted);
+          if (isNative) {
+            haptics.impact(ImpactStyle.Medium);
+          }
           onToggleMute();
         }}
         className={cn(
@@ -50,6 +54,9 @@ const StreamControls = ({
           e.preventDefault();
           e.stopPropagation();
           console.log("Toggle video clicked, current:", isVideoOff);
+          if (isNative) {
+            haptics.impact(ImpactStyle.Medium);
+          }
           onToggleVideo();
         }}
         className={cn(
@@ -68,6 +75,9 @@ const StreamControls = ({
           e.preventDefault();
           e.stopPropagation();
           console.log("Switch camera clicked");
+          if (isNative) {
+            haptics.impact(ImpactStyle.Light);
+          }
           onSwitchCamera();
         }}
         className="w-10 h-10 rounded-full bg-background/90 text-foreground border border-border flex items-center justify-center shadow-lg active:scale-90 transition-all"
@@ -81,6 +91,9 @@ const StreamControls = ({
           e.preventDefault();
           e.stopPropagation();
           console.log("End stream clicked");
+          if (isNative) {
+            haptics.impact(ImpactStyle.Heavy);
+          }
           onEndStream();
         }}
         className="w-10 h-10 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg active:scale-90 transition-all"

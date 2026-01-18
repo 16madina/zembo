@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { useZemboRingtone } from "@/hooks/useZemboRingtone";
 import { useAudioLevel } from "@/hooks/useAudioLevel";
 import AudioLevelMeter from "@/components/random-call/AudioLevelMeter";
+import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 
 interface VoiceCallModalProps {
   isOpen: boolean;
@@ -387,7 +388,12 @@ const VoiceCallModal = ({
             <div className="flex items-center justify-center gap-8">
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={onToggleMute}
+                onClick={() => {
+                  if (isNative) {
+                    haptics.impact(ImpactStyle.Medium);
+                  }
+                  onToggleMute();
+                }}
                 className={`w-14 h-14 rounded-full flex items-center justify-center ${
                   isMuted ? "bg-destructive" : "glass"
                 }`}
@@ -400,7 +406,12 @@ const VoiceCallModal = ({
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={onEnd}
+                onClick={() => {
+                  if (isNative) {
+                    haptics.impact(ImpactStyle.Heavy);
+                  }
+                  onEnd();
+                }}
                 className="w-16 h-16 rounded-full bg-destructive flex items-center justify-center"
               >
                 <PhoneOff className="w-7 h-7 text-destructive-foreground" />
