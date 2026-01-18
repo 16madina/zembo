@@ -50,6 +50,8 @@ const VoiceCallModal = ({
   
   // Audio connection status
   const [audioStatus, setAudioStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const audioRetryCountRef = useRef(0);
+  const audioRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Force audio playback on iOS - must be triggered by user interaction
   const unlockAudio = useCallback(() => {
@@ -69,9 +71,19 @@ const VoiceCallModal = ({
       remoteAudioRef.current.play().then(() => {
         console.log("[VoiceCall] Remote audio playback started");
         setAudioStatus('connected');
+        audioRetryCountRef.current = 0;
       }).catch((err) => {
         console.warn("[VoiceCall] Failed to play remote audio:", err);
-        setAudioStatus('error');
+        // Retry up to 5 times before showing error
+        if (audioRetryCountRef.current < 5) {
+          audioRetryCountRef.current++;
+          console.log(`[VoiceCall] Retrying audio playback (${audioRetryCountRef.current}/5)...`);
+          audioRetryTimeoutRef.current = setTimeout(() => {
+            unlockAudio();
+          }, 500);
+        } else {
+          setAudioStatus('error');
+        }
       });
     }
   }, [remoteAudioRef]);
@@ -80,9 +92,17 @@ const VoiceCallModal = ({
   useEffect(() => {
     if (isInCall) {
       setAudioStatus('connecting');
+      audioRetryCountRef.current = 0;
     } else {
       setAudioStatus('connecting');
+      audioRetryCountRef.current = 0;
     }
+    
+    return () => {
+      if (audioRetryTimeoutRef.current) {
+        clearTimeout(audioRetryTimeoutRef.current);
+      }
+    };
   }, [isInCall]);
 
   // Play ringtone when ringing (incoming call)
@@ -148,9 +168,14 @@ const VoiceCallModal = ({
         remoteAudioRef.current.play().then(() => {
           console.log("[VoiceCall] Remote audio attached and playing");
           setAudioStatus('connected');
+          audioRetryCountRef.current = 0;
         }).catch((err) => {
           console.warn("[VoiceCall] Failed to play remote audio on attach:", err);
-          setAudioStatus('error');
+          // Don't show error immediately - the unlockAudio retry mechanism will handle it
+          // Only mark as error if we've exhausted retries
+          if (audioRetryCountRef.current >= 5) {
+            setAudioStatus('error');
+          }
         });
       }
     }
