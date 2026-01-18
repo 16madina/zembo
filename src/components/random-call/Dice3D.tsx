@@ -121,32 +121,30 @@ const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
   );
 };
 
-// Fallback 2D dice when WebGL fails
+// Fallback 2D dice (toujours visible derrière le 3D si besoin)
 const DiceFallback2D = ({ isAnimating }: { isAnimating: boolean }) => (
   <motion.div
-    className="w-12 h-12 bg-white rounded-xl shadow-lg border-2 border-primary/50 flex items-center justify-center relative"
+    className="w-20 h-20 rounded-2xl bg-card shadow-lg border border-primary/40 flex items-center justify-center relative"
     animate={isAnimating ? {
       rotateX: [0, 360, 720],
       rotateY: [0, 360, 720],
-      scale: [1, 1.1, 1],
+      scale: [1, 1.08, 1],
     } : {
       rotateY: [0, 360],
-      y: [0, -4, 0],
+      y: [0, -5, 0],
     }}
     transition={isAnimating ? {
       duration: 0.8,
-      ease: "easeOut"
+      ease: "easeOut",
     } : {
       rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
-      y: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+      y: { duration: 2, repeat: Infinity, ease: "easeInOut" },
     }}
     style={{ transformStyle: "preserve-3d" }}
   >
-    {/* Center dot */}
-    <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm" />
-    {/* Corner dots for visual depth */}
-    <div className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-primary/60" />
-    <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary/60" />
+    <div className="w-3 h-3 rounded-full bg-primary shadow-sm" />
+    <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-primary/60" />
+    <div className="absolute bottom-3 right-3 w-2 h-2 rounded-full bg-primary/60" />
   </motion.div>
 );
 
@@ -182,52 +180,61 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
   // If WebGL is not supported or there's an error, use 2D fallback
   if (!webGLSupported || hasError) {
     return (
-      <div className="w-16 h-16 flex items-center justify-center">
+      <div className="w-28 h-28 flex items-center justify-center">
         <DiceFallback2D isAnimating={isAnimating} />
       </div>
     );
   }
 
   return (
-    <div className="w-16 h-16">
-      <Suspense fallback={<DiceLoading />}>
-        <Canvas 
-          camera={{ position: [0, 0, 2.3], fov: 45 }}
-          gl={{ 
-            antialias: true,
-            alpha: true,
-            failIfMajorPerformanceCaveat: false,
-            powerPreference: "default",
-          }}
-          style={{ background: 'transparent' }}
-          onCreated={() => console.log("Dice3D Canvas created successfully")}
-          onError={() => setHasError(true)}
-        >
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
-          <directionalLight position={[-3, -3, -3]} intensity={0.3} />
-          <pointLight position={[0, 2, 2]} intensity={0.8} color="#d4af37" />
-          <pointLight position={[-2, -1, 1]} intensity={0.4} color="#ffffff" />
-          
-          <Float
-            speed={isAnimating ? 0 : 1.5}
-            rotationIntensity={isAnimating ? 0 : 0.2}
-            floatIntensity={isAnimating ? 0 : 0.3}
+    <div className="relative w-28 h-28">
+      {/* Fallback 2D toujours rendu (si le 3D ne s'affiche pas, on voit au moins ça) */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <DiceFallback2D isAnimating={isAnimating} />
+      </div>
+
+      <div className="absolute inset-0">
+        <Suspense fallback={<DiceLoading />}>
+          <Canvas
+            camera={{ position: [0, 0, 2.3], fov: 45 }}
+            gl={{
+              antialias: true,
+              alpha: true,
+              failIfMajorPerformanceCaveat: false,
+              powerPreference: "default",
+            }}
+            style={{ background: "transparent" }}
+            onCreated={() => {
+              // Si tu ne vois pas ce log dans ta console, le Canvas ne monte pas.
+              console.log("Dice3D Canvas created successfully");
+            }}
           >
-            <AnimatedDice isAnimating={isAnimating} />
-          </Float>
-          
-          {isAnimating && (
-            <Sparkles
-              count={30}
-              scale={2}
-              size={2}
-              speed={3}
-              color="#d4af37"
-            />
-          )}
-        </Canvas>
-      </Suspense>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
+            <directionalLight position={[-3, -3, -3]} intensity={0.3} />
+            <pointLight position={[0, 2, 2]} intensity={0.8} color="#d4af37" />
+            <pointLight position={[-2, -1, 1]} intensity={0.4} color="#ffffff" />
+
+            <Float
+              speed={isAnimating ? 0 : 1.5}
+              rotationIntensity={isAnimating ? 0 : 0.2}
+              floatIntensity={isAnimating ? 0 : 0.3}
+            >
+              <AnimatedDice isAnimating={isAnimating} />
+            </Float>
+
+            {isAnimating && (
+              <Sparkles
+                count={30}
+                scale={2}
+                size={2}
+                speed={3}
+                color="#d4af37"
+              />
+            )}
+          </Canvas>
+        </Suspense>
+      </div>
     </div>
   );
 };
