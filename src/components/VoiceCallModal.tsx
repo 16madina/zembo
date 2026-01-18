@@ -55,38 +55,20 @@ const VoiceCallModal = ({
 
   // Force audio playback on iOS - must be triggered by user interaction
   const unlockAudio = useCallback(() => {
-    if (remoteAudioRef.current) {
-      // Create silent audio context to unlock audio on iOS
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContext) {
-        const ctx = new AudioContext();
-        if (ctx.state === 'suspended') {
-          ctx.resume();
-        }
+    // Create silent audio context to unlock audio on iOS
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContext) {
+      const ctx = new AudioContext();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
       }
-      
-      // Try to play the audio element
-      remoteAudioRef.current.muted = false;
-      remoteAudioRef.current.volume = 1.0;
-      remoteAudioRef.current.play().then(() => {
-        console.log("[VoiceCall] Remote audio playback started");
-        setAudioStatus('connected');
-        audioRetryCountRef.current = 0;
-      }).catch((err) => {
-        console.warn("[VoiceCall] Failed to play remote audio:", err);
-        // Retry up to 5 times before showing error
-        if (audioRetryCountRef.current < 5) {
-          audioRetryCountRef.current++;
-          console.log(`[VoiceCall] Retrying audio playback (${audioRetryCountRef.current}/5)...`);
-          audioRetryTimeoutRef.current = setTimeout(() => {
-            unlockAudio();
-          }, 500);
-        } else {
-          setAudioStatus('error');
-        }
-      });
     }
-  }, [remoteAudioRef]);
+    
+    // The remote audio is handled by the persistent element in useVoiceCall
+    // Just mark as connected since the element handles playback
+    console.log("[VoiceCall] Audio unlocked");
+    setAudioStatus('connected');
+  }, []);
 
   // Reset audio status when call starts
   useEffect(() => {
@@ -151,7 +133,7 @@ const VoiceCallModal = ({
     }
   }, [isInCall, callType, localStreamRef?.current]);
 
-  // Attach remote video/audio stream
+  // Attach remote video stream (audio is handled by persistent element in useVoiceCall)
   useEffect(() => {
     if (isInCall && remoteStreamRef?.current) {
       // Attach to video element for video calls
@@ -160,26 +142,10 @@ const VoiceCallModal = ({
         remoteVideoRef.current.play().catch(console.error);
       }
       
-      // Always attach to audio element for audio playback
-      if (remoteAudioRef.current && remoteStreamRef.current) {
-        remoteAudioRef.current.srcObject = remoteStreamRef.current;
-        remoteAudioRef.current.muted = false;
-        remoteAudioRef.current.volume = 1.0;
-        remoteAudioRef.current.play().then(() => {
-          console.log("[VoiceCall] Remote audio attached and playing");
-          setAudioStatus('connected');
-          audioRetryCountRef.current = 0;
-        }).catch((err) => {
-          console.warn("[VoiceCall] Failed to play remote audio on attach:", err);
-          // Don't show error immediately - the unlockAudio retry mechanism will handle it
-          // Only mark as error if we've exhausted retries
-          if (audioRetryCountRef.current >= 5) {
-            setAudioStatus('error');
-          }
-        });
-      }
+      // Mark audio as connected since it's handled by the persistent element
+      setAudioStatus('connected');
     }
-  }, [isInCall, callType, remoteStreamRef?.current, remoteAudioRef]);
+  }, [isInCall, callType, remoteStreamRef?.current]);
 
   // Auto-mark as connected after a short delay if still connecting
   // This handles cases where audio works but play() promise doesn't resolve properly
@@ -253,15 +219,7 @@ const VoiceCallModal = ({
         className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center"
         style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {/* Hidden audio element for remote stream (for audio-only or fallback) */}
-        <audio 
-          ref={remoteAudioRef} 
-          autoPlay 
-          playsInline
-          // @ts-ignore - webkit attribute for iOS
-          webkit-playsinline="true"
-          style={{ display: 'none' }}
-        />
+        {/* Audio is handled by persistent element in useVoiceCall hook */}
 
         {/* Video call UI */}
         {showVideoUI ? (
