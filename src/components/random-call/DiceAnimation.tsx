@@ -26,12 +26,23 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       } : { 
         type: "spring", 
         damping: 15, 
-        delay: 0.2 
+        stiffness: 100,
+        delay: 0
       }}
       className="relative w-80 h-96 z-10 flex items-center justify-center"
     >
       {/* Two 3D Dice positioned at the palm of the hand */}
-      <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center -space-x-10">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ 
+          type: "spring", 
+          damping: 15, 
+          stiffness: 100,
+          delay: 0
+        }}
+        className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center -space-x-10"
+      >
         {/* First Dice */}
         <motion.div 
           animate={isExiting ? {
@@ -72,24 +83,31 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
           } : {
             duration: 2.5,
             repeat: Infinity,
-            ease: "easeInOut",
-            delay: 0.4
+            ease: "easeInOut"
           }}
         >
           <Dice3D isAnimating={isExiting} />
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* Golden Hand Image */}
       <motion.img
         src={goldenHand}
         alt="Golden Hand"
         className="w-full h-full object-contain mt-16"
+        initial={{ opacity: 0, scale: 0.5 }}
         animate={{ 
+          opacity: 1,
+          scale: 1,
           y: [0, -8, 0],
           rotate: [0, 2, -2, 0]
         }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ 
+          opacity: { duration: 0.3, delay: 0 },
+          scale: { type: "spring", damping: 15, stiffness: 100, delay: 0 },
+          y: { duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.3 },
+          rotate: { duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.3 }
+        }}
       />
 
       {/* Sparkles around the hand */}
