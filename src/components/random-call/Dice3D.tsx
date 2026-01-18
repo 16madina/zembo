@@ -57,7 +57,7 @@ const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
   });
 
   return (
-    <group ref={meshRef} scale={0.7}>
+    <group ref={meshRef} scale={0.85}>
       <RoundedBox args={[1, 1, 1]} radius={0.15} smoothness={8}>
         <meshPhysicalMaterial 
           color="#ffffff" 
@@ -188,49 +188,47 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
 
   return (
     <div className="relative w-28 h-28">
-      {/* Fallback 2D toujours rendu (si le 3D ne s'affiche pas, on voit au moins ça) */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      {/* Fallback 2D (reste visible si le 3D ne rend rien) */}
+      <div className="absolute inset-0 flex items-center justify-center z-0 opacity-80">
         <DiceFallback2D isAnimating={isAnimating} />
       </div>
 
-      <div className="absolute inset-0">
+      {/* Canvas 3D au-dessus */}
+      <div className="absolute inset-0 z-10">
         <Suspense fallback={<DiceLoading />}>
           <Canvas
-            camera={{ position: [0, 0, 2.3], fov: 45 }}
+            className="w-full h-full"
+            camera={{ position: [0, 0, 2], fov: 50 }}
+            dpr={[1, 1.5]}
             gl={{
               antialias: true,
               alpha: true,
               failIfMajorPerformanceCaveat: false,
               powerPreference: "default",
+              preserveDrawingBuffer: false,
             }}
-            style={{ background: "transparent" }}
+            style={{ background: "transparent", width: "100%", height: "100%" }}
             onCreated={() => {
-              // Si tu ne vois pas ce log dans ta console, le Canvas ne monte pas.
+              // Si tu vois ce log, le Canvas 3D a bien été monté.
               console.log("Dice3D Canvas created successfully");
             }}
           >
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
-            <directionalLight position={[-3, -3, -3]} intensity={0.3} />
-            <pointLight position={[0, 2, 2]} intensity={0.8} color="#d4af37" />
-            <pointLight position={[-2, -1, 1]} intensity={0.4} color="#ffffff" />
+            <ambientLight intensity={0.9} />
+            <directionalLight position={[5, 5, 5]} intensity={1.7} />
+            <directionalLight position={[-3, -3, -3]} intensity={0.35} />
+            <pointLight position={[0, 2, 2]} intensity={0.9} color="#d4af37" />
+            <pointLight position={[-2, -1, 1]} intensity={0.45} color="#ffffff" />
 
             <Float
               speed={isAnimating ? 0 : 1.5}
-              rotationIntensity={isAnimating ? 0 : 0.2}
-              floatIntensity={isAnimating ? 0 : 0.3}
+              rotationIntensity={isAnimating ? 0 : 0.25}
+              floatIntensity={isAnimating ? 0 : 0.35}
             >
               <AnimatedDice isAnimating={isAnimating} />
             </Float>
 
             {isAnimating && (
-              <Sparkles
-                count={30}
-                scale={2}
-                size={2}
-                speed={3}
-                color="#d4af37"
-              />
+              <Sparkles count={30} scale={2} size={2} speed={3} color="#d4af37" />
             )}
           </Canvas>
         </Suspense>
