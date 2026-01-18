@@ -28,7 +28,7 @@ export default function IncomingCallBanner({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed top-0 left-0 right-0 z-[9999] p-2 safe-area-top"
+          className="fixed top-0 left-0 right-0 z-[9999] px-2 pb-2 pt-[calc(env(safe-area-inset-top)+8px)] pointer-events-auto"
         >
           <div className="mx-2 bg-gradient-to-r from-green-600 to-green-500 rounded-2xl shadow-2xl overflow-hidden">
             {/* Pulsing background effect */}
