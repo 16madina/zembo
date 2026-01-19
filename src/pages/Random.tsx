@@ -193,32 +193,32 @@ const Random = () => {
             </div>
 
             {/* Titre + sous-titre compacts */}
-            <motion.div className="text-center mb-2 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-2xl font-bold text-foreground">
-                Bienvenue sur <span className="text-primary text-4xl font-black">Z</span> Roulette
+            <motion.div className="text-center mb-0 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-xl font-bold text-foreground">
+                Bienvenue sur <span className="text-primary text-3xl font-black">Z</span> Roulette
               </h1>
               <motion.div 
-                className="flex items-center justify-center gap-2 mt-2"
+                className="flex items-center justify-center gap-2 mt-1"
                 initial={{ opacity: 0, scale: 0.9 }} 
                 animate={{ opacity: 1, scale: 1 }} 
                 transition={{ delay: 0.2 }}
               >
-                <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-2 h-2 rounded-full bg-primary" />
-                <span className="text-sm text-primary font-medium">Es-tu prêt(e) à jouer ?</span>
+                <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span className="text-xs text-primary font-medium">Es-tu prêt(e) à jouer ?</span>
               </motion.div>
             </motion.div>
 
-            <div ref={diceRef}>
+            <div ref={diceRef} className="-my-4">
               <DiceAnimation isExiting={isExiting} />
             </div>
             
-            <motion.p className="text-muted-foreground mb-2 max-w-xs leading-relaxed text-center z-10 text-sm -mt-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <motion.p className="text-muted-foreground mb-1 max-w-xs leading-snug text-center z-10 text-xs -mt-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <span className="text-foreground font-medium">Aucun profil, juste une voix.</span> Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
             {/* Microphone Test - Above the button for visibility */}
             <motion.div
-              className="z-10 mb-4"
+              className="z-10 mb-2"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
@@ -229,15 +229,15 @@ const Random = () => {
             {/* Commencer Button - Always visible */}
             <motion.button 
               onClick={handleCommencer} 
-              className="px-10 py-4 btn-gold rounded-2xl font-semibold flex items-center gap-3 z-10" 
+              className="px-8 py-3 btn-gold rounded-2xl font-semibold flex items-center gap-2 z-10" 
               initial={{ opacity: 0, y: 20 }} 
               animate={{ opacity: 1, y: 0 }} 
               transition={{ delay: 0.6 }} 
               whileHover={{ scale: 1.03 }} 
               whileTap={{ scale: 0.97 }}
             >
-              <Play className="w-5 h-5 text-primary-foreground" />
-              <span className="text-primary-foreground">Commencer</span>
+              <Play className="w-4 h-4 text-primary-foreground" />
+              <span className="text-primary-foreground text-sm">Commencer</span>
             </motion.button>
           </>
         );
