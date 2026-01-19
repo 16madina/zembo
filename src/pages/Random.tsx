@@ -12,7 +12,6 @@ import DecisionOverlay from "@/components/random-call/DecisionOverlay";
 import ResultScreen from "@/components/random-call/ResultScreen";
 import DiceAnimation from "@/components/random-call/DiceAnimation";
 import MicrophoneTest from "@/components/random-call/MicrophoneTest";
-import { haptics, isNative } from "@/lib/capacitor";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
@@ -43,10 +42,6 @@ const Random = () => {
   const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
 
   const handleCommencer = () => {
-    // Haptic feedback on mobile
-    if (isNative) {
-      haptics.impact('medium');
-    }
     // Scroll to dice animation
     diceRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     playDiceSound();
