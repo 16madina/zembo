@@ -3,71 +3,10 @@ import { motion } from "framer-motion";
 import { CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import waveLogo from "@/assets/payment/wave-logo.png";
+import orangeMoneyLogo from "@/assets/payment/orange-money-logo.png";
 
 export type PaymentMethod = "card" | "wave" | "orange";
-
-// Wave logo - Official cyan wave design
-const WaveLogo = () => (
-  <svg viewBox="0 0 40 40" className="w-7 h-7">
-    <defs>
-      <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#1DC1ED" />
-        <stop offset="100%" stopColor="#0EA5E9" />
-      </linearGradient>
-    </defs>
-    <circle cx="20" cy="20" r="18" fill="url(#waveGradient)" />
-    <path
-      d="M10 20 Q15 14, 20 20 T30 20"
-      stroke="white"
-      strokeWidth="3"
-      fill="none"
-      strokeLinecap="round"
-    />
-    <path
-      d="M10 26 Q15 20, 20 26 T30 26"
-      stroke="white"
-      strokeWidth="2.5"
-      fill="none"
-      strokeLinecap="round"
-      opacity="0.8"
-    />
-  </svg>
-);
-
-// Orange Money logo - Official orange square with Orange text styling
-const OrangeMoneyLogo = () => (
-  <svg viewBox="0 0 40 40" className="w-7 h-7">
-    <defs>
-      <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#FF7900" />
-        <stop offset="100%" stopColor="#F97316" />
-      </linearGradient>
-    </defs>
-    <rect x="2" y="2" width="36" height="36" rx="8" fill="url(#orangeGradient)" />
-    <text
-      x="20"
-      y="26"
-      textAnchor="middle"
-      fill="white"
-      fontWeight="bold"
-      fontSize="16"
-      fontFamily="Arial, sans-serif"
-    >
-      O
-    </text>
-    <text
-      x="20"
-      y="35"
-      textAnchor="middle"
-      fill="white"
-      fontWeight="bold"
-      fontSize="7"
-      fontFamily="Arial, sans-serif"
-    >
-      money
-    </text>
-  </svg>
-);
 
 interface PaymentMethodOption {
   id: PaymentMethod;
@@ -91,7 +30,7 @@ const paymentMethods: PaymentMethodOption[] = [
     id: "wave",
     name: "Wave",
     description: "Paiement mobile Wave",
-    icon: <WaveLogo />,
+    icon: <img src={waveLogo} alt="Wave" className="w-8 h-8 object-contain" />,
     color: "from-cyan-400 to-sky-500",
     available: false, // À implémenter
   },
@@ -99,7 +38,7 @@ const paymentMethods: PaymentMethodOption[] = [
     id: "orange",
     name: "Orange Money",
     description: "Paiement mobile Orange",
-    icon: <OrangeMoneyLogo />,
+    icon: <img src={orangeMoneyLogo} alt="Orange Money" className="w-8 h-8 object-contain" />,
     color: "from-orange-500 to-orange-600",
     available: false, // À implémenter
   },
