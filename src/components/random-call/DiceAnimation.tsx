@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import goldenHand from "@/assets/golden-hand.png";
+import { Dice5 } from "lucide-react";
 
 interface DiceAnimationProps {
   isExiting?: boolean;
@@ -30,6 +31,68 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       }}
       className="relative w-80 h-96 z-10 flex items-center justify-center"
     >
+      {/* Simple Dice - appearing with the hand */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ 
+          type: "spring", 
+          damping: 12, 
+          stiffness: 100,
+          delay: 0
+        }}
+        className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center gap-2"
+      >
+        {/* First Dice */}
+        <motion.div
+          animate={isExiting ? {
+            rotateZ: [0, 360, 720],
+            scale: [1, 1.2, 0],
+            x: [-10, -40, -100],
+            y: [0, -30, -80],
+          } : {
+            y: [0, -4, 0],
+            rotate: [0, 5, -5, 0],
+          }}
+          transition={isExiting ? {
+            duration: 0.8,
+            ease: "easeOut"
+          } : {
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="bg-white rounded-lg p-1 shadow-lg border-2 border-primary/30"
+        >
+          <Dice5 className="w-10 h-10 text-primary" strokeWidth={1.5} />
+        </motion.div>
+
+        {/* Second Dice */}
+        <motion.div
+          animate={isExiting ? {
+            rotateZ: [0, -360, -720],
+            scale: [1, 1.2, 0],
+            x: [10, 40, 100],
+            y: [0, -30, -80],
+          } : {
+            y: [0, -4, 0],
+            rotate: [0, -5, 5, 0],
+          }}
+          transition={isExiting ? {
+            duration: 0.8,
+            ease: "easeOut"
+          } : {
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.2
+          }}
+          className="bg-white rounded-lg p-1 shadow-lg border-2 border-primary/30"
+        >
+          <Dice5 className="w-10 h-10 text-primary" strokeWidth={1.5} />
+        </motion.div>
+      </motion.div>
+
       {/* Golden Hand Image */}
       <motion.img
         src={goldenHand}
