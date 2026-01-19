@@ -1,10 +1,91 @@
 import { motion } from "framer-motion";
 import goldenHand from "@/assets/golden-hand.png";
-import { Dice5 } from "lucide-react";
 
 interface DiceAnimationProps {
   isExiting?: boolean;
 }
+
+// Composant de dé doré avec vrais points
+const GoldenDice = ({ value, delay = 0 }: { value: number; delay?: number }) => {
+  // Positions des points pour chaque valeur (1-6)
+  const dotPositions: Record<number, { x: number; y: number }[]> = {
+    1: [{ x: 50, y: 50 }],
+    2: [{ x: 25, y: 25 }, { x: 75, y: 75 }],
+    3: [{ x: 25, y: 25 }, { x: 50, y: 50 }, { x: 75, y: 75 }],
+    4: [{ x: 25, y: 25 }, { x: 75, y: 25 }, { x: 25, y: 75 }, { x: 75, y: 75 }],
+    5: [{ x: 25, y: 25 }, { x: 75, y: 25 }, { x: 50, y: 50 }, { x: 25, y: 75 }, { x: 75, y: 75 }],
+    6: [{ x: 25, y: 25 }, { x: 75, y: 25 }, { x: 25, y: 50 }, { x: 75, y: 50 }, { x: 25, y: 75 }, { x: 75, y: 75 }],
+  };
+
+  const dots = dotPositions[value] || dotPositions[5];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0, rotate: -180 }}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+      transition={{ 
+        type: "spring", 
+        damping: 12, 
+        stiffness: 100,
+        delay: delay
+      }}
+      className="relative w-14 h-14"
+    >
+      {/* Dé avec dégradé doré */}
+      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-lg">
+        <defs>
+          {/* Dégradé doré principal */}
+          <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFD700" />
+            <stop offset="30%" stopColor="#FFC125" />
+            <stop offset="50%" stopColor="#FFDF00" />
+            <stop offset="70%" stopColor="#DAA520" />
+            <stop offset="100%" stopColor="#B8860B" />
+          </linearGradient>
+          {/* Dégradé pour les points */}
+          <radialGradient id="dotGradient" cx="30%" cy="30%">
+            <stop offset="0%" stopColor="#8B4513" />
+            <stop offset="100%" stopColor="#4A2500" />
+          </radialGradient>
+          {/* Ombre interne */}
+          <filter id="innerShadow">
+            <feDropShadow dx="2" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
+          </filter>
+        </defs>
+        
+        {/* Corps du dé */}
+        <rect 
+          x="5" y="5" 
+          width="90" height="90" 
+          rx="15" ry="15"
+          fill="url(#goldGradient)"
+          stroke="#DAA520"
+          strokeWidth="2"
+          filter="url(#innerShadow)"
+        />
+        
+        {/* Reflet brillant */}
+        <rect 
+          x="10" y="10" 
+          width="40" height="20" 
+          rx="8" ry="8"
+          fill="rgba(255,255,255,0.3)"
+        />
+        
+        {/* Points du dé */}
+        {dots.map((dot, i) => (
+          <circle
+            key={i}
+            cx={dot.x}
+            cy={dot.y}
+            r="10"
+            fill="url(#dotGradient)"
+          />
+        ))}
+      </svg>
+    </motion.div>
+  );
+};
 
 const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
   return (
@@ -31,17 +112,9 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       }}
       className="relative w-80 h-96 z-10 flex items-center justify-center"
     >
-      {/* Simple Dice - appearing with the hand */}
+      {/* Golden Dice - appearing with the hand */}
       <motion.div 
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ 
-          type: "spring", 
-          damping: 12, 
-          stiffness: 100,
-          delay: 0
-        }}
-        className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center gap-2"
+        className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center gap-3"
       >
         {/* First Dice */}
         <motion.div
@@ -51,20 +124,19 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
             x: [-10, -40, -100],
             y: [0, -30, -80],
           } : {
-            y: [0, -4, 0],
-            rotate: [0, 5, -5, 0],
+            y: [0, -6, 0],
+            rotate: [0, 8, -8, 0],
           }}
           transition={isExiting ? {
             duration: 0.8,
             ease: "easeOut"
           } : {
-            duration: 2,
+            duration: 2.5,
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="bg-white rounded-lg p-1 shadow-lg border-2 border-primary/30"
         >
-          <Dice5 className="w-10 h-10 text-primary" strokeWidth={1.5} />
+          <GoldenDice value={5} delay={0} />
         </motion.div>
 
         {/* Second Dice */}
@@ -75,21 +147,20 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
             x: [10, 40, 100],
             y: [0, -30, -80],
           } : {
-            y: [0, -4, 0],
-            rotate: [0, -5, 5, 0],
+            y: [0, -6, 0],
+            rotate: [0, -8, 8, 0],
           }}
           transition={isExiting ? {
             duration: 0.8,
             ease: "easeOut"
           } : {
-            duration: 2,
+            duration: 2.5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 0.2
+            delay: 0.3
           }}
-          className="bg-white rounded-lg p-1 shadow-lg border-2 border-primary/30"
         >
-          <Dice5 className="w-10 h-10 text-primary" strokeWidth={1.5} />
+          <GoldenDice value={6} delay={0.1} />
         </motion.div>
       </motion.div>
 
@@ -120,7 +191,6 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Sparkles */}
         {[
           { x: 35, y: 45, delay: 0 },
           { x: 250, y: 35, delay: 0.6 },
@@ -145,13 +215,13 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
           >
             <path
               d={`M${spark.x} ${spark.y - 8} L${spark.x} ${spark.y + 8} M${spark.x - 8} ${spark.y} L${spark.x + 8} ${spark.y}`}
-              stroke="hsl(var(--primary))"
+              stroke="#FFD700"
               strokeWidth="2.5"
               strokeLinecap="round"
             />
             <path
               d={`M${spark.x - 5} ${spark.y - 5} L${spark.x + 5} ${spark.y + 5} M${spark.x + 5} ${spark.y - 5} L${spark.x - 5} ${spark.y + 5}`}
-              stroke="hsl(var(--primary) / 0.6)"
+              stroke="#DAA520"
               strokeWidth="1.5"
               strokeLinecap="round"
             />
