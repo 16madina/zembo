@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import goldenHand from "@/assets/golden-hand.png";
-import Dice3D from "./Dice3D";
 
 interface DiceAnimationProps {
   isExiting?: boolean;
@@ -31,68 +30,11 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
       }}
       className="relative w-80 h-96 z-10 flex items-center justify-center"
     >
-      {/* Two 3D Dice positioned at the palm of the hand - synced with hand */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ 
-          opacity: { duration: 0.3, delay: 0 },
-          scale: { type: "spring", damping: 15, stiffness: 100, delay: 0 }
-        }}
-        className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center -space-x-12"
-      >
-        {/* First Dice */}
-        <motion.div 
-          animate={isExiting ? {
-            rotateZ: [0, 360, 720],
-            scale: [1, 1.2, 0.3],
-            x: [-10, -30, -80],
-            y: [0, -20, -50],
-          } : {
-            y: [0, -2, 0],
-            rotate: [0, 3, -3, 0],
-          }}
-          transition={isExiting ? {
-            duration: 0.8,
-            ease: "easeOut"
-          } : {
-            duration: 2.5,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        >
-          <Dice3D isAnimating={isExiting} />
-        </motion.div>
-
-        {/* Second Dice */}
-        <motion.div 
-          animate={isExiting ? {
-            rotateZ: [0, -360, -720],
-            scale: [1, 1.2, 0.3],
-            x: [10, 30, 80],
-            y: [0, -20, -50],
-          } : {
-            y: [0, -2, 0],
-            rotate: [0, -3, 3, 0],
-          }}
-          transition={isExiting ? {
-            duration: 0.8,
-            ease: "easeOut"
-          } : {
-            duration: 2.5,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        >
-          <Dice3D isAnimating={isExiting} />
-        </motion.div>
-      </motion.div>
-
       {/* Golden Hand Image */}
       <motion.img
         src={goldenHand}
         alt="Golden Hand"
-        className="w-full h-full object-contain mt-16"
+        className="w-full h-full object-contain"
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ 
           opacity: 1,
