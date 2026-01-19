@@ -42,7 +42,12 @@ export const useRevenueCat = (): UseRevenueCatReturn => {
   // Initialize RevenueCat and login when user is available
   useEffect(() => {
     const init = async () => {
+      console.log("[RevenueCat Debug] ====== INIT START ======");
+      console.log("[RevenueCat Debug] isNative:", isNative);
+      console.log("[RevenueCat Debug] user?.id:", user?.id?.substring(0, 8));
+
       if (!isNative) {
+        console.log("[RevenueCat Debug] Not native platform, skipping init");
         setIsLoading(false);
         return;
       }
@@ -51,29 +56,64 @@ export const useRevenueCat = (): UseRevenueCatReturn => {
 
       try {
         // Initialize RevenueCat
+        console.log("[RevenueCat Debug] Calling initializeRevenueCat...");
         const initialized = await initializeRevenueCat(user?.id);
+        console.log("[RevenueCat Debug] Initialized:", initialized);
         setIsInitialized(initialized);
 
         if (initialized && user?.id) {
           // Login with user ID to sync purchases
+          console.log("[RevenueCat Debug] Logging in user...");
           await loginRevenueCat(user.id);
+          console.log("[RevenueCat Debug] User logged in successfully");
           
           // Get customer info and offerings
+          console.log("[RevenueCat Debug] Fetching customer info and offerings...");
           const [info, offers] = await Promise.all([
             getCustomerInfo(),
             getOfferings(),
           ]);
+          
+          // Debug customer info
+          console.log("[RevenueCat Debug] ====== CUSTOMER INFO ======");
+          console.log("[RevenueCat Debug] CustomerInfo received:", !!info);
+          if (info) {
+            console.log("[RevenueCat Debug] Active entitlements:", Object.keys(info.entitlements?.active || {}));
+          }
+          
+          // Debug offerings/packages
+          console.log("[RevenueCat Debug] ====== OFFERINGS/PACKAGES ======");
+          console.log("[RevenueCat Debug] Packages received:", offers?.length ?? 0);
+          if (offers && offers.length > 0) {
+            offers.forEach((pkg, index) => {
+              console.log(`[RevenueCat Debug] Package ${index + 1}:`, {
+                identifier: pkg.identifier,
+                productId: pkg.productId,
+                priceString: pkg.priceString,
+                title: pkg.title,
+              });
+            });
+          } else {
+            console.warn("[RevenueCat Debug] ⚠️ NO PACKAGES LOADED - Check StoreKit Configuration!");
+          }
           
           setCustomerInfo(info);
           setPackages(offers);
 
           // Sync subscription status with Supabase
           if (info) {
+            const tier = getSubscriptionTier(info);
+            console.log("[RevenueCat Debug] Current tier:", tier);
             await syncSubscriptionToSupabase(user.id, info);
+            console.log("[RevenueCat Debug] Synced to Supabase");
           }
+        } else {
+          console.log("[RevenueCat Debug] Skipping login - initialized:", initialized, "user:", !!user?.id);
         }
+        
+        console.log("[RevenueCat Debug] ====== INIT COMPLETE ======");
       } catch (error) {
-        console.error("RevenueCat init error:", error);
+        console.error("[RevenueCat Debug] ❌ Init error:", error);
       } finally {
         setIsLoading(false);
       }
