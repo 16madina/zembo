@@ -263,6 +263,9 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     }
 
     setPurchasing(pack.id);
+    console.log("[CoinShop Debug] ====== PURCHASE START ======");
+    console.log("[CoinShop Debug] Pack:", pack.id, "Coins:", pack.coins, "Bonus:", pack.bonus);
+    console.log("[CoinShop Debug] useRevenueCatForCoins:", useRevenueCatForCoins);
     
     try {
       const totalCoins = pack.coins + pack.bonus;
@@ -270,26 +273,39 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
       if (useRevenueCatForCoins) {
         // iOS: Use RevenueCat for in-app purchase
         const productMapping = COIN_PACK_TO_PRODUCT[pack.id];
+        console.log("[CoinShop Debug] Product mapping:", productMapping);
+        
         if (!productMapping) {
           throw new Error("Product not found");
         }
 
+        console.log("[CoinShop Debug] Calling purchaseConsumable...");
         const result = await purchaseConsumable(productMapping.productId);
+        console.log("[CoinShop Debug] purchaseConsumable result:", result);
         
         if (result.success) {
+          console.log("[CoinShop Debug] Purchase successful! Adding", totalCoins, "coins...");
           // Add coins to user's balance after successful purchase
           const success = await addCoins(totalCoins);
+          console.log("[CoinShop Debug] addCoins result:", success);
           
           if (success) {
+            console.log("[CoinShop Debug] ✅ Coins added successfully!");
             setShowSuccess({ coins: pack.coins, bonus: pack.bonus });
             toast.success(`🎉 ${totalCoins} coins ajoutés à votre compte !`);
             
             setTimeout(() => {
               setShowSuccess(null);
             }, 3000);
+          } else {
+            console.error("[CoinShop Debug] ❌ Failed to add coins!");
+            toast.error("Achat réussi mais problème lors du crédit. Contactez le support.");
           }
         } else if (result.error && result.error !== "Achat annulé") {
+          console.error("[CoinShop Debug] ❌ Purchase error:", result.error);
           toast.error(result.error);
+        } else {
+          console.log("[CoinShop Debug] Purchase cancelled by user");
         }
       } else {
         // Web: Simulate payment (would integrate with Stripe in production)
@@ -308,8 +324,9 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           toast.error("Erreur lors de l'achat. Veuillez réessayer.");
         }
       }
+      console.log("[CoinShop Debug] ====== PURCHASE END ======");
     } catch (error: any) {
-      console.error("Purchase error:", error);
+      console.error("[CoinShop Debug] ❌ Exception:", error);
       if (error.message !== "Achat annulé") {
         toast.error("Erreur lors de l'achat. Veuillez réessayer.");
       }

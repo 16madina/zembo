@@ -10,14 +10,17 @@ import {
   getCustomerInfo,
   getOfferings,
   purchasePackage,
+  purchaseConsumable,
   restorePurchases,
   getSubscriptionTier,
   isRevenueCatAvailable,
   PACKAGE_IDS,
+  COIN_PACK_TO_PRODUCT,
   type CustomerInfo,
   type RevenueCatPackage,
   type SubscriptionPlan,
 } from "@/lib/revenuecat";
+import { useCoins } from "@/hooks/useCoins";
 
 interface UseRevenueCatReturn {
   isInitialized: boolean;
@@ -28,12 +31,14 @@ interface UseRevenueCatReturn {
   isPremium: boolean;
   isVip: boolean;
   subscribe: (plan: SubscriptionPlan) => Promise<{ success: boolean; error?: string }>;
+  purchaseCoins: (packId: string) => Promise<{ success: boolean; error?: string }>;
   restore: () => Promise<{ success: boolean; error?: string }>;
   refresh: () => Promise<void>;
 }
 
 export const useRevenueCat = (): UseRevenueCatReturn => {
   const { user } = useAuth();
+  const { addCoins, refetch: refetchCoins } = useCoins();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
@@ -214,6 +219,61 @@ export const useRevenueCat = (): UseRevenueCatReturn => {
     }
   }, [user?.id]);
 
+  // Purchase coins (consumable)
+  const purchaseCoins = useCallback(async (packId: string): Promise<{ success: boolean; error?: string }> => {
+    if (!isRevenueCatAvailable()) {
+      return { success: false, error: "RevenueCat not available" };
+    }
+
+    const pack = COIN_PACK_TO_PRODUCT[packId];
+    if (!pack) {
+      return { success: false, error: `Unknown coin pack: ${packId}` };
+    }
+
+    setIsLoading(true);
+
+    try {
+      console.log("[RevenueCat Debug] ====== COIN PURCHASE START ======");
+      console.log("[RevenueCat Debug] Pack ID:", packId);
+      console.log("[RevenueCat Debug] Product ID:", pack.productId);
+      console.log("[RevenueCat Debug] Coins:", pack.coins, "Bonus:", pack.bonus);
+
+      const result = await purchaseConsumable(pack.productId);
+
+      if (result.success) {
+        const totalCoins = pack.coins + pack.bonus;
+        console.log("[RevenueCat Debug] Purchase successful! Adding", totalCoins, "coins");
+
+        // Add coins to user's balance
+        const coinsAdded = await addCoins(totalCoins);
+        
+        if (coinsAdded) {
+          console.log("[RevenueCat Debug] ✅ Coins added to balance");
+          await refetchCoins();
+          toast.success(`🪙 +${totalCoins} coins ajoutés à votre compte!`);
+        } else {
+          console.error("[RevenueCat Debug] ❌ Failed to add coins to balance");
+          // Still return success as the purchase went through
+          toast.warning("Achat réussi mais problème lors du crédit. Contactez le support.");
+        }
+
+        console.log("[RevenueCat Debug] ====== COIN PURCHASE COMPLETE ======");
+        return { success: true };
+      } else if (result.error && result.error !== "Achat annulé") {
+        console.error("[RevenueCat Debug] ❌ Purchase failed:", result.error);
+        toast.error(result.error);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error("[RevenueCat Debug] ❌ Coin purchase exception:", error);
+      toast.error("Erreur lors de l'achat");
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [addCoins, refetchCoins]);
+
   // Restore purchases
   const restore = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!isRevenueCatAvailable()) {
@@ -278,6 +338,7 @@ export const useRevenueCat = (): UseRevenueCatReturn => {
     isPremium: tier === "premium" || tier === "vip",
     isVip: tier === "vip",
     subscribe,
+    purchaseCoins,
     restore,
     refresh,
   };
