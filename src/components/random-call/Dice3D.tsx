@@ -1,36 +1,19 @@
-import { useRef, useMemo, Suspense, useState, useEffect, useCallback } from "react";
+import { useRef, Suspense, useState, useEffect, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { RoundedBox, Float, Sparkles, Preload } from "@react-three/drei";
+import { Preload } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface DiceDotProps {
-  position: [number, number, number];
-  isRed?: boolean;
-}
-
-const DiceDot = ({ position, isRed = false }: DiceDotProps) => (
-  <mesh position={position}>
-    <sphereGeometry args={[0.06, 32, 32]} />
-    <meshStandardMaterial 
-      color={isRed ? "#d4af37" : "#d4af37"} 
-      roughness={0.2}
-      metalness={0.8}
-      emissive="#d4af37"
-      emissiveIntensity={0.2}
-    />
-  </mesh>
-);
 
 interface AnimatedDiceProps {
   isAnimating: boolean;
 }
 
+// Simple dice with rounded edges and gold pips
 const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
   const meshRef = useRef<THREE.Group>(null);
   const spinSpeed = useRef({ x: 0, y: 0, z: 0 });
 
-  useMemo(() => {
+  useEffect(() => {
     spinSpeed.current = {
       x: 6 + Math.random() * 4,
       y: 8 + Math.random() * 4,
@@ -46,76 +29,141 @@ const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
       meshRef.current.rotation.y += spinSpeed.current.y * delta;
       meshRef.current.rotation.z += spinSpeed.current.z * delta;
       meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 8) * 0.1;
-      meshRef.current.position.x = Math.cos(state.clock.elapsedTime * 6) * 0.05;
     } else {
-      meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.15;
-      meshRef.current.rotation.y += 0.008;
-      meshRef.current.rotation.z = Math.cos(state.clock.elapsedTime * 0.7) * 0.1;
-      meshRef.current.position.y = 0;
-      meshRef.current.position.x = 0;
+      meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+      meshRef.current.rotation.y += 0.005;
+      meshRef.current.rotation.z = Math.cos(state.clock.elapsedTime * 0.7) * 0.08;
+      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 1.5) * 0.05;
     }
   });
 
+  // Pip positions for each face (standard dice configuration)
+  const pipRadius = 0.08;
+  const pipOffset = 0.28;
+  const faceOffset = 0.51;
+
   return (
-    <group ref={meshRef} scale={4.5}>
-      <RoundedBox args={[1, 1, 1]} radius={0.15} smoothness={8}>
-        <meshPhysicalMaterial 
-          color="#ffffff" 
-          roughness={0.05}
-          metalness={0.1}
-          clearcoat={1}
-          clearcoatRoughness={0.1}
-          reflectivity={0.9}
-        />
-      </RoundedBox>
-      
-      <RoundedBox args={[1.02, 1.02, 1.02]} radius={0.16} smoothness={8}>
+    <group ref={meshRef} scale={1.8}>
+      {/* Main dice cube - white with slight rounding via geometry */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial 
-          color="#d4af37" 
-          roughness={0.3}
-          metalness={0.8}
-          transparent
-          opacity={0.15}
+          color="#ffffff" 
+          roughness={0.15}
+          metalness={0.05}
         />
-      </RoundedBox>
+      </mesh>
 
-      <group position={[0, 0, 0.51]}>
-        <DiceDot position={[0, 0, 0]} isRed={true} />
+      {/* Gold edge highlight */}
+      <lineSegments>
+        <edgesGeometry args={[new THREE.BoxGeometry(1.01, 1.01, 1.01)]} />
+        <lineBasicMaterial color="#d4af37" linewidth={2} />
+      </lineSegments>
+
+      {/* Face 1 - Front (1 pip center) */}
+      <mesh position={[0, 0, faceOffset]}>
+        <circleGeometry args={[pipRadius, 32]} />
+        <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+      </mesh>
+
+      {/* Face 6 - Back (6 pips) */}
+      <group position={[0, 0, -faceOffset]} rotation={[0, Math.PI, 0]}>
+        <mesh position={[-pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[-pipOffset, 0, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, 0, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[-pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
       </group>
 
-      <group position={[0, 0, -0.51]} rotation={[0, Math.PI, 0]}>
-        <DiceDot position={[-0.22, 0.22, 0]} />
-        <DiceDot position={[0.22, 0.22, 0]} />
-        <DiceDot position={[-0.22, 0, 0]} />
-        <DiceDot position={[0.22, 0, 0]} />
-        <DiceDot position={[-0.22, -0.22, 0]} />
-        <DiceDot position={[0.22, -0.22, 0]} />
+      {/* Face 2 - Right (2 pips diagonal) */}
+      <group position={[faceOffset, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[-pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
       </group>
 
-      <group position={[0.51, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <DiceDot position={[-0.22, 0.22, 0]} />
-        <DiceDot position={[0.22, -0.22, 0]} />
+      {/* Face 5 - Left (5 pips) */}
+      <group position={[-faceOffset, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh position={[-pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[-pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
       </group>
 
-      <group position={[-0.51, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <DiceDot position={[-0.22, 0.22, 0]} />
-        <DiceDot position={[0.22, 0.22, 0]} />
-        <DiceDot position={[0, 0, 0]} />
-        <DiceDot position={[-0.22, -0.22, 0]} />
-        <DiceDot position={[0.22, -0.22, 0]} />
+      {/* Face 3 - Top (3 pips diagonal) */}
+      <group position={[0, faceOffset, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[-pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
       </group>
 
-      <group position={[0, 0.51, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <DiceDot position={[-0.22, 0.22, 0]} />
-        <DiceDot position={[0, 0, 0]} />
-        <DiceDot position={[0.22, -0.22, 0]} />
-      </group>
-
-      <group position={[0, -0.51, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <DiceDot position={[-0.22, 0.22, 0]} />
-        <DiceDot position={[0.22, 0.22, 0]} />
-        <DiceDot position={[-0.22, -0.22, 0]} />
-        <DiceDot position={[0.22, -0.22, 0]} />
+      {/* Face 4 - Bottom (4 pips corners) */}
+      <group position={[0, -faceOffset, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[-pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[-pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
+        <mesh position={[pipOffset, -pipOffset, 0]}>
+          <circleGeometry args={[pipRadius, 32]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.2} />
+        </mesh>
       </group>
     </group>
   );
@@ -135,17 +183,17 @@ const RenderReadyProbe = ({ onReady }: { onReady: () => void }) => {
   return null;
 };
 
-// Loading placeholder (shimmer effect instead of 2D dice)
+// Loading placeholder
 const DiceLoadingPlaceholder = () => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
     transition={{ duration: 0.15 }}
-    className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center"
+    className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center"
   >
     <motion.div
-      className="w-16 h-16 rounded-xl bg-primary/10"
+      className="w-12 h-12 rounded-lg bg-primary/10"
       animate={{ 
         opacity: [0.3, 0.6, 0.3],
         scale: [0.95, 1, 0.95]
@@ -159,17 +207,17 @@ const DiceLoadingPlaceholder = () => (
   </motion.div>
 );
 
-// Fallback 2D dice (only shown if WebGL fails permanently)
+// Fallback 2D dice
 const DiceFallback2D = ({ isAnimating }: { isAnimating: boolean }) => (
   <motion.div
-    className="w-20 h-20 rounded-2xl bg-card shadow-lg border border-primary/40 flex items-center justify-center relative"
+    className="w-16 h-16 rounded-xl bg-card shadow-lg border border-primary/40 flex items-center justify-center relative"
     animate={isAnimating ? {
       rotateX: [0, 360, 720],
       rotateY: [0, 360, 720],
       scale: [1, 1.08, 1],
     } : {
       rotateY: [0, 360],
-      y: [0, -5, 0],
+      y: [0, -3, 0],
     }}
     transition={isAnimating ? {
       duration: 0.8,
@@ -180,9 +228,9 @@ const DiceFallback2D = ({ isAnimating }: { isAnimating: boolean }) => (
     }}
     style={{ transformStyle: "preserve-3d" }}
   >
-    <div className="w-3 h-3 rounded-full bg-primary shadow-sm" />
-    <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-primary/60" />
-    <div className="absolute bottom-3 right-3 w-2 h-2 rounded-full bg-primary/60" />
+    <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-sm" />
+    <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-primary/60" />
+    <div className="absolute bottom-2 right-2 w-1.5 h-1.5 rounded-full bg-primary/60" />
   </motion.div>
 );
 
@@ -211,7 +259,6 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
 
   const handle3DReady = useCallback(() => {
     setIs3DReady(true);
-    // Clear any pending timeouts
     if (placeholderTimeoutRef.current) {
       clearTimeout(placeholderTimeoutRef.current);
       placeholderTimeoutRef.current = null;
@@ -227,14 +274,12 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
     setWebGLSupported(isSupported);
     
     if (isSupported) {
-      // Show placeholder after 200ms if 3D not ready yet
       placeholderTimeoutRef.current = setTimeout(() => {
         if (!is3DReady) {
           setShowPlaceholder(true);
         }
       }, 200);
       
-      // Failsafe: if 3D not ready after 3s, switch to permanent 2D
       failsafeTimeoutRef.current = setTimeout(() => {
         if (!is3DReady) {
           console.warn("Dice3D: 3D rendering failed after timeout, using 2D fallback");
@@ -249,18 +294,16 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
     };
   }, []);
 
-  // If WebGL is not supported or there's an error, use 2D fallback permanently
   if (!webGLSupported || hasError) {
     return (
-      <div className="w-28 h-28 flex items-center justify-center">
+      <div className="w-20 h-20 flex items-center justify-center">
         <DiceFallback2D isAnimating={isAnimating} />
       </div>
     );
   }
 
   return (
-    <div className="relative w-28 h-28">
-      {/* Loading placeholder - only shows briefly while 3D loads */}
+    <div className="relative w-20 h-20">
       <AnimatePresence>
         {showPlaceholder && !is3DReady && (
           <div className="absolute inset-0 flex items-center justify-center z-0">
@@ -269,7 +312,6 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
         )}
       </AnimatePresence>
 
-      {/* Canvas 3D with fade-in transition */}
       <motion.div 
         className="absolute inset-0 z-10"
         initial={{ opacity: 0 }}
@@ -279,7 +321,7 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
         <Suspense fallback={null}>
           <Canvas
             className="w-full h-full"
-            camera={{ position: [0, 0, 2], fov: 50 }}
+            camera={{ position: [0, 0, 4], fov: 45 }}
             dpr={[1, 1.5]}
             gl={{
               antialias: true,
@@ -292,25 +334,13 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
           >
             <RenderReadyProbe onReady={handle3DReady} />
             
-            <ambientLight intensity={0.9} />
-            <directionalLight position={[5, 5, 5]} intensity={1.7} />
-            <directionalLight position={[-3, -3, -3]} intensity={0.35} />
-            <pointLight position={[0, 2, 2]} intensity={0.9} color="#d4af37" />
-            <pointLight position={[-2, -1, 1]} intensity={0.45} color="#ffffff" />
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 5, 5]} intensity={1.2} />
+            <directionalLight position={[-3, -3, -3]} intensity={0.3} />
+            <pointLight position={[0, 2, 2]} intensity={0.6} color="#d4af37" />
 
-            <Float
-              speed={isAnimating ? 0 : 1.5}
-              rotationIntensity={isAnimating ? 0 : 0.25}
-              floatIntensity={isAnimating ? 0 : 0.35}
-            >
-              <AnimatedDice isAnimating={isAnimating} />
-            </Float>
-
-            {isAnimating && (
-              <Sparkles count={30} scale={2} size={2} speed={3} color="#d4af37" />
-            )}
+            <AnimatedDice isAnimating={isAnimating} />
             
-            {/* Preload all drei assets for faster initial render */}
             <Preload all />
           </Canvas>
         </Suspense>
