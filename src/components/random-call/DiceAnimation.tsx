@@ -178,7 +178,7 @@ const DiceAnimation = ({ isExiting = false }: DiceAnimationProps) => {
         stiffness: 100,
         delay: 0
       }}
-      className="relative w-80 h-96 z-10 flex items-center justify-center"
+      className="relative w-64 h-72 z-10 flex items-center justify-center"
       style={{ perspective: "1000px" }}
     >
       {/* Golden Dice - appearing with the hand */}
