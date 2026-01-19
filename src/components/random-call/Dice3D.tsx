@@ -43,7 +43,7 @@ const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
   const faceOffset = 0.51;
 
   return (
-    <group ref={meshRef} scale={1.8}>
+    <group ref={meshRef} scale={3}>
       {/* Main dice cube - white with slight rounding via geometry */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
@@ -296,14 +296,14 @@ const Dice3D = ({ isAnimating = false }: Dice3DProps) => {
 
   if (!webGLSupported || hasError) {
     return (
-      <div className="w-20 h-20 flex items-center justify-center">
+      <div className="w-32 h-32 flex items-center justify-center">
         <DiceFallback2D isAnimating={isAnimating} />
       </div>
     );
   }
 
   return (
-    <div className="relative w-20 h-20">
+    <div className="relative w-32 h-32">
       <AnimatePresence>
         {showPlaceholder && !is3DReady && (
           <div className="absolute inset-0 flex items-center justify-center z-0">
