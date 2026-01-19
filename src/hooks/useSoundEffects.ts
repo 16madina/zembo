@@ -21,9 +21,9 @@ export const useSoundEffects = () => {
 
   const playDiceSound = useCallback(() => {
     try {
-      // Trigger light haptic feedback on mobile
+      // Trigger medium haptic feedback on mobile for better sensation
       if (isNative) {
-        haptics.impact('light');
+        haptics.impact('medium');
       }
       
       // Create new audio instance for each play to allow overlapping
