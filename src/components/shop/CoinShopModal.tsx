@@ -308,21 +308,26 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           console.log("[CoinShop Debug] Purchase cancelled by user");
         }
       } else {
-        // Web: Simulate payment (would integrate with Stripe in production)
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Web/Android: Use Stripe for payment
+        console.log("[CoinShop Debug] Using Stripe for payment...");
         
-        const success = await addCoins(totalCoins);
-        
-        if (success) {
-          setShowSuccess({ coins: pack.coins, bonus: pack.bonus });
-          toast.success(`🎉 ${totalCoins} coins ajoutés à votre compte !`);
-          
-          setTimeout(() => {
-            setShowSuccess(null);
-          }, 3000);
-        } else {
-          toast.error("Erreur lors de l'achat. Veuillez réessayer.");
+        const { data, error } = await supabase.functions.invoke("create-coin-checkout", {
+          body: { 
+            packId: pack.id,
+            successUrl: window.location.origin + "/?coin_purchase=success",
+            cancelUrl: window.location.origin + "/?coin_purchase=cancelled",
+          },
+        });
+
+        if (error || !data?.url) {
+          console.error("[CoinShop Debug] Stripe checkout error:", error);
+          throw new Error(error?.message || "Failed to create checkout session");
         }
+
+        console.log("[CoinShop Debug] Redirecting to Stripe checkout:", data.url);
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+        return; // Don't close modal, we're redirecting
       }
       console.log("[CoinShop Debug] ====== PURCHASE END ======");
     } catch (error: any) {

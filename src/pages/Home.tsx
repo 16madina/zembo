@@ -24,6 +24,7 @@ import { useRoseReceived } from "@/hooks/useRoseReceived";
 import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useDailyLikes } from "@/hooks/useDailyLikes";
+import { useCoinPurchaseSuccess } from "@/hooks/useCoinPurchaseSuccess";
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
@@ -60,6 +61,9 @@ const Home = () => {
     isModalOpen: isRoseReceivedModalOpen, 
     closeModal: closeRoseReceivedModal 
   } = useRoseReceived();
+  
+  // Handle coin purchase success from Stripe redirect
+  useCoinPurchaseSuccess();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
