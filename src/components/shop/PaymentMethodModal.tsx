@@ -21,7 +21,7 @@ const paymentMethods: PaymentMethodOption[] = [
   {
     id: "card",
     name: "Carte bancaire",
-    description: "Visa, Mastercard, etc.",
+    description: "Visa, Mastercard, Wave VISA",
     icon: <CreditCard className="w-6 h-6" />,
     color: "from-blue-500 to-indigo-600",
     available: true,
