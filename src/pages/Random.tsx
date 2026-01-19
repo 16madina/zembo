@@ -189,20 +189,25 @@ const Random = () => {
               ))}
             </div>
 
-            <motion.div className="text-center mb-4 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-3xl font-bold text-foreground">
-                Bienvenue sur <span className="text-primary text-5xl font-black">Z</span> Roulette
+            {/* Titre + sous-titre compacts */}
+            <motion.div className="text-center mb-2 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-bold text-foreground">
+                Bienvenue sur <span className="text-primary text-4xl font-black">Z</span> Roulette
               </h1>
+              <motion.div 
+                className="flex items-center justify-center gap-2 mt-2"
+                initial={{ opacity: 0, scale: 0.9 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                transition={{ delay: 0.2 }}
+              >
+                <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-2 h-2 rounded-full bg-primary" />
+                <span className="text-sm text-primary font-medium">Es-tu prêt(e) à jouer ?</span>
+              </motion.div>
             </motion.div>
 
             <DiceAnimation isExiting={isExiting} />
-
-            <motion.div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4 z-10" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
-              <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-sm text-primary font-medium">Es-tu prêt(e) à jouer ?</span>
-            </motion.div>
             
-            <motion.p className="text-muted-foreground mb-4 max-w-xs leading-relaxed text-center z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <motion.p className="text-muted-foreground mb-3 max-w-xs leading-relaxed text-center z-10 text-sm" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <span className="text-foreground font-medium">Aucun profil, juste une voix.</span> Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
