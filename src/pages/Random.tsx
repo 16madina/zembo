@@ -208,11 +208,11 @@ const Random = () => {
               </motion.div>
             </motion.div>
 
-            <div ref={diceRef} className="-my-4">
+            <div ref={diceRef} className="-my-6">
               <DiceAnimation isExiting={isExiting} />
             </div>
             
-            <motion.p className="text-muted-foreground mb-1 max-w-xs leading-snug text-center z-10 text-xs -mt-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <motion.p className="text-muted-foreground mb-1 max-w-xs leading-snug text-center z-10 text-xs -mt-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <span className="text-foreground font-medium">Aucun profil, juste une voix.</span> Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
