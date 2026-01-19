@@ -57,7 +57,7 @@ const AnimatedDice = ({ isAnimating }: AnimatedDiceProps) => {
   });
 
   return (
-    <group ref={meshRef} scale={1.1}>
+    <group ref={meshRef} scale={1.6}>
       <RoundedBox args={[1, 1, 1]} radius={0.15} smoothness={8}>
         <meshPhysicalMaterial 
           color="#ffffff" 
