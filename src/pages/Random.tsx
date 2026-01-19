@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
@@ -17,6 +17,7 @@ const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [hasPlayedZemboSound, setHasPlayedZemboSound] = useState(false);
+  const diceRef = useRef<HTMLDivElement>(null);
   
   const {
     status,
@@ -41,6 +42,8 @@ const Random = () => {
   const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
 
   const handleCommencer = () => {
+    // Scroll to dice animation
+    diceRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     playDiceSound();
     setIsExiting(true);
     setTimeout(() => {
@@ -205,9 +208,11 @@ const Random = () => {
               </motion.div>
             </motion.div>
 
-            <DiceAnimation isExiting={isExiting} />
+            <div ref={diceRef}>
+              <DiceAnimation isExiting={isExiting} />
+            </div>
             
-            <motion.p className="text-muted-foreground mb-3 max-w-xs leading-relaxed text-center z-10 text-sm" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <motion.p className="text-muted-foreground mb-2 max-w-xs leading-relaxed text-center z-10 text-sm -mt-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <span className="text-foreground font-medium">Aucun profil, juste une voix.</span> Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
