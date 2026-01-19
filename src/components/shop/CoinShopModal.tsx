@@ -25,6 +25,7 @@ import {
   isRevenueCatAvailable,
   COIN_PACK_TO_PRODUCT 
 } from "@/lib/revenuecat";
+import PaymentMethodModal, { PaymentMethod } from "./PaymentMethodModal";
 
 interface CoinPack {
   id: string;
@@ -204,6 +205,10 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState<{ coins: number; bonus: number } | null>(null);
   const [revenueCatPrices, setRevenueCatPrices] = useState<Record<string, { priceString: string; price: number }> | null>(null);
+  
+  // Payment method selection state
+  const [selectedPack, setSelectedPack] = useState<CoinPack | null>(null);
+  const [isPaymentMethodOpen, setIsPaymentMethodOpen] = useState(false);
 
   const currentTier = subscription?.tier || "free";
   const useRevenueCatForCoins = isNative && isRevenueCatAvailable();
@@ -256,15 +261,36 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
     return formatPrice(pack.priceUSD, userCountry);
   };
 
-  const handlePurchase = async (pack: CoinPack) => {
+  // Called when user clicks on a pack - for iOS use RevenueCat directly, for web show payment method selector
+  const handlePackClick = (pack: CoinPack) => {
     if (!user) {
       toast.error("Vous devez être connecté pour acheter");
       return;
     }
 
+    if (useRevenueCatForCoins) {
+      // iOS: Directly use RevenueCat
+      handlePurchaseWithMethod(pack, "card");
+    } else {
+      // Web/Android: Show payment method selector
+      setSelectedPack(pack);
+      setIsPaymentMethodOpen(true);
+    }
+  };
+
+  // Handle payment method selection
+  const handlePaymentMethodSelect = (method: PaymentMethod) => {
+    if (!selectedPack) return;
+    setIsPaymentMethodOpen(false);
+    handlePurchaseWithMethod(selectedPack, method);
+  };
+
+  // Process purchase with selected payment method
+  const handlePurchaseWithMethod = async (pack: CoinPack, method: PaymentMethod) => {
     setPurchasing(pack.id);
     console.log("[CoinShop Debug] ====== PURCHASE START ======");
     console.log("[CoinShop Debug] Pack:", pack.id, "Coins:", pack.coins, "Bonus:", pack.bonus);
+    console.log("[CoinShop Debug] Payment method:", method);
     console.log("[CoinShop Debug] useRevenueCatForCoins:", useRevenueCatForCoins);
     
     try {
@@ -308,26 +334,36 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           console.log("[CoinShop Debug] Purchase cancelled by user");
         }
       } else {
-        // Web/Android: Use Stripe for payment
-        console.log("[CoinShop Debug] Using Stripe for payment...");
+        // Web/Android: Use selected payment method
+        console.log("[CoinShop Debug] Using payment method:", method);
         
-        const { data, error } = await supabase.functions.invoke("create-coin-checkout", {
-          body: { 
-            packId: pack.id,
-            successUrl: window.location.origin + "/?coin_purchase=success",
-            cancelUrl: window.location.origin + "/?coin_purchase=cancelled",
-          },
-        });
+        if (method === "card") {
+          // Stripe checkout
+          const { data, error } = await supabase.functions.invoke("create-coin-checkout", {
+            body: { 
+              packId: pack.id,
+              successUrl: window.location.origin + "/?coin_purchase=success",
+              cancelUrl: window.location.origin + "/?coin_purchase=cancelled",
+            },
+          });
 
-        if (error || !data?.url) {
-          console.error("[CoinShop Debug] Stripe checkout error:", error);
-          throw new Error(error?.message || "Failed to create checkout session");
+          if (error || !data?.url) {
+            console.error("[CoinShop Debug] Stripe checkout error:", error);
+            throw new Error(error?.message || "Failed to create checkout session");
+          }
+
+          console.log("[CoinShop Debug] Redirecting to Stripe checkout:", data.url);
+          window.location.href = data.url;
+          return;
+        } else if (method === "wave") {
+          // TODO: Implement Wave payment
+          toast.info("Paiement Wave bientôt disponible");
+          return;
+        } else if (method === "orange") {
+          // TODO: Implement Orange Money payment
+          toast.info("Paiement Orange Money bientôt disponible");
+          return;
         }
-
-        console.log("[CoinShop Debug] Redirecting to Stripe checkout:", data.url);
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
-        return; // Don't close modal, we're redirecting
       }
       console.log("[CoinShop Debug] ====== PURCHASE END ======");
     } catch (error: any) {
@@ -337,6 +373,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
       }
     } finally {
       setPurchasing(null);
+      setSelectedPack(null);
     }
   };
 
@@ -489,7 +526,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
               <Button
                 variant="outline"
                 disabled={purchasing !== null}
-                onClick={() => handlePurchase(pack)}
+                onClick={() => handlePackClick(pack)}
                 className={`
                   relative w-full h-auto flex flex-col items-center py-4 px-3 
                   bg-gradient-to-br ${pack.gradient} 
@@ -735,6 +772,18 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           <X className="w-4 h-4" />
         </Button>
       </DialogContent>
+
+      {/* Payment Method Selection Modal */}
+      <PaymentMethodModal
+        isOpen={isPaymentMethodOpen}
+        onClose={() => {
+          setIsPaymentMethodOpen(false);
+          setSelectedPack(null);
+        }}
+        onSelect={handlePaymentMethodSelect}
+        packName={selectedPack ? `${selectedPack.coins} coins` : ""}
+        price={selectedPack ? getPackPrice(selectedPack) : ""}
+      />
     </Dialog>
   );
 };
