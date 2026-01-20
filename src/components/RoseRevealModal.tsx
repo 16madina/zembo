@@ -6,6 +6,7 @@ import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeRoseMessage } from "@/hooks/useRoseReceived";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 interface RoseProfile {
   id: string;
@@ -39,6 +40,8 @@ const RoseRevealModal = ({
   const [message, setMessage] = useState("");
   const [showPetals, setShowPetals] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const { playRoseSound, playRevealSound, playMatchSound } = useSoundEffects();
 
   // Fetch the rose message
   useEffect(() => {
@@ -69,26 +72,34 @@ const RoseRevealModal = ({
   const handleRevealMessage = useCallback(() => {
     setShowPetals(true);
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+    // Play romantic harp/chimes sound for message reveal
+    playRoseSound();
     
     setTimeout(() => {
       setStep("message");
     }, 800);
-  }, []);
+  }, [playRoseSound]);
 
   const handleRevealProfile = useCallback(() => {
     Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
+    // Play magical reveal sound for profile unveiling
+    playRevealSound();
     setStep("profile");
-  }, []);
+  }, [playRevealSound]);
 
   const handleShowDecision = useCallback(() => {
+    // Play subtle chime for decision step
+    playRoseSound();
     setStep("decision");
-  }, []);
+  }, [playRoseSound]);
 
   const handleMatch = useCallback(async () => {
     setIsLoading(true);
+    // Play celebratory match sound
+    playMatchSound();
     await onMatch();
     setIsLoading(false);
-  }, [onMatch]);
+  }, [onMatch, playMatchSound]);
 
   const handlePetalsComplete = useCallback(() => {
     setShowPetals(false);
