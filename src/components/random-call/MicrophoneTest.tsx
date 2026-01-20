@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Volume2, Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 
 interface MicrophoneTestProps {
   onTestComplete?: (success: boolean) => void;
@@ -25,7 +25,11 @@ const MicrophoneTest = ({ onTestComplete }: MicrophoneTestProps) => {
       animationFrameRef.current = null;
     }
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      try {
+        audioContextRef.current.close();
+      } catch (e) {
+        console.warn("[mic-test] Error closing audio context:", e);
+      }
       audioContextRef.current = null;
     }
     if (streamRef.current) {
@@ -49,19 +53,41 @@ const MicrophoneTest = ({ onTestComplete }: MicrophoneTestProps) => {
     setAudioLevel(0);
 
     try {
-      // Request microphone access
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("getUserMedia not supported");
+      }
+
+      console.log("[mic-test] Requesting microphone access...");
+      
+      // Request microphone access with Android-compatible constraints
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          // Specify default device for Android compatibility
+          deviceId: "default",
         } 
       });
+      
+      console.log("[mic-test] Got stream:", stream.getAudioTracks().length, "audio tracks");
       streamRef.current = stream;
 
-      // Set up audio analysis
-      const audioContext = new AudioContext();
+      // Set up audio analysis with fallback for older browsers
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error("AudioContext not supported");
+      }
+      
+      const audioContext = new AudioContextClass();
       audioContextRef.current = audioContext;
+      
+      // Resume audio context if suspended (required for Android WebView)
+      if (audioContext.state === "suspended") {
+        console.log("[mic-test] Resuming suspended AudioContext...");
+        await audioContext.resume();
+      }
       
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 256;
@@ -92,7 +118,9 @@ const MicrophoneTest = ({ onTestComplete }: MicrophoneTestProps) => {
         if (normalizedLevel > 30 && !hasSpoken) {
           hasSpoken = true;
           // Give feedback vibration
-          Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+          if (isNative) {
+            haptics.impact(ImpactStyle.Light).catch(() => {});
+          }
         }
 
         animationFrameRef.current = requestAnimationFrame(updateLevel);
@@ -106,15 +134,30 @@ const MicrophoneTest = ({ onTestComplete }: MicrophoneTestProps) => {
         cleanup();
         setStatus(success ? "success" : "error");
         setErrorMessage(success ? null : "Aucun son détecté. Vérifiez votre microphone.");
-        Haptics.impact({ style: success ? ImpactStyle.Medium : ImpactStyle.Heavy }).catch(() => {});
+        if (isNative) {
+          haptics.impact(success ? ImpactStyle.Medium : ImpactStyle.Heavy).catch(() => {});
+        }
         onTestComplete?.(success);
       }, 4000);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error("[mic-test]", "Failed to access microphone:", err);
       cleanup();
       setStatus("error");
-      setErrorMessage("Impossible d'accéder au microphone. Vérifiez les permissions.");
+      
+      // Provide more specific error messages
+      let message = "Impossible d'accéder au microphone.";
+      if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
+        message = "Permission micro refusée. Vérifiez les paramètres de l'app.";
+      } else if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") {
+        message = "Aucun microphone trouvé sur cet appareil.";
+      } else if (err?.name === "NotReadableError" || err?.name === "TrackStartError") {
+        message = "Le microphone est utilisé par une autre app.";
+      } else if (err?.message?.includes("getUserMedia")) {
+        message = "Microphone non disponible sur cet appareil.";
+      }
+      
+      setErrorMessage(message);
       onTestComplete?.(false);
     }
   };

@@ -373,16 +373,30 @@ export const useVoiceCall = () => {
     if (!user?.id || !callState.remoteUserId || !callState.callId) return;
 
     try {
+      // Use Android-compatible audio constraints
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+      
+      console.log("[VoiceCall] Requesting media with constraints:", { audio: audioConstraints, video: callState.callType === "video" });
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true, 
+        audio: audioConstraints, 
         video: callState.callType === "video" 
       });
+      
+      console.log("[VoiceCall] Got local stream:", stream.getAudioTracks().length, "audio tracks,", stream.getVideoTracks().length, "video tracks");
       localStreamRef.current = stream;
 
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       peerConnectionRef.current = pc;
 
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      stream.getTracks().forEach((track) => {
+        console.log("[VoiceCall] Adding track:", track.kind, track.enabled);
+        pc.addTrack(track, stream);
+      });
 
       pc.ontrack = (event) => {
         console.log("[VoiceCall] ontrack received:", event.streams[0]);
@@ -417,8 +431,15 @@ export const useVoiceCall = () => {
 
       setCallState((prev) => ({ ...prev, isInCall: true, isRinging: false }));
       startDurationTimer();
-    } catch (error) {
-      console.error("Error setting up WebRTC:", error);
+    } catch (error: any) {
+      console.error("[VoiceCall] Error setting up WebRTC:", error?.name, error?.message);
+      toast({
+        title: "Erreur d'accès au micro",
+        description: error?.name === "NotAllowedError" 
+          ? "Permission micro refusée. Vérifiez les paramètres." 
+          : "Impossible d'accéder au microphone.",
+        variant: "destructive",
+      });
       endCall();
     }
   }, [user?.id, callState.remoteUserId, callState.callId, callState.callType, setupSignaling]);
@@ -427,16 +448,30 @@ export const useVoiceCall = () => {
     if (!user?.id || !callState.callId) return;
 
     try {
+      // Use Android-compatible audio constraints
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+      
+      console.log("[VoiceCall] Answerer requesting media with constraints:", { audio: audioConstraints, video: callState.callType === "video" });
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true, 
+        audio: audioConstraints, 
         video: callState.callType === "video" 
       });
+      
+      console.log("[VoiceCall] Answerer got local stream:", stream.getAudioTracks().length, "audio tracks");
       localStreamRef.current = stream;
 
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       peerConnectionRef.current = pc;
 
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      stream.getTracks().forEach((track) => {
+        console.log("[VoiceCall] Answerer adding track:", track.kind, track.enabled);
+        pc.addTrack(track, stream);
+      });
 
       pc.ontrack = (event) => {
         console.log("[VoiceCall] ontrack received (answerer):", event.streams[0]);
@@ -465,8 +500,15 @@ export const useVoiceCall = () => {
       setupSignaling(callState.callId);
       setCallState((prev) => ({ ...prev, isInCall: true, isRinging: false }));
       startDurationTimer();
-    } catch (error) {
-      console.error("Error setting up WebRTC:", error);
+    } catch (error: any) {
+      console.error("[VoiceCall] Answerer error setting up WebRTC:", error?.name, error?.message);
+      toast({
+        title: "Erreur d'accès au micro",
+        description: error?.name === "NotAllowedError" 
+          ? "Permission micro refusée. Vérifiez les paramètres." 
+          : "Impossible d'accéder au microphone.",
+        variant: "destructive",
+      });
       endCall();
     }
   }, [user?.id, callState.callId, callState.callType, callState.remoteUserId, setupSignaling]);
