@@ -7,7 +7,7 @@ import ChatView from "@/components/ChatView";
 import ProfileModal from "@/components/ProfileModal";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import RoseMessageModal from "@/components/RoseMessageModal";
-import RoseReceivedModal from "@/components/RoseReceivedModal";
+// Note: RoseReceivedModal is now handled globally in GlobalRoseHandler
 import CallHistorySection from "@/components/CallHistorySection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,8 +15,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useGifts } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
-import { useRoseReceived } from "@/hooks/useRoseReceived";
 import { toast } from "@/hooks/use-toast";
+// Note: RoseReceivedModal is now handled globally in GlobalRoseHandler
 interface Conversation {
   id: string;
   user: {
@@ -100,11 +100,6 @@ const Messages = () => {
   const { playNotificationSound, playMatchSound } = useSoundEffects();
   const { gifts, sendGift } = useGifts();
   const { balance } = useCoins();
-  const { 
-    roseReceived, 
-    isModalOpen: isRoseReceivedModalOpen, 
-    closeModal: closeRoseReceivedModal 
-  } = useRoseReceived();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMatches, setNewMatches] = useState<NewMatch[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -429,6 +424,7 @@ const Messages = () => {
 
   // Check for notification deep link on mount
   useEffect(() => {
+    // Handle chat deep link
     const openChatData = sessionStorage.getItem("openChatWith");
     if (openChatData) {
       try {
@@ -453,6 +449,29 @@ const Messages = () => {
         setSelectedConversation(conversation);
       } catch (e) {
         console.error("Error parsing openChatWith data:", e);
+      }
+    }
+
+    // Handle rose profile deep link from GlobalRoseHandler
+    const openRoseProfileData = sessionStorage.getItem("openRoseProfile");
+    if (openRoseProfileData) {
+      try {
+        const roseProfile = JSON.parse(openRoseProfileData);
+        sessionStorage.removeItem("openRoseProfile");
+        
+        // Open the profile modal directly with the sender's info
+        setSelectedProfile({
+          id: roseProfile.id,
+          name: roseProfile.name,
+          age: 25, // Default, will be fetched
+          location: "",
+          photos: [roseProfile.photo],
+          bio: "",
+          interests: [],
+          isVerified: false,
+        });
+      } catch (e) {
+        console.error("Error parsing openRoseProfile data:", e);
       }
     }
   }, []);
@@ -874,33 +893,7 @@ const Messages = () => {
         onComplete={() => setShowRosePetals(false)} 
       />
 
-      <RoseReceivedModal
-        isOpen={isRoseReceivedModalOpen}
-        onClose={closeRoseReceivedModal}
-        onViewProfile={() => {
-          closeRoseReceivedModal();
-          // Navigate to "Who liked me" section
-          if (roseReceived) {
-            const likedByUser = likedByUsers.find(u => u.id === roseReceived.id);
-            if (likedByUser) {
-              setSelectedProfile({
-                id: likedByUser.id,
-                name: likedByUser.name,
-                age: likedByUser.age || 25,
-                location: likedByUser.location || "",
-                photos: [likedByUser.photo],
-                bio: likedByUser.bio || "",
-                interests: likedByUser.interests || [],
-                isVerified: likedByUser.isVerified || false,
-              });
-            }
-          }
-        }}
-        senderName={roseReceived?.name || ""}
-        senderPhoto={roseReceived?.photo || ""}
-        message={roseReceived?.message || ""}
-        senderId={roseReceived?.id}
-      />
+      {/* RoseReceivedModal is now handled globally in GlobalRoseHandler */}
 
       <BottomNavigation />
     </div>

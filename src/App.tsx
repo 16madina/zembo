@@ -11,6 +11,7 @@ import SplashScreen from "@/components/SplashScreen";
 import HelpButton from "@/components/HelpButton";
 import PushNotificationsBootstrap from "@/components/PushNotificationsBootstrap";
 import CallOverlay from "@/components/CallOverlay";
+import GlobalRoseHandler from "@/components/GlobalRoseHandler";
 import { VoiceCallProvider } from "@/contexts/VoiceCallContext";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
@@ -122,6 +123,7 @@ const AppContent = () => {
           <PushNotificationsBootstrap />
           <VoiceCallProvider>
             <CallOverlay />
+            <GlobalRoseHandler />
             <AppRoutes />
           </VoiceCallProvider>
         </AuthProvider>
