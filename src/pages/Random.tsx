@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play } from "lucide-react";
+import { Play, Phone } from "lucide-react";
+import { toast } from "sonner";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useRandomCallLiveKit } from "@/hooks/useRandomCallLiveKit";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useDailyRandomCalls } from "@/hooks/useDailyRandomCalls";
 import PreferenceSelector from "@/components/random-call/PreferenceSelector";
 import SearchingScreen from "@/components/random-call/SearchingScreen";
 import InCallScreenLiveKit from "@/components/random-call/InCallScreenLiveKit";
@@ -40,8 +42,26 @@ const Random = () => {
   } = useRandomCallLiveKit();
   
   const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
+  const { canCall, remainingCalls, maxCalls, incrementCallCount, isLoading: isLoadingCalls } = useDailyRandomCalls();
 
-  const handleCommencer = () => {
+  const handleCommencer = async () => {
+    // Check if user can make a call
+    if (!canCall) {
+      toast.error(
+        maxCalls === 1 
+          ? "Tu as atteint ta limite d'appel quotidien. Passe à Gold pour 5 appels/jour !" 
+          : "Tu as atteint ta limite d'appels quotidiens. Passe à Platinum pour des appels illimités !"
+      );
+      return;
+    }
+
+    // Increment call count
+    const success = await incrementCallCount();
+    if (!success) {
+      toast.error("Limite d'appels atteinte pour aujourd'hui");
+      return;
+    }
+
     // Scroll to dice animation
     diceRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     playDiceSound();
@@ -226,18 +246,40 @@ const Random = () => {
               <MicrophoneTest />
             </motion.div>
 
+            {/* Random Calls Counter */}
+            {!isLoadingCalls && maxCalls !== Infinity && (
+              <motion.div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-3 z-10"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.55 }}
+              >
+                <Phone className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-medium text-primary">
+                  {remainingCalls}/{maxCalls}
+                </span>
+              </motion.div>
+            )}
+
             {/* Commencer Button - Always visible */}
             <motion.button 
-              onClick={handleCommencer} 
-              className="px-8 py-3 btn-gold rounded-2xl font-semibold flex items-center gap-2 z-10" 
+              onClick={handleCommencer}
+              disabled={!canCall}
+              className={`px-8 py-3 rounded-2xl font-semibold flex items-center gap-2 z-10 ${
+                canCall 
+                  ? "btn-gold" 
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              }`}
               initial={{ opacity: 0, y: 20 }} 
               animate={{ opacity: 1, y: 0 }} 
               transition={{ delay: 0.6 }} 
-              whileHover={{ scale: 1.03 }} 
-              whileTap={{ scale: 0.97 }}
+              whileHover={canCall ? { scale: 1.03 } : undefined} 
+              whileTap={canCall ? { scale: 0.97 } : undefined}
             >
-              <Play className="w-4 h-4 text-primary-foreground" />
-              <span className="text-primary-foreground text-sm">Commencer</span>
+              <Play className={`w-4 h-4 ${canCall ? "text-primary-foreground" : ""}`} />
+              <span className={`text-sm ${canCall ? "text-primary-foreground" : ""}`}>
+                {canCall ? "Commencer" : "Limite atteinte"}
+              </span>
             </motion.button>
           </>
         );

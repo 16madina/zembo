@@ -14,7 +14,10 @@ const SubscriptionBadge = ({
   showLabel = true,
   className = "" 
 }: SubscriptionBadgeProps) => {
+  // Only hide badge for free users
   if (!tier || tier === "free") return null;
+  
+  // Show badge for both Gold (premium) and Platinum (vip)
 
   const isVip = tier === "vip";
   const isPremium = tier === "premium";
