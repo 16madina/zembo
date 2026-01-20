@@ -467,9 +467,9 @@ const Home = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <div className="flex items-center gap-2">
-          <ZemboLogo />
-          <ShopButton variant="compact" className="ml-1" />
+        <div className="flex items-center gap-1.5">
+          <ZemboLogo size="sm" />
+          <ShopButton variant="compact" className="ml-0.5 scale-90" />
         </div>
         <div className="flex items-center gap-2">
           {/* Likes received button */}
