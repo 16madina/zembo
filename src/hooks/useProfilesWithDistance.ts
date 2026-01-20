@@ -223,8 +223,9 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
       );
       
       // Filter by max distance (only if we have user coordinates)
+      // IMPORTANT: Always include profiles without GPS coordinates (distanceKm = 9999)
       const filteredByDistance = userLat !== null && userLng !== null
-        ? transformedProfiles.filter(p => p.distanceKm <= maxDistance)
+        ? transformedProfiles.filter(p => p.distanceKm <= maxDistance || p.distanceKm === 9999)
         : transformedProfiles;
       
       // Sort by distance (closest first)
