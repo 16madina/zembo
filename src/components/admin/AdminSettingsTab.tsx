@@ -13,6 +13,10 @@ import {
   Mail,
   FileText,
   Shield,
+  Users,
+  Heart,
+  Shuffle,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 interface AppSetting {
@@ -127,21 +132,122 @@ const AdminSettingsTab = () => {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
-      <Tabs defaultValue="social" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+      <Tabs defaultValue="discovery" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsTrigger value="discovery" className="flex items-center gap-2">
+            <Shuffle className="w-4 h-4" />
+            <span className="hidden sm:inline">Découverte</span>
+          </TabsTrigger>
           <TabsTrigger value="social" className="flex items-center gap-2">
             <Link className="w-4 h-4" />
-            <span className="hidden sm:inline">Réseaux sociaux</span>
+            <span className="hidden sm:inline">Réseaux</span>
           </TabsTrigger>
           <TabsTrigger value="legal" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Liens légaux</span>
+            <span className="hidden sm:inline">Légal</span>
           </TabsTrigger>
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Général</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* Discovery Settings */}
+        <TabsContent value="discovery">
+          <Card className="glass-strong">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shuffle className="w-5 h-5 text-primary" />
+                Paramètres de découverte
+              </CardTitle>
+              <CardDescription>
+                Contrôlez le filtrage des profils dans le feed de découverte. Désactivez pour faciliter les tests.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Filter Likes */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-2 text-base font-medium">
+                    <Heart className="w-4 h-4 text-primary" />
+                    Filtrer les profils likés
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Les profils déjà likés ne réapparaîtront pas dans le feed
+                  </p>
+                </div>
+                <Switch
+                  checked={editedValues["discovery_filter_likes"] === "true"}
+                  onCheckedChange={(checked) =>
+                    setEditedValues((prev) => ({
+                      ...prev,
+                      discovery_filter_likes: checked ? "true" : "false",
+                    }))
+                  }
+                />
+              </div>
+
+              {/* Filter Matches */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-2 text-base font-medium">
+                    <Users className="w-4 h-4 text-primary" />
+                    Filtrer les matchs
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Les profils déjà matchés ne réapparaîtront pas dans le feed
+                  </p>
+                </div>
+                <Switch
+                  checked={editedValues["discovery_filter_matches"] === "true"}
+                  onCheckedChange={(checked) =>
+                    setEditedValues((prev) => ({
+                      ...prev,
+                      discovery_filter_matches: checked ? "true" : "false",
+                    }))
+                  }
+                />
+              </div>
+
+              {/* Filter Passes */}
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-2 text-base font-medium">
+                    <X className="w-4 h-4 text-destructive" />
+                    Filtrer les swipes gauche (passes)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Les profils swipés à gauche ne réapparaîtront pas
+                  </p>
+                </div>
+                <Switch
+                  checked={editedValues["discovery_filter_passes"] === "true"}
+                  onCheckedChange={(checked) =>
+                    setEditedValues((prev) => ({
+                      ...prev,
+                      discovery_filter_passes: checked ? "true" : "false",
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={() => handleSave("discovery")}
+                  disabled={isSaving || !hasChanges("discovery")}
+                  className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Enregistrer
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Social Media Settings */}
         <TabsContent value="social">
