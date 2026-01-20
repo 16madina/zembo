@@ -107,14 +107,45 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
     }
     
     try {
-      // Fetch user IDs that the current user has already liked/passed
-      const { data: existingLikes } = await supabase
-        .from("likes")
-        .select("liked_id")
-        .eq("liker_id", user.id);
+      // Fetch discovery filter settings from app_settings
+      const { data: filterSettings } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .in("key", ["filter_likes", "filter_passes", "filter_matches"]);
       
-      const likedUserIds = existingLikes?.map(l => l.liked_id) || [];
-      console.log(`[profiles] User has ${likedUserIds.length} existing likes/passes`);
+      const filterLikes = filterSettings?.find(s => s.key === "filter_likes")?.value !== "false";
+      const filterPasses = filterSettings?.find(s => s.key === "filter_passes")?.value !== "false";
+      const filterMatches = filterSettings?.find(s => s.key === "filter_matches")?.value !== "false";
+      
+      console.log(`[profiles] Filter settings: likes=${filterLikes}, passes=${filterPasses}, matches=${filterMatches}`);
+      
+      // Fetch user IDs that the current user has already liked/passed (only if filtering is enabled)
+      let likedUserIds: string[] = [];
+      
+      if (filterLikes || filterPasses) {
+        const { data: existingLikes } = await supabase
+          .from("likes")
+          .select("liked_id")
+          .eq("liker_id", user.id);
+        
+        likedUserIds = existingLikes?.map(l => l.liked_id) || [];
+      }
+      
+      // Fetch matched user IDs (only if filtering matches is enabled)
+      let matchedUserIds: string[] = [];
+      
+      if (filterMatches) {
+        const { data: matches } = await supabase
+          .from("matches")
+          .select("user1_id, user2_id")
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
+        
+        matchedUserIds = matches?.map(m => m.user1_id === user.id ? m.user2_id : m.user1_id) || [];
+      }
+      
+      // Combine all IDs to exclude
+      const excludeIds = [...new Set([...likedUserIds, ...matchedUserIds])];
+      console.log(`[profiles] Excluding ${excludeIds.length} profiles (${likedUserIds.length} swiped, ${matchedUserIds.length} matched)`);
       
       // Build query
       let query = supabase
@@ -124,9 +155,9 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
         .not("avatar_url", "is", null)
         .not("display_name", "is", null);
       
-      // Exclude already swiped profiles
-      if (likedUserIds.length > 0) {
-        query = query.not("user_id", "in", `(${likedUserIds.join(",")})`);
+      // Exclude already swiped/matched profiles
+      if (excludeIds.length > 0) {
+        query = query.not("user_id", "in", `(${excludeIds.join(",")})`);
       }
       
       // Apply age filters
