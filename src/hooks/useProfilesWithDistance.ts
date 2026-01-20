@@ -107,6 +107,15 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
     }
     
     try {
+      // Fetch user IDs that the current user has already liked/passed
+      const { data: existingLikes } = await supabase
+        .from("likes")
+        .select("liked_id")
+        .eq("liker_id", user.id);
+      
+      const likedUserIds = existingLikes?.map(l => l.liked_id) || [];
+      console.log(`[profiles] User has ${likedUserIds.length} existing likes/passes`);
+      
       // Build query
       let query = supabase
         .from("profiles")
@@ -114,6 +123,11 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
         .neq("user_id", user.id)
         .not("avatar_url", "is", null)
         .not("display_name", "is", null);
+      
+      // Exclude already swiped profiles
+      if (likedUserIds.length > 0) {
+        query = query.not("user_id", "in", `(${likedUserIds.join(",")})`);
+      }
       
       // Apply age filters
       if (ageMin > 18) {
@@ -140,6 +154,8 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
         setError(fetchError.message);
         return;
       }
+      
+      console.log(`[profiles] Fetched ${data?.length || 0} profiles from DB`);
       
       if (!data || data.length === 0) {
         setHasMore(false);
