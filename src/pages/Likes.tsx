@@ -9,11 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
 import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
+import RoseRevealModal from "@/components/RoseRevealModal";
 import SubscriptionBadge from "@/components/SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface LikeProfile {
   id: string;
@@ -41,6 +42,7 @@ const Likes = () => {
   const [likes, setLikes] = useState<LikeProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<LikeProfile | null>(null);
+  const [selectedRoseProfile, setSelectedRoseProfile] = useState<LikeProfile | null>(null);
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<LikeProfile | null>(null);
 
@@ -365,28 +367,37 @@ const Likes = () => {
         {!loading && filteredLikes.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             <AnimatePresence>
-              {filteredLikes.map((like, index) => (
-                <LikeCard
-                  key={like.id}
-                  profile={like}
-                  index={index}
-                  isPremium={isPremium}
-                  onPress={() => {
-                    if (isPremium) {
-                      setSelectedProfile(like);
-                    } else {
-                      navigate("/subscriptions");
-                    }
-                  }}
-                />
-              ))}
+              {filteredLikes.map((like, index) =>
+                like.hasRose ? (
+                  <SecretRoseCard
+                    key={like.id}
+                    profile={like}
+                    index={index}
+                    onPress={() => setSelectedRoseProfile(like)}
+                  />
+                ) : (
+                  <LikeCard
+                    key={like.id}
+                    profile={like}
+                    index={index}
+                    isPremium={isPremium}
+                    onPress={() => {
+                      if (isPremium) {
+                        setSelectedProfile(like);
+                      } else {
+                        navigate("/subscriptions");
+                      }
+                    }}
+                  />
+                )
+              )}
             </AnimatePresence>
           </div>
         )}
       </div>
 
-      {/* Profile Modal */}
-      {selectedProfile && (
+      {/* Profile Modal (for regular likes / super likes) */}
+      {selectedProfile && !selectedProfile.hasRose && (
         <ProfileModal
           isOpen={!!selectedProfile}
           onClose={() => setSelectedProfile(null)}
@@ -402,6 +413,29 @@ const Likes = () => {
           }}
           onLike={() => handleLikeBack(selectedProfile)}
           onSuperLike={() => handleLikeBack(selectedProfile)}
+        />
+      )}
+
+      {/* Rose Reveal Modal (secret flow for roses) */}
+      {selectedRoseProfile && user && (
+        <RoseRevealModal
+          isOpen={!!selectedRoseProfile}
+          onClose={() => setSelectedRoseProfile(null)}
+          profile={{
+            id: selectedRoseProfile.id,
+            displayName: selectedRoseProfile.displayName,
+            avatarUrl: selectedRoseProfile.avatarUrl,
+            age: selectedRoseProfile.age,
+            location: selectedRoseProfile.location,
+            bio: selectedRoseProfile.bio,
+            interests: selectedRoseProfile.interests,
+            isVerified: selectedRoseProfile.isVerified,
+          }}
+          currentUserId={user.id}
+          onMatch={() => {
+            handleLikeBack(selectedRoseProfile);
+            setSelectedRoseProfile(null);
+          }}
         />
       )}
 
@@ -518,6 +552,113 @@ const LikeCard = ({ profile, index, isPremium, onPress }: LikeCardProps) => {
             ? "ring-2 ring-blue-500/50"
             : ""
         }`}
+      />
+    </motion.button>
+  );
+};
+
+// Secret Rose Card Component (mystery card for roses)
+interface SecretRoseCardProps {
+  profile: LikeProfile;
+  index: number;
+  onPress: () => void;
+}
+
+const SecretRoseCard = ({ profile, index, onPress }: SecretRoseCardProps) => {
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ delay: index * 0.05 }}
+      onClick={onPress}
+      className="relative aspect-[3/4] rounded-2xl overflow-hidden group tap-highlight"
+    >
+      {/* Mysterious gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-rose-950 via-rose-900/80 to-rose-950">
+        {/* Animated shimmer effect */}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-rose-500/10 to-transparent"
+          animate={{
+            x: ["-100%", "100%"],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            repeatDelay: 1,
+          }}
+        />
+      </div>
+
+      {/* Floating rose petals background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(5)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute text-xl opacity-30"
+            style={{ left: `${20 + i * 15}%`, top: "-20px" }}
+            animate={{
+              y: [0, 300],
+              x: [0, Math.sin(i) * 30],
+              rotate: [0, 360],
+              opacity: [0.3, 0],
+            }}
+            transition={{
+              duration: 4 + i,
+              repeat: Infinity,
+              delay: i * 0.5,
+            }}
+          >
+            🌹
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Center rose icon */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+            rotate: [0, 5, -5, 0],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+          }}
+          className="text-5xl mb-3 drop-shadow-lg"
+        >
+          🌹
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-rose-200/80 text-xs font-medium px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400/30"
+        >
+          Admirateur Secret
+        </motion.div>
+      </div>
+
+      {/* Name at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 z-10 text-center">
+        <h3 className="font-semibold text-white text-lg">{profile.displayName}</h3>
+        <p className="text-rose-200/70 text-xs mt-0.5">Touche pour découvrir...</p>
+      </div>
+
+      {/* Glowing border */}
+      <motion.div
+        className="absolute inset-0 rounded-2xl pointer-events-none ring-2 ring-rose-500/60"
+        animate={{
+          boxShadow: [
+            "0 0 15px rgba(244, 63, 94, 0.3)",
+            "0 0 25px rgba(244, 63, 94, 0.5)",
+            "0 0 15px rgba(244, 63, 94, 0.3)",
+          ],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+        }}
       />
     </motion.button>
   );
