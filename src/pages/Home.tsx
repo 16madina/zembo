@@ -75,6 +75,7 @@ const Home = () => {
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
+  const [pendingLikesCount, setPendingLikesCount] = useState(0);
   const [showSuperLikeExplosion, setShowSuperLikeExplosion] = useState(false);
   const [showRosePetals, setShowRosePetals] = useState(false);
   const [isRoseModalOpen, setIsRoseModalOpen] = useState(false);
@@ -151,18 +152,23 @@ const Home = () => {
         .select("liker_id")
         .eq("liked_id", user.id);
       
-      if (likesData) {
-        setReceivedLikes(new Set(likesData.map(l => l.liker_id)));
-      }
-      
       // Fetch likes already sent by this user
       const { data: sentLikesData } = await supabase
         .from("likes")
         .select("liked_id")
         .eq("liker_id", user.id);
       
+      const myLikedIds = new Set(sentLikesData?.map(l => l.liked_id) || []);
+      
+      if (likesData) {
+        setReceivedLikes(new Set(likesData.map(l => l.liker_id)));
+        // Count pending likes (users who liked me but I haven't liked back)
+        const pendingCount = likesData.filter(l => !myLikedIds.has(l.liker_id)).length;
+        setPendingLikesCount(pendingCount);
+      }
+      
       if (sentLikesData) {
-        setLikedProfiles(new Set(sentLikesData.map(l => l.liked_id)));
+        setLikedProfiles(myLikedIds);
       }
     };
     
@@ -465,21 +471,43 @@ const Home = () => {
           <ZemboLogo />
           <ShopButton variant="compact" className="ml-1" />
         </div>
-        <motion.button 
-          onClick={() => setIsFilterOpen(true)}
-          className={`relative p-2 rounded-lg tap-highlight ${hasActiveFilters ? 'bg-primary/20 border border-primary/30' : 'glass'}`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <SlidersHorizontal className={`w-4 h-4 ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground'}`} />
-          {hasActiveFilters && (
-            <motion.span 
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background"
-            />
-          )}
-        </motion.button>
+        <div className="flex items-center gap-2">
+          {/* Likes received button */}
+          <motion.button 
+            onClick={() => navigate("/likes")}
+            className="relative p-2 rounded-lg tap-highlight glass"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Heart className="w-4 h-4 text-destructive fill-destructive" />
+            {pendingLikesCount > 0 && (
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full border-2 border-background"
+              >
+                {pendingLikesCount > 99 ? "99+" : pendingLikesCount}
+              </motion.span>
+            )}
+          </motion.button>
+          
+          {/* Filters button */}
+          <motion.button 
+            onClick={() => setIsFilterOpen(true)}
+            className={`relative p-2 rounded-lg tap-highlight ${hasActiveFilters ? 'bg-primary/20 border border-primary/30' : 'glass'}`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <SlidersHorizontal className={`w-4 h-4 ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground'}`} />
+            {hasActiveFilters && (
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background"
+              />
+            )}
+          </motion.button>
+        </div>
       </motion.header>
 
       {/* Navigation Tabs */}
