@@ -29,6 +29,7 @@ import Terms from "./pages/Terms";
 import Support from "./pages/Support";
 import DebugNotifications from "./pages/DebugNotifications";
 import Subscriptions from "./pages/Subscriptions";
+import Likes from "./pages/Likes";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,7 @@ const AppRoutes = () => (
       <Route path="/support" element={<Support />} />
       <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
       <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+      <Route path="/likes" element={<ProtectedRoute><Likes /></ProtectedRoute>} />
       <Route path="/debug-notifications" element={<ProtectedRoute><DebugNotifications /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
