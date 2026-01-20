@@ -111,11 +111,11 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
       const { data: filterSettings } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["filter_likes", "filter_passes", "filter_matches"]);
+        .in("key", ["discovery_filter_likes", "discovery_filter_passes", "discovery_filter_matches"]);
       
-      const filterLikes = filterSettings?.find(s => s.key === "filter_likes")?.value !== "false";
-      const filterPasses = filterSettings?.find(s => s.key === "filter_passes")?.value !== "false";
-      const filterMatches = filterSettings?.find(s => s.key === "filter_matches")?.value !== "false";
+      const filterLikes = filterSettings?.find(s => s.key === "discovery_filter_likes")?.value !== "false";
+      const filterPasses = filterSettings?.find(s => s.key === "discovery_filter_passes")?.value !== "false";
+      const filterMatches = filterSettings?.find(s => s.key === "discovery_filter_matches")?.value !== "false";
       
       console.log(`[profiles] Filter settings: likes=${filterLikes}, passes=${filterPasses}, matches=${filterMatches}`);
       
