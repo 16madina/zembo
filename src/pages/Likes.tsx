@@ -13,6 +13,7 @@ import SubscriptionBadge from "@/components/SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface LikeProfile {
   id: string;
@@ -28,6 +29,8 @@ interface LikeProfile {
   isVerified: boolean;
 }
 
+type TabType = "all" | "super" | "rose";
+
 const Likes = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -40,6 +43,7 @@ const Likes = () => {
   const [selectedProfile, setSelectedProfile] = useState<LikeProfile | null>(null);
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<LikeProfile | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>("all");
 
   // Fetch likes
   useEffect(() => {
@@ -186,16 +190,33 @@ const Likes = () => {
     navigate("/messages");
   };
 
-  // Sorted likes: roses first, then super likes, then regular
-  const sortedLikes = useMemo(() => {
-    return [...likes].sort((a, b) => {
-      if (a.hasRose && !b.hasRose) return -1;
-      if (!a.hasRose && b.hasRose) return 1;
-      if (a.isSuperLike && !b.isSuperLike) return -1;
-      if (!a.isSuperLike && b.isSuperLike) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [likes]);
+  // Filter likes based on active tab
+  const filteredLikes = useMemo(() => {
+    let filtered: LikeProfile[];
+    
+    switch (activeTab) {
+      case "super":
+        filtered = likes.filter((l) => l.isSuperLike && !l.hasRose);
+        break;
+      case "rose":
+        filtered = likes.filter((l) => l.hasRose);
+        break;
+      default:
+        filtered = likes.filter((l) => !l.isSuperLike && !l.hasRose);
+    }
+
+    // Sort by date
+    return filtered.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [likes, activeTab]);
+
+  // Count for each tab
+  const counts = useMemo(() => ({
+    all: likes.filter((l) => !l.isSuperLike && !l.hasRose).length,
+    super: likes.filter((l) => l.isSuperLike && !l.hasRose).length,
+    rose: likes.filter((l) => l.hasRose).length,
+  }), [likes]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -216,6 +237,50 @@ const Likes = () => {
           <div className="w-9" /> {/* Spacer */}
         </div>
       </motion.header>
+
+      {/* Tabs */}
+      <div className="px-4 pt-3">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
+          <TabsList className="w-full grid grid-cols-3 h-12 bg-muted/50">
+            <TabsTrigger
+              value="all"
+              className="flex items-center gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive"
+            >
+              <Heart className="w-4 h-4" />
+              <span className="hidden sm:inline">Like</span>
+              {counts.all > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-destructive/20 text-destructive font-medium">
+                  {counts.all}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="super"
+              className="flex items-center gap-1.5 data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-500"
+            >
+              <Star className="w-4 h-4" />
+              <span className="hidden sm:inline">Super</span>
+              {counts.super > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-500 font-medium">
+                  {counts.super}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="rose"
+              className="flex items-center gap-1.5 data-[state=active]:bg-rose-500/10 data-[state=active]:text-rose-500"
+            >
+              <span className="text-base">🌹</span>
+              <span className="hidden sm:inline">Rose</span>
+              {counts.rose > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-rose-500/20 text-rose-500 font-medium">
+                  {counts.rose}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* Content */}
       <div className="p-4">
@@ -257,20 +322,26 @@ const Likes = () => {
         )}
 
         {/* Empty state */}
-        {!loading && likes.length === 0 && (
+        {!loading && filteredLikes.length === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="flex flex-col items-center justify-center py-16 text-center"
           >
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Heart className="w-10 h-10 text-muted-foreground" />
+              {activeTab === "all" && <Heart className="w-10 h-10 text-muted-foreground" />}
+              {activeTab === "super" && <Star className="w-10 h-10 text-muted-foreground" />}
+              {activeTab === "rose" && <span className="text-4xl opacity-50">🌹</span>}
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              Aucun like pour le moment
+              {activeTab === "all" && "Aucun like pour le moment"}
+              {activeTab === "super" && "Aucun super like pour le moment"}
+              {activeTab === "rose" && "Aucune rose pour le moment"}
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Continue à swiper pour attirer l'attention et recevoir tes premiers likes !
+              {activeTab === "all" && "Continue à swiper pour attirer l'attention et recevoir tes premiers likes !"}
+              {activeTab === "super" && "Les super likes montrent un intérêt particulier. Continue à explorer !"}
+              {activeTab === "rose" && "Les roses sont des cadeaux premium. Tu en recevras bientôt !"}
             </p>
             <Button
               onClick={() => navigate("/")}
@@ -283,10 +354,10 @@ const Likes = () => {
         )}
 
         {/* Likes grid */}
-        {!loading && likes.length > 0 && (
+        {!loading && filteredLikes.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             <AnimatePresence>
-              {sortedLikes.map((like, index) => (
+              {filteredLikes.map((like, index) => (
                 <LikeCard
                   key={like.id}
                   profile={like}
