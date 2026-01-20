@@ -238,6 +238,33 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_random_calls: {
+        Row: {
+          call_count: number
+          call_date: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          call_count?: number
+          call_date?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          call_count?: number
+          call_date?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           coin_amount: number
