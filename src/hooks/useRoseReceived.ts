@@ -58,12 +58,12 @@ export function useRoseReceived() {
       .select("user_id, display_name, avatar_url")
       .eq("user_id", senderId)
       .maybeSingle();
-    
+
     if (error || !profile) {
       console.error("Error fetching rose sender profile:", error);
       return null;
     }
-    
+
     return {
       id: profile.user_id,
       name: profile.display_name || "Quelqu'un",
@@ -82,11 +82,11 @@ export function useRoseReceived() {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    
+
     if (error || !transaction?.message) {
       return "";
     }
-    
+
     // Sanitize the message to remove phone numbers and emails
     return sanitizeRoseMessage(transaction.message);
   }, []);
@@ -100,6 +100,35 @@ export function useRoseReceived() {
     // We'll handle navigation in the component that uses this hook
     setIsModalOpen(false);
   }, []);
+
+  // Open rose modal programmatically (e.g., after tapping a push notification)
+  const openRoseBySenderId = useCallback(
+    async (senderId: string, preset?: Partial<RoseSender>) => {
+      if (!user) return;
+
+      const senderFromPreset: RoseSender | null = preset?.name || preset?.photo
+        ? {
+            id: senderId,
+            name: preset?.name || "Quelqu'un",
+            photo: preset?.photo || "/placeholder.svg",
+            message: preset?.message || "",
+          }
+        : null;
+
+      const sender = senderFromPreset ?? (await fetchSenderProfile(senderId));
+      if (!sender) return;
+
+      const message = preset?.message ?? (await fetchRoseMessage(senderId, user.id));
+
+      setRoseReceived({
+        ...sender,
+        message,
+      });
+      setIsModalOpen(true);
+      playRoseSound();
+    },
+    [user, fetchSenderProfile, fetchRoseMessage, playRoseSound]
+  );
 
   // Subscribe to new likes with has_rose = true
   useEffect(() => {
@@ -116,33 +145,33 @@ export function useRoseReceived() {
           filter: `liked_id=eq.${user.id}`,
         },
         async (payload) => {
-          const newLike = payload.new as { 
-            liker_id: string; 
-            liked_id: string; 
+          const newLike = payload.new as {
+            liker_id: string;
+            liked_id: string;
             has_rose: boolean;
           };
-          
+
           // Only show modal for roses, not regular likes
           if (!newLike.has_rose) return;
-          
+
           // Skip during initial load
           if (isFirstLoad.current) return;
-          
+
           console.log("Rose received!", newLike);
-          
+
           // Fetch sender profile
           const sender = await fetchSenderProfile(newLike.liker_id);
           if (!sender) return;
-          
+
           // Fetch the message from gift_transactions
           const message = await fetchRoseMessage(newLike.liker_id, user.id);
-          
+
           setRoseReceived({
             ...sender,
             message,
           });
           setIsModalOpen(true);
-          
+
           // Play romantic sound effect
           playRoseSound();
         }
@@ -165,6 +194,7 @@ export function useRoseReceived() {
     isModalOpen,
     closeModal,
     viewProfile,
+    openRoseBySenderId,
     sanitizeRoseMessage,
   };
 }

@@ -37,13 +37,21 @@ const Likes = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const { isPremium, isVip } = useSubscription();
-  
+
   const [likes, setLikes] = useState<LikeProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<LikeProfile | null>(null);
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<LikeProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>("all");
+
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const tab = sessionStorage.getItem("likesOpenTab");
+    if (tab === "super" || tab === "rose" || tab === "all") {
+      sessionStorage.removeItem("likesOpenTab");
+      return tab;
+    }
+    return "all";
+  });
 
   // Fetch likes
   useEffect(() => {

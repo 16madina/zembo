@@ -12,20 +12,44 @@ import { Haptics, ImpactStyle } from "@capacitor/haptics";
  */
 const GlobalRoseHandler = () => {
   const navigate = useNavigate();
-  const { 
-    roseReceived, 
-    isModalOpen, 
-    closeModal 
+  const {
+    roseReceived,
+    isModalOpen,
+    closeModal,
+    openRoseBySenderId,
   } = useRoseReceived();
-  
+
   const [showPetalsAnimation, setShowPetalsAnimation] = useState(false);
 
-  // Trigger the petals animation when a rose is received
+  // If we arrive from a push notification, open the rose modal (even if realtime event was missed)
+  useEffect(() => {
+    const pending = sessionStorage.getItem("pendingRoseFromPush");
+    if (!pending) return;
+
+    try {
+      const data = JSON.parse(pending) as {
+        sender_id?: string;
+        sender_name?: string;
+        sender_avatar?: string;
+      };
+      sessionStorage.removeItem("pendingRoseFromPush");
+
+      if (data.sender_id) {
+        openRoseBySenderId(data.sender_id, {
+          name: data.sender_name,
+          photo: data.sender_avatar,
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing pendingRoseFromPush:", e);
+      sessionStorage.removeItem("pendingRoseFromPush");
+    }
+  }, [openRoseBySenderId]);
+
+  // Trigger the petals animation when a rose modal opens
   useEffect(() => {
     if (isModalOpen && roseReceived) {
       setShowPetalsAnimation(true);
-      
-      // Trigger haptic feedback for the rose received
       Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     }
   }, [isModalOpen, roseReceived]);
@@ -37,16 +61,17 @@ const GlobalRoseHandler = () => {
   const handleViewProfile = () => {
     closeModal();
     setShowPetalsAnimation(false);
-    
+
     if (roseReceived) {
-      // Store the sender info in sessionStorage so Messages page can open their profile
-      sessionStorage.setItem("openRoseProfile", JSON.stringify({
-        id: roseReceived.id,
-        name: roseReceived.name,
-        photo: roseReceived.photo,
-      }));
-      
-      // Navigate to messages page
+      sessionStorage.setItem(
+        "openRoseProfile",
+        JSON.stringify({
+          id: roseReceived.id,
+          name: roseReceived.name,
+          photo: roseReceived.photo,
+        })
+      );
+
       navigate("/messages");
     }
   };
@@ -58,12 +83,8 @@ const GlobalRoseHandler = () => {
 
   return (
     <>
-      {/* Rose petals explosion animation */}
-      <RosePetalsAnimation 
-        isVisible={showPetalsAnimation} 
-        onComplete={handleAnimationComplete} 
-      />
-      
+      <RosePetalsAnimation isVisible={showPetalsAnimation} onComplete={handleAnimationComplete} />
+
       <RoseReceivedModal
         isOpen={isModalOpen}
         onClose={handleClose}
