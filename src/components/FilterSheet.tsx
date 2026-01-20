@@ -30,10 +30,9 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
   const [localFilters, setLocalFilters] = useState<FilterValues>(filters);
 
   const genderOptions = [
-    { id: "women", label: t.women, emoji: "👩" },
-    { id: "men", label: t.men, emoji: "👨" },
-    { id: "nonbinary", label: t.nonBinary, emoji: "🌈" },
-    { id: "trans", label: t.trans, emoji: "⚧️" },
+    { id: "femme", label: "Femme", emoji: "👩" },
+    { id: "homme", label: "Homme", emoji: "👨" },
+    { id: "lgbt", label: "LGBT+", emoji: "🏳️‍🌈" },
     { id: "all", label: t.everyone, emoji: "💫" },
   ];
 
