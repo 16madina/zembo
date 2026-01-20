@@ -8,8 +8,8 @@ interface GenderAndPreferenceStepProps {
 }
 
 const genderOptions = [
-  { id: "homme", label: "Homme", emoji: "👨" },
   { id: "femme", label: "Femme", emoji: "👩" },
+  { id: "homme", label: "Homme", emoji: "👨" },
   { id: "lgbt", label: "LGBT+", emoji: "🏳️‍🌈" },
 ];
 
