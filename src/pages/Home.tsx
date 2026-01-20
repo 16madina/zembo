@@ -189,8 +189,16 @@ const Home = () => {
     filters.distance !== 50 || 
     (filters.genders.length !== 1 || !filters.genders.includes("all"));
 
-  const currentProfile = profiles.length > 0 
-    ? profiles[currentIndex % profiles.length] 
+  // Reset currentIndex when profiles change significantly
+  useEffect(() => {
+    if (profiles.length > 0 && currentIndex >= profiles.length) {
+      console.log("[Home] Resetting currentIndex from", currentIndex, "to 0 (profiles.length:", profiles.length, ")");
+      setCurrentIndex(0);
+    }
+  }, [profiles.length, currentIndex]);
+
+  const currentProfile = profiles.length > 0 && currentIndex < profiles.length
+    ? profiles[currentIndex] 
     : null;
 
   // Check for match using real database data
