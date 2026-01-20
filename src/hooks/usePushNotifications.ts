@@ -189,37 +189,43 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
 
   const handleNotificationNavigation = useCallback((data: NotificationData) => {
     console.log("Handling notification navigation:", data);
-    
+
     const type = data.type;
-    
+
     switch (type) {
       case "message":
         // Navigate to messages with the sender's conversation
         if (data.sender_id) {
           // Store sender info in sessionStorage for the Messages page to use
-          sessionStorage.setItem("openChatWith", JSON.stringify({
-            id: data.sender_id,
-            name: data.sender_name || "Utilisateur",
-            photo: data.sender_avatar || "",
-            isOnline: true
-          }));
+          sessionStorage.setItem(
+            "openChatWith",
+            JSON.stringify({
+              id: data.sender_id,
+              name: data.sender_name || "Utilisateur",
+              photo: data.sender_avatar || "",
+              isOnline: true,
+            })
+          );
         }
         window.location.href = "/messages";
         break;
-        
+
       case "match":
         // Navigate to messages with the matched user's conversation
         if (data.matched_user_id) {
-          sessionStorage.setItem("openChatWith", JSON.stringify({
-            id: data.matched_user_id,
-            name: data.matched_user_name || "Nouveau Match",
-            photo: data.matched_user_avatar || "",
-            isOnline: true
-          }));
+          sessionStorage.setItem(
+            "openChatWith",
+            JSON.stringify({
+              id: data.matched_user_id,
+              name: data.matched_user_name || "Nouveau Match",
+              photo: data.matched_user_avatar || "",
+              isOnline: true,
+            })
+          );
         }
         window.location.href = "/messages";
         break;
-        
+
       case "live":
         // Navigate to the live room
         if (data.live_id) {
@@ -228,22 +234,41 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
           window.location.href = "/live";
         }
         break;
-        
+
       case "like":
-        // Navigate to home to see who liked
-        window.location.href = "/";
+        // Navigate to likes
+        window.location.href = "/likes";
         break;
-        
+
       case "super_like":
-        // Navigate to home to see the super like
-        window.location.href = "/";
+        // Navigate to likes
+        sessionStorage.setItem("likesOpenTab", "super");
+        window.location.href = "/likes";
+        break;
+
+      case "rose":
+        // Store rose payload so GlobalRoseHandler can open the modal + animation
+        try {
+          sessionStorage.setItem(
+            "pendingRoseFromPush",
+            JSON.stringify({
+              sender_id: data.sender_id,
+              sender_name: data.sender_name,
+              sender_avatar: data.sender_avatar,
+            })
+          );
+          sessionStorage.setItem("likesOpenTab", "rose");
+        } catch (e) {
+          console.error("[Push] Error storing pendingRoseFromPush:", e);
+        }
+        window.location.href = "/likes";
         break;
 
       case "incoming_call":
         // Store call data BEFORE any navigation - critical for cold start
         console.log("[Push] 📞 Handling incoming_call deep link");
         console.log("[Push] 📞 callId:", data.callId, "callerName:", data.callerName);
-        
+
         const pendingCallData = {
           callId: data.callId || "unknown",
           callerName: data.callerName || "Appel entrant",
@@ -251,7 +276,7 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
           callType: data.callType || "audio",
           timestamp: Date.now(),
         };
-        
+
         // Store in BOTH storages immediately (before any navigation)
         console.log("[Push] 📞 Storing pendingCall:", JSON.stringify(pendingCallData));
         try {
@@ -262,10 +287,10 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
         } catch (e) {
           console.error("[Push] Error storing pendingCall:", e);
         }
-        
+
         // Dispatch a custom event that the CallOverlay can listen to immediately
         window.dispatchEvent(new CustomEvent("incomingCallFromPush", { detail: pendingCallData }));
-        
+
         // Small delay to ensure storage is written before navigation
         setTimeout(() => {
           // Navigate to home (where CallOverlay is mounted) - not messages
@@ -283,16 +308,19 @@ export const usePushNotifications = (options: UsePushNotificationsOptions = {}) 
       case "missed_call":
         // Navigate to messages and show missed call info
         if (data.callerName) {
-          sessionStorage.setItem("missedCall", JSON.stringify({
-            callId: data.callId,
-            callerName: data.callerName,
-            callerPhoto: data.callerPhoto,
-            callType: data.callType || "audio",
-          }));
+          sessionStorage.setItem(
+            "missedCall",
+            JSON.stringify({
+              callId: data.callId,
+              callerName: data.callerName,
+              callerPhoto: data.callerPhoto,
+              callType: data.callType || "audio",
+            })
+          );
         }
         window.location.href = "/messages";
         break;
-        
+
       default:
         // Default navigation
         console.log("Unknown notification type:", type);
