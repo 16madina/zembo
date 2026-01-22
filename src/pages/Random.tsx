@@ -7,6 +7,8 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { useRandomCallLiveKit } from "@/hooks/useRandomCallLiveKit";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useDailyRandomCalls } from "@/hooks/useDailyRandomCalls";
+import { useUserSubscription } from "@/hooks/useUserSubscription";
+import { useAuth } from "@/contexts/AuthContext";
 import PreferenceSelector from "@/components/random-call/PreferenceSelector";
 import SearchingScreen from "@/components/random-call/SearchingScreen";
 import InCallScreenLiveKit from "@/components/random-call/InCallScreenLiveKit";
@@ -14,12 +16,17 @@ import DecisionOverlay from "@/components/random-call/DecisionOverlay";
 import ResultScreen from "@/components/random-call/ResultScreen";
 import DiceAnimation from "@/components/random-call/DiceAnimation";
 import MicrophoneTest from "@/components/random-call/MicrophoneTest";
+import UpgradeModal from "@/components/random-call/UpgradeModal";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [hasPlayedZemboSound, setHasPlayedZemboSound] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const diceRef = useRef<HTMLDivElement>(null);
+  
+  const { user } = useAuth();
+  const { tier } = useUserSubscription(user?.id);
   
   const {
     status,
@@ -47,11 +54,7 @@ const Random = () => {
   const handleCommencer = async () => {
     // Check if user can make a call
     if (!canCall) {
-      toast.error(
-        maxCalls === 1 
-          ? "Tu as atteint ta limite d'appel quotidien. Passe à Gold pour 5 appels/jour !" 
-          : "Tu as atteint ta limite d'appels quotidiens. Passe à Platinum pour des appels illimités !"
-      );
+      setShowUpgradeModal(true);
       return;
     }
 
@@ -299,6 +302,12 @@ const Random = () => {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      <UpgradeModal 
+        isOpen={showUpgradeModal} 
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier={tier}
+      />
 
       <BottomNavigation />
     </div>
