@@ -236,14 +236,19 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
             }
             
             if (photoFiles && photoFiles.length > 0) {
-              photos = photoFiles
-                .filter(file => !file.name.startsWith('.') && file.name !== '.emptyFolderPlaceholder')
-                .map((file) => {
-                  const { data: { publicUrl } } = supabase.storage
-                    .from("profile-photos")
-                    .getPublicUrl(`${p.user_id}/${file.name}`);
-                  return publicUrl;
-                });
+              // Filter valid files and sort by name (timestamp-based naming ensures correct order)
+              const validFiles = photoFiles
+                .filter(file => !file.name.startsWith('.') && file.name !== '.emptyFolderPlaceholder' && file.id);
+              
+              // Sort by filename (which contains timestamp) to maintain upload order
+              validFiles.sort((a, b) => a.name.localeCompare(b.name));
+              
+              photos = validFiles.map((file) => {
+                const { data: { publicUrl } } = supabase.storage
+                  .from("profile-photos")
+                  .getPublicUrl(`${p.user_id}/${file.name}`);
+                return publicUrl;
+              });
               console.log(`📸 Loaded ${photos.length} photos for ${p.display_name}:`, photos);
             }
           } catch (err) {
