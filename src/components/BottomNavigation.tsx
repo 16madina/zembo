@@ -65,14 +65,26 @@ const BottomNavigation = () => {
                       />
                     </div>
                   ) : (
-                    <Icon 
-                      className={`relative z-10 transition-all duration-300 ${
-                        item.path === "/discover" 
-                          ? `w-6 h-6 ${isActive ? "text-primary animate-[spin_8s_linear_infinite]" : "text-muted-foreground"}`
-                          : `w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground"}`
-                      }`}
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
+                    <div className="relative">
+                      {isActive && item.path === "/discover" && (
+                        <>
+                          <div className="absolute inset-0 bg-primary/40 rounded-full blur-md animate-pulse" />
+                          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-yellow-400/30 to-primary/30 rounded-full blur-lg animate-[pulse_1.5s_ease-in-out_infinite]" />
+                        </>
+                      )}
+                      <Icon 
+                        className={`relative z-10 transition-all duration-300 ${
+                          item.path === "/discover" 
+                            ? `w-6 h-6 ${isActive 
+                                ? "text-primary animate-[spin_8s_linear_infinite] drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]" 
+                                : "text-muted-foreground hover:text-primary/70 hover:scale-110"}`
+                            : `w-5 h-5 ${isActive 
+                                ? "text-primary scale-110" 
+                                : "text-muted-foreground hover:text-primary/70 hover:scale-110"}`
+                        }`}
+                        strokeWidth={isActive ? 2.5 : 2}
+                      />
+                    </div>
                   )}
                   <span className={`text-[10px] font-medium relative z-10 transition-colors duration-200 ${
                     isActive ? "text-primary" : "text-muted-foreground"
