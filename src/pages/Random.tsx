@@ -220,7 +220,7 @@ const Random = () => {
               <h1 className="text-xl font-bold text-foreground">
                 Bienvenue sur <span className="text-primary text-3xl font-black">Z</span> Roulette
               </h1>
-              <motion.div 
+            <motion.div 
                 className="flex items-center justify-center gap-2 mt-1"
                 initial={{ opacity: 0, scale: 0.9 }} 
                 animate={{ opacity: 1, scale: 1 }} 
@@ -229,6 +229,44 @@ const Random = () => {
                 <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-1.5 h-1.5 rounded-full bg-primary" />
                 <span className="text-xs text-primary font-medium">Es-tu prêt(e) à jouer ?</span>
               </motion.div>
+            </motion.div>
+
+            {/* Mini-Games Buttons */}
+            <motion.div 
+              className="flex flex-wrap justify-center gap-2 mt-3 z-10"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <motion.button
+                onClick={() => toast.info("Jeu de compatibilité - Bientôt disponible !")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/20 border border-pink-500/30 text-pink-400 text-xs font-medium hover:bg-pink-500/30 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>💕</span>
+                <span>Compatibilité</span>
+              </motion.button>
+              
+              <motion.button
+                onClick={() => toast.info("Speed Dating - Bientôt disponible !")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs font-medium hover:bg-purple-500/30 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>⚡</span>
+                <span>Speed Dating</span>
+              </motion.button>
+              
+              <motion.button
+                onClick={() => toast.info("Vérité ou Défi - Bientôt disponible !")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>🎭</span>
+                <span>Vérité ou Défi</span>
+              </motion.button>
             </motion.div>
 
             <div ref={diceRef} className="-my-6">
