@@ -248,6 +248,17 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       setStatus("waiting_room");
 
       toast.success("Session rejointe !");
+
+      // Trigger the orchestrator to check if we can start
+      setTimeout(async () => {
+        try {
+          await supabase.functions.invoke("speed-dating-orchestrator", {
+            body: { action: "check_and_start" },
+          });
+        } catch (err) {
+          console.log("[speed-dating] Orchestrator check:", err);
+        }
+      }, 2000);
     } catch (err) {
       console.error("[speed-dating] Error joining:", err);
       setError("Erreur lors de la connexion");
@@ -470,7 +481,6 @@ export function useSpeedDating(): UseSpeedDatingReturn {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            // Session should start - in real implementation, server would create rounds
             return 0;
           }
           return prev - 1;
@@ -480,6 +490,25 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       return () => clearInterval(timer);
     }
   }, [status]);
+
+  // Handle round timer - advance to next round when time is up
+  useEffect(() => {
+    if (status === "in_call" && timeRemaining === 0 && sessionId) {
+      // Round ended, trigger next round
+      const advanceRound = async () => {
+        try {
+          cleanup();
+          const { data } = await supabase.functions.invoke("speed-dating-orchestrator", {
+            body: { action: "next_round", session_id: sessionId },
+          });
+          console.log("[speed-dating] Next round result:", data);
+        } catch (err) {
+          console.error("[speed-dating] Error advancing round:", err);
+        }
+      };
+      advanceRound();
+    }
+  }, [status, timeRemaining, sessionId, cleanup]);
 
   // Fetch results when in results status
   useEffect(() => {
@@ -520,6 +549,11 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       // Sort: mutual matches first
       resultsList.sort((a, b) => (b.is_mutual ? 1 : 0) - (a.is_mutual ? 1 : 0));
       setResults(resultsList);
+
+      // Mark session as completed
+      await supabase.functions.invoke("speed-dating-orchestrator", {
+        body: { action: "complete_session", session_id: sessionId },
+      });
     };
 
     fetchResults();
