@@ -60,10 +60,10 @@ const ActionButtons = ({ onPass, onSuperLike, onLike, onUndo, canUndo = false }:
         variants={buttonVariants}
         whileHover="hover"
         whileTap="tap"
-        className="relative p-4 glass rounded-full text-orange-500 transition-shadow hover:shadow-[0_0_20px_rgba(249,115,22,0.5)]"
+        className="relative p-5 glass rounded-full text-orange-500 transition-shadow hover:shadow-[0_0_20px_rgba(249,115,22,0.5)]"
       >
         <div className="absolute inset-0 rounded-full bg-orange-500/10" />
-        <Flame className="w-6 h-6 relative z-10" fill="currentColor" />
+        <Flame className="w-7 h-7 relative z-10" fill="currentColor" />
       </motion.button>
 
       {/* Like Button */}
