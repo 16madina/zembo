@@ -176,134 +176,95 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -20 }}
-    className="flex-1 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden"
+    className="flex-1 flex flex-col items-center justify-between relative overflow-hidden"
   >
-    {/* Background Image */}
+    {/* Background Image - Full visibility */}
     <div 
-      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+      className="absolute inset-0 bg-cover bg-top bg-no-repeat"
       style={{ backgroundImage: `url(${speedDatingBg})` }}
     />
-    {/* Gradient Overlay */}
-    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
+    {/* Subtle gradient only at bottom for text readability */}
+    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
     
     {/* Golden Sparkles */}
     <GoldenSparkles />
+
+    {/* Top spacer to let image show */}
+    <div className="flex-1" />
     
-    {/* Animated Circles - Like Random page */}
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-      {[0, 1, 2].map((i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full border border-primary/20"
-          style={{ width: `${200 + i * 100}px`, height: `${200 + i * 100}px` }}
-          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.1, 0.4] }}
-          transition={{ duration: 3, repeat: Infinity, delay: i * 0.4, ease: "easeInOut" }}
-        />
-      ))}
-    </div>
-
-    {/* Floating hearts animation */}
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <motion.div
-          key={`heart-${i}`}
-          className="absolute text-primary/30"
-          style={{ 
-            left: `${15 + i * 18}%`,
-            bottom: '-20px'
-          }}
-          animate={{ 
-            y: [0, -400, -800],
-            x: [0, Math.sin(i) * 30, Math.sin(i) * -20],
-            opacity: [0, 0.6, 0],
-            scale: [0.5, 1, 0.8],
-            rotate: [0, 15, -10]
-          }}
-          transition={{ 
-            duration: 6 + i, 
-            repeat: Infinity, 
-            delay: i * 1.2,
-            ease: "easeOut"
-          }}
-        >
-          <Heart className="w-6 h-6 fill-primary/20" />
-        </motion.div>
-      ))}
-    </div>
-
-    {/* Rotating Sparkle Icon */}
-    <motion.div
-      className="absolute top-1/4 left-1/2 -translate-x-1/2 text-primary/20"
-      animate={{ rotate: 360 }}
-      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-    >
-      <Sparkles className="w-32 h-32" />
-    </motion.div>
-    
-    {/* Content */}
-    <div className="relative z-10 flex flex-col items-center">
-      <motion.div
-        animate={{ scale: [1, 1.1, 1] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(214,178,107,0.6)]"
-      >
-        <Zap className="w-12 h-12 text-primary-foreground" />
-      </motion.div>
-      
-      <motion.h2 
-        className="text-2xl font-bold mb-2 text-primary"
-        animate={{ textShadow: ["0 0 10px rgba(214,178,107,0.3)", "0 0 20px rgba(214,178,107,0.5)", "0 0 10px rgba(214,178,107,0.3)"] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
-        Speed Dating Vidéo
-      </motion.h2>
-      <p className="text-muted-foreground mb-6 max-w-xs">
-        Rencontrez plusieurs personnes en sessions de 60 secondes, puis votez pour vos coups de cœur !
-      </p>
-
-      <div className="space-y-2 mb-8 text-sm">
-        <motion.div 
-          className="flex items-center gap-2 text-muted-foreground"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Clock className="w-4 h-4 text-primary" />
-          <span>3 rounds de 60 secondes</span>
-        </motion.div>
-        <motion.div 
-          className="flex items-center gap-2 text-muted-foreground"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Users className="w-4 h-4 text-primary" />
-          <span>4 participants minimum</span>
-        </motion.div>
-        <motion.div 
-          className="flex items-center gap-2 text-muted-foreground"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Heart className="w-4 h-4 text-primary" />
-          <span>Votes mutuels = Match !</span>
-        </motion.div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
+    {/* Content at bottom */}
+    <div className="relative z-10 flex flex-col items-center px-6 pb-6 pt-4 w-full">
+      {/* Glassmorphism card for better readability */}
+      <motion.div 
+        className="bg-background/80 backdrop-blur-xl rounded-3xl p-6 w-full max-w-sm border border-primary/20 shadow-[0_0_30px_rgba(214,178,107,0.2)]"
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.2 }}
       >
-        <Button 
-          onClick={onStart} 
-          size="lg" 
-          className="bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_20px_rgba(214,178,107,0.4)]"
+        {/* Title with icon */}
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center shadow-[0_0_20px_rgba(214,178,107,0.5)]"
+          >
+            <Zap className="w-6 h-6 text-primary-foreground" />
+          </motion.div>
+          <motion.h2 
+            className="text-xl font-bold text-primary"
+            animate={{ textShadow: ["0 0 8px rgba(214,178,107,0.3)", "0 0 15px rgba(214,178,107,0.5)", "0 0 8px rgba(214,178,107,0.3)"] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            Speed Dating
+          </motion.h2>
+        </div>
+
+        {/* Info badges in row */}
+        <div className="flex flex-wrap justify-center gap-2 mb-4">
+          <motion.div 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Clock className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs text-foreground">3 × 60s</span>
+          </motion.div>
+          <motion.div 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Users className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs text-foreground">4+ joueurs</span>
+          </motion.div>
+          <motion.div 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Heart className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs text-foreground">Matchs mutuels</span>
+          </motion.div>
+        </div>
+
+        {/* Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
         >
-          <Zap className="w-5 h-5 mr-2" />
-          Commencer
-        </Button>
+          <Button 
+            onClick={onStart} 
+            size="lg" 
+            className="w-full bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_20px_rgba(214,178,107,0.4)]"
+          >
+            <Zap className="w-5 h-5 mr-2" />
+            Commencer
+          </Button>
+        </motion.div>
       </motion.div>
     </div>
   </motion.div>
