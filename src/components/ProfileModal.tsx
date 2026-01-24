@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, MapPin, BadgeCheck, Heart, Star, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp } from "lucide-react";
+import { X, MapPin, BadgeCheck, Heart, Flame, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp } from "lucide-react";
 import { useRef, useState } from "react";
 import SubscriptionBadge from "./SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
@@ -326,9 +326,9 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                 onClick={onSuperLike}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="w-14 h-14 flex items-center justify-center bg-accent/20 backdrop-blur-md rounded-full border border-accent/50"
+                className="w-14 h-14 flex items-center justify-center bg-orange-500/20 backdrop-blur-md rounded-full border border-orange-500/50"
               >
-                <Star className="w-7 h-7 text-accent" fill="currentColor" />
+                <Flame className="w-7 h-7 text-orange-500" fill="currentColor" />
               </motion.button>
               
               {/* Rose button */}
@@ -506,9 +506,9 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                       onClick={() => { onSuperLike(); setShowDetails(false); }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      className="w-14 h-14 flex items-center justify-center glass rounded-full text-accent border border-accent/30"
+                      className="w-14 h-14 flex items-center justify-center glass rounded-full text-orange-500 border border-orange-500/30"
                     >
-                      <Star className="w-7 h-7" fill="currentColor" />
+                      <Flame className="w-7 h-7" fill="currentColor" />
                     </motion.button>
                     
                     {/* Rose button */}

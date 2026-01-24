@@ -10,7 +10,7 @@ import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 import NearbyMap from "@/components/NearbyMap";
-import SuperLikeExplosion from "@/components/SuperLikeExplosion";
+import ZFlammeExplosion from "@/components/ZFlammeExplosion";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import RoseMessageModal from "@/components/RoseMessageModal";
 import RoseReceivedModal from "@/components/RoseReceivedModal";
@@ -755,7 +755,7 @@ const Home = () => {
         onApply={setFilters}
       />
 
-      <SuperLikeExplosion 
+      <ZFlammeExplosion 
         isVisible={showSuperLikeExplosion} 
         onComplete={handleSuperLikeExplosionComplete} 
       />

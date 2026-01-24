@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
   Crown, 
-  Star, 
+  Flame, 
   Check, 
   X, 
   Zap, 
@@ -51,8 +51,8 @@ const features: PlanFeature[] = [
     platinum: "Illimités",
   },
   {
-    name: "Super Likes",
-    icon: <Star className="w-4 h-4" />,
+    name: "ZFlamme 🔥",
+    icon: <Flame className="w-4 h-4" />,
     free: "1/semaine",
     gold: "5/jour",
     platinum: "Illimités",

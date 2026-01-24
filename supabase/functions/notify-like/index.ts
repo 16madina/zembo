@@ -69,9 +69,9 @@ serve(async (req) => {
     const likerName = likerProfile?.display_name || "Quelqu'un";
     
     // Determine notification content based on like type
-    const title = is_super_like ? "⭐ Super Like !" : "❤️ Nouveau Like !";
+    const title = is_super_like ? "🔥 ZFlamme !" : "❤️ Nouveau Like !";
     const body = is_super_like 
-      ? `${likerName} t'a envoyé un Super Like ! C'est le moment de découvrir son profil.`
+      ? `${likerName} t'a envoyé une ZFlamme 🔥 ! C'est le moment de découvrir son profil.`
       : `${likerName} a aimé ton profil ! Swipe pour voir si c'est réciproque.`;
 
     const accessToken = await getAccessToken(serviceAccount);

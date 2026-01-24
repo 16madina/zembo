@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 
-interface SuperLikeExplosionProps {
+interface ZFlammeExplosionProps {
   isVisible: boolean;
   onComplete: () => void;
 }
 
-interface Star {
+interface Flame {
   x: number;
   y: number;
   vx: number;
@@ -19,7 +18,7 @@ interface Star {
   scale: number;
 }
 
-const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) => {
+const ZFlammeExplosion = ({ isVisible, onComplete }: ZFlammeExplosionProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
 
@@ -44,26 +43,26 @@ const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) 
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
 
-    // Star colors - gold and blue theme
+    // Flame colors - orange, red, yellow theme
     const colors = [
+      "#FF6B00", // Deep Orange
+      "#FF8C00", // Dark Orange
+      "#FFA500", // Orange
+      "#FF4500", // Red Orange
       "#FFD700", // Gold
-      "#FFC107", // Amber
+      "#FF5722", // Flame Red
       "#FFEB3B", // Yellow
-      "#4FC3F7", // Light blue
-      "#2196F3", // Blue
-      "#00BCD4", // Cyan
-      "#FFFFFF", // White
     ];
 
-    // Create stars
-    const stars: Star[] = [];
-    const numStars = 60;
+    // Create flames
+    const flames: Flame[] = [];
+    const numFlames = 60;
 
-    for (let i = 0; i < numStars; i++) {
-      const angle = (Math.PI * 2 * i) / numStars + Math.random() * 0.5;
+    for (let i = 0; i < numFlames; i++) {
+      const angle = (Math.PI * 2 * i) / numFlames + Math.random() * 0.5;
       const speed = 8 + Math.random() * 12;
       
-      stars.push({
+      flames.push({
         x: centerX,
         y: centerY,
         vx: Math.cos(angle) * speed,
@@ -83,7 +82,7 @@ const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) 
       const angle = Math.random() * Math.PI * 2;
       const speed = 5 + Math.random() * 15;
       
-      stars.push({
+      flames.push({
         x: centerX,
         y: centerY,
         vx: Math.cos(angle) * speed,
@@ -92,7 +91,7 @@ const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) 
         rotation: 0,
         rotationSpeed: 0,
         opacity: 1,
-        color: "#FFFFFF",
+        color: "#FFEB3B",
         scale: 0,
       });
     }
@@ -102,8 +101,8 @@ const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) 
     let frame = 0;
     const maxFrames = 90;
 
-    // Draw star shape
-    const drawStar = (x: number, y: number, size: number, rotation: number, color: string, opacity: number) => {
+    // Draw flame shape
+    const drawFlame = (x: number, y: number, size: number, rotation: number, color: string, opacity: number) => {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rotation);
@@ -111,48 +110,37 @@ const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) 
       
       // Outer glow
       ctx.shadowColor = color;
-      ctx.shadowBlur = size * 0.8;
+      ctx.shadowBlur = size * 1.2;
       
+      // Draw flame teardrop shape
       ctx.beginPath();
-      const spikes = 4;
-      const outerRadius = size;
-      const innerRadius = size * 0.4;
-      
-      for (let i = 0; i < spikes * 2; i++) {
-        const radius = i % 2 === 0 ? outerRadius : innerRadius;
-        const angle = (Math.PI * i) / spikes - Math.PI / 2;
-        const px = Math.cos(angle) * radius;
-        const py = Math.sin(angle) * radius;
-        
-        if (i === 0) {
-          ctx.moveTo(px, py);
-        } else {
-          ctx.lineTo(px, py);
-        }
-      }
-      
+      ctx.moveTo(0, -size);
+      ctx.bezierCurveTo(size * 0.8, -size * 0.3, size * 0.6, size * 0.5, 0, size);
+      ctx.bezierCurveTo(-size * 0.6, size * 0.5, -size * 0.8, -size * 0.3, 0, -size);
       ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
       
-      // Add inner bright core
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.2, 0, Math.PI * 2);
-      ctx.fillStyle = "#FFFFFF";
+      // Gradient fill
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+      gradient.addColorStop(0, "#FFFFFF");
+      gradient.addColorStop(0.3, "#FFEB3B");
+      gradient.addColorStop(0.6, color);
+      gradient.addColorStop(1, "rgba(255, 69, 0, 0.5)");
+      
+      ctx.fillStyle = gradient;
       ctx.fill();
       
       ctx.restore();
     };
 
     // Draw sparkle (small circle)
-    const drawSparkle = (x: number, y: number, size: number, opacity: number) => {
+    const drawSparkle = (x: number, y: number, size: number, opacity: number, color: string) => {
       ctx.save();
       ctx.globalAlpha = opacity;
-      ctx.shadowColor = "#FFFFFF";
+      ctx.shadowColor = color;
       ctx.shadowBlur = size * 2;
       ctx.beginPath();
       ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fillStyle = "#FFFFFF";
+      ctx.fillStyle = color;
       ctx.fill();
       ctx.restore();
     };
@@ -163,43 +151,43 @@ const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) 
       // Initial burst scale animation
       const burstProgress = Math.min(frame / 10, 1);
       
-      stars.forEach((star, index) => {
+      flames.forEach((flame, index) => {
         // Scale up effect at start
-        star.scale = Math.min(star.scale + 0.2, 1);
+        flame.scale = Math.min(flame.scale + 0.2, 1);
         
         // Update position
-        star.x += star.vx;
-        star.y += star.vy;
-        star.vy += gravity;
-        star.vx *= friction;
-        star.vy *= friction;
-        star.rotation += star.rotationSpeed;
+        flame.x += flame.vx;
+        flame.y += flame.vy;
+        flame.vy += gravity;
+        flame.vx *= friction;
+        flame.vy *= friction;
+        flame.rotation += flame.rotationSpeed;
         
         // Fade out
         if (frame > maxFrames * 0.5) {
-          star.opacity -= 0.025;
+          flame.opacity -= 0.025;
         }
         
         // Draw
-        if (star.opacity > 0) {
-          if (index < numStars) {
-            drawStar(
-              star.x,
-              star.y,
-              star.size * star.scale * burstProgress,
-              star.rotation,
-              star.color,
-              star.opacity
+        if (flame.opacity > 0) {
+          if (index < numFlames) {
+            drawFlame(
+              flame.x,
+              flame.y,
+              flame.size * flame.scale * burstProgress,
+              flame.rotation,
+              flame.color,
+              flame.opacity
             );
           } else {
-            drawSparkle(star.x, star.y, star.size * star.scale, star.opacity);
+            drawSparkle(flame.x, flame.y, flame.size * flame.scale, flame.opacity, flame.color);
           }
         }
       });
 
       frame++;
       
-      if (frame < maxFrames && stars.some(s => s.opacity > 0)) {
+      if (frame < maxFrames && flames.some(f => f.opacity > 0)) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
         // Cleanup
@@ -228,4 +216,4 @@ const SuperLikeExplosion = ({ isVisible, onComplete }: SuperLikeExplosionProps) 
   return null;
 };
 
-export default SuperLikeExplosion;
+export default ZFlammeExplosion;

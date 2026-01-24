@@ -138,7 +138,7 @@ export const translations = {
     noInfo: "Non renseigné",
     sendMessageTo: "Envoyer un message à",
     likeProfile: "Liker",
-    superLikeProfile: "Super Like",
+    superLikeProfile: "ZFlamme 🔥",
     
     // Toasts
     success: "Succès",
@@ -321,7 +321,7 @@ export const translations = {
     noInfo: "Not specified",
     sendMessageTo: "Send a message to",
     likeProfile: "Like",
-    superLikeProfile: "Super Like",
+    superLikeProfile: "ZFlamme 🔥",
     
     // Toasts
     success: "Success",
