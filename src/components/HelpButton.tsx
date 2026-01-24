@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { HelpCircle, X, Sparkles, Heart, Star, MapPin, MessageCircle, Video, Coins } from "lucide-react";
+import { HelpCircle, X, Sparkles, Heart, Flame, MapPin, MessageCircle, Video, Coins } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 interface TutorialStep {
@@ -24,9 +24,9 @@ const tutorialsByPage: Record<string, { title: string; steps: TutorialStep[] }> 
         description: "Pour passer au profil suivant"
       },
       {
-        icon: <Star className="w-5 h-5 text-accent" fill="currentColor" />,
-        title: "Swipe vers le haut ou ⭐",
-        description: "Super Like pour vous démarquer (limité pour les utilisateurs gratuits)"
+        icon: <Flame className="w-5 h-5 text-orange-500" fill="currentColor" />,
+        title: "Swipe vers le haut ou 🔥",
+        description: "ZFlamme pour vous démarquer (limité pour les utilisateurs gratuits)"
       },
       {
         icon: <Sparkles className="w-5 h-5 text-pink-500" />,
@@ -109,7 +109,7 @@ const tutorialsByPage: Record<string, { title: string; steps: TutorialStep[] }> 
         description: "Ajoutez des photos et personnalisez votre bio"
       },
       {
-        icon: <Star className="w-5 h-5 text-accent" fill="currentColor" />,
+        icon: <Sparkles className="w-5 h-5 text-accent" fill="currentColor" />,
         title: "Vérification",
         description: "Vérifiez votre identité pour gagner en confiance"
       },

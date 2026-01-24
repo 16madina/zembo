@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Crown, Lock, ArrowLeft, Star, Sparkles } from "lucide-react";
+import { Heart, Crown, Lock, ArrowLeft, Flame, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -266,12 +266,12 @@ const Likes = () => {
             </TabsTrigger>
             <TabsTrigger
               value="super"
-              className="flex items-center gap-1.5 data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-500"
+              className="flex items-center gap-1.5 data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500"
             >
-              <Star className="w-4 h-4" />
-              <span className="hidden sm:inline">Super</span>
+              <Flame className="w-4 h-4" />
+              <span className="hidden sm:inline">ZFlamme</span>
               {counts.super > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-500 font-medium">
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-500 font-medium">
                   {counts.super}
                 </span>
               )}
@@ -340,17 +340,17 @@ const Likes = () => {
           >
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
               {activeTab === "all" && <Heart className="w-10 h-10 text-muted-foreground" />}
-              {activeTab === "super" && <Star className="w-10 h-10 text-muted-foreground" />}
+              {activeTab === "super" && <Flame className="w-10 h-10 text-muted-foreground" />}
               {activeTab === "rose" && <span className="text-4xl opacity-50">🌹</span>}
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">
               {activeTab === "all" && "Aucun like pour le moment"}
-              {activeTab === "super" && "Aucun super like pour le moment"}
+              {activeTab === "super" && "Aucune ZFlamme pour le moment"}
               {activeTab === "rose" && "Aucune rose pour le moment"}
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs">
               {activeTab === "all" && "Continue à swiper pour attirer l'attention et recevoir tes premiers likes !"}
-              {activeTab === "super" && "Les super likes montrent un intérêt particulier. Continue à explorer !"}
+              {activeTab === "super" && "Les ZFlammes 🔥 montrent un intérêt particulier. Continue à explorer !"}
               {activeTab === "rose" && "Les roses sont des cadeaux premium. Tu en recevras bientôt !"}
             </p>
             <Button
@@ -508,14 +508,14 @@ const LikeCard = ({ profile, index, isPremium, onPress }: LikeCardProps) => {
         </div>
       )}
 
-      {/* Rose / Super Like badge */}
+      {/* Rose / ZFlamme badge */}
       {(profile.hasRose || profile.isSuperLike) && (
         <div className="absolute top-2 right-2 z-10">
           {profile.hasRose ? (
             <span className="text-2xl drop-shadow-lg">🌹</span>
           ) : (
-            <div className="p-1.5 rounded-full bg-blue-500/90 shadow-lg">
-              <Star className="w-4 h-4 text-white fill-white" />
+            <div className="p-1.5 rounded-full bg-orange-500/90 shadow-lg">
+              <Flame className="w-4 h-4 text-white fill-white" />
             </div>
           )}
         </div>

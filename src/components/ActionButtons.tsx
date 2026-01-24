@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { X, Star, Heart, Undo2, Crown } from "lucide-react";
+import { X, Flame, Heart, Undo2, Crown } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 
 interface ActionButtonsProps {
@@ -54,16 +54,16 @@ const ActionButtons = ({ onPass, onSuperLike, onLike, onUndo, canUndo = false }:
         <X className="w-6 h-6 relative z-10" strokeWidth={3} />
       </motion.button>
 
-      {/* Super Like Button */}
+      {/* ZFlamme Button */}
       <motion.button
         onClick={onSuperLike}
         variants={buttonVariants}
         whileHover="hover"
         whileTap="tap"
-        className="relative p-3 glass rounded-full text-accent transition-shadow hover:glow-blue"
+        className="relative p-3 glass rounded-full text-orange-500 transition-shadow hover:shadow-[0_0_20px_rgba(249,115,22,0.5)]"
       >
-        <div className="absolute inset-0 rounded-full bg-accent/10" />
-        <Star className="w-5 h-5 relative z-10" fill="currentColor" />
+        <div className="absolute inset-0 rounded-full bg-orange-500/10" />
+        <Flame className="w-5 h-5 relative z-10" fill="currentColor" />
       </motion.button>
 
       {/* Like Button */}

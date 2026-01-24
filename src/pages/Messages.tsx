@@ -610,7 +610,7 @@ const Messages = () => {
                       likedBy.hasRose 
                         ? 'bg-gradient-to-br from-rose-400 via-rose-500 to-rose-600' 
                         : likedBy.isSuperLike 
-                          ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600' 
+                          ? 'bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600' 
                           : 'bg-gradient-to-br from-destructive via-destructive/80 to-destructive/60'
                     }`}>
                       <div className="relative w-full h-full">
@@ -624,7 +624,7 @@ const Messages = () => {
                     {likedBy.hasRose ? (
                       <span className="absolute -top-1 -right-1 text-lg">🌹</span>
                     ) : likedBy.isSuperLike && (
-                      <span className="absolute -top-1 -right-1 text-lg">⭐</span>
+                      <span className="absolute -top-1 -right-1 text-lg">🔥</span>
                     )}
                   </div>
                   <span className="text-xs font-medium text-foreground">

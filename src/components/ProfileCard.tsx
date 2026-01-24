@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from "framer-motion";
-import { MapPin, BadgeCheck, X, Star, Heart } from "lucide-react";
+import { MapPin, BadgeCheck, X, Flame, Heart } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import SubscriptionBadge from "./SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
@@ -212,13 +212,13 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
           <span className="text-2xl font-bold text-destructive tracking-wider">NOPE</span>
         </motion.div>
 
-        {/* SUPER LIKE Overlay */}
+        {/* ZFLAMME Overlay */}
         <motion.div
           className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 pointer-events-none"
           style={{ opacity: superLikeOpacity }}
         >
-          <span className="text-6xl">⭐</span>
-          <span className="text-lg font-bold text-accent tracking-wider">SUPER LIKE</span>
+          <span className="text-6xl">🔥</span>
+          <span className="text-lg font-bold text-orange-500 tracking-wider">ZFLAMME</span>
         </motion.div>
 
         {/* Gradient Overlay */}
@@ -275,17 +275,17 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
               <X className="w-5 h-5 relative z-10" strokeWidth={3} />
             </motion.button>
 
-            {/* Super Like Button */}
+            {/* ZFlamme Button */}
             <motion.button
               onClick={(e) => { e.stopPropagation(); triggerSwipeAnimation("up"); }}
               onTouchEnd={(e) => { e.stopPropagation(); }}
               variants={buttonVariants}
               whileHover="hover"
               whileTap="tap"
-              className="relative p-2.5 glass rounded-full text-accent transition-shadow hover:glow-blue"
+              className="relative p-2.5 glass rounded-full text-orange-500 transition-shadow hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]"
             >
-              <div className="absolute inset-0 rounded-full bg-accent/10" />
-              <Star className="w-4 h-4 relative z-10" fill="currentColor" />
+              <div className="absolute inset-0 rounded-full bg-orange-500/10" />
+              <Flame className="w-4 h-4 relative z-10" fill="currentColor" />
             </motion.button>
 
             {/* Rose Button */}
