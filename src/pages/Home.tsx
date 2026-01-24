@@ -11,6 +11,7 @@ import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
 import NearbyMap from "@/components/NearbyMap";
 import ZFlammeExplosion from "@/components/ZFlammeExplosion";
+import FlameTrail from "@/components/FlameTrail";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import RoseMessageModal from "@/components/RoseMessageModal";
 import RoseReceivedModal from "@/components/RoseReceivedModal";
@@ -81,6 +82,7 @@ const Home = () => {
   const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
   const [pendingLikesCount, setPendingLikesCount] = useState(0);
   const [showSuperLikeExplosion, setShowSuperLikeExplosion] = useState(false);
+  const [showFlameTrail, setShowFlameTrail] = useState(false);
   const [showRosePetals, setShowRosePetals] = useState(false);
   const [isRoseModalOpen, setIsRoseModalOpen] = useState(false);
   const [roseTargetProfile, setRoseTargetProfile] = useState<Profile | null>(null);
@@ -354,6 +356,12 @@ const Home = () => {
 
   const handleSuperLikeExplosionComplete = useCallback(() => {
     setShowSuperLikeExplosion(false);
+    // Trigger flame trail after explosion
+    setShowFlameTrail(true);
+  }, []);
+
+  const handleFlameTrailComplete = useCallback(() => {
+    setShowFlameTrail(false);
   }, []);
 
   const handleRosePetalsComplete = useCallback(() => {
@@ -763,6 +771,12 @@ const Home = () => {
       <ZFlammeExplosion 
         isVisible={showSuperLikeExplosion} 
         onComplete={handleSuperLikeExplosionComplete} 
+      />
+
+      <FlameTrail 
+        isVisible={showFlameTrail} 
+        onComplete={handleFlameTrailComplete}
+        duration={2500}
       />
 
       <RosePetalsAnimation 
