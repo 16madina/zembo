@@ -9,4 +9,4 @@ schedule = "*/5 * * * *"
 
 [functions.speed-dating-orchestrator]
 verify_jwt = false
-schedule = "*/10 * * * *"
+schedule = "* * * * *"
