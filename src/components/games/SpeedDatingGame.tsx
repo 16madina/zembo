@@ -146,6 +146,48 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
     {/* Gradient Overlay */}
     <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
     
+    {/* Animated Circles - Like Random page */}
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full border border-primary/20"
+          style={{ width: `${200 + i * 100}px`, height: `${200 + i * 100}px` }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.1, 0.4] }}
+          transition={{ duration: 3, repeat: Infinity, delay: i * 0.4, ease: "easeInOut" }}
+        />
+      ))}
+    </div>
+
+    {/* Floating hearts animation */}
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <motion.div
+          key={`heart-${i}`}
+          className="absolute text-primary/30"
+          style={{ 
+            left: `${15 + i * 18}%`,
+            bottom: '-20px'
+          }}
+          animate={{ 
+            y: [0, -400, -800],
+            x: [0, Math.sin(i) * 30, Math.sin(i) * -20],
+            opacity: [0, 0.6, 0],
+            scale: [0.5, 1, 0.8],
+            rotate: [0, 15, -10]
+          }}
+          transition={{ 
+            duration: 6 + i, 
+            repeat: Infinity, 
+            delay: i * 1.2,
+            ease: "easeOut"
+          }}
+        >
+          <Heart className="w-6 h-6 fill-primary/20" />
+        </motion.div>
+      ))}
+    </div>
+    
     {/* Content */}
     <div className="relative z-10 flex flex-col items-center">
       <motion.div
@@ -156,34 +198,61 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
         <Zap className="w-12 h-12 text-primary-foreground" />
       </motion.div>
       
-      <h2 className="text-2xl font-bold mb-2 text-primary">Speed Dating Vidéo</h2>
+      <motion.h2 
+        className="text-2xl font-bold mb-2 text-primary"
+        animate={{ textShadow: ["0 0 10px rgba(214,178,107,0.3)", "0 0 20px rgba(214,178,107,0.5)", "0 0 10px rgba(214,178,107,0.3)"] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        Speed Dating Vidéo
+      </motion.h2>
       <p className="text-muted-foreground mb-6 max-w-xs">
         Rencontrez plusieurs personnes en sessions de 60 secondes, puis votez pour vos coups de cœur !
       </p>
 
       <div className="space-y-2 mb-8 text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <motion.div 
+          className="flex items-center gap-2 text-muted-foreground"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <Clock className="w-4 h-4 text-primary" />
           <span>3 rounds de 60 secondes</span>
-        </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
+        </motion.div>
+        <motion.div 
+          className="flex items-center gap-2 text-muted-foreground"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <Users className="w-4 h-4 text-primary" />
           <span>4 participants minimum</span>
-        </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
+        </motion.div>
+        <motion.div 
+          className="flex items-center gap-2 text-muted-foreground"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+        >
           <Heart className="w-4 h-4 text-primary" />
           <span>Votes mutuels = Match !</span>
-        </div>
+        </motion.div>
       </div>
 
-      <Button 
-        onClick={onStart} 
-        size="lg" 
-        className="bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_20px_rgba(214,178,107,0.4)]"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
       >
-        <Zap className="w-5 h-5 mr-2" />
-        Commencer
-      </Button>
+        <Button 
+          onClick={onStart} 
+          size="lg" 
+          className="bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_20px_rgba(214,178,107,0.4)]"
+        >
+          <Zap className="w-5 h-5 mr-2" />
+          Commencer
+        </Button>
+      </motion.div>
     </div>
   </motion.div>
 );
