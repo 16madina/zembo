@@ -66,8 +66,10 @@ const BottomNavigation = () => {
                     </div>
                   ) : (
                     <Icon 
-                      className={`w-5 h-5 relative z-10 transition-colors duration-200 ${
-                        isActive ? "text-primary" : "text-muted-foreground"
+                      className={`relative z-10 transition-all duration-300 ${
+                        item.path === "/discover" 
+                          ? `w-6 h-6 ${isActive ? "text-primary animate-[spin_8s_linear_infinite]" : "text-muted-foreground"}`
+                          : `w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground"}`
                       }`}
                       strokeWidth={isActive ? 2.5 : 2}
                     />
