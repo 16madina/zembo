@@ -10,9 +10,9 @@ const BottomNavigation = () => {
   const { t } = useLanguage();
 
   const navItems = [
-    { path: "/", icon: Home, label: t.home },
+    { path: "/", icon: null, customIcon: zIcon, label: t.random },
+    { path: "/discover", icon: Home, label: t.home },
     { path: "/live", icon: Video, label: t.live },
-    { path: "/random", icon: null, customIcon: zIcon, label: t.random },
     { path: "/messages", icon: MessageCircle, label: t.messages },
     { path: "/profile", icon: User, label: t.profile },
   ];
