@@ -238,6 +238,117 @@ export type Database = {
         }
         Relationships: []
       }
+      compatibility_answers: {
+        Row: {
+          answer: string
+          answered_at: string
+          game_id: string
+          id: string
+          question_id: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          answered_at?: string
+          game_id: string
+          id?: string
+          question_id: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          answered_at?: string
+          game_id?: string
+          id?: string
+          question_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compatibility_answers_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "compatibility_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compatibility_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "compatibility_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compatibility_games: {
+        Row: {
+          compatibility_score: number | null
+          completed_at: string | null
+          created_at: string
+          current_question: number | null
+          id: string
+          status: string
+          user1_id: string
+          user1_score: number | null
+          user2_id: string
+          user2_score: number | null
+        }
+        Insert: {
+          compatibility_score?: number | null
+          completed_at?: string | null
+          created_at?: string
+          current_question?: number | null
+          id?: string
+          status?: string
+          user1_id: string
+          user1_score?: number | null
+          user2_id: string
+          user2_score?: number | null
+        }
+        Update: {
+          compatibility_score?: number | null
+          completed_at?: string | null
+          created_at?: string
+          current_question?: number | null
+          id?: string
+          status?: string
+          user1_id?: string
+          user1_score?: number | null
+          user2_id?: string
+          user2_score?: number | null
+        }
+        Relationships: []
+      }
+      compatibility_questions: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          option_a: string
+          option_b: string
+          question: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          option_a: string
+          option_b: string
+          question: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          option_a?: string
+          option_b?: string
+          question?: string
+        }
+        Relationships: []
+      }
       daily_random_calls: {
         Row: {
           call_count: number

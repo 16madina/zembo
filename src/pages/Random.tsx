@@ -17,12 +17,14 @@ import ResultScreen from "@/components/random-call/ResultScreen";
 import DiceAnimation from "@/components/random-call/DiceAnimation";
 import MicrophoneTest from "@/components/random-call/MicrophoneTest";
 import UpgradeModal from "@/components/random-call/UpgradeModal";
+import CompatibilityGameModal from "@/components/games/CompatibilityGameModal";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [hasPlayedZemboSound, setHasPlayedZemboSound] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showCompatibilityGame, setShowCompatibilityGame] = useState(false);
   const diceRef = useRef<HTMLDivElement>(null);
   
   const { user } = useAuth();
@@ -239,8 +241,8 @@ const Random = () => {
               transition={{ delay: 0.25 }}
             >
               <motion.button
-                onClick={() => toast.info("Jeu de compatibilité - Bientôt disponible !")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/20 border border-pink-500/30 text-pink-400 text-xs font-medium hover:bg-pink-500/30 transition-colors"
+                onClick={() => setShowCompatibilityGame(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/30 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -250,7 +252,7 @@ const Random = () => {
               
               <motion.button
                 onClick={() => toast.info("Speed Dating - Bientôt disponible !")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs font-medium hover:bg-purple-500/30 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/30 border border-accent/40 text-accent-foreground text-xs font-medium hover:bg-accent/50 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -260,7 +262,7 @@ const Random = () => {
               
               <motion.button
                 onClick={() => toast.info("Vérité ou Défi - Bientôt disponible !")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/70 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -345,6 +347,11 @@ const Random = () => {
         isOpen={showUpgradeModal} 
         onClose={() => setShowUpgradeModal(false)}
         currentTier={tier}
+      />
+
+      <CompatibilityGameModal
+        isOpen={showCompatibilityGame}
+        onClose={() => setShowCompatibilityGame(false)}
       />
 
       <BottomNavigation />
