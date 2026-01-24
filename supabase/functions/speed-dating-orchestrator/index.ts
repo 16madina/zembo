@@ -59,7 +59,18 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, session_id } = await req.json();
+    // Handle scheduled invocations (CRON) - no body or empty body
+    let action = "check_and_start";
+    let session_id: string | undefined;
+
+    try {
+      const body = await req.json();
+      if (body.action) action = body.action;
+      if (body.session_id) session_id = body.session_id;
+    } catch {
+      // No body = scheduled invocation, use default action
+      console.log("[speed-dating-orchestrator] Scheduled invocation - checking waiting sessions");
+    }
 
     if (action === "check_and_start") {
       // Find sessions in waiting status with enough participants
