@@ -4,6 +4,7 @@ import { MapPin, BadgeCheck, X, Flame, Heart } from "lucide-react";
 import { Profile } from "@/data/mockProfiles";
 import SubscriptionBadge from "./SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
+import FireParticles from "./FireParticles";
 
 interface ProfileCardProps {
   profile: Profile;
@@ -21,7 +22,10 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
   const controls = useAnimation();
   const isDragging = useRef(false);
   const hasTriggeredSwipe = useRef(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [exitDirection, setExitDirection] = useState<"left" | "right" | "up" | null>(null);
+  const [isDraggingUp, setIsDraggingUp] = useState(false);
+  const [yOffset, setYOffset] = useState(0);
   
   // Get subscription status for this profile
   const { tier } = useUserSubscription(profile.id);
@@ -47,6 +51,10 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
   }, []);
 
   const handleDrag = useCallback((_: any, info: PanInfo) => {
+    // Track Y offset for fire particles
+    setYOffset(info.offset.y);
+    setIsDraggingUp(info.offset.y < -20);
+    
     // Provide haptic feedback at threshold on mobile (if not already triggered)
     if (!hasTriggeredSwipe.current) {
       const threshold = 80;
@@ -123,6 +131,10 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
       });
     }
 
+    // Reset fire particle state
+    setIsDraggingUp(false);
+    setYOffset(0);
+
     setTimeout(() => {
       isDragging.current = false;
     }, 50);
@@ -167,6 +179,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
 
   return (
     <motion.div
+      ref={cardRef}
       className="absolute w-full h-full cursor-grab active:cursor-grabbing touch-none select-none"
       style={{ x, y, rotate }}
       drag
@@ -181,6 +194,9 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
       whileDrag={{ scale: 1.02 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
     >
+      {/* Fire Particles for ZFlamme swipe */}
+      <FireParticles isActive={isDraggingUp} yOffset={yOffset} />
+      
       <div 
         className="relative w-full h-full rounded-3xl overflow-hidden glass-strong"
         onClick={handleCardClick}

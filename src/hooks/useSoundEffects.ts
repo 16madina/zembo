@@ -9,6 +9,9 @@ import revealMagicSound from "@/assets/sounds/reveal-magic.mp3";
 import successChimeSound from "@/assets/sounds/success-chime.mp3";
 import zemboVoiceSound from "@/assets/sounds/zembo-voice.mp3";
 
+// Cache for dynamically generated sounds
+let flameSoundCache: string | null = null;
+
 export const useSoundEffects = () => {
   const [isDrumrollPlaying, setIsDrumrollPlaying] = useState(false);
   
@@ -242,6 +245,74 @@ export const useSoundEffects = () => {
     }
   }, []);
 
+  // Flame sound for ZFlamme (super like)
+  const playFlameSound = useCallback(async () => {
+    try {
+      // Trigger heavy haptic feedback on mobile for ZFlamme
+      if (isNative) {
+        haptics.notification('success');
+      }
+      
+      // Check if we have a cached flame sound
+      if (flameSoundCache) {
+        const audio = new Audio(flameSoundCache);
+        audio.volume = 0.85;
+        audio.play().catch((err) => {
+          console.warn("Failed to play cached flame sound:", err);
+        });
+        return;
+      }
+      
+      // Generate fire/flame sound via ElevenLabs
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            prompt: "Magical fire ignition whoosh with crackling flames, powerful yet romantic fire burst, warm and passionate sound effect",
+            duration: 2,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        // Fallback to reveal magic sound if ElevenLabs fails
+        console.warn("ElevenLabs failed for flame sound, using fallback");
+        const audio = new Audio(revealMagicSound);
+        audio.volume = 0.8;
+        audio.play().catch((err) => {
+          console.warn("Failed to play fallback flame sound:", err);
+        });
+        return;
+      }
+      
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Cache the sound for future use
+      flameSoundCache = audioUrl;
+      
+      const audio = new Audio(audioUrl);
+      audio.volume = 0.85;
+      audio.play().catch((err) => {
+        console.warn("Failed to play flame sound:", err);
+      });
+    } catch (error) {
+      console.error("Error playing flame sound:", error);
+      // Fallback to reveal magic sound
+      const audio = new Audio(revealMagicSound);
+      audio.volume = 0.7;
+      audio.play().catch((err) => {
+        console.warn("Failed to play fallback flame sound:", err);
+      });
+    }
+  }, []);
+
   return {
     playDiceSound,
     playZemboVoice,
@@ -250,6 +321,7 @@ export const useSoundEffects = () => {
     playMatchSound,
     playRoseSound,
     playRejectionSound,
+    playFlameSound,
     isDrumrollPlaying,
   };
 };
