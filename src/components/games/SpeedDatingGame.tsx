@@ -129,6 +129,46 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
   );
 };
 
+// Golden Sparkle Particles Component
+const GoldenSparkles = () => {
+  const sparkles = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    size: 2 + Math.random() * 4,
+    delay: Math.random() * 3,
+    duration: 2 + Math.random() * 2,
+  }));
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      {sparkles.map((s) => (
+        <motion.div
+          key={s.id}
+          className="absolute rounded-full bg-primary"
+          style={{
+            left: s.left,
+            top: s.top,
+            width: s.size,
+            height: s.size,
+            boxShadow: `0 0 ${s.size * 2}px rgba(214, 178, 107, 0.8)`,
+          }}
+          animate={{
+            opacity: [0, 1, 0],
+            scale: [0.5, 1.2, 0.5],
+          }}
+          transition={{
+            duration: s.duration,
+            repeat: Infinity,
+            delay: s.delay,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 // Idle Screen Component
 const IdleScreen = ({ onStart }: { onStart: () => void }) => (
   <motion.div
@@ -145,6 +185,9 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
     />
     {/* Gradient Overlay */}
     <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
+    
+    {/* Golden Sparkles */}
+    <GoldenSparkles />
     
     {/* Animated Circles - Like Random page */}
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
@@ -187,6 +230,15 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
         </motion.div>
       ))}
     </div>
+
+    {/* Rotating Sparkle Icon */}
+    <motion.div
+      className="absolute top-1/4 left-1/2 -translate-x-1/2 text-primary/20"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+    >
+      <Sparkles className="w-32 h-32" />
+    </motion.div>
     
     {/* Content */}
     <div className="relative z-10 flex flex-col items-center">
