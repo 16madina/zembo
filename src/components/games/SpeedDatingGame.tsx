@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useSpeedDating, SpeedDatingStatus } from "@/hooks/useSpeedDating";
 import { cn } from "@/lib/utils";
-
+import speedDatingBg from "@/assets/speed-dating-bg.jpeg";
 interface SpeedDatingGameProps {
   onClose: () => void;
 }
@@ -136,44 +136,55 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -20 }}
-    className="flex-1 flex flex-col items-center justify-center p-6 text-center"
+    className="flex-1 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden"
   >
-    <motion.div
-      animate={{ scale: [1, 1.1, 1] }}
-      transition={{ duration: 2, repeat: Infinity }}
-      className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6"
-    >
-      <Zap className="w-12 h-12 text-white" />
-    </motion.div>
+    {/* Background Image */}
+    <div 
+      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${speedDatingBg})` }}
+    />
+    {/* Gradient Overlay */}
+    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
     
-    <h2 className="text-2xl font-bold mb-2">Speed Dating Vidéo</h2>
-    <p className="text-muted-foreground mb-6 max-w-xs">
-      Rencontrez plusieurs personnes en sessions de 60 secondes, puis votez pour vos coups de cœur !
-    </p>
+    {/* Content */}
+    <div className="relative z-10 flex flex-col items-center">
+      <motion.div
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(214,178,107,0.6)]"
+      >
+        <Zap className="w-12 h-12 text-primary-foreground" />
+      </motion.div>
+      
+      <h2 className="text-2xl font-bold mb-2 text-primary">Speed Dating Vidéo</h2>
+      <p className="text-muted-foreground mb-6 max-w-xs">
+        Rencontrez plusieurs personnes en sessions de 60 secondes, puis votez pour vos coups de cœur !
+      </p>
 
-    <div className="space-y-2 mb-8 text-sm text-muted-foreground">
-      <div className="flex items-center gap-2">
-        <Clock className="w-4 h-4 text-primary" />
-        <span>3 rounds de 60 secondes</span>
+      <div className="space-y-2 mb-8 text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Clock className="w-4 h-4 text-primary" />
+          <span>3 rounds de 60 secondes</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Users className="w-4 h-4 text-primary" />
+          <span>4 participants minimum</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Heart className="w-4 h-4 text-primary" />
+          <span>Votes mutuels = Match !</span>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Users className="w-4 h-4 text-primary" />
-        <span>4 participants minimum</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Heart className="w-4 h-4 text-primary" />
-        <span>Votes mutuels = Match !</span>
-      </div>
+
+      <Button 
+        onClick={onStart} 
+        size="lg" 
+        className="bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_20px_rgba(214,178,107,0.4)]"
+      >
+        <Zap className="w-5 h-5 mr-2" />
+        Commencer
+      </Button>
     </div>
-
-    <Button 
-      onClick={onStart} 
-      size="lg" 
-      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-    >
-      <Zap className="w-5 h-5 mr-2" />
-      Commencer
-    </Button>
   </motion.div>
 );
 
