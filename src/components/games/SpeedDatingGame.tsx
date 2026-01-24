@@ -56,12 +56,29 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-background flex flex-col"
     >
-      {/* Header */}
+      {/* Header with info badges */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
           <span className="font-bold text-lg">Speed Dating</span>
         </div>
+        
+        {/* Info badges inline */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-xs">
+            <Users className="w-3 h-3 text-primary" />
+            <span className="text-foreground">4+</span>
+          </div>
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-xs">
+            <Clock className="w-3 h-3 text-primary" />
+            <span className="text-foreground">3×60s</span>
+          </div>
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-xs">
+            <Heart className="w-3 h-3 text-primary" />
+            <span className="text-foreground">Match</span>
+          </div>
+        </div>
+        
         <Button variant="ghost" size="icon" onClick={handleClose}>
           <X className="w-5 h-5" />
         </Button>
@@ -173,80 +190,43 @@ const GoldenSparkles = () => {
 const IdleScreen = ({ onStart }: { onStart: () => void }) => (
   <motion.div
     key="idle"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
     className="h-full w-full flex flex-col relative overflow-hidden"
   >
-    {/* Background Image - Taking most of the space */}
+    {/* Background Image - Full screen */}
     <div 
       className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
       style={{ backgroundImage: `url(${speedDatingBg})` }}
     />
-    {/* Gradient overlay - subtle at top, stronger at bottom */}
-    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background z-[1]" />
+    {/* Subtle gradient only at bottom for button readability */}
+    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80 z-[1]" />
     
     {/* Golden Sparkles */}
-    <div className="absolute inset-0 z-[2]">
+    <div className="absolute inset-0 z-[2] pointer-events-none">
       <GoldenSparkles />
     </div>
 
-    {/* Main content area - Image visible at top */}
-    <div className="flex-1 min-h-[50%]" />
+    {/* Spacer - let image fill the screen */}
+    <div className="flex-1" />
     
-    {/* Content card at bottom */}
-    <div className="relative z-10 px-4 pb-4">
-      <motion.div 
-        className="bg-background/90 backdrop-blur-xl rounded-3xl p-5 w-full max-w-sm mx-auto border border-primary/30 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
+    {/* Button at bottom - with safe margin from nav */}
+    <motion.div 
+      className="relative z-10 px-6 pb-8"
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+    >
+      <Button 
+        onClick={onStart} 
+        size="lg" 
+        className="w-full max-w-sm mx-auto flex bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_30px_rgba(214,178,107,0.5)] text-base py-6"
       >
-        {/* Title with icon */}
-        <div className="flex items-center justify-center gap-3 mb-3">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center shadow-[0_0_20px_rgba(214,178,107,0.5)]"
-          >
-            <Zap className="w-5 h-5 text-primary-foreground" />
-          </motion.div>
-          <motion.h2 
-            className="text-xl font-bold text-primary"
-            animate={{ textShadow: ["0 0 8px rgba(214,178,107,0.3)", "0 0 15px rgba(214,178,107,0.5)", "0 0 8px rgba(214,178,107,0.3)"] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            Speed Dating
-          </motion.h2>
-        </div>
-
-        {/* Info badges in row */}
-        <div className="flex flex-wrap justify-center gap-2 mb-4">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-            <Clock className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs text-foreground">3 × 60s</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-            <Users className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs text-foreground">4+ joueurs</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-            <Heart className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs text-foreground">Matchs mutuels</span>
-          </div>
-        </div>
-
-        {/* Button */}
-        <Button 
-          onClick={onStart} 
-          size="lg" 
-          className="w-full bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_20px_rgba(214,178,107,0.4)]"
-        >
-          <Zap className="w-5 h-5 mr-2" />
-          Commencer
-        </Button>
-      </motion.div>
-    </div>
+        <Zap className="w-5 h-5 mr-2" />
+        Commencer
+      </Button>
+    </motion.div>
   </motion.div>
 );
 
