@@ -49,7 +49,7 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub as string;
 
-    const { roomName, isStreamer, isRandomCall } = await req.json();
+    const { roomName, isStreamer, isRandomCall, isSpeedDating } = await req.json();
 
     if (!roomName) {
       return new Response(JSON.stringify({ error: "Room name is required" }), {
@@ -91,7 +91,17 @@ serve(async (req) => {
     });
 
     // Grant permissions based on role
-    if (isRandomCall) {
+    if (isSpeedDating) {
+      // Speed dating: participants can publish video and audio
+      at.addGrant({
+        room: roomName,
+        roomJoin: true,
+        canPublish: true,
+        canPublishSources: [TrackSource.MICROPHONE, TrackSource.CAMERA],
+        canSubscribe: true,
+        canPublishData: true,
+      });
+    } else if (isRandomCall) {
       // Random call: both participants can publish audio and subscribe
       at.addGrant({
         room: roomName,

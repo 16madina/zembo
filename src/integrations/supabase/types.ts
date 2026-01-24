@@ -1033,6 +1033,144 @@ export type Database = {
         }
         Relationships: []
       }
+      speed_dating_participants: {
+        Row: {
+          id: string
+          is_active: boolean
+          joined_at: string
+          left_at: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "speed_dating_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "speed_dating_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      speed_dating_rounds: {
+        Row: {
+          ended_at: string | null
+          id: string
+          room_name: string
+          round_number: number
+          session_id: string
+          started_at: string
+          user1_id: string
+          user2_id: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          room_name: string
+          round_number: number
+          session_id: string
+          started_at?: string
+          user1_id: string
+          user2_id: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          room_name?: string
+          round_number?: number
+          session_id?: string
+          started_at?: string
+          user1_id?: string
+          user2_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "speed_dating_rounds_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "speed_dating_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      speed_dating_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          round_duration_seconds: number
+          started_at: string | null
+          status: string
+          total_rounds: number
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          round_duration_seconds?: number
+          started_at?: string | null
+          status?: string
+          total_rounds?: number
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          round_duration_seconds?: number
+          started_at?: string | null
+          status?: string
+          total_rounds?: number
+        }
+        Relationships: []
+      }
+      speed_dating_votes: {
+        Row: {
+          created_at: string
+          id: string
+          session_id: string
+          voted_for_id: string
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          session_id: string
+          voted_for_id: string
+          voter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          session_id?: string
+          voted_for_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "speed_dating_votes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "speed_dating_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_coins: {
         Row: {
           balance: number

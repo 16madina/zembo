@@ -18,6 +18,7 @@ import DiceAnimation from "@/components/random-call/DiceAnimation";
 import MicrophoneTest from "@/components/random-call/MicrophoneTest";
 import UpgradeModal from "@/components/random-call/UpgradeModal";
 import CompatibilityGameModal from "@/components/games/CompatibilityGameModal";
+import SpeedDatingGame from "@/components/games/SpeedDatingGame";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
@@ -25,6 +26,7 @@ const Random = () => {
   const [hasPlayedZemboSound, setHasPlayedZemboSound] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showCompatibilityGame, setShowCompatibilityGame] = useState(false);
+  const [showSpeedDating, setShowSpeedDating] = useState(false);
   const diceRef = useRef<HTMLDivElement>(null);
   
   const { user } = useAuth();
@@ -251,7 +253,7 @@ const Random = () => {
               </motion.button>
               
               <motion.button
-                onClick={() => toast.info("Speed Dating - Bientôt disponible !")}
+                onClick={() => setShowSpeedDating(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/30 border border-accent/40 text-accent-foreground text-xs font-medium hover:bg-accent/50 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -353,6 +355,12 @@ const Random = () => {
         isOpen={showCompatibilityGame}
         onClose={() => setShowCompatibilityGame(false)}
       />
+
+      <AnimatePresence>
+        {showSpeedDating && (
+          <SpeedDatingGame onClose={() => setShowSpeedDating(false)} />
+        )}
+      </AnimatePresence>
 
       <BottomNavigation />
     </div>
