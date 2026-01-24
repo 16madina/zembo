@@ -23,6 +23,14 @@ const BottomNavigation = () => {
     }
   };
 
+  // Bounce animation variant
+  const bounceVariant = {
+    tap: {
+      scale: [1, 0.85, 1.15, 0.95, 1],
+      transition: { duration: 0.4, ease: "easeOut" as const }
+    }
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="mx-4 mb-2">
@@ -33,65 +41,82 @@ const BottomNavigation = () => {
               const Icon = item.icon;
               
               return (
-                <Link
+                <motion.div
                   key={item.path}
-                  to={item.path}
-                  onClick={handleNavClick}
-                  className="relative flex flex-col items-center gap-0.5 p-2 rounded-xl tap-highlight"
+                  variants={bounceVariant}
+                  whileTap="tap"
                 >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-primary/15 rounded-xl"
-                      transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                    />
-                  )}
-                  {item.customIcon ? (
-                    <div className="relative">
-                      {isActive && (
-                        <>
-                          <div className="absolute inset-0 bg-primary/40 rounded-full blur-md animate-pulse" />
-                          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-yellow-400/30 to-primary/30 rounded-full blur-lg animate-[pulse_1.5s_ease-in-out_infinite]" />
-                        </>
-                      )}
-                      <img 
-                        src={item.customIcon} 
-                        alt={item.label}
-                        className={`w-5 h-5 relative z-10 transition-all duration-200 ${
-                          isActive 
-                            ? "brightness-125 drop-shadow-[0_0_8px_rgba(212,175,55,0.8)] animate-[pulse_2s_ease-in-out_infinite]" 
-                            : "brightness-75 grayscale-[30%]"
-                        }`}
+                  <Link
+                    to={item.path}
+                    onClick={handleNavClick}
+                    className="relative flex flex-col items-center gap-0.5 p-2 rounded-xl tap-highlight"
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeTab"
+                        className="absolute inset-0 bg-primary/15 rounded-xl"
+                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
                       />
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      {isActive && item.path === "/discover" && (
-                        <>
-                          <div className="absolute inset-0 bg-primary/40 rounded-full blur-md animate-pulse" />
-                          <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-yellow-400/30 to-primary/30 rounded-full blur-lg animate-[pulse_1.5s_ease-in-out_infinite]" />
-                        </>
-                      )}
-                      <Icon 
-                        className={`relative z-10 transition-all duration-300 ${
-                          item.path === "/discover" 
-                            ? `w-6 h-6 ${isActive 
-                                ? "text-primary animate-[spin_8s_linear_infinite] drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]" 
-                                : "text-muted-foreground hover:text-primary/70 hover:scale-110"}`
-                            : `w-5 h-5 ${isActive 
-                                ? "text-primary scale-110" 
-                                : "text-muted-foreground hover:text-primary/70 hover:scale-110"}`
-                        }`}
-                        strokeWidth={isActive ? 2.5 : 2}
-                      />
-                    </div>
-                  )}
-                  <span className={`text-[10px] font-medium relative z-10 transition-colors duration-200 ${
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  }`}>
-                    {item.label}
-                  </span>
-                </Link>
+                    )}
+                    {item.customIcon ? (
+                      <motion.div 
+                        className="relative"
+                        animate={isActive ? { scale: [1, 1.1, 1] } : {}}
+                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+                      >
+                        {isActive && (
+                          <>
+                            <div className="absolute inset-0 bg-primary/40 rounded-full blur-md animate-pulse" />
+                            <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-yellow-400/30 to-primary/30 rounded-full blur-lg animate-[pulse_1.5s_ease-in-out_infinite]" />
+                          </>
+                        )}
+                        <img 
+                          src={item.customIcon} 
+                          alt={item.label}
+                          className={`w-5 h-5 relative z-10 transition-all duration-200 ${
+                            isActive 
+                              ? "brightness-125 drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]" 
+                              : "brightness-75 grayscale-[30%]"
+                          }`}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        className="relative"
+                        animate={isActive ? { scale: [1, 1.1, 1] } : {}}
+                        transition={{ 
+                          duration: item.path === "/discover" ? 8 : 0.5, 
+                          repeat: Infinity, 
+                          repeatDelay: item.path === "/discover" ? 0 : 2 
+                        }}
+                      >
+                        {isActive && (
+                          <>
+                            <div className="absolute inset-0 bg-primary/40 rounded-full blur-md animate-pulse" />
+                            <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-yellow-400/30 to-primary/30 rounded-full blur-lg animate-[pulse_1.5s_ease-in-out_infinite]" />
+                          </>
+                        )}
+                        <Icon 
+                          className={`relative z-10 transition-all duration-300 ${
+                            item.path === "/discover" 
+                              ? `w-6 h-6 ${isActive 
+                                  ? "text-primary animate-[spin_8s_linear_infinite] drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]" 
+                                  : "text-muted-foreground hover:text-primary/70 hover:scale-110"}`
+                              : `w-5 h-5 ${isActive 
+                                  ? "text-primary drop-shadow-[0_0_6px_rgba(212,175,55,0.6)]" 
+                                  : "text-muted-foreground hover:text-primary/70 hover:scale-110"}`
+                          }`}
+                          strokeWidth={isActive ? 2.5 : 2}
+                        />
+                      </motion.div>
+                    )}
+                    <span className={`text-[10px] font-medium relative z-10 transition-colors duration-200 ${
+                      isActive ? "text-primary" : "text-muted-foreground"
+                    }`}>
+                      {item.label}
+                    </span>
+                  </Link>
+                </motion.div>
               );
             })}
           </div>

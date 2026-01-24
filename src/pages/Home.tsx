@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useDailyLikes } from "@/hooks/useDailyLikes";
 import { useCoinPurchaseSuccess } from "@/hooks/useCoinPurchaseSuccess";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
@@ -61,6 +62,9 @@ const Home = () => {
     isModalOpen: isRoseReceivedModalOpen, 
     closeModal: closeRoseReceivedModal 
   } = useRoseReceived();
+  
+  // Sound effects
+  const { playFlameSound } = useSoundEffects();
   
   // Handle coin purchase success from Stripe redirect
   useCoinPurchaseSuccess();
@@ -234,9 +238,10 @@ const Home = () => {
       // Increment likes counter (for free users)
       incrementLikesUsed();
       
-      // Trigger super like explosion animation
+      // Trigger super like explosion animation and sound
       if (isSuperLike) {
         setShowSuperLikeExplosion(true);
+        playFlameSound();
       }
       // Save like to database
       try {
