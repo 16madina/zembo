@@ -241,16 +241,62 @@ const SearchingScreen = () => (
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="flex-1 flex flex-col items-center justify-center p-6"
+    className="flex-1 flex flex-col items-center justify-center p-6 relative"
   >
-    <motion.div
-      animate={{ rotate: 360 }}
-      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-      className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full mb-6"
-    />
-    <p className="text-muted-foreground">Recherche d'une session...</p>
+    {/* Background gradient */}
+    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
+    
+    {/* Golden Sparkles */}
+    <div className="absolute inset-0 pointer-events-none">
+      <GoldenSparkles />
+    </div>
+    
+    <div className="relative z-10 flex flex-col items-center">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full mb-6 shadow-[0_0_20px_rgba(214,178,107,0.4)]"
+      />
+      <p className="text-foreground font-medium text-lg">Recherche d'une session...</p>
+    </div>
   </motion.div>
 );
+
+// Floating Hearts Animation for Waiting Room
+const FloatingHearts = () => {
+  const hearts = Array.from({ length: 8 }, (_, i) => ({
+    id: i,
+    left: `${10 + Math.random() * 80}%`,
+    delay: Math.random() * 4,
+    duration: 3 + Math.random() * 2,
+    size: 12 + Math.random() * 8,
+  }));
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {hearts.map((h) => (
+        <motion.div
+          key={h.id}
+          className="absolute text-primary/40"
+          style={{ left: h.left, bottom: -20 }}
+          animate={{
+            y: [0, -400],
+            opacity: [0, 0.6, 0],
+            rotate: [0, 10, -10, 0],
+          }}
+          transition={{
+            duration: h.duration,
+            repeat: Infinity,
+            delay: h.delay,
+            ease: "easeOut",
+          }}
+        >
+          <Heart style={{ width: h.size, height: h.size }} fill="currentColor" />
+        </motion.div>
+      ))}
+    </div>
+  );
+};
 
 // Waiting Room Screen
 const WaitingRoomScreen = ({ participants }: { participants: Array<{ user_id: string; display_name: string; avatar_url: string | null }> }) => (
@@ -259,38 +305,97 @@ const WaitingRoomScreen = ({ participants }: { participants: Array<{ user_id: st
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -20 }}
-    className="flex-1 flex flex-col items-center justify-center p-6"
+    className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
   >
-    <Users className="w-12 h-12 text-primary mb-4" />
-    <h3 className="text-xl font-bold mb-2">Salle d'attente</h3>
-    <p className="text-muted-foreground mb-6">
-      {participants.length + 1}/4 participants minimum
-    </p>
-
-    <div className="flex flex-wrap justify-center gap-3 mb-6">
-      {participants.map((p) => (
+    {/* Background gradient */}
+    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
+    
+    {/* Golden Sparkles */}
+    <div className="absolute inset-0 pointer-events-none">
+      <GoldenSparkles />
+    </div>
+    
+    {/* Floating Hearts */}
+    <FloatingHearts />
+    
+    {/* Pulsing radar circles */}
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      {[1, 2, 3].map((i) => (
         <motion.div
-          key={p.user_id}
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="flex flex-col items-center"
-        >
-          <Avatar className="w-16 h-16 border-2 border-primary">
-            <AvatarImage src={p.avatar_url || undefined} />
-            <AvatarFallback>{p.display_name[0]}</AvatarFallback>
-          </Avatar>
-          <span className="text-xs mt-1 text-muted-foreground">{p.display_name}</span>
-        </motion.div>
+          key={i}
+          className="absolute w-40 h-40 rounded-full border border-primary/20"
+          animate={{
+            scale: [1, 2.5],
+            opacity: [0.4, 0],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            delay: i * 1,
+            ease: "easeOut",
+          }}
+        />
       ))}
     </div>
+    
+    <div className="relative z-10 flex flex-col items-center">
+      {/* Glassmorphism card */}
+      <motion.div 
+        className="bg-background/70 backdrop-blur-md border border-primary/30 rounded-3xl p-6 shadow-[0_0_40px_rgba(214,178,107,0.2)]"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="flex items-center gap-2 mb-4 justify-center">
+          <Users className="w-8 h-8 text-primary" />
+          <h3 className="text-xl font-bold text-foreground">Salle d'attente</h3>
+        </div>
+        
+        <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+          <span className="text-2xl font-bold text-primary">{participants.length + 1}</span>
+          <span className="text-muted-foreground">/4 minimum</span>
+        </div>
 
-    <motion.div
-      animate={{ opacity: [0.5, 1, 0.5] }}
-      transition={{ duration: 2, repeat: Infinity }}
-      className="text-sm text-muted-foreground"
-    >
-      En attente d'autres participants...
-    </motion.div>
+        <div className="flex flex-wrap justify-center gap-4 mb-6">
+          {participants.map((p, index) => (
+            <motion.div
+              key={p.user_id}
+              initial={{ scale: 0, rotate: -10 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: index * 0.1, type: "spring" }}
+              className="flex flex-col items-center"
+            >
+              <div className="relative">
+                <Avatar className="w-16 h-16 border-2 border-primary shadow-[0_0_15px_rgba(214,178,107,0.4)]">
+                  <AvatarImage src={p.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary font-bold">{p.display_name[0]}</AvatarFallback>
+                </Avatar>
+                <motion.div
+                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+              </div>
+              <span className="text-xs mt-2 text-foreground font-medium">{p.display_name}</span>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      <motion.div
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        >
+          <Zap className="w-4 h-4 text-primary" />
+        </motion.div>
+        En attente d'autres participants...
+      </motion.div>
+    </div>
   </motion.div>
 );
 
@@ -301,18 +406,54 @@ const CountdownScreen = ({ timeRemaining }: { timeRemaining: number }) => (
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="flex-1 flex flex-col items-center justify-center p-6"
+    className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
   >
-    <motion.div
-      key={timeRemaining}
-      initial={{ scale: 0.5, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 1.5, opacity: 0 }}
-      className="text-8xl font-bold text-primary"
-    >
-      {timeRemaining}
-    </motion.div>
-    <p className="text-muted-foreground mt-4">Préparez-vous !</p>
+    {/* Background gradient */}
+    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
+    
+    {/* Golden Sparkles */}
+    <div className="absolute inset-0 pointer-events-none">
+      <GoldenSparkles />
+    </div>
+    
+    {/* Pulsing circles behind number */}
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      {[1, 2, 3].map((i) => (
+        <motion.div
+          key={i}
+          className="absolute w-32 h-32 rounded-full border-2 border-primary/30"
+          animate={{
+            scale: [1, 1.8],
+            opacity: [0.6, 0],
+          }}
+          transition={{
+            duration: 1,
+            repeat: Infinity,
+            delay: i * 0.3,
+            ease: "easeOut",
+          }}
+        />
+      ))}
+    </div>
+    
+    <div className="relative z-10 flex flex-col items-center">
+      <motion.div
+        key={timeRemaining}
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 1.5, opacity: 0 }}
+        className="text-9xl font-bold text-primary drop-shadow-[0_0_30px_rgba(214,178,107,0.6)]"
+      >
+        {timeRemaining}
+      </motion.div>
+      <motion.p 
+        className="text-foreground font-semibold text-lg mt-4"
+        animate={{ opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 1, repeat: Infinity }}
+      >
+        Préparez-vous !
+      </motion.p>
+    </div>
   </motion.div>
 );
 
@@ -500,52 +641,97 @@ const VotingScreen = ({ participants, votes, onVote }: VotingScreenProps) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -20 }}
-    className="flex-1 flex flex-col p-6"
+    className="flex-1 flex flex-col p-6 relative overflow-hidden"
   >
-    <div className="text-center mb-6">
-      <Heart className="w-12 h-12 text-pink-500 mx-auto mb-2" />
-      <h2 className="text-2xl font-bold">Qui vous a plu ?</h2>
-      <p className="text-muted-foreground">Votez pour vos coups de cœur</p>
+    {/* Background gradient */}
+    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
+    
+    {/* Golden Sparkles */}
+    <div className="absolute inset-0 pointer-events-none">
+      <GoldenSparkles />
     </div>
-
-    <div className="flex-1 grid grid-cols-2 gap-4 overflow-y-auto">
-      {participants.map((p) => {
-        const isVoted = votes.includes(p.user_id);
-        return (
-          <motion.button
-            key={p.user_id}
-            onClick={() => onVote(p.user_id)}
-            className={cn(
-              "relative flex flex-col items-center p-4 rounded-2xl border-2 transition-all",
-              isVoted 
-                ? "border-pink-500 bg-pink-500/10" 
-                : "border-border bg-card hover:border-pink-500/50"
-            )}
-            whileTap={{ scale: 0.98 }}
+    
+    {/* Floating Hearts */}
+    <FloatingHearts />
+    
+    <div className="relative z-10 flex flex-col h-full">
+      {/* Header */}
+      <motion.div 
+        className="text-center mb-6"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+      >
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 border border-primary/30 mb-3 shadow-[0_0_25px_rgba(214,178,107,0.4)]">
+          <motion.div
+            animate={{ scale: [1, 1.15, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
           >
-            <Avatar className="w-20 h-20 mb-2">
-              <AvatarImage src={p.avatar_url || undefined} />
-              <AvatarFallback className="text-xl">{p.display_name[0]}</AvatarFallback>
-            </Avatar>
-            <span className="font-medium">{p.display_name}</span>
-            
-            {isVoted && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center"
-              >
-                <Heart className="w-4 h-4 text-white fill-white" />
-              </motion.div>
-            )}
-          </motion.button>
-        );
-      })}
-    </div>
+            <Heart className="w-8 h-8 text-primary" fill="currentColor" />
+          </motion.div>
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">Qui vous a plu ?</h2>
+        <p className="text-muted-foreground">Votez pour vos coups de cœur</p>
+      </motion.div>
 
-    <p className="text-center text-sm text-muted-foreground mt-4">
-      {votes.length} vote{votes.length > 1 ? "s" : ""} • Les matchs seront révélés à tous
-    </p>
+      {/* Participants grid */}
+      <div className="flex-1 grid grid-cols-2 gap-4 overflow-y-auto">
+        {participants.map((p, index) => {
+          const isVoted = votes.includes(p.user_id);
+          return (
+            <motion.button
+              key={p.user_id}
+              onClick={() => onVote(p.user_id)}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className={cn(
+                "relative flex flex-col items-center p-4 rounded-2xl border-2 transition-all backdrop-blur-sm",
+                isVoted 
+                  ? "border-primary bg-primary/20 shadow-[0_0_20px_rgba(214,178,107,0.4)]" 
+                  : "border-border/50 bg-background/60 hover:border-primary/50 hover:bg-primary/10"
+              )}
+              whileTap={{ scale: 0.95 }}
+            >
+              <div className="relative">
+                <Avatar className={cn(
+                  "w-20 h-20 mb-2 border-2 transition-all",
+                  isVoted ? "border-primary shadow-[0_0_15px_rgba(214,178,107,0.5)]" : "border-transparent"
+                )}>
+                  <AvatarImage src={p.avatar_url || undefined} />
+                  <AvatarFallback className="text-xl bg-primary/20 text-primary">{p.display_name[0]}</AvatarFallback>
+                </Avatar>
+                
+                {isVoted && (
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(214,178,107,0.6)]"
+                  >
+                    <Heart className="w-4 h-4 text-primary-foreground fill-current" />
+                  </motion.div>
+                )}
+              </div>
+              <span className="font-medium text-foreground">{p.display_name}</span>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <motion.div 
+        className="mt-4 flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-background/70 backdrop-blur-md border border-primary/20 mx-auto"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Heart className="w-4 h-4 text-primary" />
+        <span className="text-sm text-foreground font-medium">
+          {votes.length} vote{votes.length > 1 ? "s" : ""}
+        </span>
+        <span className="text-muted-foreground">•</span>
+        <span className="text-sm text-muted-foreground">Matchs révélés à tous</span>
+      </motion.div>
+    </div>
   </motion.div>
 );
 
@@ -564,69 +750,104 @@ const ResultsScreen = ({ results, onClose }: ResultsScreenProps) => {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="flex-1 flex flex-col p-6"
+      className="flex-1 flex flex-col p-6 relative overflow-hidden"
     >
-      {/* Celebration header */}
-      <div className="text-center mb-6">
-        {mutualMatches.length > 0 ? (
-          <>
-            <motion.div
-              animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
-              transition={{ duration: 0.5 }}
-              className="inline-block"
-            >
-              <Sparkles className="w-12 h-12 text-yellow-500 mx-auto mb-2" />
-            </motion.div>
-            <h2 className="text-2xl font-bold">
-              {mutualMatches.length} Match{mutualMatches.length > 1 ? "s" : ""} !
-            </h2>
-            <p className="text-muted-foreground">Vous pouvez maintenant discuter</p>
-          </>
-        ) : (
-          <>
-            <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-            <h2 className="text-2xl font-bold">Pas de match cette fois</h2>
-            <p className="text-muted-foreground">Retentez votre chance !</p>
-          </>
-        )}
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
+      
+      {/* Golden Sparkles */}
+      <div className="absolute inset-0 pointer-events-none">
+        <GoldenSparkles />
       </div>
-
-      {/* Results list */}
-      <div className="flex-1 space-y-3 overflow-y-auto">
-        {results.map((result, index) => (
-          <motion.div
-            key={result.user_id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className={cn(
-              "flex items-center gap-3 p-3 rounded-xl",
-              result.is_mutual 
-                ? "bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30" 
-                : "bg-card border border-border"
-            )}
-          >
-            <Avatar className="w-12 h-12">
-              <AvatarImage src={result.avatar_url || undefined} />
-              <AvatarFallback>{result.display_name[0]}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <span className="font-medium">{result.display_name}</span>
-            </div>
-            {result.is_mutual && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-pink-500 text-white text-xs font-medium">
-                <Crown className="w-3 h-3" />
-                <span>Match</span>
+      
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Celebration header */}
+        <motion.div 
+          className="text-center mb-6"
+          initial={{ y: -30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+        >
+          {mutualMatches.length > 0 ? (
+            <>
+              <motion.div
+                animate={{ rotate: [0, -10, 10, -10, 10, 0], scale: [1, 1.1, 1] }}
+                transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
+                className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/20 border border-primary/30 mb-4 shadow-[0_0_40px_rgba(214,178,107,0.5)]"
+              >
+                <Sparkles className="w-10 h-10 text-primary" />
+              </motion.div>
+              <h2 className="text-3xl font-bold text-foreground">
+                {mutualMatches.length} Match{mutualMatches.length > 1 ? "s" : ""} !
+              </h2>
+              <p className="text-muted-foreground mt-1">Vous pouvez maintenant discuter</p>
+            </>
+          ) : (
+            <>
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50 border border-border mb-4">
+                <Heart className="w-10 h-10 text-muted-foreground" />
               </div>
-            )}
-          </motion.div>
-        ))}
-      </div>
+              <h2 className="text-2xl font-bold text-foreground">Pas de match cette fois</h2>
+              <p className="text-muted-foreground mt-1">Retentez votre chance !</p>
+            </>
+          )}
+        </motion.div>
 
-      {/* Close button */}
-      <Button onClick={onClose} className="mt-4" size="lg">
-        Terminer
-      </Button>
+        {/* Results list */}
+        <div className="flex-1 space-y-3 overflow-y-auto">
+          {results.map((result, index) => (
+            <motion.div
+              key={result.user_id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={cn(
+                "flex items-center gap-3 p-4 rounded-2xl backdrop-blur-sm",
+                result.is_mutual 
+                  ? "bg-primary/20 border border-primary/40 shadow-[0_0_20px_rgba(214,178,107,0.3)]" 
+                  : "bg-background/60 border border-border/50"
+              )}
+            >
+              <Avatar className={cn(
+                "w-14 h-14 border-2",
+                result.is_mutual ? "border-primary shadow-[0_0_10px_rgba(214,178,107,0.4)]" : "border-transparent"
+              )}>
+                <AvatarImage src={result.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/20 text-primary">{result.display_name[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <span className="font-semibold text-foreground">{result.display_name}</span>
+              </div>
+              {result.is_mutual && (
+                <motion.div 
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-[0_0_15px_rgba(214,178,107,0.5)]"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>Match</span>
+                </motion.div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Close button */}
+        <motion.div
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Button 
+            onClick={onClose} 
+            className="w-full mt-6 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_25px_rgba(214,178,107,0.4)] py-6 text-base font-semibold" 
+            size="lg"
+          >
+            <Sparkles className="w-5 h-5 mr-2" />
+            Terminer
+          </Button>
+        </motion.div>
+      </div>
     </motion.div>
   );
 };
