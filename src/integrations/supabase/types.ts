@@ -1171,6 +1171,158 @@ export type Database = {
           },
         ]
       }
+      truth_or_dare_challenges: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          difficulty: number
+          id: string
+          is_active: boolean
+          type: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          difficulty?: number
+          id?: string
+          is_active?: boolean
+          type: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          difficulty?: number
+          id?: string
+          is_active?: boolean
+          type?: string
+        }
+        Relationships: []
+      }
+      truth_or_dare_participants: {
+        Row: {
+          id: string
+          is_active: boolean
+          joined_at: string
+          left_at: string | null
+          score: number
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
+          score?: number
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
+          score?: number
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truth_or_dare_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "truth_or_dare_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      truth_or_dare_plays: {
+        Row: {
+          challenge_id: string
+          choice: string
+          completed: boolean
+          id: string
+          played_at: string
+          player_id: string
+          session_id: string
+          skipped: boolean
+        }
+        Insert: {
+          challenge_id: string
+          choice: string
+          completed?: boolean
+          id?: string
+          played_at?: string
+          player_id: string
+          session_id: string
+          skipped?: boolean
+        }
+        Update: {
+          challenge_id?: string
+          choice?: string
+          completed?: boolean
+          id?: string
+          played_at?: string
+          player_id?: string
+          session_id?: string
+          skipped?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truth_or_dare_plays_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "truth_or_dare_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truth_or_dare_plays_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "truth_or_dare_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      truth_or_dare_sessions: {
+        Row: {
+          created_at: string
+          current_challenge_id: string | null
+          current_player_id: string | null
+          ended_at: string | null
+          id: string
+          max_players: number
+          round_number: number
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          current_challenge_id?: string | null
+          current_player_id?: string | null
+          ended_at?: string | null
+          id?: string
+          max_players?: number
+          round_number?: number
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          current_challenge_id?: string | null
+          current_player_id?: string | null
+          ended_at?: string | null
+          id?: string
+          max_players?: number
+          round_number?: number
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       user_coins: {
         Row: {
           balance: number
