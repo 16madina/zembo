@@ -31,23 +31,34 @@ export const useCompatibilityTest = () => {
   const [topMatches, setTopMatches] = useState<TopMatch[]>([]);
   const [analysisProgress, setAnalysisProgress] = useState(0);
 
-  // Fetch questions from database
+  const QUESTIONS_PER_GAME = 15;
+
+  // Fetch 15 random questions from database
   const fetchQuestions = useCallback(async () => {
     const { data, error } = await supabase
       .from("compatibility_questions")
       .select("*")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true });
+      .eq("is_active", true);
 
     if (error) {
       console.error("Error fetching questions:", error);
       return [];
     }
 
-    return (data || []).map(q => ({
+    // Shuffle and pick 15 random questions
+    const allQuestions = (data || []).map(q => ({
       ...q,
       options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
     })) as Question[];
+
+    // Fisher-Yates shuffle
+    const shuffled = [...allQuestions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    return shuffled.slice(0, QUESTIONS_PER_GAME);
   }, []);
 
   // Start the test
