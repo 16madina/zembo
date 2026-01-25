@@ -56,15 +56,16 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-background flex flex-col"
     >
-      {/* Close button - floating */}
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        onClick={handleClose}
-        className="absolute top-4 right-4 z-20 bg-background/50 backdrop-blur-sm"
-      >
-        <X className="w-5 h-5" />
-      </Button>
+      {/* Header with Speed Dating title */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Zap className="w-5 h-5 text-primary" />
+          <span className="font-bold text-lg">Speed Dating</span>
+        </div>
+        <Button variant="ghost" size="icon" onClick={handleClose}>
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
@@ -216,7 +217,7 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
     
     {/* Button - positioned higher to avoid navigation overlap */}
     <motion.div 
-      className="relative z-10 px-6 pb-24"
+      className="relative z-10 px-6 pb-32"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
