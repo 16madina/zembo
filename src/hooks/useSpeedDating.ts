@@ -50,11 +50,14 @@ interface UseSpeedDatingReturn {
   isMuted: boolean;
   isVideoOff: boolean;
   error: string | null;
+  partnerTimedOut: boolean;
+  partnerConnectionTimer: number;
   joinSession: () => Promise<void>;
   leaveSession: () => Promise<void>;
   submitVote: (userId: string) => Promise<void>;
   toggleMute: () => void;
   toggleVideo: () => void;
+  skipToNextRound: () => Promise<void>;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
 }
@@ -63,6 +66,7 @@ const ROUND_DURATION = 60; // 60 seconds per round
 const TOTAL_ROUNDS = 3;
 const COUNTDOWN_DURATION = 5;
 const MIN_PARTICIPANTS = 4;
+const PARTNER_TIMEOUT = 15; // seconds to wait for partner before showing message
 
 export function useSpeedDating(): UseSpeedDatingReturn {
   const { user } = useAuth();
@@ -78,18 +82,25 @@ export function useSpeedDating(): UseSpeedDatingReturn {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [partnerConnectionTimer, setPartnerConnectionTimer] = useState<number>(0);
+  const [partnerTimedOut, setPartnerTimedOut] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const roomRef = useRef<Room | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const partnerTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clean up resources
   const cleanup = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (partnerTimerRef.current) {
+      clearInterval(partnerTimerRef.current);
+      partnerTimerRef.current = null;
     }
     if (roomRef.current) {
       roomRef.current.disconnect();
@@ -100,6 +111,8 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       localStreamRef.current = null;
     }
     setIsConnected(false);
+    setPartnerConnectionTimer(0);
+    setPartnerTimedOut(false);
   }, []);
 
   // Join a LiveKit room for the current round
@@ -107,6 +120,24 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     if (!user) return;
 
     try {
+      setPartnerTimedOut(false);
+      setPartnerConnectionTimer(0);
+      
+      // Start partner connection timer
+      let elapsed = 0;
+      partnerTimerRef.current = setInterval(() => {
+        elapsed += 1;
+        setPartnerConnectionTimer(elapsed);
+        
+        if (elapsed >= PARTNER_TIMEOUT) {
+          setPartnerTimedOut(true);
+          if (partnerTimerRef.current) {
+            clearInterval(partnerTimerRef.current);
+            partnerTimerRef.current = null;
+          }
+        }
+      }, 1000);
+
       // Get LiveKit token
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke("livekit-token", {
         body: { roomName, isSpeedDating: true },
@@ -125,9 +156,17 @@ export function useSpeedDating(): UseSpeedDatingReturn {
         setIsConnected(state === ConnectionState.Connected);
       });
 
-      // Handle remote tracks
+      // Handle remote tracks - partner connected!
       room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
         console.log("[speed-dating] Track subscribed:", track.kind, participant.identity);
+        
+        // Partner connected, clear the timeout
+        if (partnerTimerRef.current) {
+          clearInterval(partnerTimerRef.current);
+          partnerTimerRef.current = null;
+        }
+        setPartnerTimedOut(false);
+        setPartnerConnectionTimer(0);
         
         if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
           track.attach(remoteVideoRef.current);
@@ -142,6 +181,13 @@ export function useSpeedDating(): UseSpeedDatingReturn {
 
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         track.detach();
+      });
+      
+      // Handle participant disconnection
+      room.on(RoomEvent.ParticipantDisconnected, () => {
+        console.log("[speed-dating] Partner disconnected");
+        setPartnerTimedOut(true);
+        setError("Votre partenaire s'est déconnecté");
       });
 
       // Connect to room
@@ -173,8 +219,27 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     } catch (err) {
       console.error("[speed-dating] Error joining room:", err);
       setError("Erreur de connexion vidéo");
+      setPartnerTimedOut(true);
     }
   }, [user]);
+  
+  // Skip current round and move to next
+  const skipToNextRound = useCallback(async () => {
+    if (!sessionId) return;
+    
+    try {
+      console.log("[speed-dating] Skipping to next round...");
+      cleanup();
+      toast.info("Passage au round suivant...");
+      
+      const { data } = await supabase.functions.invoke("speed-dating-orchestrator", {
+        body: { action: "next_round", session_id: sessionId },
+      });
+      console.log("[speed-dating] Skip round result:", data);
+    } catch (err) {
+      console.error("[speed-dating] Error skipping round:", err);
+    }
+  }, [sessionId, cleanup]);
 
   // Start the round timer
   const startRoundTimer = useCallback(() => {
@@ -580,11 +645,14 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     isMuted,
     isVideoOff,
     error,
+    partnerTimedOut,
+    partnerConnectionTimer,
     joinSession,
     leaveSession,
     submitVote,
     toggleMute,
     toggleVideo,
+    skipToNextRound,
     localVideoRef: localVideoRef as React.RefObject<HTMLVideoElement>,
     remoteVideoRef: remoteVideoRef as React.RefObject<HTMLVideoElement>,
   };
