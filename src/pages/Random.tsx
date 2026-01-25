@@ -19,7 +19,6 @@ import MicrophoneTest from "@/components/random-call/MicrophoneTest";
 import UpgradeModal from "@/components/random-call/UpgradeModal";
 import CompatibilityGameModal from "@/components/games/CompatibilityGameModal";
 import SpeedDatingGame from "@/components/games/SpeedDatingGame";
-import TruthOrDareGame from "@/components/games/TruthOrDareGame";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
@@ -28,7 +27,6 @@ const Random = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showCompatibilityGame, setShowCompatibilityGame] = useState(false);
   const [showSpeedDating, setShowSpeedDating] = useState(false);
-  const [showTruthOrDare, setShowTruthOrDare] = useState(false);
   const diceRef = useRef<HTMLDivElement>(null);
   
   const { user } = useAuth();
@@ -237,44 +235,41 @@ const Random = () => {
               </motion.div>
             </motion.div>
 
-            {/* Mini-Games Buttons - All on one line */}
+            {/* Mini-Games Buttons */}
             <motion.div 
-              className="flex items-center justify-center gap-2 mt-3 z-10"
+              className="flex flex-wrap justify-center gap-2 mt-3 z-10"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
             >
               <motion.button
                 onClick={() => setShowCompatibilityGame(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[11px] font-medium hover:bg-primary/30 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/30 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <span>💕</span>
-                <span className="hidden xs:inline">Compatibilité</span>
-                <span className="xs:hidden">Compat.</span>
+                <span>Compatibilité</span>
               </motion.button>
               
               <motion.button
                 onClick={() => setShowSpeedDating(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-accent/30 border border-accent/40 text-accent-foreground text-[11px] font-medium hover:bg-accent/50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/30 border border-accent/40 text-accent-foreground text-xs font-medium hover:bg-accent/50 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <span>⚡</span>
-                <span className="hidden xs:inline">Speed Dating</span>
-                <span className="xs:hidden">Speed</span>
+                <span>Speed Dating</span>
               </motion.button>
               
               <motion.button
-                onClick={() => setShowTruthOrDare(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-[11px] font-medium hover:bg-secondary/70 transition-colors"
+                onClick={() => toast.info("Vérité ou Défi - Bientôt disponible !")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/70 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <span>🎭</span>
-                <span className="hidden xs:inline">Vérité ou Défi</span>
-                <span className="xs:hidden">V ou D</span>
+                <span>Vérité ou Défi</span>
               </motion.button>
             </motion.div>
 
@@ -364,12 +359,6 @@ const Random = () => {
       <AnimatePresence>
         {showSpeedDating && (
           <SpeedDatingGame onClose={() => setShowSpeedDating(false)} />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showTruthOrDare && (
-          <TruthOrDareGame onClose={() => setShowTruthOrDare(false)} />
         )}
       </AnimatePresence>
 
