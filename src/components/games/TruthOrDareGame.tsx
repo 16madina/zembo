@@ -91,8 +91,9 @@ export default function TruthOrDareGame({ onClose }: TruthOrDareGameProps) {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex flex-col"
     >
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-primary/10" />
+      {/* Background - fully opaque to hide content behind */}
+      <div className="absolute inset-0 bg-background" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/10" />
 
       <GoldenSparkles />
       <FloatingParticles />
