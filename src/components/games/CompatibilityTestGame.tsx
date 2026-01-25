@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, X, Sparkles, MessageCircle, Search, Crown, Users } from "lucide-react";
+import { Heart, X, Sparkles, MessageCircle, Search, Crown, Users, Lock, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useCompatibilityTest } from "@/hooks/useCompatibilityTest";
+import { useCoins } from "@/hooks/useCoins";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import compatibilityBg from "@/assets/compatibility-game-bg.jpg";
 
 interface CompatibilityTestGameProps {
@@ -250,7 +253,7 @@ const IntroScreen = ({ onStart }: { onStart: () => void }) => (
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
           <Crown className="w-4 h-4 text-primary" />
-          <span className="text-foreground font-medium text-sm">Top 5 matchs révélés</span>
+          <span className="text-foreground font-medium text-sm">Top 3 matchs révélés</span>
         </div>
       </div>
     </motion.div>
@@ -455,7 +458,29 @@ interface ResultsScreenProps {
   onClose: () => void;
 }
 
-const ResultsScreen = ({ matches, onStartConversation, onRetake, onClose }: ResultsScreenProps) => (
+const UNLOCK_FIRST_COST = 50; // Cost to reveal #1 match
+
+const ResultsScreen = ({ matches, onStartConversation, onRetake, onClose }: ResultsScreenProps) => {
+  const [firstUnlocked, setFirstUnlocked] = useState(false);
+  const { balance, spendCoins, refetch } = useCoins();
+
+  const handleUnlockFirst = async () => {
+    if (balance < UNLOCK_FIRST_COST) {
+      toast.error(`Tu as besoin de ${UNLOCK_FIRST_COST} coins pour révéler le #1`);
+      return;
+    }
+
+    const success = await spendCoins(UNLOCK_FIRST_COST);
+    if (success) {
+      setFirstUnlocked(true);
+      toast.success("🥇 Match #1 révélé !");
+      refetch();
+    } else {
+      toast.error("Erreur lors du paiement");
+    }
+  };
+
+  return (
   <motion.div
     key="results"
     initial={{ opacity: 0 }}
@@ -494,72 +519,104 @@ const ResultsScreen = ({ matches, onStartConversation, onRetake, onClose }: Resu
 
           {/* Matches List */}
           <div className="space-y-3">
-            {matches.map((match, index) => (
-              <motion.div
-                key={match.userId}
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.15 }}
-                className="bg-card/80 backdrop-blur-md rounded-2xl p-4 border border-border/50 shadow-lg"
-              >
-                <div className="flex items-center gap-4">
-                  {/* Rank Badge */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                    index === 0 ? "bg-gradient-to-br from-yellow-400 to-amber-600 text-white" :
-                    index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-500 text-white" :
-                    index === 2 ? "bg-gradient-to-br from-amber-600 to-amber-800 text-white" :
-                    "bg-muted text-muted-foreground"
-                  }`}>
-                    {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
-                  </div>
-
-                  {/* Avatar */}
-                  <Avatar className="w-14 h-14 border-2 border-primary/30">
-                    <AvatarImage src={match.avatarUrl || undefined} />
-                    <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                      {match.displayName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground truncate">
-                      {match.displayName}
-                      {match.age && <span className="text-muted-foreground font-normal">, {match.age}</span>}
-                    </p>
-                    {match.location && (
-                      <p className="text-sm text-muted-foreground truncate">{match.location}</p>
-                    )}
-                  </div>
-
-                  {/* Score */}
-                  <div className="text-right">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: index * 0.15 + 0.3, type: "spring" }}
-                      className={`text-xl font-bold ${
-                        match.score >= 80 ? "text-green-500" :
-                        match.score >= 60 ? "text-primary" :
-                        "text-orange-500"
-                      }`}
-                    >
-                      {match.score}%
-                    </motion.div>
-                    <p className="text-xs text-muted-foreground">compatible</p>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <Button 
-                  onClick={() => onStartConversation(match.userId)}
-                  className="w-full mt-3 bg-gradient-to-r from-primary to-amber-600"
+            {matches.map((match, index) => {
+              const isFirstLocked = index === 0 && !firstUnlocked;
+              
+              return (
+                <motion.div
+                  key={match.userId}
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.15 }}
+                  className={`bg-card/80 backdrop-blur-md rounded-2xl p-4 border shadow-lg ${
+                    isFirstLocked ? "border-primary/50 relative overflow-hidden" : "border-border/50"
+                  }`}
                 >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Commencer la conversation
-                </Button>
-              </motion.div>
-            ))}
+                  {/* Lock overlay for #1 */}
+                  {isFirstLocked && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute inset-0 bg-background/80 backdrop-blur-md z-10 flex flex-col items-center justify-center"
+                    >
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center mb-3"
+                      >
+                        <Lock className="w-8 h-8 text-primary-foreground" />
+                      </motion.div>
+                      <p className="text-foreground font-semibold mb-1">Match #1 verrouillé</p>
+                      <p className="text-sm text-muted-foreground mb-3">Ton match le plus compatible!</p>
+                      <Button 
+                        onClick={handleUnlockFirst}
+                        className="bg-gradient-to-r from-primary to-amber-600"
+                      >
+                        <Coins className="w-4 h-4 mr-2" />
+                        Révéler pour {UNLOCK_FIRST_COST} coins
+                      </Button>
+                    </motion.div>
+                  )}
+
+                  <div className="flex items-center gap-4">
+                    {/* Rank Badge */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                      index === 0 ? "bg-gradient-to-br from-yellow-400 to-amber-600 text-white" :
+                      index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-500 text-white" :
+                      index === 2 ? "bg-gradient-to-br from-amber-600 to-amber-800 text-white" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1}
+                    </div>
+
+                    {/* Avatar */}
+                    <Avatar className="w-14 h-14 border-2 border-primary/30">
+                      <AvatarImage src={match.avatarUrl || undefined} />
+                      <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                        {match.displayName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground truncate">
+                        {match.displayName}
+                        {match.age && <span className="text-muted-foreground font-normal">, {match.age}</span>}
+                      </p>
+                      {match.location && (
+                        <p className="text-sm text-muted-foreground truncate">{match.location}</p>
+                      )}
+                    </div>
+
+                    {/* Score */}
+                    <div className="text-right">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: index * 0.15 + 0.3, type: "spring" }}
+                        className={`text-xl font-bold ${
+                          match.score >= 80 ? "text-green-500" :
+                          match.score >= 60 ? "text-primary" :
+                          "text-orange-500"
+                        }`}
+                      >
+                        {match.score}%
+                      </motion.div>
+                      <p className="text-xs text-muted-foreground">compatible</p>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <Button 
+                    onClick={() => onStartConversation(match.userId)}
+                    className="w-full mt-3 bg-gradient-to-r from-primary to-amber-600"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Commencer la conversation
+                  </Button>
+                </motion.div>
+              );
+            })}
           </div>
         </>
       ) : (
@@ -593,6 +650,7 @@ const ResultsScreen = ({ matches, onStartConversation, onRetake, onClose }: Resu
       </Button>
     </div>
   </motion.div>
-);
+  );
+};
 
 export default CompatibilityTestGame;
