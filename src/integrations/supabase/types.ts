@@ -238,114 +238,57 @@ export type Database = {
         }
         Relationships: []
       }
-      compatibility_answers: {
+      compatibility_questions: {
         Row: {
-          answer: string
-          answered_at: string
-          game_id: string
-          id: string
-          question_id: string
-          user_id: string
-        }
-        Insert: {
-          answer: string
-          answered_at?: string
-          game_id: string
-          id?: string
-          question_id: string
-          user_id: string
-        }
-        Update: {
-          answer?: string
-          answered_at?: string
-          game_id?: string
-          id?: string
-          question_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compatibility_answers_game_id_fkey"
-            columns: ["game_id"]
-            isOneToOne: false
-            referencedRelation: "compatibility_games"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compatibility_answers_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "compatibility_questions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compatibility_games: {
-        Row: {
-          compatibility_score: number | null
-          completed_at: string | null
+          category: string
           created_at: string
-          current_question: number | null
+          display_order: number
           id: string
-          status: string
-          user1_id: string
-          user1_score: number | null
-          user2_id: string
-          user2_score: number | null
+          is_active: boolean
+          options: Json
+          question: string
         }
         Insert: {
-          compatibility_score?: number | null
-          completed_at?: string | null
+          category: string
           created_at?: string
-          current_question?: number | null
+          display_order?: number
           id?: string
-          status?: string
-          user1_id: string
-          user1_score?: number | null
-          user2_id: string
-          user2_score?: number | null
+          is_active?: boolean
+          options?: Json
+          question: string
         }
         Update: {
-          compatibility_score?: number | null
-          completed_at?: string | null
+          category?: string
           created_at?: string
-          current_question?: number | null
+          display_order?: number
           id?: string
-          status?: string
-          user1_id?: string
-          user1_score?: number | null
-          user2_id?: string
-          user2_score?: number | null
+          is_active?: boolean
+          options?: Json
+          question?: string
         }
         Relationships: []
       }
-      compatibility_questions: {
+      compatibility_scores: {
         Row: {
-          category: string | null
-          created_at: string
+          calculated_at: string
           id: string
-          is_active: boolean | null
-          option_a: string
-          option_b: string
-          question: string
+          score: number
+          user1_id: string
+          user2_id: string
         }
         Insert: {
-          category?: string | null
-          created_at?: string
+          calculated_at?: string
           id?: string
-          is_active?: boolean | null
-          option_a: string
-          option_b: string
-          question: string
+          score?: number
+          user1_id: string
+          user2_id: string
         }
         Update: {
-          category?: string | null
-          created_at?: string
+          calculated_at?: string
           id?: string
-          is_active?: boolean | null
-          option_a?: string
-          option_b?: string
-          question?: string
+          score?: number
+          user1_id?: string
+          user2_id?: string
         }
         Relationships: []
       }
@@ -1348,6 +1291,33 @@ export type Database = {
           id?: string
           total_earned?: number
           total_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_compatibility_profiles: {
+        Row: {
+          answers: Json
+          completed_at: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string
+          id?: string
           updated_at?: string
           user_id?: string
         }
