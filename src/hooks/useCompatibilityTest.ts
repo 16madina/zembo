@@ -206,9 +206,9 @@ export const useCompatibilityTest = () => {
         }
       }
 
-      // Sort by score descending and take top 5
+      // Sort by score descending and take top 3
       scores.sort((a, b) => b.score - a.score);
-      const top5 = scores.slice(0, 5);
+      const top3 = scores.slice(0, 3);
 
       clearInterval(progressInterval);
       setAnalysisProgress(100);
@@ -216,7 +216,7 @@ export const useCompatibilityTest = () => {
       // Short delay for dramatic effect
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      setTopMatches(top5);
+      setTopMatches(top3);
       setStatus("results");
 
     } catch (error) {
