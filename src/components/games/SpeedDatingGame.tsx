@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Zap, Users, Clock, Heart, X, Mic, MicOff, 
-  Video, VideoOff, PhoneOff, Sparkles, Crown
+  Video, VideoOff, PhoneOff, Sparkles, Crown, SkipForward, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,11 +27,14 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
     isMuted,
     isVideoOff,
     error,
+    partnerTimedOut,
+    partnerConnectionTimer,
     joinSession,
     leaveSession,
     submitVote,
     toggleMute,
     toggleVideo,
+    skipToNextRound,
     localVideoRef,
     remoteVideoRef,
   } = useSpeedDating();
@@ -105,8 +108,11 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
               onToggleMute={toggleMute}
               onToggleVideo={toggleVideo}
               onEndCall={handleClose}
+              onSkipRound={skipToNextRound}
               progressPercent={progressPercent}
               error={error}
+              partnerTimedOut={partnerTimedOut}
+              partnerConnectionTimer={partnerConnectionTimer}
             />
           )}
 
@@ -492,8 +498,11 @@ interface InCallScreenProps {
   onToggleMute: () => void;
   onToggleVideo: () => void;
   onEndCall: () => void;
+  onSkipRound: () => void;
   progressPercent: number;
   error: string | null;
+  partnerTimedOut: boolean;
+  partnerConnectionTimer: number;
 }
 
 const InCallScreen = ({
@@ -509,7 +518,10 @@ const InCallScreen = ({
   onToggleMute,
   onToggleVideo,
   onEndCall,
+  onSkipRound,
   error,
+  partnerTimedOut,
+  partnerConnectionTimer,
 }: InCallScreenProps) => {
   const isLowTime = timeRemaining <= 10;
 
@@ -530,15 +542,54 @@ const InCallScreen = ({
           className="w-full h-full object-cover"
         />
         
-        {!isConnected && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-            <div className="text-center">
-              <Avatar className="w-24 h-24 mx-auto mb-4">
+        {/* Waiting for partner or partner timed out */}
+        {(!isConnected || partnerTimedOut) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-center p-6 max-w-sm"
+            >
+              <Avatar className="w-24 h-24 mx-auto mb-4 border-2 border-primary/30">
                 <AvatarImage src={round.partner_avatar || undefined} />
-                <AvatarFallback className="text-2xl">{round.partner_name[0]}</AvatarFallback>
+                <AvatarFallback className="text-2xl bg-primary/20 text-primary">{round.partner_name[0]}</AvatarFallback>
               </Avatar>
-              <p className="text-muted-foreground">Connexion à {round.partner_name}...</p>
-            </div>
+              
+              {partnerTimedOut ? (
+                <>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    <p className="text-foreground font-semibold">Partenaire indisponible</p>
+                  </div>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    {round.partner_name} ne s'est pas connecté(e). Vous pouvez passer au prochain round.
+                  </p>
+                  <Button
+                    onClick={onSkipRound}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <SkipForward className="w-4 h-4 mr-2" />
+                    Passer au round suivant
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3"
+                  />
+                  <p className="text-muted-foreground">
+                    Connexion à {round.partner_name}...
+                  </p>
+                  {partnerConnectionTimer > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Attente: {partnerConnectionTimer}s / 15s
+                    </p>
+                  )}
+                </>
+              )}
+            </motion.div>
           </div>
         )}
 
