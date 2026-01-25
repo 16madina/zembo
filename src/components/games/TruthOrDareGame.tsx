@@ -184,32 +184,15 @@ function IdleScreen({ onStart }: { onStart: () => void }) {
         Choisissez Vérité ou Défi à tour de rôle. Complétez pour gagner des points !
       </p>
 
-      {/* Start button with pulsing effect */}
-      <motion.div
-        className="rounded-full"
-        animate={{
-          boxShadow: [
-            "0 0 20px rgba(214,178,107,0.4)",
-            "0 0 40px rgba(214,178,107,0.7)",
-            "0 0 20px rgba(214,178,107,0.4)",
-          ],
-        }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      {/* Start button */}
+      <Button
+        onClick={onStart}
+        size="lg"
+        className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground font-bold text-lg shadow-lg shadow-primary/40"
       >
-        <Button
-          onClick={onStart}
-          size="lg"
-          className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground font-bold text-lg shadow-lg"
-        >
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Zap className="w-5 h-5 mr-2" />
-          </motion.div>
-          Jouer
-        </Button>
-      </motion.div>
+        <Zap className="w-5 h-5 mr-2" />
+        Jouer
+      </Button>
     </motion.div>
   );
 }
