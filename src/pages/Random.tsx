@@ -239,40 +239,34 @@ const Random = () => {
 
             {/* Mini-Games Buttons */}
             <motion.div 
-              className="flex flex-wrap justify-center gap-2 mt-3 z-10"
+              className="flex flex-wrap justify-center gap-2 mt-3 z-20 relative"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
             >
-              <motion.button
+              <button
                 onClick={() => setShowCompatibilityGame(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/30 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/30 transition-colors active:scale-95"
               >
                 <span>💕</span>
                 <span>Compatibilité</span>
-              </motion.button>
+              </button>
               
-              <motion.button
+              <button
                 onClick={() => setShowSpeedDating(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/30 border border-accent/40 text-accent-foreground text-xs font-medium hover:bg-accent/50 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/30 border border-accent/40 text-accent-foreground text-xs font-medium hover:bg-accent/50 transition-colors active:scale-95"
               >
                 <span>⚡</span>
                 <span>Speed Dating</span>
-              </motion.button>
+              </button>
               
-              <motion.button
+              <button
                 onClick={() => setShowTruthOrDare(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/70 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/70 transition-colors active:scale-95"
               >
                 <span>🎭</span>
                 <span>Vérité ou Défi</span>
-              </motion.button>
+              </button>
             </motion.div>
 
             <div ref={diceRef} className="-my-6">
