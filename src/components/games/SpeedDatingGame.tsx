@@ -191,24 +191,24 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
       <GoldenSparkles />
     </div>
 
-    {/* Info badges on screen - top area */}
+    {/* Info badges on screen - descriptive labels */}
     <motion.div 
-      className="relative z-10 pt-6 px-4 flex items-center justify-center gap-2"
+      className="relative z-10 pt-6 px-4 flex flex-col items-center gap-3"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm text-sm">
-        <Users className="w-4 h-4 text-primary" />
-        <span className="text-foreground font-medium">4+</span>
+      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+        <Users className="w-5 h-5 text-primary" />
+        <span className="text-foreground font-semibold text-base">4+ joueurs</span>
       </div>
-      <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm text-sm">
-        <Clock className="w-4 h-4 text-primary" />
-        <span className="text-foreground font-medium">3×60s</span>
+      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+        <Clock className="w-5 h-5 text-primary" />
+        <span className="text-foreground font-semibold text-base">3 rounds × 60s</span>
       </div>
-      <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm text-sm">
-        <Heart className="w-4 h-4 text-primary" />
-        <span className="text-foreground font-medium">Match</span>
+      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+        <Heart className="w-5 h-5 text-primary" />
+        <span className="text-foreground font-semibold text-base">Match mutuel</span>
       </div>
     </motion.div>
 
@@ -217,7 +217,7 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
     
     {/* Button - positioned higher to avoid navigation overlap */}
     <motion.div 
-      className="relative z-10 px-6 pb-32"
+      className="relative z-10 px-6 pb-40 flex justify-center"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
@@ -225,7 +225,7 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
       <Button 
         onClick={onStart} 
         size="lg" 
-        className="w-full max-w-sm mx-auto flex bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_30px_rgba(214,178,107,0.5)] text-base py-6"
+        className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_30px_rgba(214,178,107,0.5)] text-base py-6"
       >
         <Zap className="w-5 h-5 mr-2" />
         Commencer
