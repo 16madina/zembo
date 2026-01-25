@@ -3,7 +3,7 @@ import { X, Users, Zap, Trophy, MessageCircle, Flame, Check, SkipForward, Sparkl
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useTruthOrDare } from "@/hooks/useTruthOrDare";
-import speedDatingBg from "@/assets/speed-dating-bg.jpeg";
+import truthOrDareIcon from "@/assets/games/truth-or-dare-icon.png";
 
 interface TruthOrDareGameProps {
   onClose: () => void;
@@ -92,10 +92,7 @@ export default function TruthOrDareGame({ onClose }: TruthOrDareGameProps) {
       className="fixed inset-0 z-50 flex flex-col"
     >
       {/* Background */}
-      <div className="absolute inset-0">
-        <img src={speedDatingBg} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/20 via-background/90 to-background" />
-      </div>
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-primary/10" />
 
       <GoldenSparkles />
       <FloatingParticles />
@@ -161,21 +158,30 @@ function IdleScreen({ onStart }: { onStart: () => void }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center gap-6 text-center max-w-md"
+      className="flex flex-col items-center gap-4 text-center max-w-md"
     >
+      {/* Truth or Dare Icon */}
+      <motion.img 
+        src={truthOrDareIcon} 
+        alt="Vérité ou Défi" 
+        className="w-40 h-40 object-contain"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+      />
       {/* Info badges */}
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-          <Users className="w-5 h-5 text-primary" />
-          <span className="text-foreground font-semibold text-base">3+ joueurs</span>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Users className="w-4 h-4 text-primary" />
+          <span className="text-foreground font-medium text-xs">3+ joueurs</span>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-          <Zap className="w-5 h-5 text-primary" />
-          <span className="text-foreground font-semibold text-base">5 rounds × Tour</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Zap className="w-4 h-4 text-primary" />
+          <span className="text-foreground font-medium text-xs">5 rounds</span>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-          <Trophy className="w-5 h-5 text-primary" />
-          <span className="text-foreground font-semibold text-base">Score & Classement</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Trophy className="w-4 h-4 text-primary" />
+          <span className="text-foreground font-medium text-xs">Score</span>
         </div>
       </div>
 
