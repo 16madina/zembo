@@ -24,6 +24,7 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
     votes,
     results,
     isConnected,
+    hasRemoteVideo,
     isMuted,
     isVideoOff,
     error,
@@ -101,6 +102,7 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
               totalRounds={totalRounds}
               timeRemaining={timeRemaining}
               isConnected={isConnected}
+              hasRemoteVideo={hasRemoteVideo}
               isMuted={isMuted}
               isVideoOff={isVideoOff}
               localVideoRef={localVideoRef}
@@ -491,6 +493,7 @@ interface InCallScreenProps {
   totalRounds: number;
   timeRemaining: number;
   isConnected: boolean;
+  hasRemoteVideo: boolean;
   isMuted: boolean;
   isVideoOff: boolean;
   localVideoRef: React.RefObject<HTMLVideoElement>;
@@ -511,6 +514,7 @@ const InCallScreen = ({
   totalRounds,
   timeRemaining,
   isConnected,
+  hasRemoteVideo,
   isMuted,
   isVideoOff,
   localVideoRef,
@@ -542,8 +546,8 @@ const InCallScreen = ({
           className="w-full h-full object-cover"
         />
         
-        {/* Waiting for partner or partner timed out */}
-        {(!isConnected || partnerTimedOut) && (
+        {/* Waiting for partner video or partner timed out */}
+        {(!hasRemoteVideo || partnerTimedOut) && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/90 backdrop-blur-sm">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}

@@ -47,6 +47,7 @@ interface UseSpeedDatingReturn {
   votes: string[];
   results: MatchResult[];
   isConnected: boolean;
+  hasRemoteVideo: boolean;
   isMuted: boolean;
   isVideoOff: boolean;
   error: string | null;
@@ -79,6 +80,7 @@ export function useSpeedDating(): UseSpeedDatingReturn {
   const [votes, setVotes] = useState<string[]>([]);
   const [results, setResults] = useState<MatchResult[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +113,7 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       localStreamRef.current = null;
     }
     setIsConnected(false);
+    setHasRemoteVideo(false);
     setPartnerConnectionTimer(0);
     setPartnerTimedOut(false);
   }, []);
@@ -169,14 +172,29 @@ export function useSpeedDating(): UseSpeedDatingReturn {
         setPartnerConnectionTimer(0);
         
         if (track.kind === Track.Kind.Video && remoteVideoRef.current) {
+          console.log("[speed-dating] Attaching remote video track to video element");
           track.attach(remoteVideoRef.current);
+          setHasRemoteVideo(true); // Mark that we have received partner video
         } else if (track.kind === Track.Kind.Audio) {
+          console.log("[speed-dating] Attaching remote audio track");
           const audioElement = document.createElement("audio");
           audioElement.setAttribute("autoplay", "");
           audioElement.setAttribute("playsinline", "");
           document.body.appendChild(audioElement);
           track.attach(audioElement);
         }
+      });
+
+      // Also listen for tracks that are already published when we join
+      room.on(RoomEvent.ParticipantConnected, (participant) => {
+        console.log("[speed-dating] Participant connected:", participant.identity);
+        // Clear timeout when partner connects
+        if (partnerTimerRef.current) {
+          clearInterval(partnerTimerRef.current);
+          partnerTimerRef.current = null;
+        }
+        setPartnerTimedOut(false);
+        setPartnerConnectionTimer(0);
       });
 
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
@@ -642,6 +660,7 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     votes,
     results,
     isConnected,
+    hasRemoteVideo,
     isMuted,
     isVideoOff,
     error,
