@@ -56,33 +56,15 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-background flex flex-col"
     >
-      {/* Header with info badges */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-primary" />
-          <span className="font-bold text-lg">Speed Dating</span>
-        </div>
-        
-        {/* Info badges inline */}
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-xs">
-            <Users className="w-3 h-3 text-primary" />
-            <span className="text-foreground">4+</span>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-xs">
-            <Clock className="w-3 h-3 text-primary" />
-            <span className="text-foreground">3×60s</span>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-xs">
-            <Heart className="w-3 h-3 text-primary" />
-            <span className="text-foreground">Match</span>
-          </div>
-        </div>
-        
-        <Button variant="ghost" size="icon" onClick={handleClose}>
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
+      {/* Close button - floating */}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={handleClose}
+        className="absolute top-4 right-4 z-20 bg-background/50 backdrop-blur-sm"
+      >
+        <X className="w-5 h-5" />
+      </Button>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
@@ -208,12 +190,33 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
       <GoldenSparkles />
     </div>
 
+    {/* Info badges on screen - top area */}
+    <motion.div 
+      className="relative z-10 pt-6 px-4 flex items-center justify-center gap-2"
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+    >
+      <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm text-sm">
+        <Users className="w-4 h-4 text-primary" />
+        <span className="text-foreground font-medium">4+</span>
+      </div>
+      <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm text-sm">
+        <Clock className="w-4 h-4 text-primary" />
+        <span className="text-foreground font-medium">3×60s</span>
+      </div>
+      <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm text-sm">
+        <Heart className="w-4 h-4 text-primary" />
+        <span className="text-foreground font-medium">Match</span>
+      </div>
+    </motion.div>
+
     {/* Spacer - let image fill the screen */}
     <div className="flex-1" />
     
-    {/* Button at bottom - with safe margin from nav */}
+    {/* Button - positioned higher to avoid navigation overlap */}
     <motion.div 
-      className="relative z-10 px-6 pb-8"
+      className="relative z-10 px-6 pb-24"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
