@@ -19,6 +19,7 @@ import MicrophoneTest from "@/components/random-call/MicrophoneTest";
 import UpgradeModal from "@/components/random-call/UpgradeModal";
 import CompatibilityGameModal from "@/components/games/CompatibilityGameModal";
 import SpeedDatingGame from "@/components/games/SpeedDatingGame";
+import TruthOrDareGame from "@/components/games/TruthOrDareGame";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
@@ -27,6 +28,7 @@ const Random = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showCompatibilityGame, setShowCompatibilityGame] = useState(false);
   const [showSpeedDating, setShowSpeedDating] = useState(false);
+  const [showTruthOrDare, setShowTruthOrDare] = useState(false);
   const diceRef = useRef<HTMLDivElement>(null);
   
   const { user } = useAuth();
@@ -263,7 +265,7 @@ const Random = () => {
               </motion.button>
               
               <motion.button
-                onClick={() => toast.info("Vérité ou Défi - Bientôt disponible !")}
+                onClick={() => setShowTruthOrDare(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/70 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -359,6 +361,12 @@ const Random = () => {
       <AnimatePresence>
         {showSpeedDating && (
           <SpeedDatingGame onClose={() => setShowSpeedDating(false)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTruthOrDare && (
+          <TruthOrDareGame onClose={() => setShowTruthOrDare(false)} />
         )}
       </AnimatePresence>
 
