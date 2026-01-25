@@ -1562,6 +1562,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_in_speed_dating_session: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_user_banned: { Args: { p_user_id: string }; Returns: boolean }
       random_call_cancel: { Args: { p_user_id: string }; Returns: Json }
       random_call_find_or_create_match: {
