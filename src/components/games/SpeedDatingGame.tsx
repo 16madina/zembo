@@ -222,14 +222,35 @@ const IdleScreen = ({ onStart }: { onStart: () => void }) => (
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <Button 
-        onClick={onStart} 
-        size="lg" 
-        className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_30px_rgba(214,178,107,0.5)] text-base py-6"
+      <motion.div
+        animate={{
+          boxShadow: [
+            "0 0 20px rgba(214,178,107,0.4)",
+            "0 0 40px rgba(214,178,107,0.7)",
+            "0 0 20px rgba(214,178,107,0.4)",
+          ],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="rounded-lg"
       >
-        <Zap className="w-5 h-5 mr-2" />
-        Commencer
-      </Button>
+        <Button 
+          onClick={onStart} 
+          size="lg" 
+          className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground text-base py-6"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Zap className="w-5 h-5 mr-2" />
+          </motion.div>
+          Commencer
+        </Button>
+      </motion.div>
     </motion.div>
   </motion.div>
 );
