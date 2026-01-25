@@ -22,6 +22,23 @@ interface TopMatch {
 
 type TestStatus = "idle" | "loading" | "answering" | "analyzing" | "results";
 
+// Category weights - higher values = more important for compatibility
+const CATEGORY_WEIGHTS: Record<string, number> = {
+  "valeurs": 5,        // Core values are most important
+  "amour": 4,          // Love/relationship views
+  "personnalité": 3,   // Personality traits
+  "communication": 3,  // Communication style
+  "projets": 3,        // Future plans/goals
+  "lifestyle": 2,      // Day-to-day lifestyle
+  "loisirs": 1,        // Hobbies/leisure (nice to have)
+  "default": 2,        // Fallback for unknown categories
+};
+
+const getCategoryWeight = (category: string): number => {
+  const normalizedCategory = category.toLowerCase().trim();
+  return CATEGORY_WEIGHTS[normalizedCategory] ?? CATEGORY_WEIGHTS["default"];
+};
+
 export const useCompatibilityTest = () => {
   const { user } = useAuth();
   const [status, setStatus] = useState<TestStatus>("idle");
@@ -176,21 +193,29 @@ export const useCompatibilityTest = () => {
           }
         }
 
-        // Calculate score
-        let matchingAnswers = 0;
-        let totalQuestions = 0;
+        // Calculate weighted score based on category importance
+        let weightedMatchScore = 0;
+        let totalWeight = 0;
+
+        // Build a map of question id -> category for quick lookup
+        const questionCategoryMap = new Map(
+          questions.map(q => [q.id, q.category])
+        );
 
         for (const questionId of Object.keys(finalAnswers)) {
           if (otherAnswers[questionId] !== undefined) {
-            totalQuestions++;
+            const category = questionCategoryMap.get(questionId) || "default";
+            const weight = getCategoryWeight(category);
+            totalWeight += weight;
+            
             if (finalAnswers[questionId] === otherAnswers[questionId]) {
-              matchingAnswers++;
+              weightedMatchScore += weight;
             }
           }
         }
 
-        const score = totalQuestions > 0 
-          ? Math.round((matchingAnswers / totalQuestions) * 100)
+        const score = totalWeight > 0 
+          ? Math.round((weightedMatchScore / totalWeight) * 100)
           : 0;
 
         if (score > 0) {
