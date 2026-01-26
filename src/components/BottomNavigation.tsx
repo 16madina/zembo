@@ -1,4 +1,4 @@
-import { MessageCircle, User } from "lucide-react";
+import { User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
@@ -6,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import zIcon from "@/assets/z-icon.png";
 import eIcon from "@/assets/e-icon.png";
 import mIcon from "@/assets/m-icon.png";
+import bIcon from "@/assets/b-icon.png";
 
 const BottomNavigation = () => {
   const location = useLocation();
@@ -15,7 +16,7 @@ const BottomNavigation = () => {
     { path: "/", icon: null, customIcon: zIcon, label: t.random, needsBlend: false },
     { path: "/live", icon: null, customIcon: eIcon, label: t.live, needsBlend: true },
     { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes", needsBlend: true },
-    { path: "/messages", icon: MessageCircle, label: t.messages, needsBlend: false },
+    { path: "/messages", icon: null, customIcon: bIcon, label: t.messages, needsBlend: true },
     { path: "/profile", icon: User, label: t.profile, needsBlend: false },
   ];
 
