@@ -12,11 +12,11 @@ const BottomNavigation = () => {
   const { t } = useLanguage();
 
   const navItems = [
-    { path: "/", icon: null, customIcon: zIcon, label: t.random },
-    { path: "/live", icon: null, customIcon: eIcon, label: t.live },
-    { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes" },
-    { path: "/messages", icon: MessageCircle, label: t.messages },
-    { path: "/profile", icon: User, label: t.profile },
+    { path: "/", icon: null, customIcon: zIcon, label: t.random, needsBlend: false },
+    { path: "/live", icon: null, customIcon: eIcon, label: t.live, needsBlend: true },
+    { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes", needsBlend: true },
+    { path: "/messages", icon: MessageCircle, label: t.messages, needsBlend: false },
+    { path: "/profile", icon: User, label: t.profile, needsBlend: false },
   ];
 
   const handleNavClick = () => {
@@ -76,6 +76,8 @@ const BottomNavigation = () => {
                           src={item.customIcon} 
                           alt={item.label}
                           className={`w-5 h-5 relative z-10 transition-all duration-200 ${
+                            item.needsBlend ? "mix-blend-screen" : ""
+                          } ${
                             isActive 
                               ? "brightness-125 drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]" 
                               : "brightness-75 grayscale-[30%]"
