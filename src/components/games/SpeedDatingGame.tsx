@@ -30,9 +30,11 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
     error,
     partnerTimedOut,
     partnerConnectionTimer,
+    isConfirmingVotes,
     joinSession,
     leaveSession,
     submitVote,
+    confirmVotes,
     toggleMute,
     toggleVideo,
     skipToNextRound,
@@ -124,6 +126,8 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
               participants={participants}
               votes={votes}
               onVote={submitVote}
+              onConfirmVotes={confirmVotes}
+              isConfirmingVotes={isConfirmingVotes}
             />
           )}
 
@@ -709,9 +713,11 @@ interface VotingScreenProps {
   participants: Array<{ user_id: string; display_name: string; avatar_url: string | null }>;
   votes: string[];
   onVote: (userId: string) => void;
+  onConfirmVotes: () => void;
+  isConfirmingVotes: boolean;
 }
 
-const VotingScreen = ({ participants, votes, onVote }: VotingScreenProps) => (
+const VotingScreen = ({ participants, votes, onVote, onConfirmVotes, isConfirmingVotes }: VotingScreenProps) => (
   <motion.div
     key="voting"
     initial={{ opacity: 0, y: 20 }}
@@ -793,19 +799,44 @@ const VotingScreen = ({ participants, votes, onVote }: VotingScreenProps) => (
         })}
       </div>
 
-      {/* Footer */}
+      {/* Footer with vote count and confirm button */}
       <motion.div 
-        className="mt-4 flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-background/70 backdrop-blur-md border border-primary/20 mx-auto"
+        className="mt-4 space-y-3"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <Heart className="w-4 h-4 text-primary" />
-        <span className="text-sm text-foreground font-medium">
-          {votes.length} vote{votes.length > 1 ? "s" : ""}
-        </span>
-        <span className="text-muted-foreground">•</span>
-        <span className="text-sm text-muted-foreground">Matchs révélés à tous</span>
+        <div className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-background/70 backdrop-blur-md border border-primary/20 mx-auto w-fit">
+          <Heart className="w-4 h-4 text-primary" />
+          <span className="text-sm text-foreground font-medium">
+            {votes.length} vote{votes.length > 1 ? "s" : ""}
+          </span>
+          <span className="text-muted-foreground">•</span>
+          <span className="text-sm text-muted-foreground">Sélectionnez vos coups de cœur</span>
+        </div>
+        
+        <Button 
+          onClick={onConfirmVotes}
+          disabled={isConfirmingVotes}
+          className="w-full bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_25px_rgba(214,178,107,0.4)] py-6 text-base font-semibold disabled:opacity-50"
+          size="lg"
+        >
+          {isConfirmingVotes ? (
+            <>
+              <motion.div 
+                className="w-5 h-5 mr-2 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+              Révélation en cours...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5 mr-2" />
+              Révéler les matchs
+            </>
+          )}
+        </Button>
       </motion.div>
     </div>
   </motion.div>
