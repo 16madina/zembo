@@ -53,9 +53,11 @@ interface UseSpeedDatingReturn {
   error: string | null;
   partnerTimedOut: boolean;
   partnerConnectionTimer: number;
+  isConfirmingVotes: boolean;
   joinSession: () => Promise<void>;
   leaveSession: () => Promise<void>;
   submitVote: (userId: string) => Promise<void>;
+  confirmVotes: () => Promise<void>;
   toggleMute: () => void;
   toggleVideo: () => void;
   skipToNextRound: () => Promise<void>;
@@ -86,6 +88,7 @@ export function useSpeedDating(): UseSpeedDatingReturn {
   const [error, setError] = useState<string | null>(null);
   const [partnerConnectionTimer, setPartnerConnectionTimer] = useState<number>(0);
   const [partnerTimedOut, setPartnerTimedOut] = useState(false);
+  const [isConfirmingVotes, setIsConfirmingVotes] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -408,6 +411,30 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     }
   }, [user, sessionId, votes]);
 
+  // Confirm votes and reveal matches
+  const confirmVotes = useCallback(async () => {
+    if (!sessionId || !user) return;
+    
+    setIsConfirmingVotes(true);
+    try {
+      console.log("[speed-dating] Confirming votes and revealing matches...");
+      
+      // Call the orchestrator to end voting phase
+      await supabase.functions.invoke("speed-dating-orchestrator", {
+        body: { action: "end_voting", session_id: sessionId },
+      });
+      
+      // Transition to results
+      setStatus("results");
+      toast.success("Matchs révélés !");
+    } catch (err) {
+      console.error("[speed-dating] Error confirming votes:", err);
+      toast.error("Erreur lors de la confirmation");
+    } finally {
+      setIsConfirmingVotes(false);
+    }
+  }, [sessionId, user]);
+
   // Toggle mute
   const toggleMute = useCallback(() => {
     if (localStreamRef.current) {
@@ -666,9 +693,11 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     error,
     partnerTimedOut,
     partnerConnectionTimer,
+    isConfirmingVotes,
     joinSession,
     leaveSession,
     submitVote,
+    confirmVotes,
     toggleMute,
     toggleVideo,
     skipToNextRound,
