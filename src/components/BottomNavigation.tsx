@@ -1,10 +1,11 @@
-import { Compass, MessageCircle, User } from "lucide-react";
+import { MessageCircle, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 import { useLanguage } from "@/contexts/LanguageContext";
 import zIcon from "@/assets/z-icon.png";
 import eIcon from "@/assets/e-icon.png";
+import mIcon from "@/assets/m-icon.png";
 
 const BottomNavigation = () => {
   const location = useLocation();
@@ -13,7 +14,7 @@ const BottomNavigation = () => {
   const navItems = [
     { path: "/", icon: null, customIcon: zIcon, label: t.random },
     { path: "/live", icon: null, customIcon: eIcon, label: t.live },
-    { path: "/discover", icon: Compass, label: "Zvibes" },
+    { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes" },
     { path: "/messages", icon: MessageCircle, label: t.messages },
     { path: "/profile", icon: User, label: t.profile },
   ];
