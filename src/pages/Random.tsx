@@ -223,11 +223,11 @@ const Random = () => {
 
             {/* Titre + sous-titre compacts */}
             <motion.div className="text-center mb-0 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-xl font-bold text-foreground">
-                Bienvenue sur <span className="text-primary text-3xl font-black">Z</span> Roulette
+              <h1 className="text-lg font-bold text-foreground">
+                Bienvenue sur <span className="text-primary text-2xl font-black">Z</span> Roulette
               </h1>
             <motion.div 
-                className="flex items-center justify-center gap-2 mt-1"
+                className="flex items-center justify-center gap-2 mt-0.5"
                 initial={{ opacity: 0, scale: 0.9 }} 
                 animate={{ opacity: 1, scale: 1 }} 
                 transition={{ delay: 0.2 }}
@@ -239,7 +239,7 @@ const Random = () => {
 
             {/* Mini-Games Buttons */}
             <motion.div 
-              className="flex flex-wrap justify-center gap-2 mt-3 z-20 relative"
+              className="flex flex-wrap justify-center gap-2 mt-2 z-20 relative"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
@@ -269,11 +269,11 @@ const Random = () => {
               </button>
             </motion.div>
 
-            <div ref={diceRef} className="-my-6">
+            <div ref={diceRef} className="-my-8">
               <DiceAnimation isExiting={isExiting} />
             </div>
             
-            <motion.p className="text-muted-foreground mb-1 max-w-xs leading-snug text-center z-10 text-xs -mt-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <motion.p className="text-muted-foreground max-w-xs leading-snug text-center z-10 text-xs -mt-12" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <span className="text-foreground font-medium">Aucun profil, juste une voix.</span> Tu vas être connecté(e) avec une personne choisie par le hasard.
             </motion.p>
 
@@ -328,12 +328,12 @@ const Random = () => {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(140px+env(safe-area-inset-bottom))]">
-      <motion.header className="flex items-center justify-start px-4 md:px-6 py-3 flex-shrink-0" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(80px+env(safe-area-inset-bottom))]">
+      <motion.header className="flex items-center justify-start px-4 md:px-6 py-2 flex-shrink-0" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <ZemboLogo size="sm" animate={false} />
       </motion.header>
 
-      <div className="flex-1 flex flex-col items-center justify-start px-6 md:px-8 pt-4 text-center overflow-y-auto overflow-x-hidden min-h-0 max-w-2xl md:mx-auto w-full pb-[calc(180px+env(safe-area-inset-bottom))]">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 text-center overflow-hidden min-h-0 max-w-2xl md:mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div key={status} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col items-center w-full">
             {renderContent()}
