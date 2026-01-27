@@ -1,4 +1,3 @@
-import { User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
@@ -7,6 +6,7 @@ import zIcon from "@/assets/z-icon.png";
 import eIcon from "@/assets/e-icon.png";
 import mIcon from "@/assets/m-icon.png";
 import bIcon from "@/assets/b-icon.png";
+import oIcon from "@/assets/o-icon.png";
 
 const BottomNavigation = () => {
   const location = useLocation();
@@ -17,7 +17,7 @@ const BottomNavigation = () => {
     { path: "/live", icon: null, customIcon: eIcon, label: t.live, needsBlend: true },
     { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes", needsBlend: true },
     { path: "/messages", icon: null, customIcon: bIcon, label: t.messages, needsBlend: true },
-    { path: "/profile", icon: User, label: t.profile, needsBlend: false },
+    { path: "/profile", icon: null, customIcon: oIcon, label: t.profile, needsBlend: true },
   ];
 
   const handleNavClick = () => {
