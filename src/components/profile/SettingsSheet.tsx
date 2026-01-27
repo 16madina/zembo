@@ -71,6 +71,8 @@ import { useBiometricAuth } from "@/hooks/useBiometricAuth";
 import { InviteFriendsModal } from "./InviteFriendsModal";
 import { isNative } from "@/lib/capacitor";
 import { useZemboRingtone } from "@/hooks/useZemboRingtone";
+import { useSoundEffects, setSoundsEnabled, getSoundsEnabled } from "@/hooks/useSoundEffects";
+import { Volume2, VolumeX } from "lucide-react";
 
 type Theme = "dark" | "light" | "system";
 type ProfileVisibility = "all" | "matches" | "invisible";
@@ -486,6 +488,7 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTermsOfService, setShowTermsOfService] = useState(false);
   const [showInviteFriends, setShowInviteFriends] = useState(false);
+  const [appSoundsEnabled, setAppSoundsEnabled] = useState(getSoundsEnabled);
   
   // Advanced Privacy Settings
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>("all");
@@ -532,6 +535,12 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
     setPushEnabled(enabled);
     localStorage.setItem("zembo-push", String(enabled));
     window.dispatchEvent(new Event("zembo-push-changed"));
+    toast.success(t.saved);
+  };
+
+  const handleSoundsToggle = (enabled: boolean) => {
+    setAppSoundsEnabled(enabled);
+    setSoundsEnabled(enabled);
     toast.success(t.saved);
   };
 
@@ -805,6 +814,19 @@ export const SettingsSheet = ({ children }: SettingsSheetProps) => {
                   <Switch
                     checked={pushEnabled}
                     onCheckedChange={handlePushToggle}
+                  />
+                }
+              />
+              
+              {/* App Sounds Toggle */}
+              <SettingRow
+                icon={appSoundsEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                label={language === "fr" ? "Sons de l'application" : "App Sounds"}
+                description={language === "fr" ? "Sons de navigation et interactions" : "Navigation and interaction sounds"}
+                action={
+                  <Switch
+                    checked={appSoundsEnabled}
+                    onCheckedChange={handleSoundsToggle}
                   />
                 }
               />

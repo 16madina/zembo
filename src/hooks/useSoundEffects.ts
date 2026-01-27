@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 
 import { haptics, isNative } from "@/lib/capacitor";
 
@@ -12,8 +12,24 @@ import zemboVoiceSound from "@/assets/sounds/zembo-voice.mp3";
 // Cache for dynamically generated sounds
 let flameSoundCache: string | null = null;
 
+// Sound settings key
+const SOUND_ENABLED_KEY = "zembo-sounds-enabled";
+
+// Helper to get sound preference
+export const getSoundsEnabled = (): boolean => {
+  const saved = localStorage.getItem(SOUND_ENABLED_KEY);
+  return saved === null ? true : saved === "true";
+};
+
+// Helper to set sound preference
+export const setSoundsEnabled = (enabled: boolean): void => {
+  localStorage.setItem(SOUND_ENABLED_KEY, String(enabled));
+  window.dispatchEvent(new Event("zembo-sounds-changed"));
+};
+
 export const useSoundEffects = () => {
   const [isDrumrollPlaying, setIsDrumrollPlaying] = useState(false);
+  const [soundsEnabled, setSoundsEnabledState] = useState(getSoundsEnabled);
   
   // Audio refs to manage playback
   const diceAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -22,7 +38,17 @@ export const useSoundEffects = () => {
   const successAudioRef = useRef<HTMLAudioElement | null>(null);
   const roseSoundCacheRef = useRef<string | null>(null);
 
+  // Listen for sound preference changes
+  useEffect(() => {
+    const handleSoundsChanged = () => {
+      setSoundsEnabledState(getSoundsEnabled());
+    };
+    window.addEventListener("zembo-sounds-changed", handleSoundsChanged);
+    return () => window.removeEventListener("zembo-sounds-changed", handleSoundsChanged);
+  }, []);
+
   const playDiceSound = useCallback(() => {
+    if (!soundsEnabled) return;
     try {
       // Trigger medium haptic feedback on mobile for better sensation
       if (isNative) {
@@ -39,9 +65,10 @@ export const useSoundEffects = () => {
     } catch (error) {
       console.error("Error playing dice sound:", error);
     }
-  }, []);
+  }, [soundsEnabled]);
 
   const playZemboVoice = useCallback(() => {
+    if (!soundsEnabled) return;
     try {
       setIsDrumrollPlaying(true);
       
@@ -82,9 +109,10 @@ export const useSoundEffects = () => {
       console.error("Error playing zembo voice:", error);
       setIsDrumrollPlaying(false);
     }
-  }, []);
+  }, [soundsEnabled]);
 
   const playRevealSound = useCallback(() => {
+    if (!soundsEnabled) return;
     try {
       const audio = new Audio(revealMagicSound);
       audio.volume = 0.7;
@@ -95,9 +123,10 @@ export const useSoundEffects = () => {
     } catch (error) {
       console.error("Error playing reveal sound:", error);
     }
-  }, []);
+  }, [soundsEnabled]);
 
   const playNotificationSound = useCallback(() => {
+    if (!soundsEnabled) return;
     try {
       // Trigger haptic feedback on mobile
       if (isNative) {
@@ -113,7 +142,7 @@ export const useSoundEffects = () => {
     } catch (error) {
       console.error("Error playing notification sound:", error);
     }
-  }, []);
+  }, [soundsEnabled]);
 
   const playMatchSound = useCallback(() => {
     try {
@@ -313,35 +342,36 @@ export const useSoundEffects = () => {
     }
   }, []);
 
-  // Subtle navigation tab sound - uses Web Audio API for instant, lightweight feedback
+  // Very subtle navigation tab sound - soft tick
   const playNavSound = useCallback(() => {
+    if (!soundsEnabled) return;
     try {
       // Light haptic feedback on mobile
       if (isNative) {
         haptics.impact('light');
       }
       
-      // Create a subtle "pop" sound using Web Audio API for instant playback
+      // Create an ultra-subtle "tick" sound using Web Audio API
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // Create oscillator for a soft pop/click
+      // Create oscillator for a very soft tick
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
-      // Soft, high-pitched pop sound
-      oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.05);
+      // Very soft, brief tick - lower frequency and volume
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.03);
       
-      // Quick fade out for subtlety
-      gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+      // Ultra-quiet and very brief
+      gainNode.gain.setValueAtTime(0.06, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.04);
       
       oscillator.type = 'sine';
       oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.08);
+      oscillator.stop(audioContext.currentTime + 0.04);
       
       // Cleanup
       oscillator.onended = () => {
@@ -349,8 +379,12 @@ export const useSoundEffects = () => {
       };
     } catch (error) {
       // Silent fail - navigation sound is non-critical
-      console.warn("Nav sound failed:", error);
     }
+  }, [soundsEnabled]);
+
+  // Toggle sounds function
+  const toggleSounds = useCallback((enabled: boolean) => {
+    setSoundsEnabled(enabled);
   }, []);
 
   return {
@@ -364,5 +398,7 @@ export const useSoundEffects = () => {
     playFlameSound,
     playNavSound,
     isDrumrollPlaying,
+    soundsEnabled,
+    toggleSounds,
   };
 };
