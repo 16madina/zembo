@@ -13,11 +13,11 @@ const BottomNavigation = () => {
   const { t } = useLanguage();
 
   const navItems = [
-    { path: "/", icon: null, customIcon: zIcon, label: t.random, needsBlend: false },
-    { path: "/live", icon: null, customIcon: eIcon, label: t.live, needsBlend: true },
-    { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes", needsBlend: true },
-    { path: "/messages", icon: null, customIcon: bIcon, label: t.messages, needsBlend: true },
-    { path: "/profile", icon: null, customIcon: oIcon, label: t.profile, needsBlend: true },
+    { path: "/", icon: null, customIcon: zIcon, label: t.random, needsBlend: false, size: "w-5 h-5" },
+    { path: "/live", icon: null, customIcon: eIcon, label: t.live, needsBlend: true, size: "w-5 h-5" },
+    { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes", needsBlend: true, size: "w-5 h-5" },
+    { path: "/messages", icon: null, customIcon: bIcon, label: t.messages, needsBlend: true, size: "w-5 h-5" },
+    { path: "/profile", icon: null, customIcon: oIcon, label: t.profile, needsBlend: true, size: "w-6 h-6" },
   ];
 
   const handleNavClick = () => {
@@ -76,7 +76,7 @@ const BottomNavigation = () => {
                         <img 
                           src={item.customIcon} 
                           alt={item.label}
-                          className={`w-5 h-5 relative z-10 transition-all duration-200 ${
+                          className={`${item.size || "w-5 h-5"} relative z-10 transition-all duration-200 ${
                             item.needsBlend ? "mix-blend-screen" : ""
                           } ${
                             isActive 
