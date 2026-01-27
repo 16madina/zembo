@@ -329,8 +329,8 @@ const Random = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(140px+env(safe-area-inset-bottom))]">
-      <motion.header className="flex items-center justify-center px-6 md:px-8 py-4 flex-shrink-0" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <ZemboLogo />
+      <motion.header className="flex items-center justify-start px-4 md:px-6 py-3 flex-shrink-0" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <ZemboLogo size="sm" animate={false} />
       </motion.header>
 
       <div className="flex-1 flex flex-col items-center justify-start px-6 md:px-8 pt-4 text-center overflow-y-auto overflow-x-hidden min-h-0 max-w-2xl md:mx-auto w-full pb-[calc(180px+env(safe-area-inset-bottom))]">
