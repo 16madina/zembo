@@ -28,44 +28,43 @@ const BottomNavigation = () => {
     }
   };
 
-  // Bounce animation variant for tap
+  // Bounce animation variant for tap - optimized for mobile
   const bounceVariant = {
     tap: {
-      scale: [1, 0.85, 1.15, 0.95, 1],
-      transition: { duration: 0.4, ease: "easeOut" as const }
+      scale: [1, 0.9, 1.1, 1],
+      transition: { duration: 0.3, ease: "easeOut" as const }
     }
   };
 
-  // Floating animation for inactive icons
+  // Floating animation for inactive icons - subtle for battery saving
   const floatVariant = {
     float: {
-      y: [0, -2, 0],
+      y: [0, -1.5, 0],
       transition: { 
-        duration: 2, 
+        duration: 2.5, 
         repeat: Infinity, 
         ease: "easeInOut" as const 
       }
     }
   };
 
-  // Active icon animation with golden shimmer
+  // Active icon animation - optimized pulse
   const activeIconVariant = {
     active: {
-      scale: [1, 1.08, 1],
-      rotate: [0, 2, -2, 0],
+      scale: [1, 1.05, 1],
       transition: { 
-        duration: 1.5, 
+        duration: 2, 
         repeat: Infinity,
         ease: "easeInOut" as const
       }
     }
   };
 
-  // Hover wiggle animation
+  // Hover wiggle animation (web only)
   const hoverVariant = {
     hover: {
-      rotate: [-5, 5, -5, 5, 0],
-      transition: { duration: 0.5 }
+      rotate: [-3, 3, 0],
+      transition: { duration: 0.3 }
     }
   };
 
@@ -98,7 +97,7 @@ const BottomNavigation = () => {
                     )}
                     {item.customIcon && (
                       <motion.div 
-                        className="relative"
+                        className="relative transform-gpu"
                         variants={{
                           ...floatVariant,
                           ...activeIconVariant,
@@ -109,63 +108,36 @@ const BottomNavigation = () => {
                       >
                         {isActive && (
                           <>
-                            {/* Golden glow base */}
+                            {/* Golden glow - simplified for mobile performance */}
                             <motion.div 
-                              className="absolute inset-0 bg-primary/40 rounded-full blur-md"
+                              className="absolute inset-0 bg-primary/50 rounded-full blur-md transform-gpu"
                               animate={{ 
-                                opacity: [0.4, 0.7, 0.4],
-                                scale: [1, 1.2, 1]
+                                opacity: [0.5, 0.8, 0.5],
+                                scale: [1, 1.15, 1]
                               }}
-                              transition={{ duration: 1.5, repeat: Infinity }}
+                              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                             />
-                            {/* Shimmer ring */}
+                            {/* Shimmer ring - optimized */}
                             <motion.div 
-                              className="absolute -inset-1 rounded-full blur-lg"
+                              className="absolute -inset-1 rounded-full blur-lg transform-gpu"
                               style={{
-                                background: "linear-gradient(90deg, hsl(var(--primary) / 0.3), hsl(45 100% 60% / 0.4), hsl(var(--primary) / 0.3))"
+                                background: "radial-gradient(circle, hsl(45 100% 60% / 0.4) 0%, transparent 70%)"
                               }}
                               animate={{ 
-                                opacity: [0.5, 0.8, 0.5]
+                                opacity: [0.4, 0.7, 0.4]
                               }}
-                              transition={{ duration: 2, repeat: Infinity }}
+                              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                             />
-                            {/* Sparkle particles */}
-                            <motion.div
-                              className="absolute -inset-2"
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                            >
-                              {[0, 90, 180, 270].map((deg) => (
-                                <motion.div
-                                  key={deg}
-                                  className="absolute w-1 h-1 bg-primary rounded-full"
-                                  style={{
-                                    top: "50%",
-                                    left: "50%",
-                                    transform: `rotate(${deg}deg) translateY(-12px)`
-                                  }}
-                                  animate={{ 
-                                    opacity: [0, 1, 0],
-                                    scale: [0.5, 1, 0.5]
-                                  }}
-                                  transition={{ 
-                                    duration: 1.5, 
-                                    repeat: Infinity,
-                                    delay: deg / 360
-                                  }}
-                                />
-                              ))}
-                            </motion.div>
                           </>
                         )}
                         <motion.img 
                           src={item.customIcon} 
                           alt={item.label}
-                          className={`${item.size || "w-5 h-5"} relative z-10 transition-all duration-200 ${
+                          className={`${item.size || "w-5 h-5"} relative z-10 transition-all duration-200 transform-gpu ${
                             item.needsBlend ? "mix-blend-screen" : ""
                           } ${
                             isActive 
-                              ? "brightness-125 drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]" 
+                              ? "brightness-125 drop-shadow-[0_0_6px_rgba(212,175,55,0.7)]" 
                               : "brightness-75 grayscale-[30%]"
                           }`}
                         />
