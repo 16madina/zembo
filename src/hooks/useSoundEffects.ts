@@ -313,6 +313,46 @@ export const useSoundEffects = () => {
     }
   }, []);
 
+  // Subtle navigation tab sound - uses Web Audio API for instant, lightweight feedback
+  const playNavSound = useCallback(() => {
+    try {
+      // Light haptic feedback on mobile
+      if (isNative) {
+        haptics.impact('light');
+      }
+      
+      // Create a subtle "pop" sound using Web Audio API for instant playback
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Create oscillator for a soft pop/click
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Soft, high-pitched pop sound
+      oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.05);
+      
+      // Quick fade out for subtlety
+      gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+      
+      oscillator.type = 'sine';
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.08);
+      
+      // Cleanup
+      oscillator.onended = () => {
+        audioContext.close();
+      };
+    } catch (error) {
+      // Silent fail - navigation sound is non-critical
+      console.warn("Nav sound failed:", error);
+    }
+  }, []);
+
   return {
     playDiceSound,
     playZemboVoice,
@@ -322,6 +362,7 @@ export const useSoundEffects = () => {
     playRoseSound,
     playRejectionSound,
     playFlameSound,
+    playNavSound,
     isDrumrollPlaying,
   };
 };

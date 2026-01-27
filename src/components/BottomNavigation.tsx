@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 import zIcon from "@/assets/z-icon.png";
 import eIcon from "@/assets/e-icon.png";
 import mIcon from "@/assets/m-icon.png";
@@ -11,6 +11,7 @@ import oIcon from "@/assets/o-icon.png";
 const BottomNavigation = () => {
   const location = useLocation();
   const { t } = useLanguage();
+  const { playNavSound } = useSoundEffects();
 
   const navItems = [
     { path: "/", icon: null, customIcon: zIcon, label: t.random, needsBlend: false, size: "w-5 h-5" },
@@ -20,9 +21,10 @@ const BottomNavigation = () => {
     { path: "/profile", icon: null, customIcon: oIcon, label: t.profile, needsBlend: true, size: "w-6 h-6" },
   ];
 
-  const handleNavClick = () => {
-    if (isNative) {
-      haptics.impact(ImpactStyle.Light);
+  const handleNavClick = (path: string) => {
+    // Only play sound when navigating to a different tab
+    if (location.pathname !== path) {
+      playNavSound();
     }
   };
 
@@ -84,7 +86,7 @@ const BottomNavigation = () => {
                 >
                   <Link
                     to={item.path}
-                    onClick={handleNavClick}
+                    onClick={() => handleNavClick(item.path)}
                     className="relative flex flex-col items-center gap-0.5 p-2 rounded-xl tap-highlight"
                   >
                     {isActive && (
