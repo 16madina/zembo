@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useRoseReceived } from "@/hooks/useRoseReceived";
 import RoseReceivedModal from "@/components/RoseReceivedModal";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
-import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import { haptics, isNative } from "@/lib/capacitor";
 
 /**
  * Global component to handle rose notifications on any page.
@@ -50,7 +50,9 @@ const GlobalRoseHandler = () => {
   useEffect(() => {
     if (isModalOpen && roseReceived) {
       setShowPetalsAnimation(true);
-      Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+      if (isNative) {
+        haptics.impact('heavy');
+      }
     }
   }, [isModalOpen, roseReceived]);
 
