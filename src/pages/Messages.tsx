@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, CheckCheck, Check, Loader2, Heart, Lock, Crown, Sparkles } from "lucide-react";
 import ZemboLogo from "@/components/ZemboLogo";
@@ -95,6 +96,7 @@ const MessageStatus = ({ status }: { status: Conversation["status"] }) => {
 };
 
 const Messages = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isPremium } = useSubscription();
   const { playNotificationSound, playMatchSound } = useSoundEffects();
@@ -552,7 +554,27 @@ const Messages = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         <ZemboLogo />
-        <div className="w-8" />
+        <div className="flex items-center gap-2">
+          {/* Likes received badge - like Home.tsx */}
+          {likedByUsers.length > 0 && (
+            <motion.button 
+              onClick={() => navigate("/likes")}
+              className="relative p-2 rounded-lg tap-highlight glass"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Heart className="w-5 h-5 text-destructive fill-destructive" />
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-destructive text-white text-[10px] font-bold rounded-full"
+              >
+                {likedByUsers.length}
+              </motion.span>
+            </motion.button>
+          )}
+          <CallHistorySection />
+        </div>
       </motion.header>
 
       <motion.div 
@@ -561,80 +583,14 @@ const Messages = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-            <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} matchs</p>
-          </div>
-          {/* Call History Button */}
-          <CallHistorySection />
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+          <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} matchs</p>
         </div>
       </motion.div>
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain max-w-4xl md:mx-auto w-full">
-
-        {/* Who Liked Me Section */}
-        {likedByUsers.length > 0 && (
-          <motion.div
-            className="px-4 md:px-8 mb-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Heart className="w-4 h-4 text-destructive fill-destructive" />
-              <h3 className="text-sm font-medium text-muted-foreground">
-                Qui m'a liké ({likedByUsers.length})
-              </h3>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {likedByUsers.map((likedBy) => (
-                <motion.button
-                  key={likedBy.id}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedProfile({
-                    id: likedBy.id,
-                    name: likedBy.name,
-                    age: likedBy.age || 25,
-                    location: likedBy.location || "France",
-                    photos: [likedBy.photo],
-                    bio: "",
-                    interests: [],
-                    isVerified: false
-                  })}
-                  className="flex flex-col items-center gap-1.5 flex-shrink-0"
-                >
-                  <div className="relative">
-                    <div className={`w-16 h-16 rounded-full p-0.5 ${
-                      likedBy.hasRose 
-                        ? 'bg-gradient-to-br from-rose-400 via-rose-500 to-rose-600' 
-                        : likedBy.isSuperLike 
-                          ? 'bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600' 
-                          : 'bg-gradient-to-br from-destructive via-destructive/80 to-destructive/60'
-                    }`}>
-                      <div className="relative w-full h-full">
-                        <img
-                          src={likedBy.photo}
-                          alt={likedBy.name}
-                          className="w-full h-full rounded-full object-cover border-2 border-background"
-                        />
-                      </div>
-                    </div>
-                    {likedBy.hasRose ? (
-                      <span className="absolute -top-1 -right-1 text-lg">🌹</span>
-                    ) : likedBy.isSuperLike && (
-                      <span className="absolute -top-1 -right-1 text-lg">🔥</span>
-                    )}
-                  </div>
-                  <span className="text-xs font-medium text-foreground">
-                    {likedBy.name}
-                  </span>
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
 
         {/* New Matches Section */}
         {newMatches.length > 0 && (
