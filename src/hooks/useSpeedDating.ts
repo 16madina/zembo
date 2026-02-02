@@ -214,26 +214,62 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       // Connect to room
       await room.connect(tokenData.url, tokenData.token);
 
-      // Get local media
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
-        audio: true,
-      });
+      // Get local media with Android WebView fallback
+      let stream: MediaStream | null = null;
+      const isAndroidWebView = /Android/i.test(navigator.userAgent);
+      
+      // Try different constraints for Android compatibility
+      const constraintsOptions = [
+        { video: { facingMode: "user", width: 640, height: 480 }, audio: true },
+        { video: { facingMode: "user" }, audio: true },
+        { video: true, audio: true },
+      ];
+      
+      for (const constraints of constraintsOptions) {
+        try {
+          console.log("[speed-dating] Trying constraints:", JSON.stringify(constraints));
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          console.log("[speed-dating] Successfully got stream with constraints");
+          break;
+        } catch (mediaErr) {
+          console.warn("[speed-dating] Failed with constraints:", constraints, mediaErr);
+        }
+      }
+      
+      if (!stream) {
+        throw new Error("Impossible d'accéder à la caméra");
+      }
+      
       localStreamRef.current = stream;
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        // Force video play on Android
+        if (isAndroidWebView) {
+          try {
+            await localVideoRef.current.play();
+          } catch (e) {
+            console.warn("[speed-dating] Local video play failed:", e);
+          }
+        }
       }
 
       // Publish tracks
       const videoTrack = stream.getVideoTracks()[0];
       const audioTrack = stream.getAudioTracks()[0];
 
+      console.log("[speed-dating] Publishing tracks:", { 
+        hasVideo: !!videoTrack, 
+        hasAudio: !!audioTrack 
+      });
+
       if (videoTrack) {
         await room.localParticipant.publishTrack(videoTrack);
+        console.log("[speed-dating] Video track published");
       }
       if (audioTrack) {
         await room.localParticipant.publishTrack(audioTrack);
+        console.log("[speed-dating] Audio track published");
       }
 
       console.log("[speed-dating] Connected to room:", roomName);
