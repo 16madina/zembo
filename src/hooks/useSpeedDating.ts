@@ -180,11 +180,42 @@ export function useSpeedDating(): UseSpeedDatingReturn {
           setHasRemoteVideo(true); // Mark that we have received partner video
         } else if (track.kind === Track.Kind.Audio) {
           console.log("[speed-dating] Attaching remote audio track");
+          // Create a persistent audio element for mobile compatibility
           const audioElement = document.createElement("audio");
+          audioElement.id = `speed-dating-remote-audio-${participant.identity}`;
           audioElement.setAttribute("autoplay", "");
           audioElement.setAttribute("playsinline", "");
+          // Remove any existing audio element with the same id
+          const existing = document.getElementById(audioElement.id);
+          if (existing) {
+            existing.remove();
+          }
           document.body.appendChild(audioElement);
           track.attach(audioElement);
+          
+          // Force play on mobile (handle autoplay restrictions)
+          const playAudio = async () => {
+            try {
+              await audioElement.play();
+              console.log("[speed-dating] Remote audio playing successfully");
+            } catch (e) {
+              console.warn("[speed-dating] Audio autoplay blocked, retrying on user interaction:", e);
+              // Add a one-time click listener to resume audio
+              const resumeAudio = async () => {
+                try {
+                  await audioElement.play();
+                  console.log("[speed-dating] Audio resumed after user interaction");
+                } catch (err) {
+                  console.error("[speed-dating] Failed to resume audio:", err);
+                }
+                document.removeEventListener("click", resumeAudio);
+                document.removeEventListener("touchstart", resumeAudio);
+              };
+              document.addEventListener("click", resumeAudio, { once: true });
+              document.addEventListener("touchstart", resumeAudio, { once: true });
+            }
+          };
+          playAudio();
         }
       });
 
