@@ -1728,7 +1728,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
   const smoothEase = { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const };
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="min-h-full flex flex-col overflow-hidden">
       <AnimatePresence mode="wait">
         {currentStep === "intro" && (
           <motion.div
@@ -1737,18 +1737,18 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
             animate={pageTransition.animate}
             exit={pageTransition.exit}
             transition={smoothEase}
-            className="flex-1 flex flex-col items-center justify-center text-center px-6"
+            className="flex-1 flex flex-col items-center text-center px-6 py-6 overflow-y-auto"
           >
-            {/* Shield Icon */}
+            {/* Shield Icon - smaller on compact screens */}
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", delay: 0.2 }}
-              className="relative mb-8"
+              className="relative mb-4 sm:mb-8 flex-shrink-0"
             >
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-                  <Shield className="w-12 h-12 text-primary" />
+              <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <div className="w-14 h-14 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+                  <Shield className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
                 </div>
               </div>
               <motion.div
@@ -1756,7 +1756,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-0"
               >
-                <Sparkles className="w-6 h-6 text-primary absolute -top-1 left-1/2 -translate-x-1/2" />
+                <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-primary absolute -top-1 left-1/2 -translate-x-1/2" />
               </motion.div>
             </motion.div>
 
@@ -1764,7 +1764,7 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="text-2xl font-bold text-foreground mb-3"
+              className="text-xl sm:text-2xl font-bold text-foreground mb-2 sm:mb-3 flex-shrink-0"
             >
               Vérification d'identité
             </motion.h2>
@@ -1773,17 +1773,17 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="text-muted-foreground mb-8 max-w-xs"
+              className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-8 max-w-xs flex-shrink-0"
             >
               Notre IA va vérifier que vous êtes la même personne que sur vos photos de profil.
             </motion.p>
 
-            {/* AI Preload Status Indicator */}
+            {/* AI Preload Status Indicator - more compact on small screens */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
-              className="w-full max-w-xs mb-6 p-4 rounded-2xl bg-card/80 border border-border"
+              className="w-full max-w-xs mb-4 sm:mb-6 p-3 sm:p-4 rounded-2xl bg-card/80 border border-border flex-shrink-0"
             >
               <div className="space-y-3">
                 {/* Models Loading Status */}
@@ -1859,44 +1859,45 @@ export const FaceVerificationStep = ({ onNext, onBack, data, updateData }: FaceV
               </div>
             </motion.div>
 
-            {/* Steps Preview */}
+            {/* Steps Preview - scrollable on compact screens */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="w-full max-w-xs space-y-3 mb-8"
+              className="w-full max-w-xs space-y-2 sm:space-y-3 mb-4 sm:mb-8 flex-shrink-0"
             >
               {verificationSteps.map((step, index) => (
                 <div
                   key={step.id}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50"
+                  className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs sm:text-sm flex-shrink-0">
                     {index + 1}
                   </div>
-                  <span className="text-sm text-foreground">{step.instruction}</span>
+                  <span className="text-xs sm:text-sm text-foreground">{step.instruction}</span>
                 </div>
               ))}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-card/50 backdrop-blur-sm border border-primary/30">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl bg-card/50 backdrop-blur-sm border border-primary/30">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs sm:text-sm flex-shrink-0">
                   4
                 </div>
-                <span className="text-sm text-primary font-medium">Comparaison avec vos photos</span>
+                <span className="text-xs sm:text-sm text-primary font-medium">Comparaison avec vos photos</span>
               </div>
             </motion.div>
 
+            {/* Button - always visible at bottom */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
-              className="w-full max-w-xs"
+              className="w-full max-w-xs mt-auto pt-4 pb-[env(safe-area-inset-bottom)] flex-shrink-0"
             >
               <Button
                 onClick={startVerification}
-                className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
+                className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
               >
                 <Camera className="w-5 h-5 mr-2" />
-                Commencer la vérification
+                Commencer
               </Button>
             </motion.div>
           </motion.div>
