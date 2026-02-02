@@ -539,74 +539,101 @@ const InCallScreen = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col relative bg-black"
+      className="flex-1 flex flex-col bg-black h-full"
     >
-      {/* Remote Video (Full Screen) */}
-      <div className="flex-1 relative">
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
-        
-        {/* Waiting for partner video or partner timed out */}
-        {(!hasRemoteVideo || partnerTimedOut) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/90 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-center p-6 max-w-sm"
-            >
-              <Avatar className="w-24 h-24 mx-auto mb-4 border-2 border-primary/30">
-                <AvatarImage src={round.partner_avatar || undefined} />
-                <AvatarFallback className="text-2xl bg-primary/20 text-primary">{round.partner_name[0]}</AvatarFallback>
-              </Avatar>
-              
-              {partnerTimedOut ? (
-                <>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-500" />
-                    <p className="text-foreground font-semibold">Partenaire indisponible</p>
-                  </div>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    {round.partner_name} ne s'est pas connecté(e). Vous pouvez passer au prochain round.
-                  </p>
-                  <Button
-                    onClick={onSkipRound}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    <SkipForward className="w-4 h-4 mr-2" />
-                    Passer au round suivant
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3"
-                  />
-                  <p className="text-muted-foreground">
-                    Connexion à {round.partner_name}...
-                  </p>
-                  {partnerConnectionTimer > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Attente: {partnerConnectionTimer}s / 15s
-                    </p>
-                  )}
-                </>
-              )}
-            </motion.div>
-          </div>
-        )}
+      {/* Progress bar at top */}
+      <div className="w-full z-30">
+        <Progress value={(timeRemaining / 60) * 100} className="h-1 rounded-none" />
+      </div>
 
-        {/* Local Video (PiP) - positioned at top-right for better visibility */}
+      {/* Header with round info and timer */}
+      <div className="flex items-center justify-between px-4 py-2 bg-background/80 backdrop-blur-sm z-20">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">
+            Round {roundNumber}/{totalRounds}
+          </span>
+        </div>
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="absolute top-20 right-4 w-32 h-44 rounded-xl overflow-hidden border-2 border-primary shadow-lg z-20"
+          className={cn(
+            "px-3 py-1 rounded-full font-bold text-lg",
+            isLowTime 
+              ? "bg-destructive text-destructive-foreground" 
+              : "bg-primary/20 text-primary"
+          )}
+          animate={isLowTime ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ duration: 0.5, repeat: isLowTime ? Infinity : 0 }}
         >
+          {timeRemaining}s
+        </motion.div>
+      </div>
+
+      {/* Split Screen Videos - Two videos stacked vertically */}
+      <div className="flex-1 flex flex-col gap-1 p-2 min-h-0">
+        {/* Partner Video - Top half */}
+        <div className="flex-1 relative rounded-xl overflow-hidden border-2 border-primary/30 bg-muted min-h-0">
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          
+          {/* Partner name label */}
+          <div className="absolute bottom-2 left-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm">
+            <span className="text-sm font-medium text-white">{round.partner_name}</span>
+          </div>
+          
+          {/* Waiting for partner video overlay */}
+          {(!hasRemoteVideo || partnerTimedOut) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm">
+              <div className="text-center p-4">
+                <Avatar className="w-20 h-20 mx-auto mb-3 border-2 border-primary/30">
+                  <AvatarImage src={round.partner_avatar || undefined} />
+                  <AvatarFallback className="text-xl bg-primary/20 text-primary">{round.partner_name[0]}</AvatarFallback>
+                </Avatar>
+                
+                {partnerTimedOut ? (
+                  <>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      <p className="text-foreground font-semibold text-sm">Partenaire indisponible</p>
+                    </div>
+                    <p className="text-muted-foreground text-xs mb-3">
+                      {round.partner_name} ne s'est pas connecté(e).
+                    </p>
+                    <Button
+                      onClick={onSkipRound}
+                      size="sm"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <SkipForward className="w-4 h-4 mr-1" />
+                      Passer
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"
+                    />
+                    <p className="text-muted-foreground text-sm">
+                      Connexion à {round.partner_name}...
+                    </p>
+                    {partnerConnectionTimer > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {partnerConnectionTimer}s / 15s
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Local Video - Bottom half */}
+        <div className="flex-1 relative rounded-xl overflow-hidden border-2 border-primary bg-muted min-h-0">
           <video
             ref={localVideoRef}
             autoPlay
@@ -620,89 +647,57 @@ const InCallScreen = ({
           />
           {isVideoOff && (
             <div className="w-full h-full bg-muted flex items-center justify-center">
-              <VideoOff className="w-8 h-8 text-muted-foreground" />
+              <VideoOff className="w-10 h-10 text-muted-foreground" />
             </div>
           )}
-        </motion.div>
-
-        {/* Overlay Info */}
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-          {/* Round indicator */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm">
-            <span className="text-sm font-medium">
-              Round {roundNumber}/{totalRounds}
-            </span>
+          
+          {/* You label */}
+          <div className="absolute bottom-2 left-2 px-3 py-1 rounded-full bg-primary/80 backdrop-blur-sm">
+            <span className="text-sm font-medium text-primary-foreground">Vous</span>
           </div>
-
-          {/* Timer */}
-          <motion.div
-            className={cn(
-              "px-4 py-2 rounded-full font-bold text-lg",
-              isLowTime 
-                ? "bg-destructive text-destructive-foreground" 
-                : "bg-background/80 backdrop-blur-sm"
-            )}
-            animate={isLowTime ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ duration: 0.5, repeat: isLowTime ? Infinity : 0 }}
-          >
-            {timeRemaining}s
-          </motion.div>
-        </div>
-
-        {/* Partner name - positioned at bottom left */}
-        <div className="absolute bottom-28 left-4">
-          <div className="px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm">
-            <span className="font-medium">{round.partner_name}</span>
-          </div>
-        </div>
-
-        {error && (
-          <div className="absolute top-16 left-4 right-4">
-            <div className="px-3 py-2 rounded-lg bg-destructive/80 text-destructive-foreground text-sm text-center">
-              {error}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-        <div className="flex items-center justify-center gap-4">
-          <motion.button
-            onClick={onToggleMute}
-            className={cn(
-              "w-14 h-14 rounded-full flex items-center justify-center",
-              isMuted ? "bg-destructive" : "bg-muted"
-            )}
-            whileTap={{ scale: 0.95 }}
-          >
-            {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-          </motion.button>
-
-          <motion.button
-            onClick={onEndCall}
-            className="w-16 h-16 rounded-full bg-destructive flex items-center justify-center"
-            whileTap={{ scale: 0.95 }}
-          >
-            <PhoneOff className="w-7 h-7 text-white" />
-          </motion.button>
-
-          <motion.button
-            onClick={onToggleVideo}
-            className={cn(
-              "w-14 h-14 rounded-full flex items-center justify-center",
-              isVideoOff ? "bg-destructive" : "bg-muted"
-            )}
-            whileTap={{ scale: 0.95 }}
-          >
-            {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-          </motion.button>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="absolute top-0 left-0 right-0">
-        <Progress value={(timeRemaining / 60) * 100} className="h-1 rounded-none" />
+      {/* Error message if any */}
+      {error && (
+        <div className="px-4 py-2">
+          <div className="px-3 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm text-center">
+            {error}
+          </div>
+        </div>
+      )}
+
+      {/* Controls - Fixed at bottom */}
+      <div className="p-4 bg-background/90 backdrop-blur-sm border-t border-border flex items-center justify-center gap-6 z-20">
+        <motion.button
+          onClick={onToggleMute}
+          className={cn(
+            "w-14 h-14 rounded-full flex items-center justify-center shadow-lg",
+            isMuted ? "bg-destructive" : "bg-muted"
+          )}
+          whileTap={{ scale: 0.95 }}
+        >
+          {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6" />}
+        </motion.button>
+
+        <motion.button
+          onClick={onEndCall}
+          className="w-16 h-16 rounded-full bg-destructive flex items-center justify-center shadow-lg"
+          whileTap={{ scale: 0.95 }}
+        >
+          <PhoneOff className="w-7 h-7 text-white" />
+        </motion.button>
+
+        <motion.button
+          onClick={onToggleVideo}
+          className={cn(
+            "w-14 h-14 rounded-full flex items-center justify-center shadow-lg",
+            isVideoOff ? "bg-destructive" : "bg-muted"
+          )}
+          whileTap={{ scale: 0.95 }}
+        >
+          {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6" />}
+        </motion.button>
       </div>
     </motion.div>
   );
