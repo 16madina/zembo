@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Zap, Users, Clock, Heart, X, Mic, MicOff, 
@@ -6,9 +7,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useSpeedDating, SpeedDatingStatus } from "@/hooks/useSpeedDating";
 import { cn } from "@/lib/utils";
 import speedDatingBg from "@/assets/speed-dating-bg.jpeg";
+
 interface SpeedDatingGameProps {
   onClose: () => void;
 }
@@ -76,9 +80,9 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
-          {/* Idle State - Start Button */}
+          {/* Idle State - Start Button with preference selection */}
           {status === "idle" && (
-            <IdleScreen onStart={joinSession} />
+            <IdleScreenWithPreference onStart={joinSession} />
           )}
 
           {/* Searching State */}
@@ -181,91 +185,146 @@ const GoldenSparkles = () => {
   );
 };
 
-// Idle Screen Component
-const IdleScreen = ({ onStart }: { onStart: () => void }) => (
-  <motion.div
-    key="idle"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="h-full w-full flex flex-col relative overflow-hidden"
-  >
-    {/* Background Image - Full screen */}
-    <div 
-      className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
-      style={{ backgroundImage: `url(${speedDatingBg})` }}
-    />
-    {/* Subtle gradient only at bottom for button readability */}
-    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80 z-[1]" />
-    
-    {/* Golden Sparkles */}
-    <div className="absolute inset-0 z-[2] pointer-events-none">
-      <GoldenSparkles />
-    </div>
+// Idle Screen with Preference Selection
+const IdleScreenWithPreference = ({ onStart }: { onStart: (lookingFor: string) => void }) => {
+  const [lookingFor, setLookingFor] = useState<string>("tous");
+  const [showPreference, setShowPreference] = useState(false);
 
-    {/* Info badges on screen - descriptive labels */}
-    <motion.div 
-      className="relative z-10 pt-6 px-4 flex flex-col items-center gap-3"
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
-    >
-      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-        <Users className="w-5 h-5 text-primary" />
-        <span className="text-foreground font-semibold text-base">4+ joueurs</span>
-      </div>
-      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-        <Clock className="w-5 h-5 text-primary" />
-        <span className="text-foreground font-semibold text-base">3 rounds × 60s</span>
-      </div>
-      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-        <Heart className="w-5 h-5 text-primary" />
-        <span className="text-foreground font-semibold text-base">Match mutuel</span>
-      </div>
-    </motion.div>
+  const handleStart = () => {
+    if (!showPreference) {
+      setShowPreference(true);
+    } else {
+      onStart(lookingFor);
+    }
+  };
 
-    {/* Spacer - let image fill the screen */}
-    <div className="flex-1" />
-    
-    {/* Button - positioned higher to avoid navigation overlap */}
-    <motion.div 
-      className="relative z-10 px-6 pb-40 flex justify-center"
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
+  return (
+    <motion.div
+      key="idle"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="h-full w-full flex flex-col relative overflow-hidden"
     >
-      <motion.div
-        animate={{
-          boxShadow: [
-            "0 0 20px rgba(214,178,107,0.4)",
-            "0 0 40px rgba(214,178,107,0.7)",
-            "0 0 20px rgba(214,178,107,0.4)",
-          ],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="rounded-lg"
+      {/* Background Image - Full screen */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
+        style={{ backgroundImage: `url(${speedDatingBg})` }}
+      />
+      {/* Subtle gradient only at bottom for button readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80 z-[1]" />
+      
+      {/* Golden Sparkles */}
+      <div className="absolute inset-0 z-[2] pointer-events-none">
+        <GoldenSparkles />
+      </div>
+
+      {/* Info badges on screen - descriptive labels */}
+      <motion.div 
+        className="relative z-10 pt-6 px-4 flex flex-col items-center gap-3"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
       >
-        <Button 
-          onClick={onStart} 
-          size="lg" 
-          className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground text-base py-6"
-        >
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Users className="w-5 h-5 text-primary" />
+          <span className="text-foreground font-semibold text-base">4+ joueurs</span>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Clock className="w-5 h-5 text-primary" />
+          <span className="text-foreground font-semibold text-base">3 rounds × 60s</span>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Heart className="w-5 h-5 text-primary" />
+          <span className="text-foreground font-semibold text-base">Match mutuel</span>
+        </div>
+      </motion.div>
+
+      {/* Spacer - let image fill the screen */}
+      <div className="flex-1" />
+      
+      {/* Preference Selection Panel */}
+      <AnimatePresence>
+        {showPreference && (
           <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="relative z-10 mx-6 mb-4 p-5 rounded-2xl bg-background/90 backdrop-blur-md border border-primary/30"
           >
-            <Zap className="w-5 h-5 mr-2" />
+            <h3 className="text-foreground font-bold text-lg mb-4 text-center">
+              Je recherche...
+            </h3>
+            <RadioGroup
+              value={lookingFor}
+              onValueChange={setLookingFor}
+              className="grid grid-cols-2 gap-3"
+            >
+              {[
+                { value: "homme", label: "👨 Homme", emoji: "👨" },
+                { value: "femme", label: "👩 Femme", emoji: "👩" },
+                { value: "lgbt", label: "🏳️‍🌈 LGBT+", emoji: "🏳️‍🌈" },
+                { value: "tous", label: "✨ Tous", emoji: "✨" },
+              ].map((option) => (
+                <Label
+                  key={option.value}
+                  htmlFor={`pref-${option.value}`}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                    lookingFor === option.value
+                      ? "border-primary bg-primary/20"
+                      : "border-border bg-background/50 hover:border-primary/50"
+                  )}
+                >
+                  <RadioGroupItem value={option.value} id={`pref-${option.value}`} />
+                  <span className="text-base font-medium">{option.label}</span>
+                </Label>
+              ))}
+            </RadioGroup>
           </motion.div>
-          Commencer
-        </Button>
+        )}
+      </AnimatePresence>
+      
+      {/* Button - positioned higher to avoid navigation overlap */}
+      <motion.div 
+        className="relative z-10 px-6 pb-40 flex justify-center"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <motion.div
+          animate={{
+            boxShadow: [
+              "0 0 20px rgba(214,178,107,0.4)",
+              "0 0 40px rgba(214,178,107,0.7)",
+              "0 0 20px rgba(214,178,107,0.4)",
+            ],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="rounded-lg"
+        >
+          <Button 
+            onClick={handleStart} 
+            size="lg" 
+            className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground text-base py-6"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Zap className="w-5 h-5 mr-2" />
+            </motion.div>
+            {showPreference ? "Lancer la recherche" : "Commencer"}
+          </Button>
+        </motion.div>
       </motion.div>
     </motion.div>
-  </motion.div>
-);
+  );
+};
 
 // Searching Screen
 const SearchingScreen = () => (
@@ -415,18 +474,24 @@ const WaitingRoomScreen = ({ participants }: { participants: Array<{ user_id: st
         </div>
       </motion.div>
 
+      {/* Waiting message */}
       <motion.div
         animate={{ opacity: [0.5, 1, 0.5] }}
         transition={{ duration: 2, repeat: Infinity }}
-        className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"
+        className="mt-6 flex flex-col items-center gap-2 text-sm text-muted-foreground"
       >
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        >
-          <Zap className="w-4 h-4 text-primary" />
-        </motion.div>
-        En attente d'autres participants...
+        <div className="flex items-center gap-2">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          >
+            <Zap className="w-4 h-4 text-primary" />
+          </motion.div>
+          En attente de participants compatibles...
+        </div>
+        <span className="text-xs text-center max-w-[280px]">
+          Le Speed Dating commencera dès que 4+ personnes avec des préférences compatibles seront présentes.
+        </span>
       </motion.div>
     </div>
   </motion.div>
