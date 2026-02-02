@@ -54,7 +54,7 @@ interface UseSpeedDatingReturn {
   partnerTimedOut: boolean;
   partnerConnectionTimer: number;
   isConfirmingVotes: boolean;
-  joinSession: () => Promise<void>;
+  joinSession: (lookingFor?: string) => Promise<void>;
   leaveSession: () => Promise<void>;
   submitVote: (userId: string) => Promise<void>;
   confirmVotes: () => Promise<void>;
@@ -418,7 +418,7 @@ export function useSpeedDating(): UseSpeedDatingReturn {
   );
 
   // Find or create a session
-  const joinSession = useCallback(async () => {
+  const joinSession = useCallback(async (lookingFor: string = "tous") => {
     if (!user) {
       toast.error("Vous devez être connecté");
       return;
@@ -427,6 +427,15 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     try {
       setStatus("searching");
       setError(null);
+
+      // Get user's gender from profile
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("gender")
+        .eq("user_id", user.id)
+        .single();
+
+      const userGender = userProfile?.gender || "tous";
 
       // Look for an existing waiting session
       const { data: existingSessions } = await supabase
@@ -454,12 +463,14 @@ export function useSpeedDating(): UseSpeedDatingReturn {
         sessionToJoin = newSession;
       }
 
-      // Join the session
+      // Join the session with gender and preference
       const { error: joinError } = await supabase
         .from("speed_dating_participants")
         .insert({
           session_id: sessionToJoin.id,
           user_id: user.id,
+          gender: userGender,
+          looking_for: lookingFor,
         });
 
       if (joinError && !joinError.message.includes("duplicate")) {

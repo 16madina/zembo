@@ -8,19 +8,77 @@ const corsHeaders = {
 interface Participant {
   id: string;
   user_id: string;
+  gender: string | null;
+  looking_for: string | null;
 }
 
-// Round-robin pairing algorithm to ensure everyone meets different people
-function generateRoundPairings(participants: Participant[], totalRounds: number): { round: number; pairs: [string, string][] }[] {
+// Check if two participants are compatible based on gender preferences
+function areCompatible(p1: Participant, p2: Participant): boolean {
+  const g1 = p1.gender || "tous";
+  const g2 = p2.gender || "tous";
+  const lf1 = p1.looking_for || "tous";
+  const lf2 = p2.looking_for || "tous";
+
+  // p1 is looking for p2's gender (or tous)
+  const p1LikesP2 = lf1 === "tous" || lf1 === g2;
+  // p2 is looking for p1's gender (or tous)
+  const p2LikesP1 = lf2 === "tous" || lf2 === g1;
+
+  return p1LikesP2 && p2LikesP1;
+}
+
+// Smart pairing algorithm that respects gender preferences
+function generateSmartPairings(participants: Participant[], totalRounds: number): { round: number; pairs: [string, string][] }[] {
   const n = participants.length;
   if (n < 2) return [];
 
-  // If odd number, we need to handle byes (someone sits out each round)
+  const rounds: { round: number; pairs: [string, string][] }[] = [];
+  const usedPairs = new Set<string>(); // Track used pairs to avoid repetition
+
+  for (let round = 0; round < totalRounds; round++) {
+    const pairs: [string, string][] = [];
+    const pairedThisRound = new Set<string>();
+
+    // Shuffle participants for variety each round
+    const shuffled = [...participants].sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < shuffled.length; i++) {
+      const p1 = shuffled[i];
+      if (pairedThisRound.has(p1.user_id)) continue;
+
+      for (let j = i + 1; j < shuffled.length; j++) {
+        const p2 = shuffled[j];
+        if (pairedThisRound.has(p2.user_id)) continue;
+
+        // Check compatibility
+        if (!areCompatible(p1, p2)) continue;
+
+        // Check if this pair was already used in a previous round
+        const pairKey = [p1.user_id, p2.user_id].sort().join("-");
+        if (usedPairs.has(pairKey)) continue;
+
+        // Valid pair found!
+        pairs.push([p1.user_id, p2.user_id]);
+        pairedThisRound.add(p1.user_id);
+        pairedThisRound.add(p2.user_id);
+        usedPairs.add(pairKey);
+        break;
+      }
+    }
+
+    rounds.push({ round: round + 1, pairs });
+  }
+
+  return rounds;
+}
+
+// Fallback: simple round-robin when smart pairing doesn't work well
+function generateRoundRobinPairings(participants: Participant[], totalRounds: number): { round: number; pairs: [string, string][] }[] {
+  const n = participants.length;
+  if (n < 2) return [];
+
   const isOdd = n % 2 === 1;
   const userIds = participants.map(p => p.user_id);
-  
-  // For even participants, use classic round-robin
-  // For odd, add a "ghost" participant that represents a bye
   const players = isOdd ? [...userIds, "BYE"] : [...userIds];
   const numPlayers = players.length;
   const rounds: { round: number; pairs: [string, string][] }[] = [];
@@ -32,7 +90,6 @@ function generateRoundPairings(participants: Participant[], totalRounds: number)
       const home = players[i];
       const away = players[numPlayers - 1 - i];
       
-      // Skip pairs with "BYE"
       if (home !== "BYE" && away !== "BYE") {
         pairs.push([home, away]);
       }
@@ -40,7 +97,6 @@ function generateRoundPairings(participants: Participant[], totalRounds: number)
     
     rounds.push({ round: round + 1, pairs });
     
-    // Rotate players (keep first player fixed, rotate others)
     const fixed = players[0];
     const rotated = [fixed, players[numPlayers - 1], ...players.slice(1, numPlayers - 1)];
     players.splice(0, players.length, ...rotated);
@@ -184,10 +240,10 @@ Deno.serve(async (req) => {
 async function startSession(supabase: any, sessionId: string, totalRounds: number) {
   console.log(`[speed-dating] Starting session ${sessionId}`);
 
-  // Get all active participants
+  // Get all active participants with gender preferences
   const { data: participants, error: participantsError } = await supabase
     .from("speed_dating_participants")
-    .select("id, user_id")
+    .select("id, user_id, gender, looking_for")
     .eq("session_id", sessionId)
     .eq("is_active", true)
     // Ensure deterministic ordering so pairings are stable across calls
@@ -200,8 +256,17 @@ async function startSession(supabase: any, sessionId: string, totalRounds: numbe
 
   console.log(`[speed-dating] Found ${participants.length} participants`);
 
-  // Generate all round pairings
-  const roundPairings = generateRoundPairings(participants, totalRounds);
+  // Generate pairings using smart algorithm (respects gender preferences)
+  let roundPairings = generateSmartPairings(participants, totalRounds);
+  
+  // Check if we have enough compatible pairs
+  const totalPairs = roundPairings.reduce((sum, r) => sum + r.pairs.length, 0);
+  if (totalPairs === 0) {
+    // Fallback to round-robin if no compatible pairs found
+    console.log("[speed-dating] No compatible pairs, falling back to round-robin");
+    roundPairings = generateRoundRobinPairings(participants, totalRounds);
+  }
+  
   console.log(`[speed-dating] Generated ${roundPairings.length} rounds`);
 
   // Idempotency: if round 1 already exists, don't create duplicates
@@ -323,10 +388,10 @@ async function advanceToNextRound(supabase: any, sessionId: string) {
     .eq("session_id", sessionId)
     .eq("round_number", currentRound);
 
-  // Get participants for new pairings
+  // Get participants for new pairings with gender preferences
   const { data: participants } = await supabase
     .from("speed_dating_participants")
-    .select("id, user_id")
+    .select("id, user_id, gender, looking_for")
     .eq("session_id", sessionId)
     .eq("is_active", true)
     // Ensure deterministic ordering so pairings are stable across calls
@@ -336,8 +401,11 @@ async function advanceToNextRound(supabase: any, sessionId: string) {
     throw new Error("Not enough active participants");
   }
 
-  // Regenerate pairings and get the next round
-  const allPairings = generateRoundPairings(participants, session.total_rounds);
+  // Regenerate pairings and get the next round (prefer smart, fallback to round-robin)
+  let allPairings = generateSmartPairings(participants, session.total_rounds);
+  if (allPairings.reduce((sum, r) => sum + r.pairs.length, 0) === 0) {
+    allPairings = generateRoundRobinPairings(participants, session.total_rounds);
+  }
   const nextRoundPairings = allPairings[nextRound - 1];
 
   if (nextRoundPairings) {

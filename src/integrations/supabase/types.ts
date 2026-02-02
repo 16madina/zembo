@@ -978,26 +978,32 @@ export type Database = {
       }
       speed_dating_participants: {
         Row: {
+          gender: string | null
           id: string
           is_active: boolean
           joined_at: string
           left_at: string | null
+          looking_for: string | null
           session_id: string
           user_id: string
         }
         Insert: {
+          gender?: string | null
           id?: string
           is_active?: boolean
           joined_at?: string
           left_at?: string | null
+          looking_for?: string | null
           session_id: string
           user_id: string
         }
         Update: {
+          gender?: string | null
           id?: string
           is_active?: boolean
           joined_at?: string
           left_at?: string | null
+          looking_for?: string | null
           session_id?: string
           user_id?: string
         }
