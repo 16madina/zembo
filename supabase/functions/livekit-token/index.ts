@@ -92,12 +92,11 @@ serve(async (req) => {
 
     // Grant permissions based on role
     if (isSpeedDating) {
-      // Speed dating: participants can publish video and audio
+      // Speed dating: participants can publish video and audio (full permissions)
       at.addGrant({
         room: roomName,
         roomJoin: true,
         canPublish: true,
-        canPublishSources: [TrackSource.MICROPHONE, TrackSource.CAMERA],
         canSubscribe: true,
         canPublishData: true,
       });
