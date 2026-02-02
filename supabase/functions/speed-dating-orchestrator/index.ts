@@ -189,7 +189,9 @@ async function startSession(supabase: any, sessionId: string, totalRounds: numbe
     .from("speed_dating_participants")
     .select("id, user_id")
     .eq("session_id", sessionId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    // Ensure deterministic ordering so pairings are stable across calls
+    .order("user_id", { ascending: true });
 
   if (participantsError) throw participantsError;
   if (!participants || participants.length < 2) {
@@ -201,6 +203,34 @@ async function startSession(supabase: any, sessionId: string, totalRounds: numbe
   // Generate all round pairings
   const roundPairings = generateRoundPairings(participants, totalRounds);
   console.log(`[speed-dating] Generated ${roundPairings.length} rounds`);
+
+  // Idempotency: if round 1 already exists, don't create duplicates
+  const { count: existingRound1Count, error: existingRound1Error } = await supabase
+    .from("speed_dating_rounds")
+    .select("*", { count: "exact", head: true })
+    .eq("session_id", sessionId)
+    .eq("round_number", 1);
+
+  if (existingRound1Error) throw existingRound1Error;
+  if ((existingRound1Count || 0) > 0) {
+    console.log(`[speed-dating] Round 1 already exists for session ${sessionId}, skipping inserts`);
+
+    await supabase
+      .from("speed_dating_sessions")
+      .update({
+        status: "in_progress",
+        started_at: new Date().toISOString(),
+      })
+      .eq("id", sessionId);
+
+    return {
+      status: "started",
+      round: 1,
+      pairs_created: 0,
+      total_rounds: roundPairings.length,
+      already_exists: true,
+    };
+  }
 
   // Create round 1
   const firstRound = roundPairings[0];
@@ -268,6 +298,24 @@ async function advanceToNextRound(supabase: any, sessionId: string) {
     return { status: "voting", message: "All rounds completed" };
   }
 
+  // Idempotency: if next round already exists (another client already advanced), don't create duplicates.
+  const { count: existingNextRoundCount, error: existingNextRoundError } = await supabase
+    .from("speed_dating_rounds")
+    .select("*", { count: "exact", head: true })
+    .eq("session_id", sessionId)
+    .eq("round_number", nextRound);
+
+  if (existingNextRoundError) throw existingNextRoundError;
+  if ((existingNextRoundCount || 0) > 0) {
+    console.log(`[speed-dating] Round ${nextRound} already exists for session ${sessionId}, returning existing state`);
+    return {
+      status: "round_started",
+      round: nextRound,
+      pairs_created: 0,
+      already_exists: true,
+    };
+  }
+
   // End current round
   await supabase
     .from("speed_dating_rounds")
@@ -280,7 +328,9 @@ async function advanceToNextRound(supabase: any, sessionId: string) {
     .from("speed_dating_participants")
     .select("id, user_id")
     .eq("session_id", sessionId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    // Ensure deterministic ordering so pairings are stable across calls
+    .order("user_id", { ascending: true });
 
   if (!participants || participants.length < 2) {
     throw new Error("Not enough active participants");

@@ -71,6 +71,8 @@ const COUNTDOWN_DURATION = 5;
 const MIN_PARTICIPANTS = 4;
 const PARTNER_TIMEOUT = 15; // seconds to wait for partner before showing message
 
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export function useSpeedDating(): UseSpeedDatingReturn {
   const { user } = useAuth();
   const [status, setStatus] = useState<SpeedDatingStatus>("idle");
@@ -96,6 +98,8 @@ export function useSpeedDating(): UseSpeedDatingReturn {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const partnerTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastJoinedRoomRef = useRef<string | null>(null);
+  const roundSyncInFlightRef = useRef(false);
 
   // Clean up resources
   const cleanup = useCallback(() => {
@@ -347,6 +351,71 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       });
     }, 1000);
   }, []);
+
+  const syncToLatestRound = useCallback(
+    async (opts?: { expectedMinRound?: number; reason?: string }) => {
+      if (!sessionId || !user) return;
+      if (roundSyncInFlightRef.current) return;
+      roundSyncInFlightRef.current = true;
+
+      try {
+        const { data: latestRounds, error: latestErr } = await supabase
+          .from("speed_dating_rounds")
+          .select("id, round_number, user1_id, user2_id, room_name")
+          .eq("session_id", sessionId)
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .order("round_number", { ascending: false })
+          .limit(1);
+
+        if (latestErr) {
+          console.warn("[speed-dating] syncToLatestRound: query failed", latestErr);
+          return;
+        }
+
+        const latest = latestRounds?.[0];
+        if (!latest) return;
+
+        if (typeof opts?.expectedMinRound === "number" && latest.round_number < opts.expectedMinRound) {
+          return;
+        }
+
+        // If we're already in this exact room, nothing to do.
+        if (lastJoinedRoomRef.current === latest.room_name) return;
+
+        const partnerId = latest.user1_id === user.id ? latest.user2_id : latest.user1_id;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name, avatar_url")
+          .eq("user_id", partnerId)
+          .single();
+
+        setCurrentRound({
+          id: latest.id,
+          round_number: latest.round_number,
+          partner_id: partnerId,
+          partner_name: profile?.display_name || "Anonyme",
+          partner_avatar: profile?.avatar_url,
+          room_name: latest.room_name,
+        });
+        setRoundNumber(latest.round_number);
+        setStatus("in_call");
+
+        // Important: set this before connecting to avoid double-joins when multiple events arrive.
+        lastJoinedRoomRef.current = latest.room_name;
+
+        await joinLiveKitRoom(latest.room_name);
+        startRoundTimer();
+        console.log("[speed-dating] Synced to latest round", {
+          reason: opts?.reason,
+          round: latest.round_number,
+          room: latest.room_name,
+        });
+      } finally {
+        roundSyncInFlightRef.current = false;
+      }
+    },
+    [sessionId, user, joinLiveKitRoom, startRoundTimer]
+  );
 
   // Find or create a session
   const joinSession = useCallback(async () => {
@@ -635,6 +704,8 @@ export function useSpeedDating(): UseSpeedDatingReturn {
             });
             setRoundNumber(round.round_number);
             setStatus("in_call");
+
+            lastJoinedRoomRef.current = round.room_name;
             
             // Join the video room
             await joinLiveKitRoom(round.room_name);
@@ -644,12 +715,16 @@ export function useSpeedDating(): UseSpeedDatingReturn {
       )
       .subscribe();
 
+    // Fallback: if the INSERT realtime event is missed on mobile, pull the latest round and join it.
+    // This also covers cases where a user joins mid-session.
+    syncToLatestRound({ reason: "init" });
+
     return () => {
       participantChannel.unsubscribe();
       sessionChannel.unsubscribe();
       roundsChannel.unsubscribe();
     };
-  }, [sessionId, user, status, cleanup, joinLiveKitRoom, startRoundTimer]);
+  }, [sessionId, user, status, cleanup, joinLiveKitRoom, startRoundTimer, syncToLatestRound]);
 
   // Handle countdown timer for session start
   useEffect(() => {
@@ -679,13 +754,20 @@ export function useSpeedDating(): UseSpeedDatingReturn {
             body: { action: "next_round", session_id: sessionId },
           });
           console.log("[speed-dating] Next round result:", data);
+
+          // Robustness: wait for the new round row to exist, then join the new room even if realtime missed it.
+          const expected = roundNumber + 1;
+          for (let attempt = 0; attempt < 12; attempt++) {
+            await delay(1000);
+            await syncToLatestRound({ expectedMinRound: expected, reason: `post-next_round#${attempt + 1}` });
+          }
         } catch (err) {
           console.error("[speed-dating] Error advancing round:", err);
         }
       };
       advanceRound();
     }
-  }, [status, timeRemaining, sessionId, cleanup]);
+  }, [status, timeRemaining, sessionId, cleanup, syncToLatestRound, roundNumber]);
 
   // Fetch results when in results status
   useEffect(() => {
