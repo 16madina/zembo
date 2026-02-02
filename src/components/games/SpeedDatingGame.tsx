@@ -601,11 +601,11 @@ const InCallScreen = ({
           </div>
         )}
 
-        {/* Local Video (PiP) */}
+        {/* Local Video (PiP) - positioned at top-right for better visibility */}
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute bottom-24 right-4 w-28 h-40 rounded-xl overflow-hidden border-2 border-primary shadow-lg"
+          className="absolute top-20 right-4 w-32 h-44 rounded-xl overflow-hidden border-2 border-primary shadow-lg z-20"
         >
           <video
             ref={localVideoRef}
@@ -649,8 +649,8 @@ const InCallScreen = ({
           </motion.div>
         </div>
 
-        {/* Partner name */}
-        <div className="absolute bottom-24 left-4">
+        {/* Partner name - positioned at bottom left */}
+        <div className="absolute bottom-28 left-4">
           <div className="px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm">
             <span className="font-medium">{round.partner_name}</span>
           </div>

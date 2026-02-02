@@ -133,7 +133,7 @@ serve(async (req) => {
 
     const jwtToken = await at.toJwt();
 
-    console.log("LiveKit token generated successfully for:", { userId, roomName, isStreamer });
+    console.log("LiveKit token generated successfully for:", { userId, roomName, isStreamer, isSpeedDating, isRandomCall });
 
     return new Response(
       JSON.stringify({
