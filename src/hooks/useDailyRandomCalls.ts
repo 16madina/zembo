@@ -28,7 +28,7 @@ export const useDailyRandomCalls = () => {
       case "vip":
         return Infinity; // Platinum: unlimited
       case "premium":
-        return 5; // Gold: 5 per day
+        return 10; // Gold: 10 per day
       default:
         return 1; // Free: 1 per day
     }
