@@ -8,7 +8,8 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { useCoins } from "@/hooks/useCoins";
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePayment } from "@/hooks/usePayment";
@@ -436,332 +437,344 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-gradient-to-b from-background to-background/95 border-primary/20">
-        <DialogHeader className="relative pb-4">
+        <DialogHeader className="relative pb-2">
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-20 h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50 rounded-full" />
           <DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
-            <Coins className="w-7 h-7 text-primary" />
+            <Sparkles className="w-7 h-7 text-primary" />
             Boutique
           </DialogTitle>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="text-muted-foreground">Solde actuel:</span>
-            <motion.span 
-              key={balance}
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              className="font-bold text-primary text-lg"
-            >
-              {balance} coins
-            </motion.span>
-          </div>
-          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-            <span>Prix en</span>
-            <span className="font-semibold text-foreground">{currency.name} ({currency.symbol})</span>
-          </div>
         </DialogHeader>
 
-        {/* Success Animation */}
-        <AnimatePresence>
-          {showSuccess && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm rounded-lg"
-            >
-              <div className="text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
+        {/* Tabs for Coins and Subscriptions */}
+        <Tabs defaultValue="coins" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="coins" className="gap-2">
+              <Coins className="w-4 h-4" />
+              Coins
+            </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="gap-2">
+              <Crown className="w-4 h-4" />
+              Abonnements
+            </TabsTrigger>
+          </TabsList>
+
+          {/* COINS TAB */}
+          <TabsContent value="coins" className="space-y-4">
+            {/* Balance Display */}
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-muted-foreground">Solde actuel:</span>
+                <motion.span 
+                  key={balance}
+                  initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-                  className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+                  className="font-bold text-primary text-lg"
                 >
-                  <Check className="w-10 h-10 text-white" />
-                </motion.div>
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-2xl font-bold"
-                >
-                  +{showSuccess.coins + showSuccess.bonus} coins
-                </motion.p>
-                {showSuccess.bonus > 0 && (
-                  <motion.p
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="text-sm text-muted-foreground"
-                  >
-                    dont {showSuccess.bonus} en bonus ! 🎁
-                  </motion.p>
-                )}
+                  {balance} coins
+                </motion.span>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Coin Packs Grid */}
-        <div className="grid grid-cols-2 gap-3 mt-4">
-          {coinPacks.map((pack, index) => (
-            <motion.div
-              key={pack.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="relative"
-            >
-              {/* Badges */}
-              {pack.popular && (
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full shadow-lg">
-                  POPULAIRE
-                </div>
-              )}
-              {pack.bestValue && (
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  MEILLEUR
-                </div>
-              )}
-
-              <Button
-                variant="outline"
-                disabled={purchasing !== null}
-                onClick={() => handlePackClick(pack)}
-                className={`
-                  relative w-full h-auto flex flex-col items-center py-4 px-3 
-                  bg-gradient-to-br ${pack.gradient} 
-                  border-2 hover:border-primary/50 transition-all duration-300
-                  ${pack.popular ? 'border-purple-500/50 ring-2 ring-purple-500/20' : ''}
-                  ${pack.bestValue ? 'border-emerald-500/50 ring-2 ring-emerald-500/20' : ''}
-                  ${purchasing === pack.id ? 'animate-pulse' : ''}
-                `}
-              >
-                {/* Icon */}
-                <div className={`mb-2 ${pack.color}`}>
-                  {pack.icon}
-                </div>
-
-                {/* Coins Amount */}
-                <div className="flex items-center gap-1 mb-1">
-                  <Coins className="w-4 h-4 text-primary" />
-                  <span className="font-bold text-lg">{pack.coins.toLocaleString()}</span>
-                </div>
-
-                {/* Bonus */}
-                {pack.bonus > 0 && (
-                  <motion.div
-                    initial={{ scale: 0.9 }}
-                    animate={{ scale: [0.9, 1.05, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="text-xs text-emerald-500 font-semibold mb-2"
-                  >
-                    +{pack.bonus} BONUS 🎁
-                  </motion.div>
-                )}
-
-                {/* Price */}
-                <div className="text-sm font-semibold text-foreground mt-auto">
-                  {getPackPrice(pack)}
-                </div>
-
-                {/* Loading state */}
-                {purchasing === pack.id && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
-              </Button>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Info Section */}
-        <div className="mt-6 p-4 rounded-xl bg-muted/50 border border-border">
-          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-            <Gift className="w-4 h-4 text-primary" />
-            À quoi servent les coins ?
-          </h4>
-          <ul className="text-xs text-muted-foreground space-y-1">
-            <li>🌹 Envoyer des cadeaux virtuels en live</li>
-            <li>⭐ Accéder aux lives premium</li>
-            <li>🎥 Rejoindre un streamer sur scène</li>
-            <li>💎 Booster votre profil</li>
-          </ul>
-          
-          {/* Payment method indicator */}
-          <div className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {useRevenueCatForCoins ? (
-              <>
-                <Apple className="w-3 h-3" />
-                <span>Paiement sécurisé via App Store</span>
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-3 h-3" />
-                <span>Paiement sécurisé par carte</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Separator */}
-        <div className="my-6">
-          <Separator className="bg-border/50" />
-        </div>
-
-        {/* Premium Subscriptions Section */}
-        <div className="space-y-4">
-          <div className="text-center">
-            <h3 className="text-xl font-bold flex items-center justify-center gap-2">
-              <Crown className="w-6 h-6 text-amber-400" />
-              Abonnements Premium
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Débloquez toutes les fonctionnalités
-            </p>
-            {/* Payment method indicator */}
-            <div className="flex items-center justify-center gap-1 mt-2 text-xs text-muted-foreground">
-              {isRevenueCat ? (
-                <>
-                  <Apple className="w-3 h-3" />
-                  <span>Paiement via App Store</span>
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-3 h-3" />
-                  <span>Paiement sécurisé par Stripe</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Plan Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Gold Plan */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={cn(
-                "relative p-3 rounded-xl border-2 transition-all",
-                currentTier === "premium" 
-                  ? "border-amber-400 bg-amber-400/10" 
-                  : "border-border/50 bg-card hover:border-amber-400/50"
-              )}
-            >
-              {currentTier === "premium" && (
-                <Badge className="absolute -top-2 right-2 bg-amber-500 text-xs">
-                  Actuel
-                </Badge>
-              )}
-              <div className="text-center">
-                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-white" />
-                </div>
-                <h4 className="font-bold text-amber-400">Gold</h4>
-                <div className="text-lg font-bold text-amber-400 mt-1">
-                  {formatPrice(8.99, userCountry)}
-                </div>
-                <div className="text-xs text-muted-foreground">/mois</div>
-                <Button
-                  size="sm"
-                  className="w-full mt-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white"
-                  onClick={() => handleSubscribe("gold")}
-                  disabled={isProcessing || currentTier === "premium"}
-                >
-                  {processingPlan === "gold" ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : currentTier === "premium" ? (
-                    "Actif"
-                  ) : (
-                    "Souscrire"
-                  )}
-                </Button>
+              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mt-1">
+                <span>Prix en</span>
+                <span className="font-semibold text-foreground">{currency.name} ({currency.symbol})</span>
               </div>
-            </motion.div>
-
-            {/* Platinum Plan */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={cn(
-                "relative p-3 rounded-xl border-2 transition-all",
-                currentTier === "vip" 
-                  ? "border-purple-400 bg-purple-400/10" 
-                  : "border-border/50 bg-card hover:border-purple-400/50"
-              )}
-            >
-              <Badge className="absolute -top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-xs">
-                {currentTier === "vip" ? "Actuel" : "Populaire"}
-              </Badge>
-              <div className="text-center">
-                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <h4 className="font-bold text-purple-400">Platinum</h4>
-                <div className="text-lg font-bold text-purple-400 mt-1">
-                  {formatPrice(17.99, userCountry)}
-                </div>
-                <div className="text-xs text-muted-foreground">/mois</div>
-                <Button
-                  size="sm"
-                  className="w-full mt-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                  onClick={() => handleSubscribe("platinum")}
-                  disabled={isProcessing || currentTier === "vip"}
-                >
-                  {processingPlan === "platinum" ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : currentTier === "vip" ? (
-                    "Actif"
-                  ) : (
-                    "Souscrire"
-                  )}
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Features Comparison Table */}
-          <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
-            <div className="p-3 border-b border-border/50 bg-muted/30">
-              <h4 className="font-semibold text-sm text-center">Comparaison des plans</h4>
             </div>
 
-            {/* Table Header */}
-            <div className="grid grid-cols-4 gap-1 p-2 bg-muted/20 text-center text-xs font-medium">
-              <div className="text-left pl-2">Fonction</div>
-              <div className="text-muted-foreground">Gratuit</div>
-              <div className="text-amber-400">Gold</div>
-              <div className="text-purple-400">Platinum</div>
-            </div>
-
-            {/* Table Body */}
-            <div className="divide-y divide-border/20 max-h-60 overflow-y-auto">
-              {subscriptionFeatures.map((feature, index) => (
+            {/* Success Animation */}
+            <AnimatePresence>
+              {showSuccess && (
                 <motion.div
-                  key={feature.name}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.02 }}
-                  className="grid grid-cols-4 gap-1 p-2 text-center items-center hover:bg-muted/10 transition-colors"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm rounded-lg"
                 >
-                  <div className="flex items-center gap-1.5 text-left">
-                    <span className="text-muted-foreground shrink-0">{feature.icon}</span>
-                    <span className="text-xs truncate">{feature.name}</span>
+                  <div className="text-center">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+                      className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+                    >
+                      <Check className="w-10 h-10 text-white" />
+                    </motion.div>
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-2xl font-bold"
+                    >
+                      +{showSuccess.coins + showSuccess.bonus} coins
+                    </motion.p>
+                    {showSuccess.bonus > 0 && (
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-sm text-muted-foreground"
+                      >
+                        dont {showSuccess.bonus} en bonus ! 🎁
+                      </motion.p>
+                    )}
                   </div>
-                  <div className="flex justify-center">
-                    {renderFeatureValue(feature.free, "free")}
-                  </div>
-                  <div className="flex justify-center">
-                    {renderFeatureValue(feature.gold, "gold")}
-                  </div>
-                  <div className="flex justify-center">
-                    {renderFeatureValue(feature.platinum, "platinum")}
-                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Coin Packs Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {coinPacks.map((pack, index) => (
+                <motion.div
+                  key={pack.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="relative"
+                >
+                  {/* Badges */}
+                  {pack.popular && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full shadow-lg">
+                      POPULAIRE
+                    </div>
+                  )}
+                  {pack.bestValue && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      MEILLEUR
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    disabled={purchasing !== null}
+                    onClick={() => handlePackClick(pack)}
+                    className={`
+                      relative w-full h-auto flex flex-col items-center py-4 px-3 
+                      bg-gradient-to-br ${pack.gradient} 
+                      border-2 hover:border-primary/50 transition-all duration-300
+                      ${pack.popular ? 'border-purple-500/50 ring-2 ring-purple-500/20' : ''}
+                      ${pack.bestValue ? 'border-emerald-500/50 ring-2 ring-emerald-500/20' : ''}
+                      ${purchasing === pack.id ? 'animate-pulse' : ''}
+                    `}
+                  >
+                    {/* Icon */}
+                    <div className={`mb-2 ${pack.color}`}>
+                      {pack.icon}
+                    </div>
+
+                    {/* Coins Amount */}
+                    <div className="flex items-center gap-1 mb-1">
+                      <Coins className="w-4 h-4 text-primary" />
+                      <span className="font-bold text-lg">{pack.coins.toLocaleString()}</span>
+                    </div>
+
+                    {/* Bonus */}
+                    {pack.bonus > 0 && (
+                      <motion.div
+                        initial={{ scale: 0.9 }}
+                        animate={{ scale: [0.9, 1.05, 1] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="text-xs text-emerald-500 font-semibold mb-2"
+                      >
+                        +{pack.bonus} BONUS 🎁
+                      </motion.div>
+                    )}
+
+                    {/* Price */}
+                    <div className="text-sm font-semibold text-foreground mt-auto">
+                      {getPackPrice(pack)}
+                    </div>
+
+                    {/* Loading state */}
+                    {purchasing === pack.id && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </Button>
                 </motion.div>
               ))}
             </div>
-          </div>
-        </div>
+
+            {/* Info Section */}
+            <div className="mt-4 p-4 rounded-xl bg-muted/50 border border-border">
+              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <Gift className="w-4 h-4 text-primary" />
+                À quoi servent les coins ?
+              </h4>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>🌹 Envoyer des roses et cadeaux virtuels</li>
+                <li>⭐ Accéder aux lives premium</li>
+                <li>🎥 Rejoindre un streamer sur scène</li>
+                <li>💎 Booster votre profil</li>
+              </ul>
+              
+              {/* Payment method indicator */}
+              <div className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                {useRevenueCatForCoins ? (
+                  <>
+                    <Apple className="w-3 h-3" />
+                    <span>Paiement sécurisé via App Store</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-3 h-3" />
+                    <span>Paiement sécurisé par carte</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* SUBSCRIPTIONS TAB */}
+          <TabsContent value="subscriptions" className="space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Débloquez toutes les fonctionnalités
+              </p>
+              {/* Payment method indicator */}
+              <div className="flex items-center justify-center gap-1 mt-2 text-xs text-muted-foreground">
+                {isRevenueCat ? (
+                  <>
+                    <Apple className="w-3 h-3" />
+                    <span>Paiement via App Store</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-3 h-3" />
+                    <span>Paiement sécurisé par Stripe</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Plan Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Gold Plan */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={cn(
+                  "relative p-3 rounded-xl border-2 transition-all",
+                  currentTier === "premium" 
+                    ? "border-amber-400 bg-amber-400/10" 
+                    : "border-border/50 bg-card hover:border-amber-400/50"
+                )}
+              >
+                {currentTier === "premium" && (
+                  <Badge className="absolute -top-2 right-2 bg-amber-500 text-xs">
+                    Actuel
+                  </Badge>
+                )}
+                <div className="text-center">
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                    <Crown className="w-5 h-5 text-white" />
+                  </div>
+                  <h4 className="font-bold text-amber-400">Gold</h4>
+                  <div className="text-lg font-bold text-amber-400 mt-1">
+                    {formatPrice(8.99, userCountry)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">/mois</div>
+                  <Button
+                    size="sm"
+                    className="w-full mt-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white"
+                    onClick={() => handleSubscribe("gold")}
+                    disabled={isProcessing || currentTier === "premium"}
+                  >
+                    {processingPlan === "gold" ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : currentTier === "premium" ? (
+                      "Actif"
+                    ) : (
+                      "Souscrire"
+                    )}
+                  </Button>
+                </div>
+              </motion.div>
+
+              {/* Platinum Plan */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={cn(
+                  "relative p-3 rounded-xl border-2 transition-all",
+                  currentTier === "vip" 
+                    ? "border-purple-400 bg-purple-400/10" 
+                    : "border-border/50 bg-card hover:border-purple-400/50"
+                )}
+              >
+                <Badge className="absolute -top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-xs">
+                  {currentTier === "vip" ? "Actuel" : "Populaire"}
+                </Badge>
+                <div className="text-center">
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <h4 className="font-bold text-purple-400">Platinum</h4>
+                  <div className="text-lg font-bold text-purple-400 mt-1">
+                    {formatPrice(17.99, userCountry)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">/mois</div>
+                  <Button
+                    size="sm"
+                    className="w-full mt-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                    onClick={() => handleSubscribe("platinum")}
+                    disabled={isProcessing || currentTier === "vip"}
+                  >
+                    {processingPlan === "platinum" ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : currentTier === "vip" ? (
+                      "Actif"
+                    ) : (
+                      "Souscrire"
+                    )}
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Features Comparison Table */}
+            <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+              <div className="p-3 border-b border-border/50 bg-muted/30">
+                <h4 className="font-semibold text-sm text-center">Comparaison des plans</h4>
+              </div>
+
+              {/* Table Header */}
+              <div className="grid grid-cols-4 gap-1 p-2 bg-muted/20 text-center text-xs font-medium">
+                <div className="text-left pl-2">Fonction</div>
+                <div className="text-muted-foreground">Gratuit</div>
+                <div className="text-amber-400">Gold</div>
+                <div className="text-purple-400">Platinum</div>
+              </div>
+
+              {/* Table Body */}
+              <div className="divide-y divide-border/20 max-h-48 overflow-y-auto">
+                {subscriptionFeatures.map((feature, index) => (
+                  <motion.div
+                    key={feature.name}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.02 }}
+                    className="grid grid-cols-4 gap-1 p-2 text-center items-center hover:bg-muted/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5 text-left">
+                      <span className="text-muted-foreground shrink-0">{feature.icon}</span>
+                      <span className="text-xs truncate">{feature.name}</span>
+                    </div>
+                    <div className="flex justify-center">
+                      {renderFeatureValue(feature.free, "free")}
+                    </div>
+                    <div className="flex justify-center">
+                      {renderFeatureValue(feature.gold, "gold")}
+                    </div>
+                    <div className="flex justify-center">
+                      {renderFeatureValue(feature.platinum, "platinum")}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Close Button */}
         <Button
