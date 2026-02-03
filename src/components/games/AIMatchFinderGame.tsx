@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Heart, MessageCircle, Coins, Search, Zap } from "lucide-react";
+import { X, Sparkles, Heart, MessageCircle, Coins, Search, Zap, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,12 @@ interface AIMatchFinderGameProps {
   onClose: () => void;
 }
 
+interface ProfilePreview {
+  userId: string;
+  avatarUrl: string | null;
+  displayName: string;
+}
+
 interface MatchResult {
   userId: string;
   displayName: string;
@@ -22,84 +28,81 @@ interface MatchResult {
   compatibilityScore: number;
 }
 
-type GameStatus = "idle" | "scanning" | "revealed" | "matched";
+type GameStatus = "idle" | "shuffling" | "scanning" | "revealing" | "revealed" | "matched";
 
 const MATCH_COST = 50;
 
-// Scanning effect particles
-const ScanningParticles = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(12)].map((_, i) => (
+// Scanning laser effect
+const ScanningLaser = () => (
+  <motion.div
+    className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent"
+    initial={{ top: 0 }}
+    animate={{ top: ["0%", "100%", "0%"] }}
+    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+    style={{ boxShadow: "0 0 20px 5px hsl(var(--primary) / 0.5)" }}
+  />
+);
+
+// Neural network animation around the photo
+const NeuralNetwork = () => (
+  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+    {[...Array(8)].map((_, i) => (
       <motion.div
         key={i}
-        className="absolute w-1 h-8 bg-gradient-to-b from-primary to-transparent"
+        className="absolute w-2 h-2 rounded-full bg-primary"
         style={{
-          left: `${(i / 12) * 100}%`,
-          top: 0,
+          left: `${10 + (i % 4) * 25}%`,
+          top: `${15 + Math.floor(i / 4) * 70}%`,
         }}
         animate={{
-          y: [0, 200, 0],
+          scale: [0, 1.5, 0],
           opacity: [0, 1, 0],
         }}
         transition={{
-          duration: 1.5,
+          duration: 1.2,
+          repeat: Infinity,
+          delay: i * 0.15,
+        }}
+      />
+    ))}
+    {/* Connection lines */}
+    {[...Array(12)].map((_, i) => (
+      <motion.div
+        key={`line-${i}`}
+        className="absolute bg-gradient-to-r from-primary/50 via-primary to-primary/50 h-0.5"
+        style={{
+          width: 40 + Math.random() * 60,
+          left: `${Math.random() * 80}%`,
+          top: `${Math.random() * 100}%`,
+          transform: `rotate(${Math.random() * 360}deg)`,
+        }}
+        animate={{
+          opacity: [0, 0.8, 0],
+          scaleX: [0, 1, 0],
+        }}
+        transition={{
+          duration: 0.8,
           repeat: Infinity,
           delay: i * 0.1,
-          ease: "linear",
         }}
       />
     ))}
   </div>
 );
 
-// Glowing ring animation
-const GlowingRing = ({ delay = 0 }: { delay?: number }) => (
+// Glowing pulse effect
+const GlowingPulse = ({ color = "primary" }: { color?: string }) => (
   <motion.div
-    className="absolute inset-0 rounded-full border-2 border-primary"
-    initial={{ scale: 0.8, opacity: 0 }}
+    className={`absolute inset-0 rounded-3xl border-4 border-${color}`}
     animate={{
-      scale: [0.8, 1.5, 2],
-      opacity: [0, 0.5, 0],
+      boxShadow: [
+        "0 0 20px 5px hsl(var(--primary) / 0.3)",
+        "0 0 40px 15px hsl(var(--primary) / 0.5)",
+        "0 0 20px 5px hsl(var(--primary) / 0.3)",
+      ],
     }}
-    transition={{
-      duration: 2,
-      repeat: Infinity,
-      delay,
-      ease: "easeOut",
-    }}
+    transition={{ duration: 1.5, repeat: Infinity }}
   />
-);
-
-// AI brain animation
-const AIBrainAnimation = () => (
-  <motion.div
-    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-  >
-    {/* Neural network lines */}
-    {[...Array(6)].map((_, i) => (
-      <motion.div
-        key={i}
-        className="absolute w-0.5 bg-gradient-to-b from-primary/50 to-transparent"
-        style={{
-          height: 40 + Math.random() * 30,
-          left: `${20 + i * 12}%`,
-          transformOrigin: "center",
-          rotate: `${-30 + i * 12}deg`,
-        }}
-        animate={{
-          opacity: [0.2, 1, 0.2],
-          scaleY: [0.8, 1.2, 0.8],
-        }}
-        transition={{
-          duration: 0.8,
-          repeat: Infinity,
-          delay: i * 0.15,
-        }}
-      />
-    ))}
-  </motion.div>
 );
 
 export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
@@ -112,6 +115,10 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
   const [myProfile, setMyProfile] = useState<{ avatarUrl: string | null; displayName: string } | null>(null);
   const [scanProgress, setScanProgress] = useState(0);
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
+  const [shuffleProfiles, setShuffleProfiles] = useState<ProfilePreview[]>([]);
+  const [currentShuffleIndex, setCurrentShuffleIndex] = useState(0);
+  const [allProfiles, setAllProfiles] = useState<any[]>([]);
+  const shuffleIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch user's profile
   useEffect(() => {
@@ -133,75 +140,127 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
     fetchProfile();
   }, [user]);
 
-  // Start scanning
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (shuffleIntervalRef.current) {
+        clearInterval(shuffleIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Start the full experience
   const startScan = async () => {
     if (!user) {
       toast.error("Tu dois être connecté");
       return;
     }
 
+    // First, fetch all profiles for the shuffle effect
+    const { data: myProfileData } = await supabase
+      .from("profiles")
+      .select("looking_for, gender")
+      .eq("user_id", user.id)
+      .single();
+
+    let query = supabase
+      .from("profiles")
+      .select("user_id, display_name, avatar_url, age, location, gender")
+      .neq("user_id", user.id)
+      .not("avatar_url", "is", null);
+
+    const lookingFor = myProfileData?.looking_for || [];
+    if (lookingFor.length > 0 && !lookingFor.includes("tous")) {
+      query = query.in("gender", lookingFor);
+    }
+
+    const { data: profiles } = await query.limit(50);
+
+    if (!profiles || profiles.length < 3) {
+      toast.error("Pas assez de profils pour le scan");
+      return;
+    }
+
+    setAllProfiles(profiles);
+    
+    // Create shuffle preview profiles
+    const shufflePreviews: ProfilePreview[] = profiles.slice(0, 15).map(p => ({
+      userId: p.user_id,
+      avatarUrl: p.avatar_url,
+      displayName: p.display_name || "Inconnu",
+    }));
+    setShuffleProfiles(shufflePreviews);
+
+    // Start shuffling phase
+    setStatus("shuffling");
+    setCurrentShuffleIndex(0);
+
+    // Fast shuffle through profiles
+    let shuffleSpeed = 100; // Start fast
+    let index = 0;
+    
+    shuffleIntervalRef.current = setInterval(() => {
+      index = (index + 1) % shufflePreviews.length;
+      setCurrentShuffleIndex(index);
+    }, shuffleSpeed);
+
+    // After 2s, slow down and transition to scanning
+    setTimeout(() => {
+      if (shuffleIntervalRef.current) {
+        clearInterval(shuffleIntervalRef.current);
+      }
+      
+      // Slower shuffle
+      shuffleSpeed = 200;
+      shuffleIntervalRef.current = setInterval(() => {
+        index = (index + 1) % shufflePreviews.length;
+        setCurrentShuffleIndex(index);
+      }, shuffleSpeed);
+
+      // After 1.5s more, go to scanning
+      setTimeout(() => {
+        if (shuffleIntervalRef.current) {
+          clearInterval(shuffleIntervalRef.current);
+        }
+        beginScanning(profiles);
+      }, 1500);
+    }, 2000);
+  };
+
+  // Begin the actual scanning phase
+  const beginScanning = async (profiles: any[]) => {
     setStatus("scanning");
     setScanProgress(0);
 
-    // Simulate scanning progress
+    // Progress animation
     const progressInterval = setInterval(() => {
       setScanProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
           return 100;
         }
-        return prev + Math.random() * 15;
+        return prev + 2;
       });
-    }, 200);
+    }, 80);
 
     try {
-      // Fetch current user's preferences
-      const { data: myProfileData } = await supabase
-        .from("profiles")
-        .select("looking_for, gender")
-        .eq("user_id", user.id)
-        .single();
-
-      // Fetch compatibility scores if available
+      // Fetch compatibility scores
       const { data: compatScores } = await supabase
         .from("compatibility_scores")
         .select("user2_id, score")
-        .eq("user1_id", user.id)
+        .eq("user1_id", user!.id)
         .order("score", { ascending: false })
         .limit(10);
 
-      // Get all eligible profiles
-      let query = supabase
-        .from("profiles")
-        .select("user_id, display_name, avatar_url, age, location, gender")
-        .neq("user_id", user.id)
-        .not("avatar_url", "is", null);
-
-      // Apply gender filter if set
-      const lookingFor = myProfileData?.looking_for || [];
-      if (lookingFor.length > 0 && !lookingFor.includes("tous")) {
-        query = query.in("gender", lookingFor);
-      }
-
-      const { data: profiles } = await query.limit(50);
-
-      if (!profiles || profiles.length === 0) {
-        clearInterval(progressInterval);
-        toast.error("Aucun profil compatible trouvé");
-        setStatus("idle");
-        return;
-      }
-
-      // Wait for scanning animation to complete
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      // Wait for scanning animation
+      await new Promise(resolve => setTimeout(resolve, 4000));
       clearInterval(progressInterval);
       setScanProgress(100);
 
-      // Score and rank profiles
+      // Score profiles
       const scoredProfiles = profiles.map(profile => {
-        // Check if we have a compatibility score
         const compatScore = compatScores?.find(s => s.user2_id === profile.user_id);
-        const score = compatScore?.score || Math.floor(Math.random() * 40 + 60); // 60-100 random if no score
+        const score = compatScore?.score || Math.floor(Math.random() * 40 + 60);
         
         return {
           userId: profile.user_id,
@@ -213,15 +272,17 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
         };
       });
 
-      // Sort by compatibility and pick the best
       scoredProfiles.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
       const bestMatch = scoredProfiles[0];
 
-      // Small delay for dramatic effect
-      await new Promise(resolve => setTimeout(resolve, 500));
-
+      // Transition to revealing phase
+      setStatus("revealing");
       setMatchResult(bestMatch);
-      setStatus("revealed");
+
+      // After dramatic reveal animation
+      setTimeout(() => {
+        setStatus("revealed");
+      }, 2000);
 
     } catch (error) {
       console.error("Error finding match:", error);
@@ -306,7 +367,7 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
           animate={{ opacity: 1, x: 0 }}
         >
           <span className="text-2xl">🤖</span>
-          <span className="bg-gradient-to-r from-primary via-amber-400 to-primary bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-primary via-primary/70 to-primary bg-clip-text text-transparent">
             AI Match Finder
           </span>
         </motion.h1>
@@ -330,11 +391,26 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
               onStart={startScan} 
             />
           )}
+          {status === "shuffling" && (
+            <ShufflingScreen
+              key="shuffling"
+              myProfile={myProfile}
+              shuffleProfiles={shuffleProfiles}
+              currentIndex={currentShuffleIndex}
+            />
+          )}
           {status === "scanning" && (
-            <ScanningScreen 
+            <ScanningScreenNew 
               key="scanning" 
               myProfile={myProfile} 
               progress={scanProgress} 
+            />
+          )}
+          {status === "revealing" && matchResult && (
+            <RevealingScreen
+              key="revealing"
+              myProfile={myProfile}
+              matchResult={matchResult}
             />
           )}
           {status === "revealed" && matchResult && (
@@ -363,7 +439,7 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
   );
 }
 
-// Idle Screen
+// Idle Screen - Bigger photos
 function IdleScreen({ 
   myProfile, 
   onStart 
@@ -378,16 +454,16 @@ function IdleScreen({
       exit={{ opacity: 0, y: -20 }}
       className="flex flex-col items-center gap-6 text-center max-w-md"
     >
-      {/* Two profile slots */}
-      <div className="flex items-center gap-6">
-        {/* My profile */}
+      {/* Two large profile slots */}
+      <div className="flex items-center gap-4">
+        {/* My profile - BIGGER */}
         <motion.div
           className="relative"
-          initial={{ x: -50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          initial={{ x: -50, opacity: 0, scale: 0.8 }}
+          animate={{ x: 0, opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, type: "spring" }}
         >
-          <div className="w-28 h-28 rounded-2xl border-2 border-primary/50 overflow-hidden bg-primary/10">
+          <div className="w-36 h-44 rounded-3xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
             {myProfile?.avatarUrl ? (
               <img 
                 src={myProfile.avatarUrl} 
@@ -396,51 +472,57 @@ function IdleScreen({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-4xl">👤</span>
+                <span className="text-5xl">👤</span>
               </div>
             )}
           </div>
-          <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full">
+          <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-lg">
             TOI
           </span>
         </motion.div>
 
-        {/* AI Icon */}
+        {/* AI Icon - Center */}
         <motion.div
+          className="flex flex-col items-center gap-1"
           animate={{ 
             scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
           }}
-          transition={{ duration: 3, repeat: Infinity }}
-          className="text-4xl"
+          transition={{ duration: 2, repeat: Infinity }}
         >
-          ⚡
+          <Brain className="w-8 h-8 text-primary" />
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            className="text-3xl"
+          >
+            ⚡
+          </motion.div>
         </motion.div>
 
-        {/* Mystery slot */}
+        {/* Mystery slot - BIGGER */}
         <motion.div
           className="relative"
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
+          initial={{ x: 50, opacity: 0, scale: 0.8 }}
+          animate={{ x: 0, opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, type: "spring" }}
         >
-          <div className="w-28 h-28 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 flex items-center justify-center">
+          <div className="w-36 h-44 rounded-3xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
             <motion.div
-              animate={{ opacity: [0.3, 1, 0.3] }}
+              animate={{ opacity: [0.3, 1, 0.3], scale: [0.9, 1.1, 0.9] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Search className="w-10 h-10 text-primary/50" />
+              <Search className="w-14 h-14 text-primary/40" />
             </motion.div>
           </div>
-          <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-muted text-muted-foreground text-xs font-bold rounded-full">
+          <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-muted text-muted-foreground text-sm font-bold rounded-full shadow-lg">
             ???
           </span>
         </motion.div>
       </div>
 
       {/* Description */}
-      <div className="space-y-2">
-        <h2 className="text-lg font-bold">Laisse l'IA trouver ton match parfait</h2>
+      <div className="space-y-2 mt-4">
+        <h2 className="text-xl font-bold">Laisse l'IA trouver ton match parfait</h2>
         <p className="text-muted-foreground text-sm">
           Notre algorithme analyse des milliers de profils pour te trouver LA personne idéale.
         </p>
@@ -462,7 +544,7 @@ function IdleScreen({
       <Button
         onClick={onStart}
         size="lg"
-        className="px-12 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground font-bold text-lg shadow-lg shadow-primary/40"
+        className="px-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold text-lg shadow-lg shadow-primary/40"
       >
         <Zap className="w-5 h-5 mr-2" />
         Lancer le scan
@@ -471,8 +553,120 @@ function IdleScreen({
   );
 }
 
-// Scanning Screen
-function ScanningScreen({ 
+// Shuffling Screen - Slot machine effect with profiles
+function ShufflingScreen({
+  myProfile,
+  shuffleProfiles,
+  currentIndex,
+}: {
+  myProfile: { avatarUrl: string | null; displayName: string } | null;
+  shuffleProfiles: ProfilePreview[];
+  currentIndex: number;
+}) {
+  const currentProfile = shuffleProfiles[currentIndex];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex flex-col items-center gap-6"
+    >
+      <motion.h2 
+        className="text-lg font-bold text-primary"
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 0.5, repeat: Infinity }}
+      >
+        🎰 Recherche en cours...
+      </motion.h2>
+
+      {/* Two large profile slots */}
+      <div className="flex items-center gap-4">
+        {/* My profile - Static */}
+        <motion.div
+          className="relative w-36 h-44 rounded-3xl border-3 border-primary overflow-hidden shadow-xl shadow-primary/30"
+        >
+          {myProfile?.avatarUrl ? (
+            <img 
+              src={myProfile.avatarUrl} 
+              alt="Toi" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+              <span className="text-5xl">👤</span>
+            </div>
+          )}
+          <GlowingPulse />
+        </motion.div>
+
+        {/* Connection sparks */}
+        <div className="flex flex-col items-center gap-2">
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              className="w-3 h-3 rounded-full bg-primary"
+              animate={{
+                scale: [1, 2, 1],
+                opacity: [0.3, 1, 0.3],
+                x: [-5, 5, -5],
+              }}
+              transition={{
+                duration: 0.3,
+                repeat: Infinity,
+                delay: i * 0.1,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Shuffling slot - Rapid photo changes */}
+        <motion.div
+          className="relative w-36 h-44 rounded-3xl border-3 border-primary/50 overflow-hidden shadow-xl"
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentIndex}
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ duration: 0.1 }}
+              className="absolute inset-0"
+            >
+              {currentProfile?.avatarUrl ? (
+                <img 
+                  src={currentProfile.avatarUrl} 
+                  alt="" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                  <span className="text-5xl">👤</span>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+          
+          {/* Scanning overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-background/60 pointer-events-none" />
+          <ScanningLaser />
+        </motion.div>
+      </div>
+
+      {/* Shuffling text */}
+      <motion.p
+        className="text-muted-foreground text-sm"
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 0.3, repeat: Infinity }}
+      >
+        Analyse de {shuffleProfiles.length}+ profils...
+      </motion.p>
+    </motion.div>
+  );
+}
+
+// New Scanning Screen - With bigger photos and neural network effect
+function ScanningScreenNew({ 
   myProfile, 
   progress 
 }: { 
@@ -484,12 +678,14 @@ function ScanningScreen({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex flex-col items-center gap-8"
+      className="flex flex-col items-center gap-6"
     >
-      {/* Two profile slots with scanning effect */}
-      <div className="flex items-center gap-6">
-        {/* My profile */}
-        <motion.div className="relative w-28 h-28 rounded-2xl border-2 border-primary overflow-hidden">
+      {/* Two large profile slots with scanning effect */}
+      <div className="flex items-center gap-4">
+        {/* My profile with neural network */}
+        <motion.div 
+          className="relative w-36 h-44 rounded-3xl border-3 border-primary overflow-hidden shadow-xl shadow-primary/30"
+        >
           {myProfile?.avatarUrl ? (
             <img 
               src={myProfile.avatarUrl} 
@@ -498,63 +694,58 @@ function ScanningScreen({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-primary/10">
-              <span className="text-4xl">👤</span>
+              <span className="text-5xl">👤</span>
             </div>
           )}
+          <NeuralNetwork />
+          <ScanningLaser />
         </motion.div>
 
-        {/* Connection animation */}
-        <div className="flex items-center gap-1">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              className="w-2 h-2 rounded-full bg-primary"
-              animate={{
-                scale: [1, 1.5, 1],
-                opacity: [0.3, 1, 0.3],
-              }}
-              transition={{
-                duration: 0.6,
-                repeat: Infinity,
-                delay: i * 0.2,
-              }}
-            />
-          ))}
+        {/* AI Processing animation */}
+        <div className="flex flex-col items-center gap-1">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          >
+            <Brain className="w-10 h-10 text-primary" />
+          </motion.div>
+          <motion.div
+            className="flex gap-1"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 0.5, repeat: Infinity }}
+          >
+            <span className="text-2xl">🔍</span>
+          </motion.div>
         </div>
 
-        {/* Scanning slot */}
-        <motion.div className="relative w-28 h-28 rounded-2xl border-2 border-primary/50 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
-          <ScanningParticles />
-          <AIBrainAnimation />
+        {/* Scanning slot with neural network */}
+        <motion.div 
+          className="relative w-36 h-44 rounded-3xl border-3 border-primary/50 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 shadow-xl"
+        >
+          <NeuralNetwork />
+          <ScanningLaser />
           
-          {/* Glowing rings */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <GlowingRing delay={0} />
-            <GlowingRing delay={0.5} />
-            <GlowingRing delay={1} />
-          </div>
-
-          {/* Center icon */}
+          {/* Center pulsing icon */}
           <div className="absolute inset-0 flex items-center justify-center">
             <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1, repeat: Infinity }}
             >
-              <Search className="w-10 h-10 text-primary" />
+              <Search className="w-14 h-14 text-primary" />
             </motion.div>
           </div>
         </motion.div>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-64 space-y-2">
+      {/* Progress bar - Wider */}
+      <div className="w-80 space-y-3">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Analyse en cours...</span>
-          <span className="text-primary font-bold">{Math.min(Math.round(progress), 100)}%</span>
+          <span className="text-muted-foreground font-medium">Analyse approfondie...</span>
+          <span className="text-primary font-bold text-lg">{Math.min(Math.round(progress), 100)}%</span>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-3 bg-muted rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-primary to-amber-500"
+            className="h-full bg-gradient-to-r from-primary via-primary/80 to-primary"
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(progress, 100)}%` }}
             transition={{ duration: 0.3 }}
@@ -565,23 +756,129 @@ function ScanningScreen({
       {/* Status messages */}
       <AnimatePresence mode="wait">
         <motion.p
-          key={Math.floor(progress / 25)}
+          key={Math.floor(progress / 20)}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="text-sm text-muted-foreground"
+          className="text-sm text-muted-foreground text-center"
         >
-          {progress < 25 && "🔍 Analyse de ton profil..."}
-          {progress >= 25 && progress < 50 && "🧠 Comparaison des personnalités..."}
-          {progress >= 50 && progress < 75 && "💫 Calcul de compatibilité..."}
-          {progress >= 75 && "✨ Match parfait trouvé !"}
+          {progress < 20 && "🔍 Analyse de ton profil..."}
+          {progress >= 20 && progress < 40 && "🧠 Comparaison des personnalités..."}
+          {progress >= 40 && progress < 60 && "💫 Calcul de compatibilité..."}
+          {progress >= 60 && progress < 80 && "🎯 Sélection du meilleur match..."}
+          {progress >= 80 && "✨ Match parfait identifié !"}
         </motion.p>
       </AnimatePresence>
     </motion.div>
   );
 }
 
-// Revealed Screen
+// Revealing Screen - Dramatic reveal animation
+function RevealingScreen({
+  myProfile,
+  matchResult,
+}: {
+  myProfile: { avatarUrl: string | null; displayName: string } | null;
+  matchResult: MatchResult;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex flex-col items-center gap-6"
+    >
+      <motion.h2 
+        className="text-xl font-bold text-primary"
+        initial={{ scale: 0 }}
+        animate={{ scale: [0, 1.2, 1] }}
+        transition={{ duration: 0.5 }}
+      >
+        🎯 Match trouvé !
+      </motion.h2>
+
+      {/* Two large profile slots */}
+      <div className="flex items-center gap-4">
+        {/* My profile */}
+        <motion.div
+          className="relative w-36 h-44 rounded-3xl border-3 border-primary overflow-hidden shadow-xl shadow-primary/30"
+          initial={{ x: -100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.3, type: "spring" }}
+        >
+          {myProfile?.avatarUrl ? (
+            <img 
+              src={myProfile.avatarUrl} 
+              alt="Toi" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+              <span className="text-5xl">👤</span>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Heart beating */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: [0, 1.5, 1] }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+          <motion.div
+            animate={{ scale: [1, 1.3, 1] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
+          >
+            <Heart className="w-12 h-12 text-destructive fill-destructive" />
+          </motion.div>
+        </motion.div>
+
+        {/* Match profile - REVEAL */}
+        <motion.div
+          className="relative w-36 h-44 rounded-3xl border-3 border-primary overflow-hidden shadow-xl shadow-primary/30"
+          initial={{ x: 100, opacity: 0, rotateY: 180 }}
+          animate={{ x: 0, opacity: 1, rotateY: 0 }}
+          transition={{ delay: 0.7, duration: 0.8, type: "spring" }}
+        >
+          {matchResult.avatarUrl ? (
+            <img 
+              src={matchResult.avatarUrl} 
+              alt={matchResult.displayName} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary/10">
+              <span className="text-5xl">👤</span>
+            </div>
+          )}
+          
+          {/* Compatibility badge */}
+          <motion.div
+            className="absolute -top-2 -right-2 w-14 h-14 rounded-full bg-gradient-to-r from-accent to-accent/80 flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg"
+            initial={{ scale: 0 }}
+            animate={{ scale: [0, 1.3, 1] }}
+            transition={{ delay: 1.2, type: "spring" }}
+          >
+            {matchResult.compatibilityScore}%
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Loading dots */}
+      <motion.div 
+        className="flex gap-2"
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 0.8, repeat: Infinity }}
+      >
+        <span className="w-2 h-2 rounded-full bg-primary" />
+        <span className="w-2 h-2 rounded-full bg-primary" />
+        <span className="w-2 h-2 rounded-full bg-primary" />
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Revealed Screen - With bigger photos
 function RevealedScreen({
   myProfile,
   matchResult,
@@ -606,7 +903,7 @@ function RevealedScreen({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="flex flex-col items-center gap-6 text-center max-w-md"
+      className="flex flex-col items-center gap-5 text-center max-w-md"
     >
       {/* Match found header */}
       <motion.div
@@ -615,16 +912,16 @@ function RevealedScreen({
         className="flex items-center gap-2 text-xl font-bold"
       >
         <span className="text-2xl">🎯</span>
-        <span className="bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
           Match trouvé !
         </span>
       </motion.div>
 
-      {/* Two profiles with heart */}
-      <div className="flex items-center gap-4">
-        {/* My profile */}
+      {/* Two BIGGER profiles with heart */}
+      <div className="flex items-center gap-3">
+        {/* My profile - BIGGER */}
         <motion.div
-          className="w-24 h-24 rounded-2xl border-2 border-primary overflow-hidden"
+          className="w-32 h-40 rounded-2xl border-2 border-primary overflow-hidden shadow-lg"
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -637,7 +934,7 @@ function RevealedScreen({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-primary/10">
-              <span className="text-3xl">👤</span>
+              <span className="text-4xl">👤</span>
             </div>
           )}
         </motion.div>
@@ -652,18 +949,18 @@ function RevealedScreen({
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 1, repeat: Infinity }}
           >
-            <Heart className="w-8 h-8 text-red-500 fill-red-500" />
+            <Heart className="w-10 h-10 text-destructive fill-destructive" />
           </motion.div>
         </motion.div>
 
-        {/* Match profile - REVEALED */}
+        {/* Match profile - BIGGER */}
         <motion.div
           className="relative"
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="w-24 h-24 rounded-2xl border-2 border-primary overflow-hidden">
+          <div className="w-32 h-40 rounded-2xl border-2 border-primary overflow-hidden shadow-lg">
             {matchResult.avatarUrl ? (
               <img 
                 src={matchResult.avatarUrl} 
@@ -672,13 +969,13 @@ function RevealedScreen({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                <span className="text-3xl">👤</span>
+                <span className="text-4xl">👤</span>
               </div>
             )}
           </div>
           {/* Compatibility badge */}
           <motion.div
-            className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold text-xs shadow-lg"
+            className="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-r from-accent to-accent/80 flex items-center justify-center text-primary-foreground font-bold text-xs shadow-lg"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.6, type: "spring" }}
@@ -718,7 +1015,7 @@ function RevealedScreen({
           onClick={onMatch}
           disabled={!canAfford || isLoading}
           size="lg"
-          className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-bold shadow-lg"
+          className="w-full bg-gradient-to-r from-destructive to-destructive/80 hover:from-destructive/90 hover:to-destructive/70 text-destructive-foreground font-bold shadow-lg"
         >
           {isLoading ? (
             <motion.div
@@ -729,7 +1026,7 @@ function RevealedScreen({
             </motion.div>
           ) : (
             <>
-              <Heart className="w-5 h-5 mr-2 fill-white" />
+              <Heart className="w-5 h-5 mr-2 fill-current" />
               Matcher pour {matchCost}
               <Coins className="w-4 h-4 ml-1" />
             </>
@@ -737,7 +1034,7 @@ function RevealedScreen({
         </Button>
 
         {!canAfford && (
-          <p className="text-sm text-red-400">
+          <p className="text-sm text-destructive">
             Tu as besoin de {matchCost - balance} coins supplémentaires
           </p>
         )}
@@ -756,7 +1053,7 @@ function RevealedScreen({
   );
 }
 
-// Matched Screen (success)
+// Matched Screen (success) - With bigger photo
 function MatchedScreen({
   matchResult,
   onMessage,
@@ -771,7 +1068,7 @@ function MatchedScreen({
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
-      className="flex flex-col items-center gap-6 text-center"
+      className="flex flex-col items-center gap-5 text-center"
     >
       {/* Celebration */}
       <motion.div
@@ -786,26 +1083,33 @@ function MatchedScreen({
       <motion.h2
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-rose-500 bg-clip-text text-transparent"
+        className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent"
       >
         C'est un Match !
       </motion.h2>
 
-      {/* Match avatar */}
+      {/* Match avatar - BIGGER */}
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.2, type: "spring" }}
         className="relative"
       >
-        <Avatar className="w-32 h-32 border-4 border-primary shadow-[0_0_30px_rgba(214,178,107,0.4)]">
-          <AvatarImage src={matchResult.avatarUrl || ""} />
-          <AvatarFallback className="text-4xl bg-primary/20">
-            {matchResult.displayName[0]}
-          </AvatarFallback>
-        </Avatar>
+        <div className="w-40 h-48 rounded-3xl border-4 border-primary overflow-hidden shadow-[0_0_30px_rgba(214,178,107,0.4)]">
+          {matchResult.avatarUrl ? (
+            <img 
+              src={matchResult.avatarUrl} 
+              alt={matchResult.displayName} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-primary/20">
+              <span className="text-5xl">{matchResult.displayName[0]}</span>
+            </div>
+          )}
+        </div>
         <motion.div
-          className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-bold rounded-full"
+          className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-bold rounded-full shadow-lg"
           animate={{ scale: [1, 1.1, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
         >
@@ -823,7 +1127,7 @@ function MatchedScreen({
         <Button
           onClick={onMessage}
           size="lg"
-          className="w-full bg-gradient-to-r from-primary to-amber-600 font-bold"
+          className="w-full bg-gradient-to-r from-primary to-primary/80 font-bold"
         >
           <MessageCircle className="w-5 h-5 mr-2" />
           Envoyer un message
