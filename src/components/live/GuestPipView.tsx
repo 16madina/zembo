@@ -4,12 +4,15 @@ import { X, Loader2, Maximize2, Minimize2, Mic, MicOff, Sparkles } from "lucide-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ConnectionQualityIndicator from "./ConnectionQualityIndicator";
 import { useWebRTCQuality } from "@/hooks/useWebRTCQuality";
+import { Track } from "livekit-client";
 
 interface GuestPipViewProps {
   guestName: string | null;
   guestAvatar: string | null;
   guestId: string;
   guestStream?: MediaStream | null;
+  /** LiveKit remote track for spectators viewing the guest via LiveKit */
+  guestRemoteTrack?: Track | null;
   isStreamer: boolean;
   isGuest: boolean;
   isMuted?: boolean;
@@ -83,6 +86,7 @@ const GuestPipView = ({
   guestAvatar,
   guestId,
   guestStream,
+  guestRemoteTrack,
   isStreamer,
   isGuest,
   isMuted = false,
@@ -127,10 +131,20 @@ const GuestPipView = ({
       videoEl.play().catch((err) => {
         console.warn("[GuestPipView] Guest VIDEO play() failed:", err);
       });
+    } else if (guestRemoteTrack) {
+      // Spectator viewing guest via LiveKit
+      console.log("[GuestPipView] Attaching guestRemoteTrack from LiveKit");
+      guestRemoteTrack.attach(videoEl);
     } else {
       videoEl.srcObject = null;
     }
-  }, [guestStream]);
+
+    return () => {
+      if (guestRemoteTrack) {
+        guestRemoteTrack.detach(videoEl);
+      }
+    };
+  }, [guestStream, guestRemoteTrack]);
 
   useEffect(() => {
     const audioEl = guestAudioRef.current;
@@ -149,6 +163,9 @@ const GuestPipView = ({
       audioEl.srcObject = null;
     }
   }, [guestStream]);
+
+  // Determine if we have any video to show
+  const hasVideo = !!(guestStream || guestRemoteTrack);
 
   const defaultGuestAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${guestId}`;
 
@@ -214,7 +231,7 @@ const GuestPipView = ({
         <audio ref={guestAudioRef} autoPlay playsInline className="hidden" />
 
         {/* Video or Avatar */}
-        {guestStream ? (
+        {hasVideo ? (
           <video
             ref={guestVideoRef}
             autoPlay

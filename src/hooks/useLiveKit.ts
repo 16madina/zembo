@@ -17,7 +17,12 @@ interface UseLiveKitOptions {
   roomName: string;
   isStreamer: boolean;
   /**
-   * Optional existing stream to publish for streamers.
+   * Stage guest: When true, this participant is on stage in DUO mode
+   * and will publish their video/audio to LiveKit so spectators can see them.
+   */
+  isStageGuest?: boolean;
+  /**
+   * Optional existing stream to publish for streamers or stage guests.
    * When provided, we reuse these tracks instead of requesting a second camera/mic.
    */
   publishStream?: MediaStream | null;
@@ -60,6 +65,7 @@ const isMobile = (): boolean => isIOS() || isAndroid();
 export const useLiveKit = ({
   roomName,
   isStreamer,
+  isStageGuest = false,
   publishStream,
   onParticipantJoined,
   onParticipantLeft,
@@ -73,6 +79,9 @@ export const useLiveKit = ({
   const [participantCount, setParticipantCount] = useState(0);
   const [remoteVideoTrack, setRemoteVideoTrack] = useState<Track | null>(null);
   const [remoteAudioTrack, setRemoteAudioTrack] = useState<Track | null>(null);
+  // Map of participant identity -> their video track (for multi-participant scenarios like DUO)
+  const [remoteVideoTracks, setRemoteVideoTracks] = useState<Map<string, Track>>(new Map());
+  const [remoteAudioTracks, setRemoteAudioTracks] = useState<Map<string, Track>>(new Map());
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
 
@@ -324,16 +333,20 @@ export const useLiveKit = ({
   }, [isStreamer, roomName, isConnecting, isConnected, error, remoteVideoTrack, audioPlaying]);
 
   // Sync remote tracks - finds and attaches any available video/audio tracks from remote participants
+  // Now stores tracks by participant identity for multi-participant scenarios (DUO mode)
   const syncRemoteTracks = useCallback((currentRoom: Room) => {
-    if (isStreamer) return; // Only viewers need this
+    // Stage guests also need to receive the streamer's video (they don't publish-only)
+    if (isStreamer && !isStageGuest) return;
 
     console.log("[LiveKit] syncRemoteTracks - Scanning for remote tracks...");
     
     const remoteParticipants = Array.from(currentRoom.remoteParticipants.values());
     console.log("[LiveKit] Remote participants:", remoteParticipants.length);
 
-    let foundVideo = false;
-    let foundAudio = false;
+    const newVideoTracks = new Map<string, Track>();
+    const newAudioTracks = new Map<string, Track>();
+    let foundPrimaryVideo = false;
+    let foundPrimaryAudio = false;
 
     for (const participant of remoteParticipants) {
       console.log("[LiveKit] Participant:", participant.identity, 
@@ -343,6 +356,7 @@ export const useLiveKit = ({
       // Handle video tracks
       for (const [, publication] of participant.videoTrackPublications) {
         console.log("[LiveKit] Video publication:", {
+          participant: participant.identity,
           trackSid: publication.trackSid,
           source: publication.source,
           isSubscribed: publication.isSubscribed,
@@ -355,20 +369,26 @@ export const useLiveKit = ({
           publication.setSubscribed(true);
         }
 
-        // If we have a track, use it
-        if (publication.track && publication.track.kind === Track.Kind.Video && !foundVideo) {
-          console.log("[LiveKit] Found video track, attaching...");
-          setRemoteVideoTrack(publication.track);
-          if (remoteVideoRef.current) {
-            publication.track.attach(remoteVideoRef.current);
+        // If we have a track, store it by participant identity
+        if (publication.track && publication.track.kind === Track.Kind.Video) {
+          console.log("[LiveKit] Found video track from:", participant.identity);
+          newVideoTracks.set(participant.identity, publication.track);
+          
+          // Set the primary remote video track (first one found, usually the streamer)
+          if (!foundPrimaryVideo) {
+            setRemoteVideoTrack(publication.track);
+            if (remoteVideoRef.current) {
+              publication.track.attach(remoteVideoRef.current);
+            }
+            foundPrimaryVideo = true;
           }
-          foundVideo = true;
         }
       }
 
       // Handle audio tracks
       for (const [, publication] of participant.audioTrackPublications) {
         console.log("[LiveKit] Audio publication:", {
+          participant: participant.identity,
           trackSid: publication.trackSid,
           source: publication.source,
           isSubscribed: publication.isSubscribed,
@@ -381,30 +401,37 @@ export const useLiveKit = ({
           publication.setSubscribed(true);
         }
 
-        // If we have a track, attach it with mobile-friendly handling
-        if (publication.track && publication.track.kind === Track.Kind.Audio && !foundAudio) {
-          console.log("[LiveKit] Found audio track, attaching with mobile support...");
-          setRemoteAudioTrack(publication.track);
-          attachAudioTrack(publication.track);
-          foundAudio = true;
+        // If we have a track, store it and attach with mobile-friendly handling
+        if (publication.track && publication.track.kind === Track.Kind.Audio) {
+          console.log("[LiveKit] Found audio track from:", participant.identity);
+          newAudioTracks.set(participant.identity, publication.track);
+          
+          if (!foundPrimaryAudio) {
+            setRemoteAudioTrack(publication.track);
+            attachAudioTrack(publication.track);
+            foundPrimaryAudio = true;
+          }
         }
       }
     }
 
-    if (!foundVideo) {
-      console.log("[LiveKit] No remote video track found yet");
-    }
-    if (!foundAudio) {
-      console.log("[LiveKit] No remote audio track found yet");
-    }
-  }, [isStreamer, attachAudioTrack]);
+    // Update the Maps with all found tracks
+    setRemoteVideoTracks(newVideoTracks);
+    setRemoteAudioTracks(newAudioTracks);
+
+    console.log("[LiveKit] syncRemoteTracks complete:", {
+      videoTracksCount: newVideoTracks.size,
+      audioTracksCount: newAudioTracks.size,
+    });
+  }, [isStreamer, isStageGuest, attachAudioTrack]);
 
   // Get LiveKit token from edge function
   const getToken = useCallback(async () => {
-    console.log(`[LiveKit] Requesting token as ${isStreamer ? "streamer" : "viewer"} for room: ${roomName}`);
+    const role = isStreamer ? "streamer" : isStageGuest ? "stageGuest" : "viewer";
+    console.log(`[LiveKit] Requesting token as ${role} for room: ${roomName}`);
     
     const { data, error } = await supabase.functions.invoke("livekit-token", {
-      body: { roomName, isStreamer },
+      body: { roomName, isStreamer, isStageGuest },
     });
 
     if (error) {
@@ -414,7 +441,7 @@ export const useLiveKit = ({
 
     console.log("[LiveKit] Token received successfully");
     return data;
-  }, [roomName, isStreamer]);
+  }, [roomName, isStreamer, isStageGuest]);
 
   // Force reconnect function
   const forceReconnect = useCallback(async () => {
@@ -468,8 +495,8 @@ export const useLiveKit = ({
         setParticipantCount(newRoom.numParticipants);
         hasConnectedRef.current = true;
         
-        // VIEWER: Sync remote tracks immediately after connection
-        if (!isStreamer) {
+        // VIEWER or STAGE GUEST: Sync remote tracks immediately after connection
+        if (!isStreamer || isStageGuest) {
           setTimeout(() => syncRemoteTracks(newRoom), 500);
         }
         
@@ -478,7 +505,7 @@ export const useLiveKit = ({
 
       newRoom.on(RoomEvent.Reconnected, () => {
         console.log("[LiveKit] Room reconnected");
-        if (!isStreamer) {
+        if (!isStreamer || isStageGuest) {
           syncRemoteTracks(newRoom);
         }
         updateDebugInfo(newRoom);
@@ -497,8 +524,8 @@ export const useLiveKit = ({
         setParticipantCount(newRoom.numParticipants);
         onParticipantJoined?.(participant);
         
-        // VIEWER: Try to sync tracks when a new participant joins
-        if (!isStreamer) {
+        // VIEWER or STAGE GUEST: Try to sync tracks when a new participant joins
+        if (!isStreamer || isStageGuest) {
           setTimeout(() => syncRemoteTracks(newRoom), 500);
         }
         updateDebugInfo(newRoom);
@@ -511,10 +538,10 @@ export const useLiveKit = ({
         updateDebugInfo(newRoom);
       });
 
-      // Track published event - important for viewers to catch streamer publishing
+      // Track published event - important for viewers and stage guests to catch streamer publishing
       newRoom.on(RoomEvent.TrackPublished, (publication, participant) => {
         console.log("[LiveKit] TrackPublished:", publication.kind, "from", participant.identity);
-        if (!isStreamer) {
+        if (!isStreamer || isStageGuest) {
           setTimeout(() => syncRemoteTracks(newRoom), 300);
         }
         updateDebugInfo(newRoom);
@@ -524,14 +551,19 @@ export const useLiveKit = ({
         RoomEvent.TrackSubscribed,
         (track, publication, participant) => {
           console.log("[LiveKit] TrackSubscribed:", track.kind, "from", participant.identity);
+          
+          // Store track in Map by participant identity
           if (track.kind === Track.Kind.Video) {
-            console.log("[LiveKit] Setting remote video track for viewer");
+            console.log("[LiveKit] Adding remote video track from:", participant.identity);
+            setRemoteVideoTracks(prev => new Map(prev).set(participant.identity, track));
+            // Also set the legacy single track (for backward compatibility)
             setRemoteVideoTrack(track);
             if (remoteVideoRef.current) {
               track.attach(remoteVideoRef.current);
             }
           } else if (track.kind === Track.Kind.Audio) {
-            console.log("[LiveKit] Setting remote audio track with mobile support");
+            console.log("[LiveKit] Adding remote audio track from:", participant.identity);
+            setRemoteAudioTracks(prev => new Map(prev).set(participant.identity, track));
             setRemoteAudioTrack(track);
             // Use our custom audio attachment with iOS/Android support
             attachAudioTrack(track);
@@ -545,18 +577,36 @@ export const useLiveKit = ({
         (track, publication, participant) => {
           console.log("[LiveKit] TrackUnsubscribed:", track.kind, "from", participant.identity);
           track.detach();
+          
+          // Remove from Maps
           if (track.kind === Track.Kind.Video) {
-            setRemoteVideoTrack(null);
+            setRemoteVideoTracks(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(participant.identity);
+              return newMap;
+            });
+            // If this was the primary track, clear it
+            setRemoteVideoTrack(prevTrack => prevTrack === track ? null : prevTrack);
           } else if (track.kind === Track.Kind.Audio) {
-            setRemoteAudioTrack(null);
-            setAudioPlaying(false);
-            // Clean up audio element
-            if (audioElementRef.current) {
-              audioElementRef.current.pause();
-              audioElementRef.current.srcObject = null;
-              audioElementRef.current.remove();
-              audioElementRef.current = null;
-            }
+            setRemoteAudioTracks(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(participant.identity);
+              return newMap;
+            });
+            setRemoteAudioTrack(prevTrack => {
+              if (prevTrack === track) {
+                setAudioPlaying(false);
+                // Clean up audio element
+                if (audioElementRef.current) {
+                  audioElementRef.current.pause();
+                  audioElementRef.current.srcObject = null;
+                  audioElementRef.current.remove();
+                  audioElementRef.current = null;
+                }
+                return null;
+              }
+              return prevTrack;
+            });
           }
           updateDebugInfo(newRoom);
         }
@@ -567,14 +617,15 @@ export const useLiveKit = ({
       await newRoom.connect(url, token);
       setRoom(newRoom);
 
-      // If streamer, publish tracks
-      if (isStreamer) {
+      // If streamer OR stage guest, publish tracks
+      if (isStreamer || isStageGuest) {
         // IMPORTANT: Reuse existing getUserMedia stream when available.
         // This avoids a second camera capture which often fails on mobile/webviews.
         const existingVideoTrack = publishStream?.getVideoTracks?.()?.[0] || null;
         const existingAudioTrack = publishStream?.getAudioTracks?.()?.[0] || null;
 
-        console.log("[LiveKit] Publishing as streamer:", {
+        const role = isStreamer ? "streamer" : "stage guest";
+        console.log(`[LiveKit] Publishing as ${role}:`, {
           hasPublishStream: !!publishStream,
           videoTracksCount: publishStream?.getVideoTracks?.()?.length || 0,
           audioTracksCount: publishStream?.getAudioTracks?.()?.length || 0,
@@ -602,14 +653,14 @@ export const useLiveKit = ({
           const videoPubs = Array.from(newRoom.localParticipant.videoTrackPublications.values());
           const audioPubs = Array.from(newRoom.localParticipant.audioTrackPublications.values());
           
-          console.log("[LiveKit] Streamer publications after publish:", {
+          console.log(`[LiveKit] ${role} publications after publish:`, {
             videoPubs: videoPubs.length,
             audioPubs: audioPubs.length,
             hasActiveVideoTrack: videoPubs.some(p => p.track && !p.track.isMuted),
           });
 
-          // Check if video track is actually active
-          if (videoPubs.length === 0 || !videoPubs[0].track) {
+          // Check if video track is actually active (only for streamer, stage guest may have different flow)
+          if (isStreamer && (videoPubs.length === 0 || !videoPubs[0].track)) {
             console.warn("[LiveKit] Warning: No active video publication after publish, attempting fallback...");
             // Fallback: create and publish a new track
             const fallbackTrack = await createLocalVideoTrack({
@@ -623,9 +674,9 @@ export const useLiveKit = ({
             publishedVideoPub.track.attach(localVideoRef.current);
           }
 
-          console.log("[LiveKit] Streamer tracks published successfully");
+          console.log(`[LiveKit] ${role} tracks published successfully`);
         } catch (pubError: any) {
-          console.error("[LiveKit] Error publishing tracks:", pubError);
+          console.error(`[LiveKit] Error publishing tracks as ${role}:`, pubError);
           setError("Erreur lors de la publication de la vidéo: " + pubError.message);
         }
         
@@ -767,6 +818,9 @@ export const useLiveKit = ({
     participantCount,
     remoteVideoTrack,
     remoteAudioTrack,
+    // New: Map of all remote video tracks by participant identity (for DUO mode)
+    remoteVideoTracks,
+    remoteAudioTracks,
     audioPlaying,
     needsAudioUnlock,
     debugInfo,
