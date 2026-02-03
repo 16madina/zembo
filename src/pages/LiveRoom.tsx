@@ -170,6 +170,7 @@ const LiveRoom = () => {
     isMuted: liveKitMuted,
     isVideoOff: liveKitVideoOff,
     remoteVideoTrack,
+    remoteVideoTracks, // Map of all remote video tracks by participant identity
     needsAudioUnlock,
     debugInfo: liveKitDebugInfo,
     connect: connectLiveKit,
@@ -188,7 +189,6 @@ const LiveRoom = () => {
     // Streamer: reuse the already-open camera stream to publish to LiveKit.
     publishStream: isStreamer ? stream : null,
   });
-
   // Auto-reconnect state for viewers
   const [showReconnectButton, setShowReconnectButton] = useState(false);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -248,6 +248,42 @@ const LiveRoom = () => {
     isStreamer: !!isStreamer,
     isOnStage,
   });
+
+  // Stage guest LiveKit connection (separate from main viewer connection)
+  // The stage guest needs their own LiveKit connection to PUBLISH their video to spectators
+  const {
+    isConnected: stageGuestLiveKitConnected,
+    connect: connectStageGuestLiveKit,
+    disconnect: disconnectStageGuestLiveKit,
+  } = useLiveKit({
+    roomName,
+    isStreamer: false,
+    isStageGuest: isOnStage && !isStreamer,
+    // Stage guest reuses their WebRTC local stream to publish to LiveKit
+    publishStream: isOnStage && !isStreamer ? guestLocalStream : null,
+  });
+
+  // Find the guest's remote video track for spectators
+  // The guest's identity is their user_id, so we can look it up in remoteVideoTracks
+  const guestRemoteVideoTrack = currentGuest && !isStreamer && !isOnStage
+    ? remoteVideoTracks.get(currentGuest.user_id) || null
+    : null;
+
+  // Auto-connect stage guest to LiveKit when they go on stage
+  useEffect(() => {
+    if (isOnStage && !isStreamer && guestLocalStream && !stageGuestLiveKitConnected) {
+      console.log("[LiveRoom] Stage guest connecting to LiveKit to broadcast video...");
+      connectStageGuestLiveKit();
+    }
+  }, [isOnStage, isStreamer, guestLocalStream, stageGuestLiveKitConnected, connectStageGuestLiveKit]);
+
+  // Disconnect stage guest from LiveKit when they leave stage
+  useEffect(() => {
+    if (!isOnStage && stageGuestLiveKitConnected) {
+      console.log("[LiveRoom] Stage guest left stage, disconnecting from LiveKit");
+      disconnectStageGuestLiveKit();
+    }
+  }, [isOnStage, stageGuestLiveKitConnected, disconnectStageGuestLiveKit]);
 
   // Join requests with coins (for viewers requesting to join, and streamers managing requests)
   const {
@@ -1063,6 +1099,7 @@ const LiveRoom = () => {
                   ? guestLocalStream
                   : null
             }
+            guestRemoteTrack={guestRemoteVideoTrack}
             isStreamer={isStreamer}
             onRemoveGuest={removeFromStage}
             isConnecting={stageConnecting}
@@ -1100,6 +1137,7 @@ const LiveRoom = () => {
                         ? guestStream
                         : null
                   }
+                  guestRemoteTrack={guestRemoteVideoTrack}
                   isStreamer={isStreamer}
                   isGuest={isOnStage}
                   isMuted={guestMuted}

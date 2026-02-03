@@ -49,7 +49,7 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub as string;
 
-    const { roomName, isStreamer, isRandomCall, isSpeedDating } = await req.json();
+    const { roomName, isStreamer, isRandomCall, isSpeedDating, isStageGuest } = await req.json();
 
     if (!roomName) {
       return new Response(JSON.stringify({ error: "Room name is required" }), {
@@ -110,6 +110,15 @@ serve(async (req) => {
         canSubscribe: true,
         canPublishData: true,
       });
+    } else if (isStageGuest) {
+      // Stage guest (DUO mode): can publish video and audio so spectators can see/hear them
+      at.addGrant({
+        room: roomName,
+        roomJoin: true,
+        canPublish: true,
+        canSubscribe: true,
+        canPublishData: true,
+      });
     } else if (isStreamer) {
       // Streamer can publish and subscribe
       at.addGrant({
@@ -132,7 +141,7 @@ serve(async (req) => {
 
     const jwtToken = await at.toJwt();
 
-    console.log("LiveKit token generated successfully for:", { userId, roomName, isStreamer, isSpeedDating, isRandomCall });
+    console.log("LiveKit token generated successfully for:", { userId, roomName, isStreamer, isSpeedDating, isRandomCall, isStageGuest });
 
     return new Response(
       JSON.stringify({

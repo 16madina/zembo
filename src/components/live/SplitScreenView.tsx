@@ -21,6 +21,8 @@ interface SplitScreenViewProps {
   guestAvatar: string | null;
   guestId: string;
   guestStream?: MediaStream | null;
+  /** LiveKit remote track for spectators viewing the guest via LiveKit */
+  guestRemoteTrack?: Track | null;
 
   // Control props
   isStreamer: boolean;
@@ -43,6 +45,7 @@ const SplitScreenView = ({
   guestAvatar,
   guestId,
   guestStream,
+  guestRemoteTrack,
   isStreamer,
   onRemoveGuest,
   isConnecting = false,
@@ -77,6 +80,7 @@ const SplitScreenView = ({
     console.log("[SplitScreenView] Guest stream -> video effect:", {
       hasVideoRef: !!guestVideoRef.current,
       hasStream: !!guestStream,
+      hasRemoteTrack: !!guestRemoteTrack,
       tracks:
         guestStream?.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState, id: t.id })) ??
         [],
@@ -97,11 +101,21 @@ const SplitScreenView = ({
       el.play().catch((err) => {
         console.warn("[SplitScreenView] Guest VIDEO play() failed:", err);
       });
+    } else if (guestRemoteTrack) {
+      // Spectator viewing guest via LiveKit
+      console.log("[SplitScreenView] Attaching guestRemoteTrack from LiveKit");
+      guestRemoteTrack.attach(el);
     } else {
       console.log("[SplitScreenView] Clearing guest VIDEO srcObject");
       el.srcObject = null;
     }
-  }, [guestStream]);
+
+    return () => {
+      if (guestRemoteTrack) {
+        guestRemoteTrack.detach(el);
+      }
+    };
+  }, [guestStream, guestRemoteTrack]);
 
   // Attach guest stream to AUDIO (helps when browsers are picky about audio on <video>)
   useEffect(() => {
@@ -131,6 +145,9 @@ const SplitScreenView = ({
 
   const defaultStreamerAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${streamerId}`;
   const defaultGuestAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${guestId}`;
+  
+  // Determine if we have any video to show for the guest
+  const hasGuestVideo = !!(guestStream || guestRemoteTrack);
 
   return (
     <div className="absolute inset-0 bg-black flex flex-col">
@@ -171,7 +188,7 @@ const SplitScreenView = ({
         {/* Dedicated audio element for guest */}
         <audio ref={guestAudioRef} autoPlay playsInline />
 
-        {guestStream ? (
+        {hasGuestVideo ? (
           <video
             ref={guestVideoRef}
             autoPlay
