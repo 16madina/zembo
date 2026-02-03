@@ -36,6 +36,7 @@ export const useStageWebRTC = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsMediaUnlock, setNeedsMediaUnlock] = useState(false);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -45,12 +46,21 @@ export const useStageWebRTC = ({
   const userIdRef = useRef<string | null>(null);
   const liveIdRef = useRef<string | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+  const pendingStreamerIdRef = useRef<string | null>(null);
 
   // Keep refs updated for cleanup
   useEffect(() => {
     userIdRef.current = user?.id || null;
     liveIdRef.current = liveId || null;
   }, [user?.id, liveId]);
+
+  // Reset media unlock prompt when leaving stage
+  useEffect(() => {
+    if (!isOnStage) {
+      setNeedsMediaUnlock(false);
+      pendingStreamerIdRef.current = null;
+    }
+  }, [isOnStage]);
 
   // Cleanup function - only cleans local resources, not signals
   const cleanup = useCallback(() => {
@@ -82,6 +92,7 @@ export const useStageWebRTC = ({
     setGuestStream(null);
     setIsConnected(false);
     setIsConnecting(false);
+    setNeedsMediaUnlock(false);
 
     onGuestDisconnected?.();
   }, [localStream, onGuestDisconnected]);
@@ -362,9 +373,11 @@ export const useStageWebRTC = ({
     }
 
     hasInitializedRef.current = true;
+    pendingStreamerIdRef.current = streamerId;
     console.log("[StageWebRTC] Starting as guest, sending video to:", streamerId);
     setIsConnecting(true);
     setError(null);
+    setNeedsMediaUnlock(false);
 
     try {
       // Get local video/audio stream
@@ -474,8 +487,41 @@ export const useStageWebRTC = ({
           console.error("[StageWebRTC] Error fetching existing signals:", fetchError);
           return false;
         } else if (existingSignals && existingSignals.length > 0) {
-          console.log("[StageWebRTC] Found existing offer, processing...");
-          await handleSignal("offer", existingSignals[0].signal_data, existingSignals[0].sender_id);
+          const offerSignal = existingSignals[0] as any;
+          console.log("[StageWebRTC] Found existing offer, processing...", {
+            created_at: offerSignal.created_at,
+            sender_id: offerSignal.sender_id,
+          });
+
+          // Process the offer first (sets remote description + generates answer)
+          await handleSignal("offer", offerSignal.signal_data, offerSignal.sender_id);
+
+          // IMPORTANT: If the guest subscribed late, they may have missed earlier ICE candidates.
+          // Fetch and apply recent ICE candidates sent by the streamer.
+          try {
+            const { data: iceSignals, error: iceErr } = await supabase
+              .from("live_stage_signals")
+              .select("signal_data, sender_id, created_at")
+              .eq("live_id", liveId)
+              .eq("receiver_id", user.id)
+              .eq("sender_id", offerSignal.sender_id)
+              .eq("signal_type", "ice-candidate")
+              .gte("created_at", offerSignal.created_at)
+              .order("created_at", { ascending: true })
+              .limit(50);
+
+            if (iceErr) {
+              console.warn("[StageWebRTC] Failed to fetch past ICE candidates:", iceErr);
+            } else if (iceSignals && iceSignals.length > 0) {
+              console.log("[StageWebRTC] Applying past ICE candidates:", iceSignals.length);
+              for (const s of iceSignals) {
+                await handleSignal("ice-candidate", (s as any).signal_data, (s as any).sender_id);
+              }
+            }
+          } catch (e) {
+            console.warn("[StageWebRTC] Error applying past ICE candidates:", e);
+          }
+
           return true;
         } else {
           console.log("[StageWebRTC] No existing offer found yet...");
@@ -499,11 +545,56 @@ export const useStageWebRTC = ({
 
     } catch (err: any) {
       console.error("[StageWebRTC] Error starting as guest:", err);
-      setError(err.message || "Failed to connect");
+      const name = String(err?.name || "");
+      const msg = String(err?.message || "");
+      // Mobile Safari / some Android WebViews may require a user gesture to request media.
+      // If we try to start automatically via realtime update, it can be blocked.
+      const isGestureOrPermissionError =
+        name === "NotAllowedError" ||
+        name === "SecurityError" ||
+        name === "PermissionDeniedError" ||
+        /permission|denied|gesture|notallowed/i.test(msg);
+
+      if (isGestureOrPermissionError) {
+        console.warn("[StageWebRTC] getUserMedia blocked -> waiting for user tap to retry", {
+          name,
+          msg,
+        });
+        setNeedsMediaUnlock(true);
+        setError("Veuillez autoriser la caméra et le micro");
+      } else {
+        setError(msg || "Failed to connect");
+      }
       setIsConnecting(false);
       hasInitializedRef.current = false;
     }
   }, [user, liveId, sendSignal, handleSignal]);
+
+  // Guest manual retry (must be triggered by a user gesture)
+  const requestMediaAccess = useCallback(async () => {
+    if (!user || !liveId) return;
+    if (isStreamer || !isOnStage) return;
+
+    let streamerId = pendingStreamerIdRef.current;
+    if (!streamerId) {
+      const { data: live } = await supabase
+        .from("lives")
+        .select("streamer_id")
+        .eq("id", liveId)
+        .maybeSingle();
+      streamerId = live?.streamer_id ?? null;
+      pendingStreamerIdRef.current = streamerId;
+    }
+
+    if (!streamerId) {
+      console.error("[StageWebRTC] requestMediaAccess: streamerId not found", { liveId });
+      return;
+    }
+
+    // Allow retry even if a previous attempt marked initialized
+    hasInitializedRef.current = false;
+    await startAsGuest(streamerId);
+  }, [user?.id, liveId, isStreamer, isOnStage, startAsGuest]);
 
   // Effect: Streamer (re)starts connection when guest changes
   useEffect(() => {
@@ -548,6 +639,12 @@ export const useStageWebRTC = ({
   useEffect(() => {
     if (!isOnStage || isStreamer || !user || !liveId) return;
 
+    // If media permission / user gesture is required, wait for explicit user action.
+    if (needsMediaUnlock) {
+      console.log("[StageWebRTC] Guest waiting for user gesture to request media...");
+      return;
+    }
+
     console.log("[StageWebRTC] Guest effect triggered, fetching streamer...");
     
     const fetchStreamerAndConnect = async () => {
@@ -559,6 +656,7 @@ export const useStageWebRTC = ({
 
       if (live?.streamer_id) {
         console.log("[StageWebRTC] Found streamer:", live.streamer_id);
+        pendingStreamerIdRef.current = live.streamer_id;
         startAsGuest(live.streamer_id);
       } else {
         console.error("[StageWebRTC] Could not find streamer for live:", liveId);
@@ -568,7 +666,7 @@ export const useStageWebRTC = ({
     fetchStreamerAndConnect();
     
     // No cleanup here - cleanup only on unmount
-  }, [isOnStage, isStreamer, user?.id, liveId]); // Use user?.id instead of user object
+  }, [isOnStage, isStreamer, user?.id, liveId, needsMediaUnlock, startAsGuest]); // Use user?.id instead of user object
 
   // Final cleanup on unmount
   useEffect(() => {
@@ -600,6 +698,8 @@ export const useStageWebRTC = ({
     isConnecting,
     isMuted,
     error,
+    needsMediaUnlock,
+    requestMediaAccess,
     cleanup,
     toggleMute,
     getPeerConnection,
