@@ -458,24 +458,43 @@ export const useStageWebRTC = ({
       // Wait a bit for subscription to be ready
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Check for existing offer from streamer
-      console.log("[StageWebRTC] Guest checking for existing offer...");
-      const { data: existingSignals, error: fetchError } = await supabase
-        .from("live_stage_signals")
-        .select("*")
-        .eq("live_id", liveId)
-        .eq("receiver_id", user.id)
-        .eq("signal_type", "offer")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      // Check for existing offer from streamer (with retry mechanism)
+      const checkForOffer = async (attempt: number = 1): Promise<boolean> => {
+        console.log(`[StageWebRTC] Guest checking for existing offer (attempt ${attempt}/5)...`);
+        const { data: existingSignals, error: fetchError } = await supabase
+          .from("live_stage_signals")
+          .select("*")
+          .eq("live_id", liveId)
+          .eq("receiver_id", user.id)
+          .eq("signal_type", "offer")
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-      if (fetchError) {
-        console.error("[StageWebRTC] Error fetching existing signals:", fetchError);
-      } else if (existingSignals && existingSignals.length > 0) {
-        console.log("[StageWebRTC] Found existing offer, processing...");
-        await handleSignal("offer", existingSignals[0].signal_data, existingSignals[0].sender_id);
-      } else {
-        console.log("[StageWebRTC] No existing offer found, waiting for realtime signal...");
+        if (fetchError) {
+          console.error("[StageWebRTC] Error fetching existing signals:", fetchError);
+          return false;
+        } else if (existingSignals && existingSignals.length > 0) {
+          console.log("[StageWebRTC] Found existing offer, processing...");
+          await handleSignal("offer", existingSignals[0].signal_data, existingSignals[0].sender_id);
+          return true;
+        } else {
+          console.log("[StageWebRTC] No existing offer found yet...");
+          return false;
+        }
+      };
+
+      // Try to find offer with retry - the streamer adds a delay, so we may need to wait
+      let found = await checkForOffer(1);
+      if (!found) {
+        // Retry up to 4 more times with increasing delays
+        for (let attempt = 2; attempt <= 5 && !found; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 800 * (attempt - 1)));
+          found = await checkForOffer(attempt);
+        }
+        
+        if (!found) {
+          console.log("[StageWebRTC] No offer found after retries, waiting for realtime signal...");
+        }
       }
 
     } catch (err: any) {
@@ -511,7 +530,18 @@ export const useStageWebRTC = ({
     prevGuestIdRef.current = guestId;
 
     console.log("[StageWebRTC] Streamer effect triggered, guestId:", guestId);
-    startAsStreamer(guestId);
+    
+    // IMPORTANT: Wait 1.5s before sending offer to give guest time to setup their 
+    // realtime subscription. Without this delay, the offer is sent before the guest
+    // can receive it, causing the DUO connection to fail.
+    const delayTimer = setTimeout(() => {
+      console.log("[StageWebRTC] Streamer starting connection after delay");
+      startAsStreamer(guestId);
+    }, 1500);
+    
+    return () => {
+      clearTimeout(delayTimer);
+    };
   }, [isStreamer, guestId, user?.id, liveId, cleanup, startAsStreamer]);
 
   // Effect: Guest starts connection when they go on stage
