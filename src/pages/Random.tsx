@@ -19,7 +19,7 @@ import MicrophoneTest from "@/components/random-call/MicrophoneTest";
 import UpgradeModal from "@/components/random-call/UpgradeModal";
 import CompatibilityGameModal from "@/components/games/CompatibilityGameModal";
 import SpeedDatingGame from "@/components/games/SpeedDatingGame";
-import TruthOrDareGame from "@/components/games/TruthOrDareGame";
+import AIMatchFinderGame from "@/components/games/AIMatchFinderGame";
 
 const Random = () => {
   const [isExiting, setIsExiting] = useState(false);
@@ -28,7 +28,7 @@ const Random = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showCompatibilityGame, setShowCompatibilityGame] = useState(false);
   const [showSpeedDating, setShowSpeedDating] = useState(false);
-  const [showTruthOrDare, setShowTruthOrDare] = useState(false);
+  const [showAIMatchFinder, setShowAIMatchFinder] = useState(false);
   const diceRef = useRef<HTMLDivElement>(null);
   
   const { user } = useAuth();
@@ -261,11 +261,11 @@ const Random = () => {
               </button>
               
               <button
-                onClick={() => setShowTruthOrDare(true)}
+                onClick={() => setShowAIMatchFinder(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/70 transition-colors active:scale-95"
               >
-                <span>🎭</span>
-                <span>Vérité ou Défi</span>
+                <span>🤖</span>
+                <span>AI Match</span>
               </button>
             </motion.div>
 
@@ -359,8 +359,8 @@ const Random = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showTruthOrDare && (
-          <TruthOrDareGame onClose={() => setShowTruthOrDare(false)} />
+        {showAIMatchFinder && (
+          <AIMatchFinderGame onClose={() => setShowAIMatchFinder(false)} />
         )}
       </AnimatePresence>
 
