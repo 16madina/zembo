@@ -933,8 +933,9 @@ const LiveRoom = () => {
       </AnimatePresence>
 
       {/* PROMINENT Audio unlock overlay for iOS/Android mobile */}
+      {/* IMPORTANT: Hide this overlay for users who are on stage (isOnStage) since they use WebRTC audio, not LiveKit */}
       <AnimatePresence>
-        {needsAudioUnlock && !isStreamer && liveKitConnected && (
+        {needsAudioUnlock && !isStreamer && !isOnStage && liveKitConnected && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
