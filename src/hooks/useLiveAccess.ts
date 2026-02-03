@@ -38,33 +38,25 @@ export const useLiveAccess = (liveId: string) => {
         return;
       }
 
-      // Use the can_access_live function
-      const { data: canAccess, error } = await supabase.rpc("can_access_live", {
-        p_user_id: user.id,
-        p_live_id: liveId,
-      });
-
-      if (error) {
-        console.error("Error checking access:", error);
-        setHasAccess(false);
-      } else {
-        setHasAccess(canAccess ?? false);
-        
-        // Check if access is via Premium
-        const { data: subscription } = await supabase
-          .from("user_subscriptions")
-          .select("tier, is_active")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        
-        setIsPremium(
-          subscription?.is_active && 
-          (subscription?.tier === "premium" || subscription?.tier === "vip")
-        );
-      }
+      // WATCHING LIVES IS FREE FOR ALL SPECTATORS
+      // No payment or subscription required to watch
+      setHasAccess(true);
+      
+      // Check subscription status for display purposes only
+      const { data: subscription } = await supabase
+        .from("user_subscriptions")
+        .select("tier, is_active")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      setIsPremium(
+        subscription?.is_active && 
+        (subscription?.tier === "premium" || subscription?.tier === "vip")
+      );
     } catch (err) {
       console.error("Error checking live access:", err);
-      setHasAccess(false);
+      // Even on error, allow access - watching is free
+      setHasAccess(true);
     }
 
     setLoading(false);
