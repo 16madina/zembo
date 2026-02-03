@@ -237,6 +237,9 @@ const LiveRoom = () => {
     isConnected: stageConnected,
     isConnecting: stageConnecting,
     isMuted: guestMuted,
+    error: stageError,
+    needsMediaUnlock,
+    requestMediaAccess,
     toggleMute: toggleGuestMute,
     getPeerConnection,
   } = useStageWebRTC({
@@ -996,6 +999,44 @@ const LiveRoom = () => {
               >
                 Continuer sans son
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Guest on-stage: prompt for camera/mic if the browser blocked getUserMedia without user gesture */}
+      <AnimatePresence>
+        {needsMediaUnlock && !isStreamer && isOnStage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[65] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="w-[min(420px,92vw)] rounded-2xl border border-border bg-card p-5 shadow-xl"
+            >
+              <h3 className="text-lg font-bold text-foreground">Activer caméra et micro</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Pour rejoindre le DUO, votre téléphone doit autoriser la caméra et le micro.
+              </p>
+              {stageError && (
+                <p className="mt-2 text-xs text-muted-foreground">{stageError}</p>
+              )}
+              <div className="mt-4 flex gap-2">
+                <Button onClick={requestMediaAccess} className="flex-1">
+                  Activer maintenant
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => toast.info("Ouvrez les permissions caméra/micro dans les réglages du navigateur")}
+                >
+                  Aide
+                </Button>
+              </div>
             </motion.div>
           </motion.div>
         )}
