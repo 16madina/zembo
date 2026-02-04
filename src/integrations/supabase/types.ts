@@ -59,6 +59,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_data_consents: {
+        Row: {
+          consent_details: Json | null
+          consent_version: string
+          consented_at: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consent_details?: Json | null
+          consent_version?: string
+          consented_at?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consent_details?: Json | null
+          consent_version?: string
+          consented_at?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           category: string
@@ -131,6 +161,30 @@ export type Database = {
           unbanned_at?: string | null
           unbanned_by?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
         }
         Relationships: []
       }
@@ -1566,6 +1620,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_blocked: {
+        Args: { p_by_user_id: string; p_user_id: string }
         Returns: boolean
       }
       is_in_speed_dating_session: {

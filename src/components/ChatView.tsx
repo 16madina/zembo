@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Flag, UserX } from "lucide-react";
+import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Flag, Ban } from "lucide-react";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ import { useChatMessages, ChatMessage } from "@/hooks/useChatMessages";
 import { useVoiceCallContext } from "@/contexts/VoiceCallContext";
 import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import { useMessageReactions } from "@/hooks/useMessageReactions";
+import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import VoiceCallModal from "@/components/VoiceCallModal";
 import ChatRestrictionBanner from "@/components/chat/ChatRestrictionBanner";
 import MessageReactionPicker from "@/components/chat/MessageReactionPicker";
@@ -18,6 +19,8 @@ import VoiceRecorder from "@/components/chat/VoiceRecorder";
 import SwipeableMessage from "@/components/chat/SwipeableMessage";
 import ReplyPreview from "@/components/chat/ReplyPreview";
 import QuotedMessage from "@/components/chat/QuotedMessage";
+import ReportModal from "@/components/random-call/ReportModal";
+import BlockUserModal from "@/components/BlockUserModal";
 import { isNative } from "@/lib/capacitor";
 import {
   DropdownMenu,
@@ -76,6 +79,10 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
     senderName: string;
     isMe: boolean;
   } | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  
+  const { blockUser, isBlocked } = useBlockedUsers();
 
   // Keyboard handling (native) + viewport-resize compensation (iOS)
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -648,12 +655,12 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 z-[110]">
-                <DropdownMenuItem onClick={handleReport} className="gap-2 text-foreground">
+                <DropdownMenuItem onClick={() => setShowReportModal(true)} className="gap-2 text-foreground">
                   <Flag className="w-4 h-4" />
                   Signaler
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleBlock} className="gap-2 text-destructive">
-                  <UserX className="w-4 h-4" />
+                <DropdownMenuItem onClick={() => setShowBlockModal(true)} className="gap-2 text-destructive">
+                  <Ban className="w-4 h-4" />
                   Bloquer
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -1038,6 +1045,21 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         remoteAudioRef={remoteAudioRef}
         localStreamRef={localStreamRef}
         remoteStreamRef={remoteStreamRef}
+      />
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUserId={user.id}
+      />
+
+      {/* Block User Modal */}
+      <BlockUserModal
+        isOpen={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        userId={user.id}
+        userName={user.name}
       />
     </>
   );
