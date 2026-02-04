@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Heart, MessageCircle, Coins, Search, ChevronRight, Check } from "lucide-react";
+import { X, Sparkles, Heart, MessageCircle, Coins, Search, ChevronRight, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCoins } from "@/hooks/useCoins";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { BASE_GENDER_OPTIONS, LGBT_GENDER_OPTIONS, LGBT_GENDER_IDS } from "@/data/genderOptions";
 
 interface AIMatchFinderGameProps {
   onClose: () => void;
@@ -47,11 +48,11 @@ const QUESTIONS = [
     title: "Tu recherches qui ?",
     subtitle: "(plusieurs choix possibles)",
     multiSelect: true,
+    hasLgbtExpand: true,
     options: [
-      { id: "homme", emoji: "👨", label: "Homme" },
-      { id: "femme", emoji: "👩", label: "Femme" },
-      { id: "lgbt", emoji: "🏳️‍🌈", label: "LGBT+" },
-    ]
+      ...BASE_GENDER_OPTIONS.map(g => ({ id: g.id, emoji: g.emoji, label: g.label })),
+    ],
+    lgbtOptions: LGBT_GENDER_OPTIONS.map(g => ({ id: g.id, emoji: g.emoji, label: g.label })),
   },
   {
     id: "seeking",
@@ -553,7 +554,7 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
   );
 }
 
-// Questionnaire Screen - 5 questions before scanning (with multi-select support)
+// Questionnaire Screen - 5 questions before scanning (with multi-select and LGBT+ expansion)
 function QuestionnaireScreen({
   currentQuestion,
   onAnswer,
@@ -565,19 +566,26 @@ function QuestionnaireScreen({
   onConfirmMultiSelect: () => void;
   answers: OracleAnswers;
 }) {
+  const [showLgbtOptions, setShowLgbtOptions] = useState(false);
   const question = QUESTIONS[currentQuestion];
   const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100;
   const isMultiSelect = question.multiSelect === true;
+  const hasLgbtExpand = (question as any).hasLgbtExpand === true;
+  const lgbtOptions = (question as any).lgbtOptions || [];
   const currentAnswerValue = answers[question.id as keyof OracleAnswers];
   const selectedItems = Array.isArray(currentAnswerValue) ? currentAnswerValue : [];
   const canConfirm = selectedItems.length > 0;
+  
+  const selectedLgbtCount = selectedItems.filter((id: string) => 
+    lgbtOptions.some((o: any) => o.id === id)
+  ).length;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center gap-6 text-center max-w-md w-full px-4"
+      className="flex flex-col items-center gap-4 text-center max-w-md w-full px-4"
     >
       {/* Oracle icon with mystical animation */}
       <motion.div
@@ -588,7 +596,7 @@ function QuestionnaireScreen({
         }}
         transition={{ duration: 3, repeat: Infinity }}
       >
-        <span className="text-6xl">🔮</span>
+        <span className="text-5xl">🔮</span>
         <motion.div
           className="absolute inset-0 rounded-full"
           animate={{ 
@@ -625,7 +633,7 @@ function QuestionnaireScreen({
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -50 }}
-          className="w-full space-y-4"
+          className="w-full space-y-3"
         >
           <div>
             <h2 className="text-lg font-bold text-foreground">
@@ -639,7 +647,7 @@ function QuestionnaireScreen({
           </div>
 
           {/* Options */}
-          <div className={`grid gap-3 ${isMultiSelect ? 'grid-cols-3' : 'grid-cols-1'}`}>
+          <div className={`grid gap-2 ${isMultiSelect && hasLgbtExpand ? 'grid-cols-2' : isMultiSelect ? 'grid-cols-3' : 'grid-cols-1'}`}>
             {question.options.map((option, index) => {
               const isSelected = isMultiSelect && selectedItems.includes(option.id);
               
@@ -648,25 +656,25 @@ function QuestionnaireScreen({
                   key={option.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: index * 0.05 }}
                   onClick={() => onAnswer(question.id, option.id)}
-                  className={`relative flex ${isMultiSelect ? 'flex-col' : ''} items-center gap-3 p-4 rounded-2xl bg-background/80 backdrop-blur-sm border-2 transition-all active:scale-95 ${
+                  className={`relative flex ${isMultiSelect ? 'flex-col' : ''} items-center gap-2 p-3 rounded-2xl bg-background/80 backdrop-blur-sm border-2 transition-all active:scale-95 ${
                     isSelected 
                       ? 'border-primary bg-primary/20' 
                       : 'border-primary/20 hover:border-primary/50 hover:bg-primary/10'
                   }`}
                 >
-                  <span className={isMultiSelect ? 'text-3xl' : 'text-2xl'}>{option.emoji}</span>
-                  <span className={`text-sm font-medium text-foreground ${isMultiSelect ? 'text-center' : 'flex-1 text-left'}`}>
+                  <span className={isMultiSelect ? 'text-2xl' : 'text-xl'}>{option.emoji}</span>
+                  <span className={`text-xs font-medium text-foreground ${isMultiSelect ? 'text-center' : 'flex-1 text-left'}`}>
                     {option.label}
                   </span>
                   {isMultiSelect && isSelected && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+                      className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
                     >
-                      <Check className="w-3 h-3 text-primary-foreground" />
+                      <Check className="w-2.5 h-2.5 text-primary-foreground" />
                     </motion.div>
                   )}
                   {!isMultiSelect && (
@@ -676,6 +684,78 @@ function QuestionnaireScreen({
               );
             })}
           </div>
+
+          {/* LGBT+ Expandable Section */}
+          {hasLgbtExpand && lgbtOptions.length > 0 && (
+            <>
+              <motion.button
+                onClick={() => setShowLgbtOptions(!showLgbtOptions)}
+                className={`w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-background/80 backdrop-blur-sm border-2 transition-all ${
+                  selectedLgbtCount > 0
+                    ? 'border-primary bg-primary/20'
+                    : 'border-primary/20 hover:border-primary/50'
+                }`}
+              >
+                <span className="text-2xl">🏳️‍🌈</span>
+                <span className="text-xs font-medium text-foreground">LGBT+</span>
+                {selectedLgbtCount > 0 && (
+                  <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                    {selectedLgbtCount}
+                  </span>
+                )}
+                {showLgbtOptions ? (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                )}
+              </motion.button>
+
+              <AnimatePresence>
+                {showLgbtOptions && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="grid grid-cols-2 gap-2 p-2 rounded-2xl bg-background/50">
+                      {lgbtOptions.map((option: any, index: number) => {
+                        const isSelected = selectedItems.includes(option.id);
+                        return (
+                          <motion.button
+                            key={option.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            onClick={() => onAnswer(question.id, option.id)}
+                            className={`relative flex flex-col items-center gap-1 p-2 rounded-xl bg-background/60 border-2 transition-all active:scale-95 ${
+                              isSelected 
+                                ? 'border-primary bg-primary/20' 
+                                : 'border-primary/10 hover:border-primary/30'
+                            }`}
+                          >
+                            <span className="text-xl">{option.emoji}</span>
+                            <span className="text-[10px] font-medium text-foreground text-center leading-tight">
+                              {option.label}
+                            </span>
+                            {isSelected && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center"
+                              >
+                                <Check className="w-2 h-2 text-primary-foreground" />
+                              </motion.div>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
 
           {/* Confirm button for multi-select */}
           {isMultiSelect && (
@@ -687,7 +767,7 @@ function QuestionnaireScreen({
               <Button
                 onClick={onConfirmMultiSelect}
                 disabled={!canConfirm}
-                className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80"
+                className="w-full mt-2 bg-gradient-to-r from-primary to-primary/80"
               >
                 Continuer ({selectedItems.length} sélectionné{selectedItems.length > 1 ? 's' : ''})
                 <ChevronRight className="w-4 h-4 ml-2" />
