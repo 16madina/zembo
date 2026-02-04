@@ -61,14 +61,20 @@ const Random = () => {
           <ZemboLogo size="sm" animate={false} />
         </div>
         {currentGame === "hub" && (
-          <div className="text-center mt-2">
-            <h1 className="text-lg font-bold text-foreground">
-              Bienvenue sur <span className="text-primary text-xl font-black">Z</span> Games
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Choisis ton mode de rencontre
+          <motion.div 
+            className="text-center mt-3"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <p className="text-xs text-muted-foreground/80 tracking-widest uppercase mb-1">
+              Bienvenue sur
             </p>
-          </div>
+            <h1 className="text-2xl font-black tracking-tight">
+              <span className="text-primary drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]">Z</span>
+              <span className="text-foreground">Games</span>
+            </h1>
+          </motion.div>
         )}
       </motion.header>
 
