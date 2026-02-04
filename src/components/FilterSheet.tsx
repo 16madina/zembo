@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { X, RotateCcw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, RotateCcw, ChevronDown, ChevronUp, Check } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -10,6 +10,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { BASE_GENDER_OPTIONS, LGBT_GENDER_OPTIONS } from "@/data/genderOptions";
 
 export interface FilterValues {
   ageMin: number;
@@ -28,13 +29,7 @@ interface FilterSheetProps {
 const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) => {
   const { t } = useLanguage();
   const [localFilters, setLocalFilters] = useState<FilterValues>(filters);
-
-  const genderOptions = [
-    { id: "femme", label: "Femme", emoji: "👩" },
-    { id: "homme", label: "Homme", emoji: "👨" },
-    { id: "lgbt", label: "LGBT+", emoji: "🏳️‍🌈" },
-    { id: "all", label: t.everyone, emoji: "💫" },
-  ];
+  const [showLgbtOptions, setShowLgbtOptions] = useState(false);
 
   const handleAgeChange = (values: number[]) => {
     setLocalFilters((prev) => ({
@@ -81,6 +76,7 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
       distance: 50,
       genders: ["all"],
     });
+    setShowLgbtOptions(false);
   };
 
   const handleApply = () => {
@@ -88,11 +84,17 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
     onClose();
   };
 
+  const selectedLgbtCount = localFilters.genders.filter(g => 
+    LGBT_GENDER_OPTIONS.some(o => o.id === g)
+  ).length;
+
+  const hasLgbtSelected = selectedLgbtCount > 0;
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent 
         side="bottom" 
-        className="rounded-t-3xl glass-strong border-t-0 px-4 pb-6 pt-2"
+        className="rounded-t-3xl glass-strong border-t-0 px-4 pb-6 pt-2 max-h-[85vh] overflow-y-auto"
       >
         {/* Drag handle */}
         <div className="flex justify-center mb-3">
@@ -153,8 +155,33 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
           {/* Gender Selection */}
           <div className="space-y-2">
             <span className="text-xs font-medium text-foreground">{t.lookingFor}</span>
+            
+            {/* All option */}
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              <motion.button
+                onClick={() => toggleGender("all")}
+                whileTap={{ scale: 0.97 }}
+                className={`relative flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all duration-200 ${
+                  localFilters.genders.includes("all")
+                    ? "text-primary-foreground"
+                    : "text-foreground glass hover:bg-muted/50"
+                }`}
+              >
+                {localFilters.genders.includes("all") && (
+                  <motion.div
+                    layoutId="selectedGenderAll"
+                    className="absolute inset-0 btn-gold rounded-lg"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 text-sm">💫</span>
+                <span className="relative z-10">{t.everyone}</span>
+              </motion.button>
+            </div>
+
+            {/* Base genders */}
             <div className="flex flex-wrap gap-1.5">
-              {genderOptions.map((gender) => {
+              {BASE_GENDER_OPTIONS.map((gender) => {
                 const isSelected = localFilters.genders.includes(gender.id);
                 return (
                   <motion.button
@@ -163,23 +190,79 @@ const FilterSheet = ({ isOpen, onClose, filters, onApply }: FilterSheetProps) =>
                     whileTap={{ scale: 0.97 }}
                     className={`relative flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium text-xs transition-all duration-200 ${
                       isSelected
-                        ? "text-primary-foreground"
+                        ? "bg-primary/20 border border-primary text-foreground"
                         : "text-foreground glass hover:bg-muted/50"
                     }`}
                   >
+                    <span className="text-sm">{gender.emoji}</span>
+                    <span>{gender.label}</span>
                     {isSelected && (
-                      <motion.div
-                        layoutId="selectedGender"
-                        className="absolute inset-0 btn-gold rounded-lg"
-                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                      />
+                      <Check className="w-3 h-3 text-primary ml-1" />
                     )}
-                    <span className="relative z-10 text-sm">{gender.emoji}</span>
-                    <span className="relative z-10">{gender.label}</span>
                   </motion.button>
                 );
               })}
             </div>
+
+            {/* LGBT+ Expandable */}
+            <motion.button
+              onClick={() => setShowLgbtOptions(!showLgbtOptions)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                hasLgbtSelected
+                  ? "bg-primary/20 border border-primary text-foreground"
+                  : "glass hover:bg-muted/50 text-foreground"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🏳️‍🌈</span>
+                <span>LGBT+</span>
+                {hasLgbtSelected && (
+                  <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                    {selectedLgbtCount}
+                  </span>
+                )}
+              </div>
+              {showLgbtOptions ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </motion.button>
+
+            <AnimatePresence>
+              {showLgbtOptions && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-lg bg-background/50">
+                    {LGBT_GENDER_OPTIONS.map((gender) => {
+                      const isSelected = localFilters.genders.includes(gender.id);
+                      return (
+                        <motion.button
+                          key={gender.id}
+                          onClick={() => toggleGender(gender.id)}
+                          whileTap={{ scale: 0.97 }}
+                          className={`relative flex items-center gap-1 px-2 py-1.5 rounded-lg font-medium text-xs transition-all duration-200 ${
+                            isSelected
+                              ? "bg-primary/20 border border-primary text-foreground"
+                              : "text-foreground glass hover:bg-muted/50"
+                          }`}
+                        >
+                          <span className="text-sm">{gender.emoji}</span>
+                          <span>{gender.label}</span>
+                          {isSelected && (
+                            <Check className="w-3 h-3 text-primary ml-1" />
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
