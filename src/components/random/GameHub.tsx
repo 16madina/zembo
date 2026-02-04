@@ -145,7 +145,7 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
                   ))}
                   
                   {/* Dark gradient overlay for text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 pointer-events-none" />
                 </>
               ) : (
                 <div className={`w-12 h-12 rounded-full ${game.iconBg} flex items-center justify-center mb-2`}>
@@ -154,12 +154,18 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
               )}
 
               {/* Title - positioned at bottom for image cards */}
-              <h3 className={`font-semibold text-sm text-center relative z-10 ${'customImage' in game && game.customImage ? 'text-white' : 'text-foreground'}`}>
+              <h3 
+                className={`font-bold text-base text-center relative z-10 ${'customImage' in game && game.customImage ? 'text-white' : 'text-foreground'}`}
+                style={{ textShadow: 'customImage' in game && game.customImage ? '0 2px 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)' : 'none' }}
+              >
                 {game.name}
               </h3>
 
               {/* Description */}
-              <p className={`text-[10px] text-center mt-1 leading-tight relative z-10 ${'customImage' in game && game.customImage ? 'text-white/80' : 'text-muted-foreground'}`}>
+              <p 
+                className={`text-xs text-center mt-1 leading-tight relative z-10 ${'customImage' in game && game.customImage ? 'text-white font-medium' : 'text-muted-foreground'}`}
+                style={{ textShadow: 'customImage' in game && game.customImage ? '0 1px 4px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)' : 'none' }}
+              >
                 {game.description}
               </p>
 
