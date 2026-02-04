@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGeolocation } from "./useGeolocation";
+import { GenderType } from "@/data/mockProfiles";
 
 export interface ProfileWithDistance {
   id: string;
   name: string;
   age: number;
-  gender: 'male' | 'female';
+  gender: GenderType;
   location: string;
   distance: string;
   distanceKm: number;
@@ -245,7 +246,7 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
             id: p.user_id,
             name: p.display_name || "Utilisateur",
             age: p.age || 25,
-            gender: (p.gender === "homme" ? "male" : p.gender === "femme" ? "female" : "female") as 'male' | 'female',
+            gender: (p.gender || "femme") as GenderType,
             location: p.location || "Non spécifié",
             distance: distanceKm < 9999 ? formatDistance(distanceKm) : "Distance inconnue",
             distanceKm,
