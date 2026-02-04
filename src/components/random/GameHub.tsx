@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Phone, Zap, Sparkles, Heart } from "lucide-react";
 import goldenHand from "@/assets/golden-hand.png";
 import speedDatingPhones from "@/assets/games/speed-dating-phones.png";
+import zemboOracle from "@/assets/games/zembo-oracle.png";
 
 interface GameHubProps {
   onSelectGame: (game: "zconnect" | "speedDating" | "oracle" | "compatibility") => void;
@@ -42,6 +43,7 @@ const games = [
     borderColor: "border-secondary",
     iconBg: "bg-secondary/50",
     iconColor: "text-secondary-foreground",
+    customImage: zemboOracle,
   },
   {
     id: "compatibility" as const,
