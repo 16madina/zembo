@@ -185,9 +185,11 @@ const LiveRoom = () => {
     unlockAudio,
   } = useLiveKit({
     roomName,
-    isStreamer,
+    // CRITICAL: Use a stable isStreamer value that doesn't depend on live loading
+    // This prevents race conditions where the hook connects as viewer before live is loaded
+    isStreamer: live?.streamer_id === user?.id,
     // Streamer: reuse the already-open camera stream to publish to LiveKit.
-    publishStream: isStreamer ? stream : null,
+    publishStream: live?.streamer_id === user?.id ? stream : null,
   });
   // Auto-reconnect state for viewers
   const [showReconnectButton, setShowReconnectButton] = useState(false);

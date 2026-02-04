@@ -91,6 +91,8 @@ export const useLiveKit = ({
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const hasUnlockedAudioRef = useRef(false);
+  // Track role changes to force reconnection when isStreamer changes
+  const previousRoleRef = useRef<{ isStreamer: boolean; isStageGuest: boolean } | null>(null);
 
   // Debug info state
   const [debugInfo, setDebugInfo] = useState<LiveKitDebugInfo>({
@@ -779,6 +781,46 @@ export const useLiveKit = ({
       remoteVideoTrack.attach(ref);
     }
   }, [remoteVideoTrack]);
+
+  // CRITICAL: Force reconnection when role changes (isStreamer or isStageGuest)
+  // This fixes the issue where the streamer connects as viewer if live data loads after initial connection
+  useEffect(() => {
+    const prevRole = previousRoleRef.current;
+    const currentRole = { isStreamer, isStageGuest };
+    
+    // Skip on first render
+    if (prevRole === null) {
+      previousRoleRef.current = currentRole;
+      return;
+    }
+    
+    // Check if role changed
+    const roleChanged = prevRole.isStreamer !== isStreamer || prevRole.isStageGuest !== isStageGuest;
+    
+    if (roleChanged && isConnected) {
+      console.log("[LiveKit] 🔄 Role changed, forcing reconnection:", {
+        from: prevRole,
+        to: currentRole,
+      });
+      
+      // Disconnect current connection
+      if (room) {
+        room.disconnect();
+      }
+      
+      // Reset state
+      setRoom(null);
+      setIsConnected(false);
+      hasConnectedRef.current = false;
+      setRemoteVideoTrack(null);
+      setRemoteAudioTrack(null);
+      setRemoteVideoTracks(new Map());
+      setRemoteAudioTracks(new Map());
+      setError(null);
+    }
+    
+    previousRoleRef.current = currentRole;
+  }, [isStreamer, isStageGuest, isConnected, room]);
 
   // Cleanup on unmount
   useEffect(() => {
