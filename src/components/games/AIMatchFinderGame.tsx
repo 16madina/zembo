@@ -1142,36 +1142,40 @@ function ShufflingScreen({
           ))}
         </div>
 
-        {/* Shuffling slot - Rapid photo changes */}
+        {/* Mystery slot - Silhouette only during shuffling (no real photos) */}
         <motion.div
-          className="relative w-36 h-44 rounded-3xl border-3 border-primary/50 overflow-hidden shadow-xl"
+          className="relative w-36 h-44 rounded-3xl border-3 border-primary/50 overflow-hidden shadow-xl bg-gradient-to-br from-primary/20 to-primary/5"
         >
-          <AnimatePresence mode="wait">
+          {/* Mystery silhouette - never show real photos */}
+          <div className="absolute inset-0 flex items-center justify-center">
             <motion.div
-              key={currentIndex}
-              initial={{ y: -100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              className="absolute inset-0"
+              animate={{ 
+                scale: [1, 1.1, 1],
+                opacity: [0.4, 0.8, 0.4],
+              }}
+              transition={{ duration: 0.8, repeat: Infinity }}
             >
-              {currentProfile?.avatarUrl ? (
-                <img 
-                  src={currentProfile.avatarUrl} 
-                  alt="" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                  <span className="text-5xl">👤</span>
-                </div>
-              )}
+              <span className="text-6xl opacity-60">👤</span>
             </motion.div>
-          </AnimatePresence>
+          </div>
           
           {/* Scanning overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-background/60 pointer-events-none" />
           <ScanningLaser />
+          
+          {/* Question marks overlay */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <motion.span
+              className="text-3xl font-black text-primary/40"
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.3, 0.7, 0.3],
+              }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              ???
+            </motion.span>
+          </div>
         </motion.div>
       </div>
 
