@@ -4,34 +4,133 @@ interface UseLocalStreamOptions {
   autoStart?: boolean;
 }
 
+// Detect Android
+const isAndroid = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return /Android/.test(navigator.userAgent);
+};
+
+// Detect iOS
+const isIOS = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+};
+
 export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const initAttemptRef = useRef(0);
 
-  // Initialize camera
+  // Initialize camera with robust fallback for Android/iOS
   const initCamera = useCallback(async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: 1280, height: 720 },
+    console.log("[useLocalStream] Initializing camera...", {
+      isAndroid: isAndroid(),
+      isIOS: isIOS(),
+      attempt: initAttemptRef.current + 1,
+    });
+
+    initAttemptRef.current += 1;
+    setError(null);
+
+    // Define constraint sets to try in order (from most preferred to most basic)
+    const constraintSets = [
+      // Try 1: Ideal resolution for live streaming
+      {
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
-      });
-      setStream(mediaStream);
-      setIsInitialized(true);
+      },
+      // Try 2: Lower resolution for older devices
+      {
+        video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: true,
+      },
+      // Try 3: Very basic constraints for problematic WebViews
+      {
+        video: { facingMode },
+        audio: true,
+      },
+      // Try 4: Just video, no specific constraints
+      {
+        video: true,
+        audio: true,
+      },
+    ];
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+    for (let i = 0; i < constraintSets.length; i++) {
+      const constraints = constraintSets[i];
+      console.log(`[useLocalStream] Trying constraints set ${i + 1}:`, constraints);
+
+      try {
+        // Add timeout for getUserMedia (can hang on some Android WebViews)
+        const mediaPromise = navigator.mediaDevices.getUserMedia(constraints);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("getUserMedia timeout")), 10000);
+        });
+
+        const mediaStream = await Promise.race([mediaPromise, timeoutPromise]);
+
+        // Verify we actually got tracks
+        const videoTracks = mediaStream.getVideoTracks();
+        const audioTracks = mediaStream.getAudioTracks();
+        
+        console.log("[useLocalStream] ✓ Got stream:", {
+          videoTracks: videoTracks.length,
+          audioTracks: audioTracks.length,
+          videoTrackState: videoTracks[0]?.readyState,
+          audioTrackState: audioTracks[0]?.readyState,
+        });
+
+        if (videoTracks.length === 0) {
+          console.warn("[useLocalStream] No video tracks, trying next constraint set...");
+          continue;
+        }
+
+        setStream(mediaStream);
+        setIsInitialized(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          // Force play on Android WebViews
+          try {
+            await videoRef.current.play();
+          } catch (playErr) {
+            console.warn("[useLocalStream] Video play failed (may need user interaction):", playErr);
+          }
+        }
+
+        return mediaStream;
+      } catch (err: any) {
+        console.warn(`[useLocalStream] Constraint set ${i + 1} failed:`, err?.message || err);
+        
+        // If it's a permission error, stop trying
+        if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
+          console.error("[useLocalStream] Camera permission denied");
+          setError("Camera permission denied");
+          setIsInitialized(false);
+          return null;
+        }
+        
+        // If it's a device not found error, stop trying
+        if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") {
+          console.error("[useLocalStream] No camera found");
+          setError("No camera found");
+          setIsInitialized(false);
+          return null;
+        }
       }
-
-      return mediaStream;
-    } catch (err) {
-      console.error("Camera access error:", err);
-      setIsInitialized(false);
-      return null;
     }
+
+    // All constraint sets failed
+    console.error("[useLocalStream] All constraint sets failed");
+    setError("Could not access camera");
+    setIsInitialized(false);
+    return null;
   }, [facingMode]);
 
   // Stop all tracks
@@ -75,7 +174,7 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
     try {
       // Get new stream with different camera
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: newFacingMode, width: 1280, height: 720 },
+        video: { facingMode: newFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
 
@@ -132,6 +231,7 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
     isVideoOff,
     facingMode,
     isInitialized,
+    error,
     initCamera,
     stopStream,
     toggleMute,
