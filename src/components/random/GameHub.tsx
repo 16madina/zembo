@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Phone, Zap, Sparkles, Heart } from "lucide-react";
+import goldenHand from "@/assets/golden-hand.png";
 
 interface GameHubProps {
   onSelectGame: (game: "zconnect" | "speedDating" | "oracle" | "compatibility") => void;
@@ -16,6 +17,7 @@ const games = [
     borderColor: "border-primary/30",
     iconBg: "bg-primary/20",
     iconColor: "text-primary",
+    customImage: goldenHand,
   },
   {
     id: "speedDating" as const,
@@ -70,22 +72,74 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
 
       <div className="grid grid-cols-2 gap-3">
         {games.map((game, index) => {
-          const Icon = game.icon;
           return (
             <motion.button
               key={game.id}
               onClick={() => onSelectGame(game.id)}
-              className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[120px]`}
+              className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[140px] overflow-hidden`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
-              {/* Icon */}
-              <div className={`w-12 h-12 rounded-full ${game.iconBg} flex items-center justify-center mb-2`}>
-                <span className="text-2xl">{game.emoji}</span>
-              </div>
+              {/* Custom image for Z Connect */}
+              {'customImage' in game && game.customImage ? (
+                <motion.div
+                  className="relative w-16 h-16 mb-2"
+                  animate={{
+                    y: [0, -4, 0],
+                    rotate: [0, 3, -3, 0],
+                  }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <motion.img
+                    src={game.customImage}
+                    alt={game.name}
+                    className="w-full h-full object-contain drop-shadow-lg"
+                    animate={{
+                      filter: [
+                        "drop-shadow(0 0 8px rgba(234, 179, 8, 0.3))",
+                        "drop-shadow(0 0 16px rgba(234, 179, 8, 0.6))",
+                        "drop-shadow(0 0 8px rgba(234, 179, 8, 0.3))",
+                      ],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
+                  {/* Sparkle effects */}
+                  {[...Array(3)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-1 h-1 bg-primary rounded-full"
+                      style={{
+                        top: `${20 + i * 25}%`,
+                        left: `${10 + i * 30}%`,
+                      }}
+                      animate={{
+                        scale: [0, 1.5, 0],
+                        opacity: [0, 1, 0],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        delay: i * 0.5,
+                      }}
+                    />
+                  ))}
+                </motion.div>
+              ) : (
+                <div className={`w-12 h-12 rounded-full ${game.iconBg} flex items-center justify-center mb-2`}>
+                  <span className="text-2xl">{game.emoji}</span>
+                </div>
+              )}
 
               {/* Title */}
               <h3 className="font-semibold text-sm text-foreground text-center">
