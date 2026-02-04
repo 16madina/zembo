@@ -33,29 +33,31 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
       isAndroid: isAndroid(),
       isIOS: isIOS(),
       attempt: initAttemptRef.current + 1,
+      userAgent: navigator.userAgent,
     });
 
     initAttemptRef.current += 1;
     setError(null);
 
     // Define constraint sets to try in order (from most preferred to most basic)
-    const constraintSets = [
+    // CRITICAL: Use explicit "user" facingMode for front camera on mobile
+    const constraintSets: MediaStreamConstraints[] = [
       // Try 1: Ideal resolution for live streaming
       {
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
       },
       // Try 2: Lower resolution for older devices
       {
-        video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
         audio: true,
       },
       // Try 3: Very basic constraints for problematic WebViews
       {
-        video: { facingMode },
+        video: { facingMode: "user" },
         audio: true,
       },
-      // Try 4: Just video, no specific constraints
+      // Try 4: Just video, no specific constraints (last resort)
       {
         video: true,
         audio: true,
@@ -64,13 +66,14 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
 
     for (let i = 0; i < constraintSets.length; i++) {
       const constraints = constraintSets[i];
-      console.log(`[useLocalStream] Trying constraints set ${i + 1}:`, constraints);
+      console.log(`[useLocalStream] Trying constraints set ${i + 1}/${constraintSets.length}:`, JSON.stringify(constraints));
 
       try {
         // Add timeout for getUserMedia (can hang on some Android WebViews)
+        // INCREASED to 15s for slow mobile devices
         const mediaPromise = navigator.mediaDevices.getUserMedia(constraints);
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error("getUserMedia timeout")), 10000);
+          setTimeout(() => reject(new Error("getUserMedia timeout after 15s")), 15000);
         });
 
         const mediaStream = await Promise.race([mediaPromise, timeoutPromise]);
@@ -84,6 +87,7 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
           audioTracks: audioTracks.length,
           videoTrackState: videoTracks[0]?.readyState,
           audioTrackState: audioTracks[0]?.readyState,
+          videoTrackLabel: videoTracks[0]?.label,
         });
 
         if (videoTracks.length === 0) {
@@ -99,18 +103,21 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
           // Force play on Android WebViews
           try {
             await videoRef.current.play();
-          } catch (playErr) {
-            console.warn("[useLocalStream] Video play failed (may need user interaction):", playErr);
+            console.log("[useLocalStream] ✓ Video element play() successful");
+          } catch (playErr: any) {
+            console.warn("[useLocalStream] Video play failed (may need user interaction):", playErr?.message);
           }
         }
 
         return mediaStream;
       } catch (err: any) {
-        console.warn(`[useLocalStream] Constraint set ${i + 1} failed:`, err?.message || err);
+        console.error(`[useLocalStream] ❌ Constraint set ${i + 1} failed`);
+        console.error("[useLocalStream] Error name:", err?.name);
+        console.error("[useLocalStream] Error message:", err?.message);
         
         // If it's a permission error, stop trying
         if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
-          console.error("[useLocalStream] Camera permission denied");
+          console.error("[useLocalStream] ❌ Camera permission denied by user or system");
           setError("Camera permission denied");
           setIsInitialized(false);
           return null;
@@ -118,16 +125,25 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
         
         // If it's a device not found error, stop trying
         if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") {
-          console.error("[useLocalStream] No camera found");
+          console.error("[useLocalStream] ❌ No camera device found on this device");
           setError("No camera found");
           setIsInitialized(false);
           return null;
         }
+
+        // If it's a timeout, log it specifically
+        if (err?.message?.includes("timeout")) {
+          console.error("[useLocalStream] ❌ getUserMedia timed out - WebView may be blocking camera access");
+        }
+        
+        // Continue to next constraint set
+        console.log(`[useLocalStream] Trying next constraint set...`);
       }
     }
 
     // All constraint sets failed
-    console.error("[useLocalStream] All constraint sets failed");
+    console.error("[useLocalStream] ❌ All constraint sets failed - camera could not be accessed");
+    console.error("[useLocalStream] This may be a WebView restriction or hardware issue");
     setError("Could not access camera");
     setIsInitialized(false);
     return null;
