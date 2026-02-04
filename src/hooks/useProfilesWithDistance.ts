@@ -168,31 +168,12 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
         query = query.lte("age", ageMax);
       }
       
-      // Apply gender filter
+      // Apply gender filter - supports new LGBT+ sub-categories
+      // DB uses: homme, femme, homme_gay, femme_lesbienne, non_binaire, autre_lgbt
       if (!genders.includes("all") && genders.length > 0) {
-        // UI uses: men/women/nonbinary/trans/all
-        // DB uses: homme/femme/lgbt
-        const genderFilter = genders
-          .map((g) => {
-            switch (g) {
-              case "men":
-              case "male":
-                return "homme";
-              case "women":
-              case "female":
-                return "femme";
-              case "nonbinary":
-              case "trans":
-                return "lgbt";
-              default:
-                return g;
-            }
-          })
-          .filter(Boolean);
-
-        if (genderFilter.length > 0) {
-          query = query.in("gender", genderFilter);
-        }
+        // Direct mapping - genders from FilterSheet now use exact DB values
+        // No conversion needed since FilterSheet sends: homme, femme, homme_gay, femme_lesbienne, etc.
+        query = query.in("gender", genders);
       }
       
       // Paginate - fetch more than needed to allow for distance filtering
