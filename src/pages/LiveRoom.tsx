@@ -388,25 +388,25 @@ const LiveRoom = () => {
   }, [isStreamer, hasAccess, isOnStage, hasShownStageToast]);
 
   // Auto-start camera for streamer (for local preview and face tracking)
-  // CRITICAL: Start camera EARLY - before live data is fully loaded
-  // We can use accessIsStreamer which is determined faster from the access check
+  // CRITICAL: Start camera IMMEDIATELY when accessIsStreamer is determined
+  // Do NOT wait for live data to be loaded - this prevents race conditions
   useEffect(() => {
-    const shouldStartCamera = (isStreamer || accessIsStreamer) && !isInitialized && !localStreamError;
+    // Start camera as soon as we know user is streamer, don't wait for live
+    const shouldStartCamera = accessIsStreamer && !isInitialized && !localStreamError && !accessLoading;
     
     console.log("[LiveRoom] Camera init check:", {
-      isStreamer,
       accessIsStreamer,
+      accessLoading,
       isInitialized,
       localStreamError,
       shouldStartCamera,
-      hasLive: !!live,
     });
     
     if (shouldStartCamera) {
-      console.log("[LiveRoom] Starting camera for streamer (early init)");
+      console.log("[LiveRoom] Starting camera for streamer (IMMEDIATE early init)");
       initCamera();
     }
-  }, [live, isStreamer, accessIsStreamer, isInitialized, localStreamError, initCamera]);
+  }, [accessIsStreamer, accessLoading, isInitialized, localStreamError, initCamera]);
 
   // Timeout: Force LiveKit connection after 15s if camera hasn't started (Android fallback)
   useEffect(() => {
