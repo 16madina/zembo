@@ -62,20 +62,7 @@ const games = [
 
 const GameHub = ({ onSelectGame }: GameHubProps) => {
   return (
-    <div className="w-full max-w-lg mx-auto px-4 flex flex-col">
-      <motion.div
-        className="text-center py-3"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <h1 className="text-lg font-bold text-foreground">
-          Bienvenue sur <span className="text-primary text-xl font-black">Z</span> Games
-        </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Choisis ton mode de rencontre
-        </p>
-      </motion.div>
-
+    <div className="w-full max-w-lg mx-auto px-4">
       <div className="grid grid-cols-2 gap-3">
         {games.map((game, index) => {
           return (
