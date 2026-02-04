@@ -395,7 +395,18 @@ const LiveRoom = () => {
   // Auto-connect to LiveKit when live is loaded and has access
   useEffect(() => {
     if (!live || !roomName) return;
-    if (liveKitConnected || liveKitConnecting || liveKitError) return;
+    // Only block on currently connecting - allow retry if there was an error
+    if (liveKitConnected || liveKitConnecting) return;
+
+    console.log("LiveRoom - Auto-connect check:", {
+      isStreamer,
+      hasAccess,
+      isInitialized,
+      hasStream: !!stream,
+      liveKitConnected,
+      liveKitConnecting,
+      liveKitError,
+    });
 
     if (isStreamer) {
       // STREAMER: Wait for local camera stream to be ready before connecting

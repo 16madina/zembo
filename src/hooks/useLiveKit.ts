@@ -797,18 +797,21 @@ export const useLiveKit = ({
     // Check if role changed
     const roleChanged = prevRole.isStreamer !== isStreamer || prevRole.isStageGuest !== isStageGuest;
     
-    if (roleChanged && isConnected) {
-      console.log("[LiveKit] 🔄 Role changed, forcing reconnection:", {
+    if (roleChanged) {
+      console.log("[LiveKit] 🔄 Role changed:", {
         from: prevRole,
         to: currentRole,
+        wasConnected: isConnected,
+        hadConnectedBefore: hasConnectedRef.current,
       });
       
-      // Disconnect current connection
-      if (room) {
+      // If we were connected, disconnect first
+      if (isConnected && room) {
+        console.log("[LiveKit] Disconnecting current connection due to role change");
         room.disconnect();
       }
       
-      // Reset state
+      // Reset state to allow fresh connection with new role
       setRoom(null);
       setIsConnected(false);
       hasConnectedRef.current = false;
@@ -817,6 +820,7 @@ export const useLiveKit = ({
       setRemoteVideoTracks(new Map());
       setRemoteAudioTracks(new Map());
       setError(null);
+      setIsConnecting(false); // CRITICAL: Reset connecting state so we can connect again
     }
     
     previousRoleRef.current = currentRole;
