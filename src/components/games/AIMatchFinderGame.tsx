@@ -269,6 +269,20 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
     // Use the answer from questionnaire for gender preference (multi-select)
     const lookingFor = oracleAnswers.lookingFor;
 
+    // Map gender IDs to include variations (female/femme, male/homme)
+    const expandGenderFilter = (genders: string[]): string[] => {
+      const expanded: string[] = [];
+      genders.forEach(g => {
+        expanded.push(g);
+        // Add English/French variations
+        if (g === "femme") expanded.push("female", "woman", "f");
+        if (g === "homme") expanded.push("male", "man", "m");
+        if (g === "female") expanded.push("femme", "woman", "f");
+        if (g === "male") expanded.push("homme", "man", "m");
+      });
+      return [...new Set(expanded)]; // Remove duplicates
+    };
+
     let query = supabase
       .from("profiles")
       .select("user_id, display_name, avatar_url, age, location, gender")
@@ -277,13 +291,14 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
 
     // Filter by gender based on Oracle questionnaire answers (multi-select)
     if (lookingFor.length > 0) {
-      query = query.in("gender", lookingFor);
+      const expandedGenders = expandGenderFilter(lookingFor);
+      query = query.in("gender", expandedGenders);
     }
 
     const { data: profiles } = await query.limit(50);
 
-    if (!profiles || profiles.length < 3) {
-      toast.error("Pas assez de profils pour le scan");
+    if (!profiles || profiles.length < 1) {
+      toast.error("Aucun profil trouvé pour tes critères");
       return;
     }
 
