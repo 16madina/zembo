@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Phone, Zap, Sparkles, Heart } from "lucide-react";
 import goldenHand from "@/assets/golden-hand.png";
+import speedDatingPhones from "@/assets/games/speed-dating-phones.png";
 
 interface GameHubProps {
   onSelectGame: (game: "zconnect" | "speedDating" | "oracle" | "compatibility") => void;
@@ -29,6 +30,7 @@ const games = [
     borderColor: "border-accent/40",
     iconBg: "bg-accent/30",
     iconColor: "text-accent-foreground",
+    customImage: speedDatingPhones,
   },
   {
     id: "oracle" as const,
