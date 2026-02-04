@@ -164,6 +164,9 @@ const LiveRoom = () => {
   // LiveKit for streaming to viewers
   // Use live's livekit_room_name if available, otherwise use the live id
   const roomName = live?.livekit_room_name || live?.id || id || "";
+  
+  // NOTE: effectiveIsStageGuest will be calculated AFTER useLiveStage hook is called
+  // For now, we use initial values and the role change detection in useLiveKit handles updates
   const {
     isConnected: liveKitConnected,
     isConnecting: liveKitConnecting,
@@ -186,9 +189,10 @@ const LiveRoom = () => {
     unlockAudio,
   } = useLiveKit({
     roomName,
-    // CRITICAL FIX: Use accessIsStreamer (fast) OR live check to prevent race condition
-    // accessIsStreamer is determined from the access hook before live data loads
+    // Use accessIsStreamer for initial connection (fast, available before live loads)
     isStreamer: accessIsStreamer || (live?.streamer_id === user?.id),
+    // isStageGuest will be false initially, role change detection handles promotion
+    isStageGuest: false,
     // Streamer: reuse the already-open camera stream to publish to LiveKit.
     publishStream: (accessIsStreamer || (live?.streamer_id === user?.id)) ? stream : null,
   });
@@ -238,6 +242,9 @@ const LiveRoom = () => {
   // The stage guest captures camera/mic locally (useLocalStream) and publishes to LiveKit.
   const [guestNeedsMediaAccess, setGuestNeedsMediaAccess] = useState(false);
 
+  // BUG #3 FIX: Define effective roles AFTER useLiveStage hook
+  const effectiveIsStageGuest = isOnStage && !isStreamer;
+
   useEffect(() => {
     if (isOnStage && !isStreamer) {
       const needs = !isInitialized && !stream && !localStreamError;
@@ -247,21 +254,9 @@ const LiveRoom = () => {
     }
   }, [isOnStage, isStreamer, isInitialized, stream, localStreamError]);
 
-  // Stage guest LiveKit connection (separate from main viewer connection)
-  // The stage guest needs their own LiveKit connection to PUBLISH their video to spectators
-  const {
-    isConnected: stageGuestLiveKitConnected,
-    isConnecting: stageGuestLiveKitConnecting,
-    error: stageGuestLiveKitError,
-    connect: connectStageGuestLiveKit,
-    disconnect: disconnectStageGuestLiveKit,
-  } = useLiveKit({
-    roomName,
-    isStreamer: false,
-    isStageGuest: isOnStage && !isStreamer,
-    // Stage guest reuses their locally captured stream to publish to LiveKit
-    publishStream: isOnStage && !isStreamer ? stream : null,
-  });
+  // BUG #3 FIX: Stage guest connection status derived from unified LiveKit hook
+  const stageGuestLiveKitConnected = effectiveIsStageGuest ? liveKitConnected : false;
+  const stageGuestLiveKitConnecting = effectiveIsStageGuest ? liveKitConnecting : false;
 
   // Find the guest's remote video track (streamer + spectators)
   // The guest's identity is their user_id, so we can look it up in remoteVideoTracks.
@@ -295,46 +290,42 @@ const LiveRoom = () => {
         : liveKitConnected && !guestRemoteVideoTrack)
   );
 
-  // Force resync remote tracks when a guest joins/changes (for spectators to see guest)
+  // BUG #4 FIX: Force resync remote tracks when a guest joins/changes (for spectators to see guest)
+  // Increased delay from 1500ms to 3000ms to allow guest stream to fully publish
   useEffect(() => {
     if (currentGuest && !isStreamer && !isOnStage && liveKitConnected) {
-      console.log("[LiveRoom] Guest changed, forcing track resync for spectators...");
-      // Give the guest time to publish their track
+      console.log("[LiveRoom] Guest changed, forcing track resync for spectators in 3s...");
+      // Give the guest time to publish their track (increased to 3s)
       const timer = setTimeout(() => {
+        console.log("[LiveRoom] Executing delayed track resync for guest video");
         liveKitResyncTracks();
-      }, 1500);
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [currentGuest?.user_id, isStreamer, isOnStage, liveKitConnected, liveKitResyncTracks]);
 
-  // Auto-connect stage guest to LiveKit when they go on stage
+  // BUG #3 FIX: Auto-connect stage guest via UNIFIED LiveKit hook
+  // The unified hook handles role changes automatically - stage guest just needs to trigger connect
   useEffect(() => {
     if (
-      isOnStage &&
-      !isStreamer &&
+      effectiveIsStageGuest &&
       stream &&
-      !stageGuestLiveKitConnected &&
-      !stageGuestLiveKitConnecting
+      !liveKitConnected &&
+      !liveKitConnecting
     ) {
-      console.log("[LiveRoom] Stage guest connecting to LiveKit to broadcast video...");
-      connectStageGuestLiveKit();
+      console.log("[LiveRoom] Stage guest connecting to unified LiveKit to broadcast video...");
+      connectLiveKit();
     }
   }, [
-    isOnStage,
-    isStreamer,
+    effectiveIsStageGuest,
     stream,
-    stageGuestLiveKitConnected,
-    stageGuestLiveKitConnecting,
-    connectStageGuestLiveKit,
+    liveKitConnected,
+    liveKitConnecting,
+    connectLiveKit,
   ]);
 
-  // Disconnect stage guest from LiveKit when they leave stage
-  useEffect(() => {
-    if (!isOnStage && stageGuestLiveKitConnected) {
-      console.log("[LiveRoom] Stage guest left stage, disconnecting from LiveKit");
-      disconnectStageGuestLiveKit();
-    }
-  }, [isOnStage, stageGuestLiveKitConnected, disconnectStageGuestLiveKit]);
+  // Disconnect when stage guest leaves stage (role change in unified hook handles this)
+  // The useLiveKit hook's role change detection will handle disconnection automatically
 
   // Stop local camera when guest leaves stage (avoid holding camera in background)
   useEffect(() => {
@@ -1170,9 +1161,9 @@ const LiveRoom = () => {
               <p className="mt-2 text-sm text-muted-foreground">
                 Pour rejoindre le DUO, votre téléphone doit autoriser la caméra et le micro.
               </p>
-              {(localStreamError || stageGuestLiveKitError) && (
+              {localStreamError && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {localStreamError || stageGuestLiveKitError}
+                  {localStreamError}
                 </p>
               )}
               <div className="mt-4 flex gap-2">

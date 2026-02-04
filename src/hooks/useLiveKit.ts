@@ -88,6 +88,7 @@ export const useLiveKit = ({
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const hasConnectedRef = useRef(false);
+  const hasPublishedRef = useRef(false); // BUG #1 FIX: Track if we've published tracks
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const hasUnlockedAudioRef = useRef(false);
@@ -683,6 +684,8 @@ export const useLiveKit = ({
             publishedVideoPub.track.attach(localVideoRef.current);
           }
 
+          // BUG #5 FIX: Mark as published to prevent duplicate publishing
+          hasPublishedRef.current = true;
           console.log(`[LiveKit] ${role} tracks published successfully`);
         } catch (pubError: any) {
           console.error(`[LiveKit] Error publishing tracks as ${role}:`, pubError);
@@ -822,6 +825,7 @@ export const useLiveKit = ({
       setRoom(null);
       setIsConnected(false);
       hasConnectedRef.current = false;
+      hasPublishedRef.current = false; // BUG #1 FIX: Reset to allow re-publication with new role
       setRemoteVideoTrack(null);
       setRemoteAudioTrack(null);
       setRemoteVideoTracks(new Map());
@@ -860,6 +864,47 @@ export const useLiveKit = ({
     const interval = setInterval(() => updateDebugInfo(room), 2000);
     return () => clearInterval(interval);
   }, [room, updateDebugInfo]);
+
+  // BUG #1 & #2 FIX: Re-publish tracks if stream becomes available AFTER connection
+  // This fixes the race condition where publishStream arrives after connect() was called
+  useEffect(() => {
+    // Only applies to streamers and stage guests who need to publish
+    if (!room || !isConnected) return;
+    if (!(isStreamer || isStageGuest)) return;
+    if (!publishStream) return;
+    if (hasPublishedRef.current) return;
+
+    console.log("[LiveKit] 🔄 Stream became available after connection, publishing now...");
+
+    const publishLateStream = async () => {
+      try {
+        const existingVideoTrack = publishStream.getVideoTracks()?.[0];
+        const existingAudioTrack = publishStream.getAudioTracks()?.[0];
+
+        console.log("[LiveKit] Late stream tracks:", {
+          hasVideo: !!existingVideoTrack,
+          hasAudio: !!existingAudioTrack,
+        });
+
+        if (existingVideoTrack) {
+          await room.localParticipant.publishTrack(existingVideoTrack);
+          console.log("[LiveKit] ✓ Late video track published");
+        }
+        if (existingAudioTrack) {
+          await room.localParticipant.publishTrack(existingAudioTrack);
+          console.log("[LiveKit] ✓ Late audio track published");
+        }
+
+        hasPublishedRef.current = true;
+        console.log("[LiveKit] ✓ Late stream published successfully");
+        updateDebugInfo(room);
+      } catch (err) {
+        console.error("[LiveKit] ❌ Failed to publish late stream:", err);
+      }
+    };
+
+    publishLateStream();
+  }, [room, isConnected, isStreamer, isStageGuest, publishStream, updateDebugInfo]);
 
   return {
     room,
