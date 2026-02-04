@@ -62,16 +62,16 @@ const games = [
 
 const GameHub = ({ onSelectGame }: GameHubProps) => {
   return (
-    <div className="w-full max-w-lg mx-auto px-4">
+    <div className="w-full max-w-lg mx-auto px-4 pt-2">
       <motion.div
-        className="text-center mb-6"
+        className="text-center mb-4"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-xl font-bold text-foreground">
-          Bienvenue sur <span className="text-primary text-2xl font-black">Z</span> Games
+        <h1 className="text-lg font-bold text-foreground">
+          Bienvenue sur <span className="text-primary text-xl font-black">Z</span> Games
         </h1>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-0.5">
           Choisis ton mode de rencontre
         </p>
       </motion.div>
@@ -82,7 +82,7 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
             <motion.button
               key={game.id}
               onClick={() => onSelectGame(game.id)}
-              className={`relative flex flex-col items-center justify-end p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[140px] overflow-hidden`}
+              className={`relative flex flex-col items-center justify-end p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[160px] sm:min-h-[180px] overflow-hidden`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
