@@ -23,12 +23,12 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. Fonctionnalités IA et partage de données",
-        content: "Pour les fonctionnalités IA (Compatibilité, Zembo Oracle), nous partageons certaines données avec nos fournisseurs IA (Lovable AI utilisant Google Gemini et OpenAI GPT). Les données partagées incluent : votre profil (nom, âge, intérêts), vos réponses au test de compatibilité, et vos préférences. Nous demandons votre consentement explicite avant tout partage. Ces données sont chiffrées en transit et ne sont pas stockées par les fournisseurs IA.",
+        content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle), nous partageons certaines données avec des fournisseurs d'intelligence artificielle tiers : Google (via Google Gemini) et OpenAI (via GPT). Les données partagées incluent : votre profil (prénom, âge, centres d'intérêt), vos réponses aux questionnaires de compatibilité, et vos préférences de rencontre. Nous demandons votre consentement explicite avant tout partage via un modal dédié. Ces données sont chiffrées en transit (TLS) et ne sont pas stockées de manière permanente par Google ni OpenAI.",
       },
       {
         icon: Server,
         title: "4. Fournisseurs de services tiers",
-        content: "Nous utilisons les services suivants : Lovable AI (intelligence artificielle pour les fonctionnalités de compatibilité et prédictions), Supabase (hébergement de données sécurisé), LiveKit (appels audio/vidéo), Stripe (paiements). Tous nos partenaires sont conformes au RGPD et protègent vos données selon les mêmes standards que nous.",
+        content: "Nous utilisons les services suivants pour faire fonctionner l'application : Google Gemini (intelligence artificielle pour l'analyse de compatibilité), OpenAI GPT (intelligence artificielle pour les prédictions et recommandations), Supabase (hébergement de base de données sécurisé), LiveKit (appels audio/vidéo en temps réel), Stripe (traitement des paiements). Tous nos partenaires sont conformes au RGPD et s'engagent contractuellement à protéger vos données selon les mêmes standards que nous.",
       },
       {
         icon: Share2,
@@ -71,12 +71,12 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. AI Features and Data Sharing",
-        content: "For AI features (Compatibility, Zembo Oracle), we share certain data with our AI providers (Lovable AI using Google Gemini and OpenAI GPT). Shared data includes: your profile (name, age, interests), your compatibility test answers, and your preferences. We ask for your explicit consent before any sharing. This data is encrypted in transit and is not stored by AI providers.",
+        content: "For AI features (Compatibility Test, Zembo Oracle), we share certain data with third-party artificial intelligence providers: Google (via Google Gemini) and OpenAI (via GPT). Shared data includes: your profile (first name, age, interests), your compatibility questionnaire answers, and your dating preferences. We ask for your explicit consent before any sharing via a dedicated modal. This data is encrypted in transit (TLS) and is not permanently stored by Google or OpenAI.",
       },
       {
         icon: Server,
         title: "4. Third-Party Service Providers",
-        content: "We use the following services: Lovable AI (artificial intelligence for compatibility and prediction features), Supabase (secure data hosting), LiveKit (audio/video calls), Stripe (payments). All our partners are GDPR compliant and protect your data to the same standards as we do.",
+        content: "We use the following services to operate the application: Google Gemini (artificial intelligence for compatibility analysis), OpenAI GPT (artificial intelligence for predictions and recommendations), Supabase (secure database hosting), LiveKit (real-time audio/video calls), Stripe (payment processing). All our partners are GDPR compliant and contractually committed to protecting your data to the same standards as we do.",
       },
       {
         icon: Share2,
