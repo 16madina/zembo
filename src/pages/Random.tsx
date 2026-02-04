@@ -53,21 +53,33 @@ const Random = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(80px+env(safe-area-inset-bottom))]">
       <motion.header 
-        className="flex items-center justify-start px-4 md:px-6 py-2 flex-shrink-0" 
+        className="flex flex-col items-center px-4 md:px-6 py-2 flex-shrink-0" 
         initial={{ opacity: 0, y: -20 }} 
         animate={{ opacity: 1, y: 0 }}
       >
-        <ZemboLogo size="sm" animate={false} />
+        <div className="w-full flex justify-start">
+          <ZemboLogo size="sm" animate={false} />
+        </div>
+        {currentGame === "hub" && (
+          <div className="text-center mt-2">
+            <h1 className="text-lg font-bold text-foreground">
+              Bienvenue sur <span className="text-primary text-xl font-black">Z</span> Games
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Choisis ton mode de rencontre
+            </p>
+          </div>
+        )}
       </motion.header>
 
-      <div className="flex-1 flex flex-col px-4 md:px-8 overflow-hidden min-h-0 max-w-2xl md:mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 text-center overflow-hidden min-h-0 max-w-2xl md:mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div 
             key={currentGame} 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             exit={{ opacity: 0, y: -20 }} 
-            className="flex flex-col items-center w-full h-full"
+            className="flex flex-col items-center w-full"
           >
             {renderContent()}
           </motion.div>
