@@ -146,9 +146,9 @@ const LiveDebugPanel = ({
                 </div>
               </div>
 
-              {/* Stage Status */}
+              {/* DUO Stage Status */}
               <div className="p-2 rounded bg-muted/50 space-y-1">
-                <span className="font-semibold block mb-1">Stage (WebRTC)</span>
+                <span className="font-semibold block mb-1">Stage (DUO)</span>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">On Stage:</span>
                   <span className={isOnStage ? "text-green-500" : "text-muted-foreground"}>

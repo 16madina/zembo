@@ -27,7 +27,6 @@ import { useLiveKit } from "@/hooks/useLiveKit";
 import { useSnapchatFilters } from "@/hooks/useSnapchatFilters";
 import { useFaceTracking } from "@/hooks/useFaceTracking";
 import { useLiveStage } from "@/hooks/useLiveStage";
-import { useStageWebRTC } from "@/hooks/useStageWebRTC";
 import { useLiveAccess } from "@/hooks/useLiveAccess";
 import { useLiveJoinRequests } from "@/hooks/useLiveJoinRequests";
 import { Button } from "@/components/ui/button";
@@ -234,45 +233,41 @@ const LiveRoom = () => {
     isStreamer,
   });
 
-  // WebRTC for stage video connection
-  const {
-    guestStream,
-    localStream: guestLocalStream,
-    isConnected: stageConnected,
-    isConnecting: stageConnecting,
-    isMuted: guestMuted,
-    error: stageError,
-    needsMediaUnlock,
-    requestMediaAccess,
-    toggleMute: toggleGuestMute,
-    getPeerConnection,
-  } = useStageWebRTC({
-    liveId: id || "",
-    guestId: currentGuest?.user_id || null,
-    isStreamer: !!isStreamer,
-    isOnStage,
-  });
+  // === DUO (Option A) ===
+  // Remove P2P WebRTC stage transport and rely on LiveKit only.
+  // The stage guest captures camera/mic locally (useLocalStream) and publishes to LiveKit.
+  const [guestNeedsMediaAccess, setGuestNeedsMediaAccess] = useState(false);
+
+  useEffect(() => {
+    if (isOnStage && !isStreamer) {
+      const needs = !isInitialized && !stream && !localStreamError;
+      setGuestNeedsMediaAccess(needs || !!localStreamError);
+    } else {
+      setGuestNeedsMediaAccess(false);
+    }
+  }, [isOnStage, isStreamer, isInitialized, stream, localStreamError]);
 
   // Stage guest LiveKit connection (separate from main viewer connection)
   // The stage guest needs their own LiveKit connection to PUBLISH their video to spectators
   const {
     isConnected: stageGuestLiveKitConnected,
+    isConnecting: stageGuestLiveKitConnecting,
+    error: stageGuestLiveKitError,
     connect: connectStageGuestLiveKit,
     disconnect: disconnectStageGuestLiveKit,
   } = useLiveKit({
     roomName,
     isStreamer: false,
     isStageGuest: isOnStage && !isStreamer,
-    // Stage guest reuses their WebRTC local stream to publish to LiveKit
-    publishStream: isOnStage && !isStreamer ? guestLocalStream : null,
+    // Stage guest reuses their locally captured stream to publish to LiveKit
+    publishStream: isOnStage && !isStreamer ? stream : null,
   });
 
-  // Find the guest's remote video track for spectators
-  // The guest's identity is their user_id, so we can look it up in remoteVideoTracks
-  // IMPORTANT: Only spectators (not streamer, not on stage) should use LiveKit track for guest
+  // Find the guest's remote video track (streamer + spectators)
+  // The guest's identity is their user_id, so we can look it up in remoteVideoTracks.
+  // IMPORTANT: The guest themselves (isOnStage) uses local preview instead.
   const guestRemoteVideoTrack = (() => {
-    // Only for spectators who are not the streamer and not on stage themselves
-    if (!currentGuest || isStreamer || isOnStage) {
+    if (!currentGuest || isOnStage) {
       return null;
     }
     
@@ -289,6 +284,17 @@ const LiveRoom = () => {
     return guestTrack || null;
   })();
 
+  // DUO connection status derived from LiveKit (no P2P WebRTC)
+  const duoGuestConnected = !!(
+    currentGuest && (isOnStage && !isStreamer ? stageGuestLiveKitConnected : guestRemoteVideoTrack)
+  );
+  const duoGuestConnecting = !!(
+    currentGuest &&
+      (isOnStage && !isStreamer
+        ? stageGuestLiveKitConnecting
+        : liveKitConnected && !guestRemoteVideoTrack)
+  );
+
   // Force resync remote tracks when a guest joins/changes (for spectators to see guest)
   useEffect(() => {
     if (currentGuest && !isStreamer && !isOnStage && liveKitConnected) {
@@ -303,11 +309,24 @@ const LiveRoom = () => {
 
   // Auto-connect stage guest to LiveKit when they go on stage
   useEffect(() => {
-    if (isOnStage && !isStreamer && guestLocalStream && !stageGuestLiveKitConnected) {
+    if (
+      isOnStage &&
+      !isStreamer &&
+      stream &&
+      !stageGuestLiveKitConnected &&
+      !stageGuestLiveKitConnecting
+    ) {
       console.log("[LiveRoom] Stage guest connecting to LiveKit to broadcast video...");
       connectStageGuestLiveKit();
     }
-  }, [isOnStage, isStreamer, guestLocalStream, stageGuestLiveKitConnected, connectStageGuestLiveKit]);
+  }, [
+    isOnStage,
+    isStreamer,
+    stream,
+    stageGuestLiveKitConnected,
+    stageGuestLiveKitConnecting,
+    connectStageGuestLiveKit,
+  ]);
 
   // Disconnect stage guest from LiveKit when they leave stage
   useEffect(() => {
@@ -316,6 +335,13 @@ const LiveRoom = () => {
       disconnectStageGuestLiveKit();
     }
   }, [isOnStage, stageGuestLiveKitConnected, disconnectStageGuestLiveKit]);
+
+  // Stop local camera when guest leaves stage (avoid holding camera in background)
+  useEffect(() => {
+    if (!isStreamer && !isOnStage && stream) {
+      stopStream();
+    }
+  }, [isStreamer, isOnStage, stream, stopStream]);
 
   // Join requests with coins (for viewers requesting to join, and streamers managing requests)
   const {
@@ -1017,8 +1043,8 @@ const LiveRoom = () => {
       {/* Debug Panel (dev only) */}
       <LiveDebugPanel
         liveKitDebug={liveKitDebugInfo}
-        stageConnected={stageConnected}
-        stageConnecting={stageConnecting}
+        stageConnected={duoGuestConnected}
+        stageConnecting={duoGuestConnecting}
         isOnStage={isOnStage}
         onReconnectLiveKit={handleLiveKitReconnect}
         onResyncTracks={liveKitResyncTracks}
@@ -1057,9 +1083,9 @@ const LiveRoom = () => {
       </AnimatePresence>
 
       {/* PROMINENT Audio unlock overlay for iOS/Android mobile */}
-      {/* IMPORTANT: Hide this overlay for users who are on stage (isOnStage) since they use WebRTC audio, not LiveKit */}
+      {/* IMPORTANT: DUO stage now uses LiveKit too, so do NOT hide this on stage */}
       <AnimatePresence>
-        {needsAudioUnlock && !isStreamer && !isOnStage && liveKitConnected && (
+        {needsAudioUnlock && !isStreamer && liveKitConnected && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1127,7 +1153,7 @@ const LiveRoom = () => {
 
       {/* Guest on-stage: prompt for camera/mic if the browser blocked getUserMedia without user gesture */}
       <AnimatePresence>
-        {needsMediaUnlock && !isStreamer && isOnStage && (
+        {guestNeedsMediaAccess && !isStreamer && isOnStage && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1144,11 +1170,19 @@ const LiveRoom = () => {
               <p className="mt-2 text-sm text-muted-foreground">
                 Pour rejoindre le DUO, votre téléphone doit autoriser la caméra et le micro.
               </p>
-              {stageError && (
-                <p className="mt-2 text-xs text-muted-foreground">{stageError}</p>
+              {(localStreamError || stageGuestLiveKitError) && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {localStreamError || stageGuestLiveKitError}
+                </p>
               )}
               <div className="mt-4 flex gap-2">
-                <Button onClick={requestMediaAccess} className="flex-1">
+                <Button
+                  onClick={() => {
+                    setGuestNeedsMediaAccess(false);
+                    initCamera();
+                  }}
+                  className="flex-1"
+                >
                   Activer maintenant
                 </Button>
                 <Button
@@ -1178,17 +1212,13 @@ const LiveRoom = () => {
             guestAvatar={currentGuest.profile?.avatar_url || null}
             guestId={currentGuest.user_id}
             guestStream={
-              isStreamer
-                ? guestStream
-                : isOnStage
-                  ? guestLocalStream
-                  : null
+              isOnStage && !isStreamer ? stream : null
             }
             guestRemoteTrack={guestRemoteVideoTrack}
             isStreamer={isStreamer}
             onRemoveGuest={removeFromStage}
-            isConnecting={stageConnecting}
-            isConnected={stageConnected}
+            isConnecting={duoGuestConnecting}
+            isConnected={duoGuestConnected}
           />
         ) : (
           <>
@@ -1216,21 +1246,15 @@ const LiveRoom = () => {
                   guestAvatar={currentGuest.profile?.avatar_url || null}
                   guestId={currentGuest.user_id}
                   guestStream={
-                    isOnStage && !isStreamer
-                      ? guestLocalStream
-                      : isStreamer
-                        ? guestStream
-                        : null
+                    isOnStage && !isStreamer ? stream : null
                   }
                   guestRemoteTrack={guestRemoteVideoTrack}
                   isStreamer={isStreamer}
                   isGuest={isOnStage}
-                  isMuted={guestMuted}
-                  onToggleMute={isOnStage ? toggleGuestMute : undefined}
                   onRemoveGuest={removeFromStage}
-                  isConnecting={stageConnecting}
-                  isConnected={stageConnected}
-                  peerConnection={getPeerConnection()}
+                  isConnecting={duoGuestConnecting}
+                  isConnected={duoGuestConnected}
+                  peerConnection={null}
                 />
               )}
             </AnimatePresence>
