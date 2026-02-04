@@ -155,16 +155,16 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
 
               {/* Title - positioned at bottom for image cards */}
               <h3 
-                className={`font-bold text-base text-center relative z-10 ${'customImage' in game && game.customImage ? 'text-white' : 'text-foreground'}`}
-                style={{ textShadow: 'customImage' in game && game.customImage ? '0 2px 8px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.9)' : 'none' }}
+                className={`font-bold text-sm text-center relative z-10 ${'customImage' in game && game.customImage ? 'text-primary' : 'text-foreground'}`}
+                style={{ textShadow: 'customImage' in game && game.customImage ? '0 0 10px rgba(234,179,8,0.6), 0 2px 6px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)' : 'none' }}
               >
                 {game.name}
               </h3>
 
               {/* Description */}
               <p 
-                className={`text-xs text-center mt-1 leading-tight relative z-10 ${'customImage' in game && game.customImage ? 'text-white font-medium' : 'text-muted-foreground'}`}
-                style={{ textShadow: 'customImage' in game && game.customImage ? '0 1px 4px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)' : 'none' }}
+                className={`text-[10px] text-center mt-0.5 leading-tight relative z-10 ${'customImage' in game && game.customImage ? 'text-white/90 font-medium' : 'text-muted-foreground'}`}
+                style={{ textShadow: 'customImage' in game && game.customImage ? '0 1px 3px rgba(0,0,0,0.9)' : 'none' }}
               >
                 {game.description}
               </p>
