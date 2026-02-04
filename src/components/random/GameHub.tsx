@@ -76,52 +76,55 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
             <motion.button
               key={game.id}
               onClick={() => onSelectGame(game.id)}
-              className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[140px] overflow-hidden`}
+              className={`relative flex flex-col items-center justify-end p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[140px] overflow-hidden`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
-              {/* Custom image for Z Connect */}
+              {/* Full card image for Z Connect */}
               {'customImage' in game && game.customImage ? (
-                <motion.div
-                  className="relative w-16 h-16 mb-2"
-                  animate={{
-                    y: [0, -4, 0],
-                    rotate: [0, 3, -3, 0],
-                  }}
-                  transition={{
-                    duration: 2.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                >
-                  <motion.img
-                    src={game.customImage}
-                    alt={game.name}
-                    className="w-full h-full object-contain drop-shadow-lg"
+                <>
+                  {/* Background image covering the entire card */}
+                  <motion.div
+                    className="absolute inset-0 flex items-center justify-center"
                     animate={{
-                      filter: [
-                        "drop-shadow(0 0 8px rgba(234, 179, 8, 0.3))",
-                        "drop-shadow(0 0 16px rgba(234, 179, 8, 0.6))",
-                        "drop-shadow(0 0 8px rgba(234, 179, 8, 0.3))",
-                      ],
+                      y: [0, -3, 0],
                     }}
                     transition={{
-                      duration: 1.5,
+                      duration: 2.5,
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                  />
+                  >
+                    <motion.img
+                      src={game.customImage}
+                      alt={game.name}
+                      className="w-full h-full object-cover scale-110"
+                      animate={{
+                        filter: [
+                          "drop-shadow(0 0 10px rgba(234, 179, 8, 0.4))",
+                          "drop-shadow(0 0 20px rgba(234, 179, 8, 0.7))",
+                          "drop-shadow(0 0 10px rgba(234, 179, 8, 0.4))",
+                        ],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  </motion.div>
+                  
                   {/* Sparkle effects */}
-                  {[...Array(3)].map((_, i) => (
+                  {[...Array(4)].map((_, i) => (
                     <motion.div
                       key={i}
-                      className="absolute w-1 h-1 bg-primary rounded-full"
+                      className="absolute w-1.5 h-1.5 bg-primary rounded-full z-10"
                       style={{
-                        top: `${20 + i * 25}%`,
-                        left: `${10 + i * 30}%`,
+                        top: `${15 + i * 20}%`,
+                        left: `${15 + (i % 2) * 60}%`,
                       }}
                       animate={{
                         scale: [0, 1.5, 0],
@@ -130,24 +133,27 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
                       transition={{
                         duration: 1.5,
                         repeat: Infinity,
-                        delay: i * 0.5,
+                        delay: i * 0.4,
                       }}
                     />
                   ))}
-                </motion.div>
+                  
+                  {/* Dark gradient overlay for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+                </>
               ) : (
                 <div className={`w-12 h-12 rounded-full ${game.iconBg} flex items-center justify-center mb-2`}>
                   <span className="text-2xl">{game.emoji}</span>
                 </div>
               )}
 
-              {/* Title */}
-              <h3 className="font-semibold text-sm text-foreground text-center">
+              {/* Title - positioned at bottom for image cards */}
+              <h3 className={`font-semibold text-sm text-center relative z-10 ${'customImage' in game && game.customImage ? 'text-white' : 'text-foreground'}`}>
                 {game.name}
               </h3>
 
               {/* Description */}
-              <p className="text-[10px] text-muted-foreground text-center mt-1 leading-tight">
+              <p className={`text-[10px] text-center mt-1 leading-tight relative z-10 ${'customImage' in game && game.customImage ? 'text-white/80' : 'text-muted-foreground'}`}>
                 {game.description}
               </p>
 
