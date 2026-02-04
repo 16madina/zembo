@@ -67,13 +67,31 @@ const Random = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
           >
-            <p className="text-xs text-muted-foreground/80 tracking-widest uppercase mb-1">
-              Bienvenue sur
+            <p className="text-sm font-semibold text-foreground/90 tracking-wide mb-1">
+              ✨ Bienvenue sur ✨
             </p>
-            <h1 className="text-2xl font-black tracking-tight">
-              <span className="text-primary drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]">Z</span>
-              <span className="text-foreground">Games</span>
-            </h1>
+            <motion.h1 
+              className="text-3xl font-black tracking-tight relative inline-block"
+              animate={{
+                textShadow: [
+                  "0 0 10px rgba(234,179,8,0.3)",
+                  "0 0 20px rgba(234,179,8,0.6)",
+                  "0 0 10px rgba(234,179,8,0.3)",
+                ],
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <span className="text-primary">Z</span>
+              <span className="bg-gradient-to-r from-foreground via-primary/80 to-foreground bg-clip-text text-transparent">Games</span>
+            </motion.h1>
+            <motion.p 
+              className="text-xs text-muted-foreground mt-2 italic"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              Es-tu prêt(e) à jouer ? 🎮
+            </motion.p>
           </motion.div>
         )}
       </motion.header>
