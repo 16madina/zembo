@@ -387,15 +387,30 @@ const LiveRoom = () => {
   }, [isStreamer, hasAccess, isOnStage, hasShownStageToast]);
 
   // Auto-start camera for streamer (for local preview and face tracking)
+  // CRITICAL: Start camera EARLY - before live data is fully loaded
+  // We can use accessIsStreamer which is determined faster from the access check
   useEffect(() => {
-    if (live && isStreamer && !isInitialized && !localStreamError) {
+    const shouldStartCamera = (isStreamer || accessIsStreamer) && !isInitialized && !localStreamError;
+    
+    console.log("[LiveRoom] Camera init check:", {
+      isStreamer,
+      accessIsStreamer,
+      isInitialized,
+      localStreamError,
+      shouldStartCamera,
+      hasLive: !!live,
+    });
+    
+    if (shouldStartCamera) {
+      console.log("[LiveRoom] Starting camera for streamer (early init)");
       initCamera();
     }
-  }, [live, isStreamer, isInitialized, localStreamError, initCamera]);
+  }, [live, isStreamer, accessIsStreamer, isInitialized, localStreamError, initCamera]);
 
   // Timeout: Force LiveKit connection after 15s if camera hasn't started (Android fallback)
   useEffect(() => {
-    if (!live || !isStreamer || liveKitConnected || liveKitConnecting) return;
+    const isStreamerFinal = isStreamer || accessIsStreamer;
+    if (!isStreamerFinal || liveKitConnected || liveKitConnecting) return;
     if (stream || isInitialized || localStreamError) return; // Already handled
 
     console.log("LiveRoom - Starting 15s camera timeout for streamer...");
@@ -408,7 +423,7 @@ const LiveRoom = () => {
     }, 15000);
 
     return () => clearTimeout(timeout);
-  }, [live, isStreamer, stream, isInitialized, localStreamError, liveKitConnected, liveKitConnecting, connectLiveKit]);
+  }, [isStreamer, accessIsStreamer, stream, isInitialized, localStreamError, liveKitConnected, liveKitConnecting, connectLiveKit]);
 
   // Auto-connect to LiveKit when live is loaded and has access
   useEffect(() => {
@@ -427,7 +442,10 @@ const LiveRoom = () => {
       liveKitError,
     });
 
-    if (isStreamer) {
+    // Use accessIsStreamer as a faster check when live data hasn't loaded yet
+    const isStreamerFinal = isStreamer || accessIsStreamer;
+    
+    if (isStreamerFinal) {
       // STREAMER: Wait for local camera stream to be ready before connecting
       // OR if there's a local stream error, connect anyway and let LiveKit create its own tracks
       if (!stream && !isInitialized && !localStreamError) {
@@ -449,7 +467,7 @@ const LiveRoom = () => {
         connectLiveKit();
       }
     }
-  }, [live, roomName, isStreamer, hasAccess, stream, isInitialized, localStreamError, liveKitConnected, liveKitConnecting, liveKitError, connectLiveKit]);
+  }, [live, roomName, isStreamer, accessIsStreamer, hasAccess, stream, isInitialized, localStreamError, liveKitConnected, liveKitConnecting, liveKitError, connectLiveKit]);
 
   // Log LiveKit connection status and handle auto-reconnect for viewers
   useEffect(() => {
