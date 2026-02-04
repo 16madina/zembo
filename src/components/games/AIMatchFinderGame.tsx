@@ -33,6 +33,7 @@ interface OracleAnswers {
   connectionType: string;
   attraction: string;
   frequency: string;
+  lookingFor: string;
 }
 
 type GameStatus = "questionnaire" | "idle" | "shuffling" | "scanning" | "revealing" | "revealed" | "matched";
@@ -41,6 +42,16 @@ const MATCH_COST = 50;
 
 // Questionnaire options
 const QUESTIONS = [
+  {
+    id: "lookingFor",
+    title: "Tu recherches qui ?",
+    options: [
+      { id: "homme", emoji: "👨", label: "Un homme" },
+      { id: "femme", emoji: "👩", label: "Une femme" },
+      { id: "lgbt", emoji: "🏳️‍🌈", label: "LGBT+" },
+      { id: "tous", emoji: "✨", label: "Tout le monde" },
+    ]
+  },
   {
     id: "seeking",
     title: "Que recherches-tu en ce moment ?",
@@ -168,6 +179,7 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
     connectionType: "",
     attraction: "",
     frequency: "",
+    lookingFor: "",
   });
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [myProfile, setMyProfile] = useState<{ avatarUrl: string | null; displayName: string } | null>(null);
@@ -226,12 +238,8 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
       return;
     }
 
-    // First, fetch all profiles for the shuffle effect
-    const { data: myProfileData } = await supabase
-      .from("profiles")
-      .select("looking_for, gender")
-      .eq("user_id", user.id)
-      .single();
+    // Use the answer from questionnaire for gender preference
+    const lookingFor = oracleAnswers.lookingFor;
 
     let query = supabase
       .from("profiles")
@@ -239,9 +247,9 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
       .neq("user_id", user.id)
       .not("avatar_url", "is", null);
 
-    const lookingFor = myProfileData?.looking_for || [];
-    if (lookingFor.length > 0 && !lookingFor.includes("tous")) {
-      query = query.in("gender", lookingFor);
+    // Filter by gender based on Oracle questionnaire answer
+    if (lookingFor && lookingFor !== "tous") {
+      query = query.eq("gender", lookingFor);
     }
 
     const { data: profiles } = await query.limit(50);
