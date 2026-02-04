@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Heart, MessageCircle, Coins, Search, ChevronRight } from "lucide-react";
+import { X, Sparkles, Heart, MessageCircle, Coins, Search, ChevronRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +33,7 @@ interface OracleAnswers {
   connectionType: string;
   attraction: string;
   frequency: string;
-  lookingFor: string;
+  lookingFor: string[];
 }
 
 type GameStatus = "questionnaire" | "idle" | "shuffling" | "scanning" | "revealing" | "revealed" | "matched";
@@ -45,11 +45,12 @@ const QUESTIONS = [
   {
     id: "lookingFor",
     title: "Tu recherches qui ?",
+    subtitle: "(plusieurs choix possibles)",
+    multiSelect: true,
     options: [
-      { id: "homme", emoji: "👨", label: "Un homme" },
-      { id: "femme", emoji: "👩", label: "Une femme" },
+      { id: "homme", emoji: "👨", label: "Homme" },
+      { id: "femme", emoji: "👩", label: "Femme" },
       { id: "lgbt", emoji: "🏳️‍🌈", label: "LGBT+" },
-      { id: "tous", emoji: "✨", label: "Tout le monde" },
     ]
   },
   {
@@ -179,7 +180,7 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
     connectionType: "",
     attraction: "",
     frequency: "",
-    lookingFor: "",
+    lookingFor: [],
   });
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [myProfile, setMyProfile] = useState<{ avatarUrl: string | null; displayName: string } | null>(null);
@@ -221,12 +222,38 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
 
   // Handle questionnaire answer
   const handleAnswer = (questionId: string, answerId: string) => {
-    setOracleAnswers(prev => ({ ...prev, [questionId]: answerId }));
+    const question = QUESTIONS.find(q => q.id === questionId);
     
+    // Handle multi-select questions (like lookingFor)
+    if (question?.multiSelect) {
+      setOracleAnswers(prev => {
+        const currentValues = prev[questionId as keyof OracleAnswers];
+        if (Array.isArray(currentValues)) {
+          if (currentValues.includes(answerId)) {
+            return { ...prev, [questionId]: currentValues.filter(v => v !== answerId) };
+          } else {
+            return { ...prev, [questionId]: [...currentValues, answerId] };
+          }
+        }
+        return prev;
+      });
+    } else {
+      // Single select - auto-advance
+      setOracleAnswers(prev => ({ ...prev, [questionId]: answerId }));
+      
+      if (currentQuestion < QUESTIONS.length - 1) {
+        setTimeout(() => setCurrentQuestion(prev => prev + 1), 300);
+      } else {
+        setTimeout(() => setStatus("idle"), 500);
+      }
+    }
+  };
+
+  // Confirm multi-select and move to next question
+  const confirmMultiSelect = () => {
     if (currentQuestion < QUESTIONS.length - 1) {
       setTimeout(() => setCurrentQuestion(prev => prev + 1), 300);
     } else {
-      // All questions answered, move to idle (ready to scan)
       setTimeout(() => setStatus("idle"), 500);
     }
   };
@@ -238,7 +265,7 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
       return;
     }
 
-    // Use the answer from questionnaire for gender preference
+    // Use the answer from questionnaire for gender preference (multi-select)
     const lookingFor = oracleAnswers.lookingFor;
 
     let query = supabase
@@ -247,9 +274,9 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
       .neq("user_id", user.id)
       .not("avatar_url", "is", null);
 
-    // Filter by gender based on Oracle questionnaire answer
-    if (lookingFor && lookingFor !== "tous") {
-      query = query.eq("gender", lookingFor);
+    // Filter by gender based on Oracle questionnaire answers (multi-select)
+    if (lookingFor.length > 0) {
+      query = query.in("gender", lookingFor);
     }
 
     const { data: profiles } = await query.limit(50);
@@ -467,6 +494,7 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
               key="questionnaire"
               currentQuestion={currentQuestion}
               onAnswer={handleAnswer}
+              onConfirmMultiSelect={confirmMultiSelect}
               answers={oracleAnswers}
             />
           )}
@@ -525,18 +553,24 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
   );
 }
 
-// Questionnaire Screen - 4 questions before scanning
+// Questionnaire Screen - 5 questions before scanning (with multi-select support)
 function QuestionnaireScreen({
   currentQuestion,
   onAnswer,
+  onConfirmMultiSelect,
   answers,
 }: {
   currentQuestion: number;
   onAnswer: (questionId: string, answerId: string) => void;
+  onConfirmMultiSelect: () => void;
   answers: OracleAnswers;
 }) {
   const question = QUESTIONS[currentQuestion];
   const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100;
+  const isMultiSelect = question.multiSelect === true;
+  const currentAnswerValue = answers[question.id as keyof OracleAnswers];
+  const selectedItems = Array.isArray(currentAnswerValue) ? currentAnswerValue : [];
+  const canConfirm = selectedItems.length > 0;
 
   return (
     <motion.div
@@ -593,29 +627,73 @@ function QuestionnaireScreen({
           exit={{ opacity: 0, x: -50 }}
           className="w-full space-y-4"
         >
-          <h2 className="text-lg font-bold text-foreground">
-            {question.title}
-          </h2>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">
+              {question.title}
+            </h2>
+            {question.subtitle && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {question.subtitle}
+              </p>
+            )}
+          </div>
 
           {/* Options */}
-          <div className="grid grid-cols-1 gap-3">
-            {question.options.map((option, index) => (
-              <motion.button
-                key={option.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                onClick={() => onAnswer(question.id, option.id)}
-                className="flex items-center gap-3 p-4 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-primary/20 hover:border-primary/50 hover:bg-primary/10 transition-all active:scale-95"
-              >
-                <span className="text-2xl">{option.emoji}</span>
-                <span className="text-sm font-medium text-foreground flex-1 text-left">
-                  {option.label}
-                </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </motion.button>
-            ))}
+          <div className={`grid gap-3 ${isMultiSelect ? 'grid-cols-3' : 'grid-cols-1'}`}>
+            {question.options.map((option, index) => {
+              const isSelected = isMultiSelect && selectedItems.includes(option.id);
+              
+              return (
+                <motion.button
+                  key={option.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => onAnswer(question.id, option.id)}
+                  className={`relative flex ${isMultiSelect ? 'flex-col' : ''} items-center gap-3 p-4 rounded-2xl bg-background/80 backdrop-blur-sm border-2 transition-all active:scale-95 ${
+                    isSelected 
+                      ? 'border-primary bg-primary/20' 
+                      : 'border-primary/20 hover:border-primary/50 hover:bg-primary/10'
+                  }`}
+                >
+                  <span className={isMultiSelect ? 'text-3xl' : 'text-2xl'}>{option.emoji}</span>
+                  <span className={`text-sm font-medium text-foreground ${isMultiSelect ? 'text-center' : 'flex-1 text-left'}`}>
+                    {option.label}
+                  </span>
+                  {isMultiSelect && isSelected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+                    >
+                      <Check className="w-3 h-3 text-primary-foreground" />
+                    </motion.div>
+                  )}
+                  {!isMultiSelect && (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </motion.button>
+              );
+            })}
           </div>
+
+          {/* Confirm button for multi-select */}
+          {isMultiSelect && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Button
+                onClick={onConfirmMultiSelect}
+                disabled={!canConfirm}
+                className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80"
+              >
+                Continuer ({selectedItems.length} sélectionné{selectedItems.length > 1 ? 's' : ''})
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </motion.div>
+          )}
         </motion.div>
       </AnimatePresence>
 
