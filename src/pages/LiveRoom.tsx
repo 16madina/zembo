@@ -114,8 +114,9 @@ const LiveRoom = () => {
     streamerAvatar: string | null;
   } | null>(null);
   
-  // SECURITY: Ultra simple - only compare IDs directly
-  const isStreamer = live?.streamer_id === user?.id;
+  // CRITICAL FIX: Use accessIsStreamer first (available early) OR live check
+  // This fixes the race condition causing infinite "Initialisation" on Android/iOS
+  const isStreamer = accessIsStreamer || (live?.streamer_id === user?.id);
   
   // Alias for UI controls
   const showStreamerControls = !!isStreamer;
@@ -186,11 +187,11 @@ const LiveRoom = () => {
     unlockAudio,
   } = useLiveKit({
     roomName,
-    // CRITICAL: Use a stable isStreamer value that doesn't depend on live loading
-    // This prevents race conditions where the hook connects as viewer before live is loaded
-    isStreamer: live?.streamer_id === user?.id,
+    // CRITICAL FIX: Use accessIsStreamer (fast) OR live check to prevent race condition
+    // accessIsStreamer is determined from the access hook before live data loads
+    isStreamer: accessIsStreamer || (live?.streamer_id === user?.id),
     // Streamer: reuse the already-open camera stream to publish to LiveKit.
-    publishStream: live?.streamer_id === user?.id ? stream : null,
+    publishStream: (accessIsStreamer || (live?.streamer_id === user?.id)) ? stream : null,
   });
   // Auto-reconnect state for viewers
   const [showReconnectButton, setShowReconnectButton] = useState(false);
