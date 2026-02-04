@@ -3,6 +3,7 @@ import { Phone, Zap, Sparkles, Heart } from "lucide-react";
 import goldenHand from "@/assets/golden-hand.png";
 import speedDatingPhones from "@/assets/games/speed-dating-phones.png";
 import zemboOracle from "@/assets/games/zembo-oracle.png";
+import compatibilityTest from "@/assets/games/compatibility-test.png";
 
 interface GameHubProps {
   onSelectGame: (game: "zconnect" | "speedDating" | "oracle" | "compatibility") => void;
@@ -55,6 +56,7 @@ const games = [
     borderColor: "border-pink-500/30",
     iconBg: "bg-pink-500/20",
     iconColor: "text-pink-400",
+    customImage: compatibilityTest,
   },
 ];
 
