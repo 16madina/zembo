@@ -269,9 +269,37 @@ const LiveRoom = () => {
 
   // Find the guest's remote video track for spectators
   // The guest's identity is their user_id, so we can look it up in remoteVideoTracks
-  const guestRemoteVideoTrack = currentGuest && !isStreamer && !isOnStage
-    ? remoteVideoTracks.get(currentGuest.user_id) || null
-    : null;
+  // IMPORTANT: Only spectators (not streamer, not on stage) should use LiveKit track for guest
+  const guestRemoteVideoTrack = (() => {
+    // Only for spectators who are not the streamer and not on stage themselves
+    if (!currentGuest || isStreamer || isOnStage) {
+      return null;
+    }
+    
+    // Try to find guest's track by their user_id
+    const guestTrack = remoteVideoTracks.get(currentGuest.user_id);
+    
+    console.log("[LiveRoom] Guest remote track lookup:", {
+      guestUserId: currentGuest.user_id,
+      hasTrack: !!guestTrack,
+      availableTrackIdentities: Array.from(remoteVideoTracks.keys()),
+      totalRemoteTracks: remoteVideoTracks.size,
+    });
+    
+    return guestTrack || null;
+  })();
+
+  // Force resync remote tracks when a guest joins/changes (for spectators to see guest)
+  useEffect(() => {
+    if (currentGuest && !isStreamer && !isOnStage && liveKitConnected) {
+      console.log("[LiveRoom] Guest changed, forcing track resync for spectators...");
+      // Give the guest time to publish their track
+      const timer = setTimeout(() => {
+        liveKitResyncTracks();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentGuest?.user_id, isStreamer, isOnStage, liveKitConnected, liveKitResyncTracks]);
 
   // Auto-connect stage guest to LiveKit when they go on stage
   useEffect(() => {

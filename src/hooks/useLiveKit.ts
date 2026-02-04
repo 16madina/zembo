@@ -343,7 +343,12 @@ export const useLiveKit = ({
     console.log("[LiveKit] syncRemoteTracks - Scanning for remote tracks...");
     
     const remoteParticipants = Array.from(currentRoom.remoteParticipants.values());
-    console.log("[LiveKit] Remote participants:", remoteParticipants.length);
+    console.log("[LiveKit] Remote participants:", remoteParticipants.map(p => ({
+      identity: p.identity,
+      name: p.name,
+      videoTracks: p.videoTrackPublications.size,
+      audioTracks: p.audioTrackPublications.size,
+    })));
 
     const newVideoTracks = new Map<string, Track>();
     const newAudioTracks = new Map<string, Track>();
@@ -351,7 +356,7 @@ export const useLiveKit = ({
     let foundPrimaryAudio = false;
 
     for (const participant of remoteParticipants) {
-      console.log("[LiveKit] Participant:", participant.identity, 
+      console.log("[LiveKit] Processing participant:", participant.identity, 
         "Video pubs:", participant.videoTrackPublications.size,
         "Audio pubs:", participant.audioTrackPublications.size);
       
@@ -373,7 +378,7 @@ export const useLiveKit = ({
 
         // If we have a track, store it by participant identity
         if (publication.track && publication.track.kind === Track.Kind.Video) {
-          console.log("[LiveKit] Found video track from:", participant.identity);
+          console.log("[LiveKit] ✓ Found video track from:", participant.identity);
           newVideoTracks.set(participant.identity, publication.track);
           
           // Set the primary remote video track (first one found, usually the streamer)
@@ -405,7 +410,7 @@ export const useLiveKit = ({
 
         // If we have a track, store it and attach with mobile-friendly handling
         if (publication.track && publication.track.kind === Track.Kind.Audio) {
-          console.log("[LiveKit] Found audio track from:", participant.identity);
+          console.log("[LiveKit] ✓ Found audio track from:", participant.identity);
           newAudioTracks.set(participant.identity, publication.track);
           
           if (!foundPrimaryAudio) {
@@ -424,6 +429,8 @@ export const useLiveKit = ({
     console.log("[LiveKit] syncRemoteTracks complete:", {
       videoTracksCount: newVideoTracks.size,
       audioTracksCount: newAudioTracks.size,
+      videoTrackIdentities: Array.from(newVideoTracks.keys()),
+      audioTrackIdentities: Array.from(newAudioTracks.keys()),
     });
   }, [isStreamer, isStageGuest, attachAudioTrack]);
 
