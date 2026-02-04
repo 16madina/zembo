@@ -623,8 +623,8 @@ function QuestionnaireScreen({
   );
 }
 
-// Animated Crystal Ball Component - like the golden dice
-const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => {
+// Animated Crystal Ball Component with VS inside - like the golden dice
+const AnimatedCrystalBall = ({ isExiting = false, showVS = false }: { isExiting?: boolean; showVS?: boolean }) => {
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
@@ -651,10 +651,10 @@ const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => 
     >
       {/* Crystal Ball with animations */}
       <motion.div
-        className="relative w-48 h-48"
+        className="relative w-28 h-28"
         animate={isExiting ? {} : {
-          y: [0, -10, 0],
-          rotate: [0, 3, -3, 0],
+          y: [0, -5, 0],
+          rotate: [0, 2, -2, 0],
         }}
         transition={{
           duration: 3,
@@ -666,7 +666,7 @@ const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => 
         <div className="relative w-full h-full">
           {/* Glow effect behind */}
           <motion.div
-            className="absolute inset-0 rounded-full blur-2xl"
+            className="absolute inset-0 rounded-full blur-xl"
             animate={{
               background: [
                 "radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)",
@@ -680,7 +680,7 @@ const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => 
           
           {/* Crystal ball emoji with enhanced styling */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center text-[120px]"
+            className="absolute inset-0 flex items-center justify-center text-[80px]"
             animate={isExiting ? {
               rotateZ: [0, 360, 720],
               rotateX: [0, 180, 360],
@@ -694,14 +694,36 @@ const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => 
             🔮
           </motion.div>
 
+          {/* VS text inside the ball */}
+          {showVS && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center z-10"
+              animate={{ 
+                scale: [1, 1.15, 1],
+                textShadow: [
+                  "0 0 10px hsl(var(--primary))",
+                  "0 0 20px hsl(var(--primary))",
+                  "0 0 10px hsl(var(--primary))",
+                ]
+              }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              <span className="text-xl font-black text-primary drop-shadow-lg" style={{ 
+                textShadow: "0 0 10px hsl(var(--primary)), 0 2px 4px rgba(0,0,0,0.5)" 
+              }}>
+                VS
+              </span>
+            </motion.div>
+          )}
+
           {/* Floating sparkles around the ball */}
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+          {[0, 1, 2, 3].map((i) => (
             <motion.div
               key={i}
-              className="absolute text-2xl"
+              className="absolute text-lg"
               style={{
-                left: `${50 + 45 * Math.cos((i * Math.PI * 2) / 6)}%`,
-                top: `${50 + 45 * Math.sin((i * Math.PI * 2) / 6)}%`,
+                left: `${50 + 50 * Math.cos((i * Math.PI * 2) / 4)}%`,
+                top: `${50 + 50 * Math.sin((i * Math.PI * 2) / 4)}%`,
                 transform: "translate(-50%, -50%)",
               }}
               animate={{
@@ -712,7 +734,7 @@ const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => 
               transition={{
                 duration: 2,
                 repeat: Infinity,
-                delay: i * 0.3,
+                delay: i * 0.4,
                 ease: "easeInOut",
               }}
             >
@@ -723,7 +745,7 @@ const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => 
 
         {/* Mystical base/stand */}
         <motion.div
-          className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-24 h-6 rounded-full bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 blur-md"
+          className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-4 rounded-full bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 blur-md"
           animate={{
             scaleX: [1, 1.1, 1],
             opacity: [0.5, 0.8, 0.5],
@@ -731,40 +753,11 @@ const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => 
           transition={{ duration: 2, repeat: Infinity }}
         />
       </motion.div>
-
-      {/* Orbiting mystical particles */}
-      {[0, 1, 2].map((i) => (
-        <motion.div
-          key={`orbit-${i}`}
-          className="absolute w-3 h-3 rounded-full bg-primary"
-          style={{
-            boxShadow: "0 0 10px 5px hsl(var(--primary) / 0.5)",
-          }}
-          animate={{
-            rotate: 360,
-          }}
-          transition={{
-            duration: 3 + i,
-            repeat: Infinity,
-            ease: "linear",
-            delay: i * 0.5,
-          }}
-          custom={i}
-        >
-          <motion.div
-            className="w-full h-full rounded-full bg-primary"
-            style={{
-              position: "absolute",
-              left: 80 + i * 20,
-            }}
-          />
-        </motion.div>
-      ))}
     </motion.div>
   );
 };
 
-// Idle Screen - Bigger photos with crystal ball exit animation
+// Idle Screen - Photos on sides with crystal ball (VS) in the middle
 function IdleScreen({ 
   myProfile, 
   onStart 
@@ -789,12 +782,9 @@ function IdleScreen({
       exit={{ opacity: 0, y: -20 }}
       className="flex flex-col items-center gap-4 text-center max-w-md"
     >
-      {/* Animated Crystal Ball - like the golden dice */}
-      <AnimatedCrystalBall isExiting={isExiting} />
-
-      {/* Two large profile slots - hide when exiting */}
+      {/* Photos with Crystal Ball (VS) in the middle */}
       <motion.div 
-        className="flex items-center gap-4"
+        className="flex items-center gap-2"
         animate={isExiting ? { 
           opacity: 0, 
           scale: 0.8,
@@ -806,14 +796,14 @@ function IdleScreen({
         }}
         transition={{ duration: 0.3 }}
       >
-        {/* My profile - BIGGER */}
+        {/* My profile - Left side */}
         <motion.div
           className="relative"
           initial={{ x: -50, opacity: 0, scale: 0.8 }}
           animate={{ x: 0, opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, type: "spring" }}
         >
-          <div className="w-32 h-40 rounded-3xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
+          <div className="w-28 h-36 rounded-2xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
             {myProfile?.avatarUrl ? (
               <img 
                 src={myProfile.avatarUrl} 
@@ -822,7 +812,7 @@ function IdleScreen({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-4xl">👤</span>
+                <span className="text-3xl">👤</span>
               </div>
             )}
           </div>
@@ -831,30 +821,22 @@ function IdleScreen({
           </span>
         </motion.div>
 
-        {/* VS Icon */}
-        <motion.div
-          className="flex flex-col items-center gap-1"
-          animate={{ 
-            scale: [1, 1.1, 1],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <span className="text-lg font-bold text-primary">VS</span>
-        </motion.div>
+        {/* Crystal Ball with VS in the middle */}
+        <AnimatedCrystalBall isExiting={isExiting} showVS={true} />
 
-        {/* Mystery slot - BIGGER */}
+        {/* Mystery slot - Right side */}
         <motion.div
           className="relative"
           initial={{ x: 50, opacity: 0, scale: 0.8 }}
           animate={{ x: 0, opacity: 1, scale: 1 }}
           transition={{ delay: 0.3, type: "spring" }}
         >
-          <div className="w-32 h-40 rounded-3xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
+          <div className="w-28 h-36 rounded-2xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
             <motion.div
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.9, 1.1, 0.9] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Search className="w-12 h-12 text-primary/40" />
+              <Search className="w-10 h-10 text-primary/40" />
             </motion.div>
           </div>
           <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-muted text-muted-foreground text-xs font-bold rounded-full shadow-lg">
