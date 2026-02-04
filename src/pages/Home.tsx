@@ -27,12 +27,14 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useDailyLikes } from "@/hooks/useDailyLikes";
 import { useCoinPurchaseSuccess } from "@/hooks/useCoinPurchaseSuccess";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { GenderType } from "@/data/mockProfiles";
+
 // Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
   name: string;
   age: number;
-  gender: 'male' | 'female';
+  gender: GenderType;
   location: string;
   distance: string;
   bio: string;

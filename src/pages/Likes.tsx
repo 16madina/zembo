@@ -453,7 +453,7 @@ const Likes = () => {
             bio: matchedProfile.bio || "",
             interests: matchedProfile.interests,
             isVerified: matchedProfile.isVerified,
-            gender: "female" as const,
+            gender: "femme" as const,
             distance: "",
             isOnline: false,
           }}
