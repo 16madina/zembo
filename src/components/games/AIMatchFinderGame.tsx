@@ -803,7 +803,7 @@ function IdleScreen({
           animate={{ x: 0, opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, type: "spring" }}
         >
-          <div className="w-28 h-36 rounded-2xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
+          <div className="w-32 h-44 rounded-2xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
             {myProfile?.avatarUrl ? (
               <img 
                 src={myProfile.avatarUrl} 
@@ -812,7 +812,7 @@ function IdleScreen({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-3xl">👤</span>
+                <span className="text-4xl">👤</span>
               </div>
             )}
           </div>
@@ -831,12 +831,12 @@ function IdleScreen({
           animate={{ x: 0, opacity: 1, scale: 1 }}
           transition={{ delay: 0.3, type: "spring" }}
         >
-          <div className="w-28 h-36 rounded-2xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
+          <div className="w-32 h-44 rounded-2xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
             <motion.div
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.9, 1.1, 0.9] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Search className="w-10 h-10 text-primary/40" />
+              <Search className="w-12 h-12 text-primary/40" />
             </motion.div>
           </div>
           <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-muted text-muted-foreground text-xs font-bold rounded-full shadow-lg">
