@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Heart, MessageCircle, Coins, Search, Zap, Brain } from "lucide-react";
+import { X, Sparkles, Heart, MessageCircle, Coins, Search, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,9 +28,60 @@ interface MatchResult {
   compatibilityScore: number;
 }
 
-type GameStatus = "idle" | "shuffling" | "scanning" | "revealing" | "revealed" | "matched";
+interface OracleAnswers {
+  seeking: string;
+  connectionType: string;
+  attraction: string;
+  frequency: string;
+}
+
+type GameStatus = "questionnaire" | "idle" | "shuffling" | "scanning" | "revealing" | "revealed" | "matched";
 
 const MATCH_COST = 50;
+
+// Questionnaire options
+const QUESTIONS = [
+  {
+    id: "seeking",
+    title: "Que recherches-tu en ce moment ?",
+    options: [
+      { id: "serious", emoji: "💘", label: "Une relation sérieuse" },
+      { id: "casual", emoji: "🌊", label: "Quelque chose de léger" },
+      { id: "friends", emoji: "🤝", label: "De nouvelles rencontres" },
+      { id: "test", emoji: "🎭", label: "Juste tester le jeu" },
+    ]
+  },
+  {
+    id: "connectionType",
+    title: "Quel type de connexion te correspond ?",
+    options: [
+      { id: "passionate", emoji: "🔥", label: "Passionnée & intense" },
+      { id: "calm", emoji: "🧘", label: "Calme & stable" },
+      { id: "fun", emoji: "😂", label: "Fun & décontractée" },
+      { id: "intellectual", emoji: "🧠", label: "Intellectuelle & stimulante" },
+    ]
+  },
+  {
+    id: "attraction",
+    title: "Qu'est-ce qui t'attire en premier ?",
+    options: [
+      { id: "style", emoji: "😍", label: "Le style / l'apparence" },
+      { id: "personality", emoji: "🧠", label: "La personnalité" },
+      { id: "energy", emoji: "💬", label: "L'énergie / le vibe" },
+      { id: "kindness", emoji: "❤️", label: "La gentillesse" },
+    ]
+  },
+  {
+    id: "frequency",
+    title: "À quelle fréquence veux-tu matcher ?",
+    options: [
+      { id: "now", emoji: "⚡️", label: "Maintenant (instantané)" },
+      { id: "daily", emoji: "🔁", label: "Une fois par jour" },
+      { id: "weekly", emoji: "🌙", label: "Une fois par semaine" },
+      { id: "random", emoji: "🎲", label: "Quand j'en ai envie" },
+    ]
+  },
+];
 
 // Scanning laser effect
 const ScanningLaser = () => (
@@ -110,7 +161,14 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
   const { balance, spendCoins, refetch } = useCoins();
   const navigate = useNavigate();
   
-  const [status, setStatus] = useState<GameStatus>("idle");
+  const [status, setStatus] = useState<GameStatus>("questionnaire");
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [oracleAnswers, setOracleAnswers] = useState<OracleAnswers>({
+    seeking: "",
+    connectionType: "",
+    attraction: "",
+    frequency: "",
+  });
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [myProfile, setMyProfile] = useState<{ avatarUrl: string | null; displayName: string } | null>(null);
   const [scanProgress, setScanProgress] = useState(0);
@@ -148,6 +206,18 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
       }
     };
   }, []);
+
+  // Handle questionnaire answer
+  const handleAnswer = (questionId: string, answerId: string) => {
+    setOracleAnswers(prev => ({ ...prev, [questionId]: answerId }));
+    
+    if (currentQuestion < QUESTIONS.length - 1) {
+      setTimeout(() => setCurrentQuestion(prev => prev + 1), 300);
+    } else {
+      // All questions answered, move to idle (ready to scan)
+      setTimeout(() => setStatus("idle"), 500);
+    }
+  };
 
   // Start the full experience
   const startScan = async () => {
@@ -366,9 +436,9 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <span className="text-2xl">🤖</span>
+          <span className="text-2xl">🔮</span>
           <span className="bg-gradient-to-r from-primary via-primary/70 to-primary bg-clip-text text-transparent">
-            AI Match Finder
+            Zembo Oracle
           </span>
         </motion.h1>
         <Button
@@ -384,6 +454,14 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
       {/* Content */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pb-32">
         <AnimatePresence mode="wait">
+          {status === "questionnaire" && (
+            <QuestionnaireScreen
+              key="questionnaire"
+              currentQuestion={currentQuestion}
+              onAnswer={handleAnswer}
+              answers={oracleAnswers}
+            />
+          )}
           {status === "idle" && (
             <IdleScreen 
               key="idle" 
@@ -439,6 +517,112 @@ export default function AIMatchFinderGame({ onClose }: AIMatchFinderGameProps) {
   );
 }
 
+// Questionnaire Screen - 4 questions before scanning
+function QuestionnaireScreen({
+  currentQuestion,
+  onAnswer,
+  answers,
+}: {
+  currentQuestion: number;
+  onAnswer: (questionId: string, answerId: string) => void;
+  answers: OracleAnswers;
+}) {
+  const question = QUESTIONS[currentQuestion];
+  const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="flex flex-col items-center gap-6 text-center max-w-md w-full px-4"
+    >
+      {/* Oracle icon with mystical animation */}
+      <motion.div
+        className="relative"
+        animate={{ 
+          scale: [1, 1.1, 1],
+          rotate: [0, 5, -5, 0],
+        }}
+        transition={{ duration: 3, repeat: Infinity }}
+      >
+        <span className="text-6xl">🔮</span>
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          animate={{ 
+            boxShadow: [
+              "0 0 20px 10px hsl(var(--primary) / 0.2)",
+              "0 0 40px 20px hsl(var(--primary) / 0.4)",
+              "0 0 20px 10px hsl(var(--primary) / 0.2)",
+            ]
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+      </motion.div>
+
+      {/* Progress indicator */}
+      <div className="w-full space-y-2">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Question {currentQuestion + 1} / {QUESTIONS.length}</span>
+          <span>{Math.round(progress)}%</span>
+        </div>
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-primary to-primary/70"
+            initial={{ width: `${((currentQuestion) / QUESTIONS.length) * 100}%` }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+
+      {/* Question */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentQuestion}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          className="w-full space-y-4"
+        >
+          <h2 className="text-lg font-bold text-foreground">
+            {question.title}
+          </h2>
+
+          {/* Options */}
+          <div className="grid grid-cols-1 gap-3">
+            {question.options.map((option, index) => (
+              <motion.button
+                key={option.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => onAnswer(question.id, option.id)}
+                className="flex items-center gap-3 p-4 rounded-2xl bg-background/80 backdrop-blur-sm border-2 border-primary/20 hover:border-primary/50 hover:bg-primary/10 transition-all active:scale-95"
+              >
+                <span className="text-2xl">{option.emoji}</span>
+                <span className="text-sm font-medium text-foreground flex-1 text-left">
+                  {option.label}
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Mystical hint */}
+      <motion.p
+        className="text-xs text-muted-foreground italic"
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        L'Oracle analyse tes réponses pour trouver ton âme sœur...
+      </motion.p>
+    </motion.div>
+  );
+}
+
 // Idle Screen - Bigger photos
 function IdleScreen({ 
   myProfile, 
@@ -481,7 +665,7 @@ function IdleScreen({
           </span>
         </motion.div>
 
-        {/* AI Icon - Center */}
+        {/* Oracle Icon - Center */}
         <motion.div
           className="flex flex-col items-center gap-1"
           animate={{ 
@@ -489,13 +673,13 @@ function IdleScreen({
           }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          <Brain className="w-8 h-8 text-primary" />
+          <span className="text-3xl">🔮</span>
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            className="text-3xl"
+            className="text-2xl"
           >
-            ⚡
+            ✨
           </motion.div>
         </motion.div>
 
@@ -522,9 +706,9 @@ function IdleScreen({
 
       {/* Description */}
       <div className="space-y-2 mt-4">
-        <h2 className="text-xl font-bold">Laisse l'IA trouver ton match parfait</h2>
+        <h2 className="text-xl font-bold">L'Oracle va révéler ton match parfait</h2>
         <p className="text-muted-foreground text-sm">
-          Notre algorithme analyse des milliers de profils pour te trouver LA personne idéale.
+          Basé sur tes réponses, l'Oracle va scanner les profils et trouver ton âme sœur.
         </p>
       </div>
 
@@ -532,7 +716,7 @@ function IdleScreen({
       <div className="flex flex-wrap items-center justify-center gap-2">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-foreground font-medium text-xs">Scan gratuit</span>
+          <span className="text-foreground font-medium text-xs">Révélation gratuite</span>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
           <Coins className="w-4 h-4 text-primary" />
@@ -546,8 +730,8 @@ function IdleScreen({
         size="lg"
         className="px-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold text-lg shadow-lg shadow-primary/40"
       >
-        <Zap className="w-5 h-5 mr-2" />
-        Lancer le scan
+        <span className="mr-2">🔮</span>
+        Consulter l'Oracle
       </Button>
     </motion.div>
   );
@@ -577,7 +761,7 @@ function ShufflingScreen({
         animate={{ opacity: [0.5, 1, 0.5] }}
         transition={{ duration: 0.5, repeat: Infinity }}
       >
-        🎰 Recherche en cours...
+        🔮 L'Oracle consulte les astres...
       </motion.h2>
 
       {/* Two large profile slots */}
@@ -701,20 +885,21 @@ function ScanningScreenNew({
           <ScanningLaser />
         </motion.div>
 
-        {/* AI Processing animation */}
+        {/* Oracle Processing animation */}
         <div className="flex flex-col items-center gap-1">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="text-4xl"
           >
-            <Brain className="w-10 h-10 text-primary" />
+            🔮
           </motion.div>
           <motion.div
             className="flex gap-1"
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 0.5, repeat: Infinity }}
           >
-            <span className="text-2xl">🔍</span>
+            <span className="text-2xl">✨</span>
           </motion.div>
         </div>
 
@@ -740,7 +925,7 @@ function ScanningScreenNew({
       {/* Progress bar - Wider */}
       <div className="w-80 space-y-3">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground font-medium">Analyse approfondie...</span>
+          <span className="text-muted-foreground font-medium">L'Oracle médite...</span>
           <span className="text-primary font-bold text-lg">{Math.min(Math.round(progress), 100)}%</span>
         </div>
         <div className="h-3 bg-muted rounded-full overflow-hidden">
@@ -762,11 +947,11 @@ function ScanningScreenNew({
           exit={{ opacity: 0, y: -10 }}
           className="text-sm text-muted-foreground text-center"
         >
-          {progress < 20 && "🔍 Analyse de ton profil..."}
-          {progress >= 20 && progress < 40 && "🧠 Comparaison des personnalités..."}
-          {progress >= 40 && progress < 60 && "💫 Calcul de compatibilité..."}
-          {progress >= 60 && progress < 80 && "🎯 Sélection du meilleur match..."}
-          {progress >= 80 && "✨ Match parfait identifié !"}
+          {progress < 20 && "🔮 L'Oracle lit ton aura..."}
+          {progress >= 20 && progress < 40 && "⭐ Alignement des astres..."}
+          {progress >= 40 && progress < 60 && "💫 Calcul de l'affinité cosmique..."}
+          {progress >= 60 && progress < 80 && "🌙 Révélation imminente..."}
+          {progress >= 80 && "✨ Ton match est révélé !"}
         </motion.p>
       </AnimatePresence>
     </motion.div>
@@ -794,7 +979,7 @@ function RevealingScreen({
         animate={{ scale: [0, 1.2, 1] }}
         transition={{ duration: 0.5 }}
       >
-        🎯 Match trouvé !
+        🔮 L'Oracle a parlé !
       </motion.h2>
 
       {/* Two large profile slots */}

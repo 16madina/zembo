@@ -264,8 +264,8 @@ const Random = () => {
                 onClick={() => setShowAIMatchFinder(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/70 transition-colors active:scale-95"
               >
-                <span>🤖</span>
-                <span>AI Match</span>
+                <span>🔮</span>
+                <span>Zembo Oracle</span>
               </button>
             </motion.div>
 
