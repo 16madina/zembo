@@ -623,7 +623,148 @@ function QuestionnaireScreen({
   );
 }
 
-// Idle Screen - Bigger photos
+// Animated Crystal Ball Component - like the golden dice
+const AnimatedCrystalBall = ({ isExiting = false }: { isExiting?: boolean }) => {
+  return (
+    <motion.div
+      initial={{ scale: 0, opacity: 0 }}
+      animate={isExiting ? { 
+        scale: [1, 1.5, 8],
+        opacity: [1, 1, 0],
+        y: [0, -50, -200],
+        rotate: [0, 15, 45]
+      } : { 
+        scale: 1, 
+        opacity: 1 
+      }}
+      transition={isExiting ? {
+        duration: 0.8,
+        ease: [0.4, 0, 0.2, 1],
+        times: [0, 0.3, 1]
+      } : { 
+        type: "spring", 
+        damping: 15, 
+        stiffness: 100,
+      }}
+      className="relative flex items-center justify-center"
+      style={{ perspective: "1000px" }}
+    >
+      {/* Crystal Ball with animations */}
+      <motion.div
+        className="relative w-48 h-48"
+        animate={isExiting ? {} : {
+          y: [0, -10, 0],
+          rotate: [0, 3, -3, 0],
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        {/* Main crystal ball */}
+        <div className="relative w-full h-full">
+          {/* Glow effect behind */}
+          <motion.div
+            className="absolute inset-0 rounded-full blur-2xl"
+            animate={{
+              background: [
+                "radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)",
+                "radial-gradient(circle, hsl(var(--primary) / 0.6) 0%, transparent 70%)",
+                "radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)",
+              ],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          
+          {/* Crystal ball emoji with enhanced styling */}
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center text-[120px]"
+            animate={isExiting ? {
+              rotateZ: [0, 360, 720],
+              rotateX: [0, 180, 360],
+            } : {}}
+            transition={isExiting ? {
+              duration: 0.8,
+              ease: "easeOut"
+            } : {}}
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            🔮
+          </motion.div>
+
+          {/* Floating sparkles around the ball */}
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <motion.div
+              key={i}
+              className="absolute text-2xl"
+              style={{
+                left: `${50 + 45 * Math.cos((i * Math.PI * 2) / 6)}%`,
+                top: `${50 + 45 * Math.sin((i * Math.PI * 2) / 6)}%`,
+                transform: "translate(-50%, -50%)",
+              }}
+              animate={{
+                opacity: [0, 1, 0],
+                scale: [0.5, 1.2, 0.5],
+                rotate: [0, 180, 360],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                delay: i * 0.3,
+                ease: "easeInOut",
+              }}
+            >
+              ✨
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Mystical base/stand */}
+        <motion.div
+          className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-24 h-6 rounded-full bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 blur-md"
+          animate={{
+            scaleX: [1, 1.1, 1],
+            opacity: [0.5, 0.8, 0.5],
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+      </motion.div>
+
+      {/* Orbiting mystical particles */}
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={`orbit-${i}`}
+          className="absolute w-3 h-3 rounded-full bg-primary"
+          style={{
+            boxShadow: "0 0 10px 5px hsl(var(--primary) / 0.5)",
+          }}
+          animate={{
+            rotate: 360,
+          }}
+          transition={{
+            duration: 3 + i,
+            repeat: Infinity,
+            ease: "linear",
+            delay: i * 0.5,
+          }}
+          custom={i}
+        >
+          <motion.div
+            className="w-full h-full rounded-full bg-primary"
+            style={{
+              position: "absolute",
+              left: 80 + i * 20,
+            }}
+          />
+        </motion.div>
+      ))}
+    </motion.div>
+  );
+};
+
+// Idle Screen - Bigger photos with crystal ball exit animation
 function IdleScreen({ 
   myProfile, 
   onStart 
@@ -631,15 +772,40 @@ function IdleScreen({
   myProfile: { avatarUrl: string | null; displayName: string } | null;
   onStart: () => void;
 }) {
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleStart = () => {
+    setIsExiting(true);
+    // Wait for animation to complete before starting scan
+    setTimeout(() => {
+      onStart();
+    }, 800);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center gap-6 text-center max-w-md"
+      className="flex flex-col items-center gap-4 text-center max-w-md"
     >
-      {/* Two large profile slots */}
-      <div className="flex items-center gap-4">
+      {/* Animated Crystal Ball - like the golden dice */}
+      <AnimatedCrystalBall isExiting={isExiting} />
+
+      {/* Two large profile slots - hide when exiting */}
+      <motion.div 
+        className="flex items-center gap-4"
+        animate={isExiting ? { 
+          opacity: 0, 
+          scale: 0.8,
+          y: 20 
+        } : { 
+          opacity: 1, 
+          scale: 1,
+          y: 0 
+        }}
+        transition={{ duration: 0.3 }}
+      >
         {/* My profile - BIGGER */}
         <motion.div
           className="relative"
@@ -647,7 +813,7 @@ function IdleScreen({
           animate={{ x: 0, opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, type: "spring" }}
         >
-          <div className="w-36 h-44 rounded-3xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
+          <div className="w-32 h-40 rounded-3xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
             {myProfile?.avatarUrl ? (
               <img 
                 src={myProfile.avatarUrl} 
@@ -656,31 +822,24 @@ function IdleScreen({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-5xl">👤</span>
+                <span className="text-4xl">👤</span>
               </div>
             )}
           </div>
-          <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-lg">
+          <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full shadow-lg">
             TOI
           </span>
         </motion.div>
 
-        {/* Oracle Icon - Center */}
+        {/* VS Icon */}
         <motion.div
           className="flex flex-col items-center gap-1"
           animate={{ 
-            scale: [1, 1.2, 1],
+            scale: [1, 1.1, 1],
           }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          <span className="text-3xl">🔮</span>
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            className="text-2xl"
-          >
-            ✨
-          </motion.div>
+          <span className="text-lg font-bold text-primary">VS</span>
         </motion.div>
 
         {/* Mystery slot - BIGGER */}
@@ -690,49 +849,63 @@ function IdleScreen({
           animate={{ x: 0, opacity: 1, scale: 1 }}
           transition={{ delay: 0.3, type: "spring" }}
         >
-          <div className="w-36 h-44 rounded-3xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
+          <div className="w-32 h-40 rounded-3xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
             <motion.div
               animate={{ opacity: [0.3, 1, 0.3], scale: [0.9, 1.1, 0.9] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Search className="w-14 h-14 text-primary/40" />
+              <Search className="w-12 h-12 text-primary/40" />
             </motion.div>
           </div>
-          <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-muted text-muted-foreground text-sm font-bold rounded-full shadow-lg">
+          <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-muted text-muted-foreground text-xs font-bold rounded-full shadow-lg">
             ???
           </span>
         </motion.div>
-      </div>
+      </motion.div>
 
-      {/* Description */}
-      <div className="space-y-2 mt-4">
-        <h2 className="text-xl font-bold">L'Oracle va révéler ton match parfait</h2>
-        <p className="text-muted-foreground text-sm">
-          Basé sur tes réponses, l'Oracle va scanner les profils et trouver ton âme sœur.
+      {/* Description - hide when exiting */}
+      <motion.div 
+        className="space-y-1 mt-2"
+        animate={isExiting ? { opacity: 0, y: 10 } : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <h2 className="text-lg font-bold">L'Oracle va révéler ton match</h2>
+        <p className="text-muted-foreground text-xs">
+          Basé sur tes réponses, l'Oracle va trouver ton âme sœur.
         </p>
-      </div>
+      </motion.div>
 
-      {/* Info badges */}
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-          <Sparkles className="w-4 h-4 text-primary" />
+      {/* Info badges - hide when exiting */}
+      <motion.div 
+        className="flex flex-wrap items-center justify-center gap-2"
+        animate={isExiting ? { opacity: 0, scale: 0.9 } : { opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Sparkles className="w-3 h-3 text-primary" />
           <span className="text-foreground font-medium text-xs">Révélation gratuite</span>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-          <Coins className="w-4 h-4 text-primary" />
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
+          <Coins className="w-3 h-3 text-primary" />
           <span className="text-foreground font-medium text-xs">50 coins pour matcher</span>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Start button */}
-      <Button
-        onClick={onStart}
-        size="lg"
-        className="px-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold text-lg shadow-lg shadow-primary/40"
+      {/* Start button - hide when exiting */}
+      <motion.div
+        animate={isExiting ? { opacity: 0, scale: 0.8, y: 20 } : { opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
       >
-        <span className="mr-2">🔮</span>
-        Consulter l'Oracle
-      </Button>
+        <Button
+          onClick={handleStart}
+          disabled={isExiting}
+          size="lg"
+          className="px-10 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold text-base shadow-lg shadow-primary/40"
+        >
+          <span className="mr-2">🔮</span>
+          Consulter l'Oracle
+        </Button>
+      </motion.div>
     </motion.div>
   );
 }
