@@ -1,9 +1,11 @@
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, MapPin, BadgeCheck, Heart, Flame, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp } from "lucide-react";
+import { X, MapPin, BadgeCheck, Heart, Flame, User, Briefcase, GraduationCap, Ruler, Calendar, ChevronUp, Flag, Ban } from "lucide-react";
 import { useRef, useState } from "react";
 import SubscriptionBadge from "./SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
+import ReportModal from "./random-call/ReportModal";
+import BlockUserModal from "./BlockUserModal";
 
 interface ProfileData {
   id: string;
@@ -47,6 +49,8 @@ const interestColors = [
 const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRose }: ProfileModalProps) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const didSwipeRef = useRef(false);
   
   // Get subscription status for this profile
@@ -497,6 +501,29 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
                       </div>
                     </div>
                   )}
+
+                  {/* Report & Block buttons */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+                      Sécurité
+                    </h3>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setShowReportModal(true)}
+                        className="flex-1 flex items-center justify-center gap-2 p-3 glass rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <Flag className="w-4 h-4" />
+                        <span className="text-sm font-medium">Signaler</span>
+                      </button>
+                      <button
+                        onClick={() => setShowBlockModal(true)}
+                        className="flex-1 flex items-center justify-center gap-2 p-3 glass rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <Ban className="w-4 h-4" />
+                        <span className="text-sm font-medium">Bloquer</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Action buttons fixed at bottom */}
@@ -545,7 +572,29 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
     </AnimatePresence>
   );
 
-  return createPortal(modalContent, document.body);
+  return (
+    <>
+      {createPortal(modalContent, document.body)}
+      
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUserId={profile?.id || ""}
+      />
+      
+      {/* Block Modal */}
+      <BlockUserModal
+        isOpen={showBlockModal}
+        onClose={() => {
+          setShowBlockModal(false);
+          onClose();
+        }}
+        userId={profile?.id || ""}
+        userName={profile?.name || ""}
+      />
+    </>
+  );
 };
 
 export default ProfileModal;
