@@ -780,11 +780,16 @@ function IdleScreen({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center gap-4 text-center max-w-md"
+      className="flex flex-col items-center gap-4 text-center max-w-md relative"
     >
-      {/* Photos with Crystal Ball (VS) in the middle */}
+      {/* Crystal Ball with VS - Positioned absolutely so it can fly out */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-8 z-20 pointer-events-none">
+        <AnimatedCrystalBall isExiting={isExiting} showVS={true} />
+      </div>
+
+      {/* Photos on each side */}
       <motion.div 
-        className="flex items-center gap-2"
+        className="flex items-center justify-center gap-24 pt-4"
         animate={isExiting ? { 
           opacity: 0, 
           scale: 0.8,
@@ -794,14 +799,14 @@ function IdleScreen({
           scale: 1,
           y: 0 
         }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.3, delay: isExiting ? 0.2 : 0 }}
       >
         {/* My profile - Left side */}
         <motion.div
           className="relative"
           initial={{ x: -50, opacity: 0, scale: 0.8 }}
-          animate={{ x: 0, opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, type: "spring" }}
+          animate={isExiting ? { x: -100, opacity: 0 } : { x: 0, opacity: 1, scale: 1 }}
+          transition={{ delay: isExiting ? 0.1 : 0.2, type: "spring" }}
         >
           <div className="w-32 h-44 rounded-2xl border-3 border-primary/50 overflow-hidden bg-primary/10 shadow-xl shadow-primary/20">
             {myProfile?.avatarUrl ? (
@@ -821,15 +826,12 @@ function IdleScreen({
           </span>
         </motion.div>
 
-        {/* Crystal Ball with VS in the middle */}
-        <AnimatedCrystalBall isExiting={isExiting} showVS={true} />
-
         {/* Mystery slot - Right side */}
         <motion.div
           className="relative"
           initial={{ x: 50, opacity: 0, scale: 0.8 }}
-          animate={{ x: 0, opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, type: "spring" }}
+          animate={isExiting ? { x: 100, opacity: 0 } : { x: 0, opacity: 1, scale: 1 }}
+          transition={{ delay: isExiting ? 0.1 : 0.3, type: "spring" }}
         >
           <div className="w-32 h-44 rounded-2xl border-3 border-dashed border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shadow-xl">
             <motion.div
