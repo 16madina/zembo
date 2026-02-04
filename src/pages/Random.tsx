@@ -23,10 +23,8 @@ import AIMatchFinderGame from "@/components/games/AIMatchFinderGame";
 import PreConnectionScreen from "@/components/random-call/PreConnectionScreen";
 import AIConsentModal from "@/components/AIConsentModal";
 import { useAIDataConsent } from "@/hooks/useAIDataConsent";
-import ZConnectWelcomeScreen from "@/components/random-call/ZConnectWelcomeScreen";
 
 const Random = () => {
-  const [hasEnteredHub, setHasEnteredHub] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [hasPlayedZemboSound, setHasPlayedZemboSound] = useState(false);
@@ -421,15 +419,6 @@ const Random = () => {
         );
     }
   };
-
-  // Show welcome screen first
-  if (!hasEnteredHub) {
-    return (
-      <AnimatePresence>
-        <ZConnectWelcomeScreen onEnter={() => setHasEnteredHub(true)} />
-      </AnimatePresence>
-    );
-  }
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(80px+env(safe-area-inset-bottom))]">
