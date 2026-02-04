@@ -62,9 +62,9 @@ const games = [
 
 const GameHub = ({ onSelectGame }: GameHubProps) => {
   return (
-    <div className="w-full max-w-lg mx-auto px-4 pt-2">
+    <div className="w-full max-w-lg mx-auto px-4 flex flex-col">
       <motion.div
-        className="text-center mb-4"
+        className="text-center py-3"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
