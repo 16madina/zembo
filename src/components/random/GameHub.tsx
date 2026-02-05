@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Phone, Zap, Sparkles, Heart } from "lucide-react";
+ import AIConsentCard from "@/components/games/AIConsentCard";
 import goldenHand from "@/assets/golden-hand.png";
 import speedDatingPhones from "@/assets/games/speed-dating-phones.png";
 import zemboOracle from "@/assets/games/zembo-oracle.png";
@@ -63,6 +64,11 @@ const games = [
 const GameHub = ({ onSelectGame }: GameHubProps) => {
   return (
     <div className="w-full max-w-lg mx-auto px-4">
+       {/* AI Consent Card */}
+       <div className="mb-4">
+         <AIConsentCard />
+       </div>
+ 
       <div className="grid grid-cols-2 gap-3">
         {games.map((game, index) => {
           return (
