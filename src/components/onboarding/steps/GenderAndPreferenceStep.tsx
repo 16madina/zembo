@@ -53,7 +53,7 @@ const GenderAndPreferenceStep = ({ data, updateData }: GenderAndPreferenceStepPr
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-1">
       {/* Gender Selection */}
       <div>
         <p className="text-muted-foreground text-sm mb-3">
@@ -61,7 +61,7 @@ const GenderAndPreferenceStep = ({ data, updateData }: GenderAndPreferenceStepPr
         </p>
         
         {/* Base genders */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-2 gap-2 mb-2">
           {BASE_GENDER_OPTIONS.map((option, index) => 
             renderGenderButton(
               option, 
@@ -78,7 +78,7 @@ const GenderAndPreferenceStep = ({ data, updateData }: GenderAndPreferenceStepPr
         {/* LGBT+ Expandable Section */}
         <motion.button
           onClick={() => setShowLgbtOptions(!showLgbtOptions)}
-          className={`w-full p-3 rounded-2xl flex items-center justify-center gap-2 transition-all ${
+          className={`w-full p-2.5 rounded-xl flex items-center justify-center gap-2 transition-all ${
             LGBT_GENDER_OPTIONS.some(o => data.gender === o.id)
               ? "bg-primary/20 border-2 border-primary"
               : "glass border-2 border-transparent"
@@ -123,7 +123,7 @@ const GenderAndPreferenceStep = ({ data, updateData }: GenderAndPreferenceStepPr
         </p>
         
         {/* Base genders */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-2 gap-2 mb-2">
           {BASE_GENDER_OPTIONS.map((option, index) => 
             renderGenderButton(
               option, 
@@ -138,7 +138,7 @@ const GenderAndPreferenceStep = ({ data, updateData }: GenderAndPreferenceStepPr
         {/* LGBT+ Expandable Section */}
         <motion.button
           onClick={() => setShowLgbtLookingFor(!showLgbtLookingFor)}
-          className={`w-full p-3 rounded-2xl flex items-center justify-center gap-2 transition-all ${
+          className={`w-full p-2.5 rounded-xl flex items-center justify-center gap-2 transition-all ${
             LGBT_GENDER_OPTIONS.some(o => data.lookingFor.includes(o.id))
               ? "bg-primary/20 border-2 border-primary"
               : "glass border-2 border-transparent"

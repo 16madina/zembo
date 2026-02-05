@@ -91,25 +91,25 @@ const BirthdayStep = ({ data, updateData, onNext }: BirthdayStepProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-1">
       <p className="text-muted-foreground text-sm">
         Quelle est votre date de naissance ? Vous devez avoir au moins 18 ans.
       </p>
 
       {/* Date Selectors */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {/* Day */}
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground uppercase tracking-wider">
             Jour
           </label>
           <Select value={day} onValueChange={setDay}>
-            <SelectTrigger className="h-14 glass border-0 rounded-xl text-lg font-medium">
+            <SelectTrigger className="h-12 glass border-0 rounded-xl text-base font-medium">
               <SelectValue placeholder="--" />
             </SelectTrigger>
             <SelectContent className="glass border-border max-h-60">
               {days.map((d) => (
-                <SelectItem key={d} value={String(d)} className="text-lg">
+                <SelectItem key={d} value={String(d)} className="text-base">
                   {String(d).padStart(2, "0")}
                 </SelectItem>
               ))}
@@ -123,7 +123,7 @@ const BirthdayStep = ({ data, updateData, onNext }: BirthdayStepProps) => {
             Mois
           </label>
           <Select value={month} onValueChange={setMonth}>
-            <SelectTrigger className="h-14 glass border-0 rounded-xl text-lg font-medium">
+            <SelectTrigger className="h-12 glass border-0 rounded-xl text-base font-medium">
               <SelectValue placeholder="--" />
             </SelectTrigger>
             <SelectContent className="glass border-border max-h-60">
@@ -142,12 +142,12 @@ const BirthdayStep = ({ data, updateData, onNext }: BirthdayStepProps) => {
             Année
           </label>
           <Select value={year} onValueChange={setYear}>
-            <SelectTrigger className="h-14 glass border-0 rounded-xl text-lg font-medium">
+            <SelectTrigger className="h-12 glass border-0 rounded-xl text-base font-medium">
               <SelectValue placeholder="----" />
             </SelectTrigger>
             <SelectContent className="glass border-border max-h-60">
               {years.map((y) => (
-                <SelectItem key={y} value={String(y)} className="text-lg">
+                <SelectItem key={y} value={String(y)} className="text-base">
                   {y}
                 </SelectItem>
               ))}
@@ -161,11 +161,11 @@ const BirthdayStep = ({ data, updateData, onNext }: BirthdayStepProps) => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl p-5 text-center border border-primary/20"
+          className="glass rounded-xl p-4 text-center border border-primary/20"
         >
           <div className="flex items-center justify-center gap-3 mb-1">
-            <Cake className="w-5 h-5 text-primary" />
-            <p className="text-3xl font-bold text-primary">
+            <Cake className="w-4 h-4 text-primary" />
+            <p className="text-2xl font-bold text-primary">
               {calculateAge()} ans
             </p>
           </div>
@@ -181,7 +181,7 @@ const BirthdayStep = ({ data, updateData, onNext }: BirthdayStepProps) => {
         whileTap={{ scale: 0.98 }}
         onClick={handleConfirm}
         disabled={!isComplete}
-        className="w-full h-14 btn-gold rounded-2xl text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full h-12 btn-gold rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Confirmer
       </motion.button>

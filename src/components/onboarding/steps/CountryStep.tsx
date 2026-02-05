@@ -30,43 +30,43 @@ const CountryStep = ({ data, updateData, onNext }: CountryStepProps) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-1">
       <p className="text-muted-foreground text-sm mb-4">
         Sélectionnez votre pays de résidence
       </p>
 
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="text"
           placeholder="Rechercher un pays..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-12 h-14 glass border-0 rounded-2xl text-base"
+          className="w-full pl-10 h-12 glass border-0 rounded-xl text-sm"
         />
       </div>
 
-      <ScrollArea className="h-[400px] rounded-2xl glass p-2">
+      <ScrollArea className="h-[350px] rounded-xl glass p-2">
         <div className="space-y-1">
           {filteredCountries.map((country) => (
             <button
               key={country.code}
               onClick={() => handleSelect(country)}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all tap-highlight ${
+              className={`w-full flex items-center gap-2 p-2.5 rounded-lg transition-all tap-highlight ${
                 data.countryCode === country.code
                   ? "bg-primary/20 border border-primary/30"
                   : "hover:bg-secondary/50"
               }`}
             >
-              <FlagIcon countryCode={country.code} className="w-6 h-4" />
-              <span className="flex-1 text-left text-foreground">
+              <FlagIcon countryCode={country.code} className="w-5 h-3.5" />
+              <span className="flex-1 text-left text-foreground text-sm">
                 {country.name}
               </span>
               <span className="text-muted-foreground text-sm">
                 {country.dialCode}
               </span>
               {data.countryCode === country.code && (
-                <Check className="w-5 h-5 text-primary" />
+                <Check className="w-4 h-4 text-primary" />
               )}
             </button>
           ))}
