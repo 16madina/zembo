@@ -120,6 +120,9 @@ const LiveRoom = () => {
   // Alias for UI controls
   const showStreamerControls = !!isStreamer;
   
+  // STATE for dynamic stage guest role - synced with useLiveStage's isOnStage
+  const [isStageGuestState, setIsStageGuestState] = useState(false);
+  
   // Debug logging for streamer verification
   console.log("LiveRoom - SECURITY CHECK:", {
     isStreamer,
@@ -164,9 +167,7 @@ const LiveRoom = () => {
   // LiveKit for streaming to viewers
   // Use live's livekit_room_name if available, otherwise use the live id
   const roomName = live?.livekit_room_name || live?.id || id || "";
-  
-  // NOTE: effectiveIsStageGuest will be calculated AFTER useLiveStage hook is called
-  // For now, we use initial values and the role change detection in useLiveKit handles updates
+
   const {
     isConnected: liveKitConnected,
     isConnecting: liveKitConnecting,
@@ -191,10 +192,10 @@ const LiveRoom = () => {
     roomName,
     // Use accessIsStreamer for initial connection (fast, available before live loads)
     isStreamer: accessIsStreamer || (live?.streamer_id === user?.id),
-    // isStageGuest will be false initially, role change detection handles promotion
-    isStageGuest: false,
-    // Streamer: reuse the already-open camera stream to publish to LiveKit.
-    publishStream: (accessIsStreamer || (live?.streamer_id === user?.id)) ? stream : null,
+    // DYNAMIC: Stage guest role synced from useLiveStage
+    isStageGuest: isStageGuestState,
+    // Publish stream for both streamer AND stage guest
+    publishStream: (accessIsStreamer || (live?.streamer_id === user?.id) || isStageGuestState) ? stream : null,
   });
   // Auto-reconnect state for viewers
   const [showReconnectButton, setShowReconnectButton] = useState(false);
@@ -244,6 +245,21 @@ const LiveRoom = () => {
 
   // BUG #3 FIX: Define effective roles AFTER useLiveStage hook
   const effectiveIsStageGuest = isOnStage && !isStreamer;
+
+  // SYNC: Update isStageGuestState when isOnStage changes
+  // This triggers LiveKit role change detection for reconnection with publish permissions
+  useEffect(() => {
+    const shouldBeStageGuest = isOnStage && !isStreamer;
+    if (shouldBeStageGuest !== isStageGuestState) {
+      console.log("[LiveRoom] Stage guest state change:", { 
+        prev: isStageGuestState, 
+        next: shouldBeStageGuest,
+        isOnStage,
+        isStreamer,
+      });
+      setIsStageGuestState(shouldBeStageGuest);
+    }
+  }, [isOnStage, isStreamer, isStageGuestState]);
 
   useEffect(() => {
     if (isOnStage && !isStreamer) {
