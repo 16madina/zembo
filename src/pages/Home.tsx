@@ -690,10 +690,10 @@ const Home = () => {
                       <SearchX className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
-                      {profiles.length === 0 ? "Aucun profil disponible" : t.noProfilesFound}
+                       {profiles.length === 0 ? t.noProfileAvailable : t.noProfilesFound}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      {profiles.length === 0 ? "Soyez le premier à vous inscrire dans votre région !" : t.modifyFilters}
+                       {profiles.length === 0 ? t.beFirstInRegion : t.modifyFilters}
                     </p>
                     {profiles.length > 0 && (
                       <div className="flex gap-2">

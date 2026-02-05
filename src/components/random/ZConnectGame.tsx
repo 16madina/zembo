@@ -156,7 +156,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
             return (
               <div className="flex flex-col items-center justify-center gap-4">
                 <div className="w-24 h-24 rounded-full bg-muted animate-pulse" />
-                <p className="text-muted-foreground text-sm">Chargement du profil...</p>
+                 <p className="text-muted-foreground text-sm">{t.loadingProfile}</p>
               </div>
             );
           }

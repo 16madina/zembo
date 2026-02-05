@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Camera, CameraOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface VideoPlayerProps {
   isStreamer: boolean;
@@ -23,6 +24,7 @@ const VideoPlayer = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCamera, setHasCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+   const { t } = useLanguage();
 
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${streamerId}`;
 
@@ -97,7 +99,7 @@ const VideoPlayer = ({
           <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
             <CameraOff className="w-12 h-12 text-muted-foreground" />
           </div>
-          <p className="text-muted-foreground">Caméra désactivée</p>
+           <p className="text-muted-foreground">{t.cameraDisabled}</p>
         </motion.div>
       </div>
     );
@@ -125,7 +127,7 @@ const VideoPlayer = ({
             </h2>
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Camera className="w-4 h-4" />
-              <span>Mode démo - LiveKit à intégrer</span>
+               <span>{t.demoModeLiveKit}</span>
             </div>
           </motion.div>
         </div>
