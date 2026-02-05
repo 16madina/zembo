@@ -52,6 +52,9 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     toggleSpeaker,
     submitDecision,
     acceptConnection,
+    declineConnection,
+    skipConnection,
+    declinedByOther,
   } = useRandomCallLiveKit();
   
   const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
@@ -108,18 +111,17 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     setIsAccepting(false);
   };
 
-  const handleDeclineConnection = () => {
-    cancelSearch();
-    handleReset();
+  const handleDeclineConnection = async () => {
+    await declineConnection();
+    setIsSelecting(false);
+    setHasPlayedZemboSound(false);
+    setAcceptedConnection(false);
     toast.info("Connexion refusée");
   };
 
   const handleSkipConnection = async () => {
-    await cancelSearch();
-    setAcceptedConnection(false);
-    setTimeout(() => {
-      startSearch("tous");
-    }, 500);
+    await skipConnection();
+    toast.info("Recherche d'un autre profil...");
   };
 
   const renderContent = () => {
@@ -168,6 +170,45 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
         }
         // This case shouldn't be reached now, but keep as fallback
         return null;
+      
+      case "declined_by_other":
+        return (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center gap-6 p-6"
+          >
+            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+              <Phone className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <div className="text-center space-y-2">
+              <h2 className="text-lg font-semibold text-foreground">
+                L'autre personne n'était pas disponible
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Pas de soucis, on te trouve quelqu'un d'autre !
+              </p>
+            </div>
+            <motion.button
+              onClick={() => {
+                setIsSelecting(true);
+                startSearch("tous");
+              }}
+              className="btn-gold px-6 py-3 rounded-xl flex items-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Play className="w-4 h-4" />
+              <span>Relancer la recherche</span>
+            </motion.button>
+            <button
+              onClick={handleReset}
+              className="text-muted-foreground text-sm hover:underline"
+            >
+              Retour au menu
+            </button>
+          </motion.div>
+        );
       
       case "in_call":
         return (
