@@ -2,133 +2,131 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { HelpCircle, X, Sparkles, Heart, Flame, MapPin, MessageCircle, Video, Coins } from "lucide-react";
 import { useLocation } from "react-router-dom";
-
-interface TutorialStep {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-const tutorialsByPage: Record<string, { title: string; steps: TutorialStep[] }> = {
-  "/": {
-    title: "Découvrir des profils",
-    steps: [
-      {
-        icon: <Heart className="w-5 h-5 text-primary" />,
-        title: "Swipe à droite ou ❤️",
-        description: "Pour liker un profil et montrer votre intérêt"
-      },
-      {
-        icon: <X className="w-5 h-5 text-destructive" />,
-        title: "Swipe à gauche ou ✕",
-        description: "Pour passer au profil suivant"
-      },
-      {
-        icon: <Flame className="w-5 h-5 text-orange-500" fill="currentColor" />,
-        title: "Swipe vers le haut ou 🔥",
-        description: "ZFlamme pour vous démarquer (limité pour les utilisateurs gratuits)"
-      },
-      {
-        icon: <Sparkles className="w-5 h-5 text-pink-500" />,
-        title: "Envoyer une Rose 🌹",
-        description: "Envoyez une rose avec un message personnalisé pour attirer l'attention"
-      },
-      {
-        icon: <MapPin className="w-5 h-5 text-green-500" />,
-        title: "À proximité",
-        description: "Voir les profils sur une carte selon leur localisation"
-      }
-    ]
-  },
-  "/messages": {
-    title: "Messagerie",
-    steps: [
-      {
-        icon: <MessageCircle className="w-5 h-5 text-primary" />,
-        title: "Vos conversations",
-        description: "Discutez avec vos matchs et les personnes qui vous ont envoyé une rose"
-      },
-      {
-        icon: <Heart className="w-5 h-5 text-pink-500" />,
-        title: "Likes reçus",
-        description: "Voyez qui vous a liké (fonctionnalité Premium)"
-      },
-      {
-        icon: <Video className="w-5 h-5 text-accent" />,
-        title: "Appel vidéo",
-        description: "Lancez un appel vidéo avec votre match"
-      }
-    ]
-  },
-  "/random": {
-   title: "Z Games",
-    steps: [
-      {
-        icon: <Video className="w-5 h-5 text-primary" />,
-       title: "Z Connect",
-       description: "Rencontrez de nouvelles personnes en appel audio avec leur profil"
-      },
-      {
-        icon: <Heart className="w-5 h-5 text-green-500" />,
-        title: "Like mutuel",
-        description: "Si vous vous likez mutuellement, l'appel continue !"
-      },
-      {
-        icon: <X className="w-5 h-5 text-destructive" />,
-        title: "Passer",
-        description: "Passez au profil suivant si le courant ne passe pas"
-      }
-    ]
-  },
-  "/live": {
-    title: "Lives",
-    steps: [
-      {
-        icon: <Video className="w-5 h-5 text-primary" />,
-        title: "Regarder des lives",
-        description: "Regardez des diffusions en direct de la communauté"
-      },
-      {
-        icon: <Sparkles className="w-5 h-5 text-accent" />,
-        title: "Lancer votre live",
-        description: "Créez votre propre diffusion et interagissez avec votre audience"
-      },
-      {
-        icon: <Coins className="w-5 h-5 text-yellow-500" />,
-        title: "Envoyer des cadeaux",
-        description: "Soutenez vos streamers préférés avec des cadeaux virtuels"
-      }
-    ]
-  },
-  "/profile": {
-    title: "Votre profil",
-    steps: [
-      {
-        icon: <Sparkles className="w-5 h-5 text-primary" />,
-        title: "Modifier votre profil",
-        description: "Ajoutez des photos et personnalisez votre bio"
-      },
-      {
-        icon: <Sparkles className="w-5 h-5 text-accent" fill="currentColor" />,
-        title: "Vérification",
-        description: "Vérifiez votre identité pour gagner en confiance"
-      },
-      {
-        icon: <Coins className="w-5 h-5 text-yellow-500" />,
-        title: "Coins et abonnement",
-        description: "Gérez votre solde et votre abonnement Premium"
-      }
-    ]
-  }
-};
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const HelpButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  
-  // Get tutorial for current page, fallback to home
+  const { t, language } = useLanguage();
+
+  // Tutorials with translations
+  const getTutorialsByPage = () => ({
+    "/": {
+      title: language === "en" ? "Discover profiles" : "Découvrir des profils",
+      steps: [
+        {
+          icon: <Heart className="w-5 h-5 text-primary" />,
+          title: language === "en" ? "Swipe right or ❤️" : "Swipe à droite ou ❤️",
+          description: language === "en" ? "To like a profile and show your interest" : "Pour liker un profil et montrer votre intérêt"
+        },
+        {
+          icon: <X className="w-5 h-5 text-destructive" />,
+          title: language === "en" ? "Swipe left or ✕" : "Swipe à gauche ou ✕",
+          description: language === "en" ? "To skip to the next profile" : "Pour passer au profil suivant"
+        },
+        {
+          icon: <Flame className="w-5 h-5 text-orange-500" fill="currentColor" />,
+          title: language === "en" ? "Swipe up or 🔥" : "Swipe vers le haut ou 🔥",
+          description: language === "en" ? "ZFlamme to stand out (limited for free users)" : "ZFlamme pour vous démarquer (limité pour les utilisateurs gratuits)"
+        },
+        {
+          icon: <Sparkles className="w-5 h-5 text-pink-500" />,
+          title: language === "en" ? "Send a Rose 🌹" : "Envoyer une Rose 🌹",
+          description: language === "en" ? "Send a rose with a personalized message to get noticed" : "Envoyez une rose avec un message personnalisé pour attirer l'attention"
+        },
+        {
+          icon: <MapPin className="w-5 h-5 text-green-500" />,
+          title: t.nearby,
+          description: language === "en" ? "See profiles on a map by location" : "Voir les profils sur une carte selon leur localisation"
+        }
+      ]
+    },
+    "/messages": {
+      title: t.messages,
+      steps: [
+        {
+          icon: <MessageCircle className="w-5 h-5 text-primary" />,
+          title: language === "en" ? "Your conversations" : "Vos conversations",
+          description: language === "en" ? "Chat with your matches and people who sent you a rose" : "Discutez avec vos matchs et les personnes qui vous ont envoyé une rose"
+        },
+        {
+          icon: <Heart className="w-5 h-5 text-pink-500" />,
+          title: language === "en" ? "Received likes" : "Likes reçus",
+          description: language === "en" ? "See who liked you (Premium feature)" : "Voyez qui vous a liké (fonctionnalité Premium)"
+        },
+        {
+          icon: <Video className="w-5 h-5 text-accent" />,
+          title: language === "en" ? "Video call" : "Appel vidéo",
+          description: language === "en" ? "Start a video call with your match" : "Lancez un appel vidéo avec votre match"
+        }
+      ]
+    },
+    "/random": {
+      title: "Z Games",
+      steps: [
+        {
+          icon: <Video className="w-5 h-5 text-primary" />,
+          title: t.zConnect,
+          description: language === "en" ? "Meet new people in audio calls with their profile" : "Rencontrez de nouvelles personnes en appel audio avec leur profil"
+        },
+        {
+          icon: <Heart className="w-5 h-5 text-green-500" />,
+          title: language === "en" ? "Mutual like" : "Like mutuel",
+          description: language === "en" ? "If you both like each other, the call continues!" : "Si vous vous likez mutuellement, l'appel continue !"
+        },
+        {
+          icon: <X className="w-5 h-5 text-destructive" />,
+          title: t.skip,
+          description: language === "en" ? "Skip to the next profile if the connection isn't there" : "Passez au profil suivant si le courant ne passe pas"
+        }
+      ]
+    },
+    "/live": {
+      title: t.live,
+      steps: [
+        {
+          icon: <Video className="w-5 h-5 text-primary" />,
+          title: language === "en" ? "Watch lives" : "Regarder des lives",
+          description: language === "en" ? "Watch live broadcasts from the community" : "Regardez des diffusions en direct de la communauté"
+        },
+        {
+          icon: <Sparkles className="w-5 h-5 text-accent" />,
+          title: language === "en" ? "Start your live" : "Lancer votre live",
+          description: language === "en" ? "Create your own broadcast and interact with your audience" : "Créez votre propre diffusion et interagissez avec votre audience"
+        },
+        {
+          icon: <Coins className="w-5 h-5 text-yellow-500" />,
+          title: language === "en" ? "Send gifts" : "Envoyer des cadeaux",
+          description: language === "en" ? "Support your favorite streamers with virtual gifts" : "Soutenez vos streamers préférés avec des cadeaux virtuels"
+        }
+      ]
+    },
+    "/profile": {
+      title: t.myProfile,
+      steps: [
+        {
+          icon: <Sparkles className="w-5 h-5 text-primary" />,
+          title: t.editProfile,
+          description: language === "en" ? "Add photos and customize your bio" : "Ajoutez des photos et personnalisez votre bio"
+        },
+        {
+          icon: <Sparkles className="w-5 h-5 text-accent" fill="currentColor" />,
+          title: language === "en" ? "Verification" : "Vérification",
+          description: language === "en" ? "Verify your identity to build trust" : "Vérifiez votre identité pour gagner en confiance"
+        },
+        {
+          icon: <Coins className="w-5 h-5 text-yellow-500" />,
+          title: language === "en" ? "Coins and subscription" : "Coins et abonnement",
+          description: language === "en" ? "Manage your balance and Premium subscription" : "Gérez votre solde et votre abonnement Premium"
+        }
+      ]
+    }
+  });
+
   const currentPath = location.pathname;
+  const tutorialsByPage = getTutorialsByPage();
   const tutorial = tutorialsByPage[currentPath] || tutorialsByPage["/"];
+  const understoodText = language === "en" ? "Got it!" : "J'ai compris !";
 
   return (
     <>
@@ -208,7 +206,7 @@ const HelpButton = () => {
                 className="w-full mt-4 py-2.5 btn-gold rounded-xl font-medium text-sm"
                 whileTap={{ scale: 0.98 }}
               >
-                J'ai compris !
+                {understoodText}
               </motion.button>
             </motion.div>
           </>

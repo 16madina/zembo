@@ -7,6 +7,7 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useDailyRandomCalls } from "@/hooks/useDailyRandomCalls";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import PreferenceSelector from "@/components/random-call/PreferenceSelector";
 import SearchingScreen from "@/components/random-call/SearchingScreen";
 import InCallScreenLiveKit from "@/components/random-call/InCallScreenLiveKit";
@@ -30,6 +31,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
   const diceRef = useRef<HTMLDivElement>(null);
   
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { tier } = useUserSubscription(user?.id);
   
   const {
@@ -69,7 +71,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
 
     const success = await incrementCallCount();
     if (!success) {
-      toast.error("Limite d'appels atteinte pour aujourd'hui");
+      toast.error(t.limitReachedCalls);
       return;
     }
 
@@ -116,12 +118,12 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     setIsSelecting(false);
     setHasPlayedZemboSound(false);
     setAcceptedConnection(false);
-    toast.info("Connexion refusée");
+    toast.info(t.connectionRefused);
   };
 
   const handleSkipConnection = async () => {
     await skipConnection();
-    toast.info("Recherche d'un autre profil...");
+    toast.info(t.searchingAnotherProfile);
   };
 
   const renderContent = () => {
@@ -183,10 +185,10 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
             </div>
             <div className="text-center space-y-2">
               <h2 className="text-lg font-semibold text-foreground">
-                L'autre personne n'était pas disponible
+                {t.otherPersonNotAvailable}
               </h2>
               <p className="text-muted-foreground text-sm">
-                Pas de soucis, on te trouve quelqu'un d'autre !
+                {t.noWorries}
               </p>
             </div>
             <motion.button
@@ -199,13 +201,13 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
               whileTap={{ scale: 0.98 }}
             >
               <Play className="w-4 h-4" />
-              <span>Relancer la recherche</span>
+              <span>{t.restartSearch}</span>
             </motion.button>
             <button
               onClick={handleReset}
               className="text-muted-foreground text-sm hover:underline"
             >
-              Retour au menu
+              {t.backToMenu}
             </button>
           </motion.div>
         );
@@ -289,7 +291,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
 
             <motion.div className="text-center mb-0 z-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <h1 className="text-lg font-bold text-foreground">
-                <span className="text-primary text-2xl font-black">Z</span> Connect
+                <span className="text-primary text-2xl font-black">Z</span> {t.zConnect.replace("Z ", "")}
               </h1>
               <motion.div 
                 className="flex items-center justify-center gap-2 mt-0.5"
@@ -298,7 +300,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
                 transition={{ delay: 0.2 }}
               >
                 <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-1.5 h-1.5 rounded-full bg-primary" />
-                <span className="text-xs text-primary font-medium">Es-tu prêt(e) à rencontrer quelqu'un ?</span>
+                <span className="text-xs text-primary font-medium">{t.readyToMeet}</span>
               </motion.div>
             </motion.div>
 
@@ -307,7 +309,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
             </div>
             
             <motion.p className="text-muted-foreground max-w-xs leading-snug text-center z-10 text-xs -mt-12" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <span className="text-foreground font-medium">Aucun profil, juste une voix.</span> Tu vas être connecté(e) avec une personne choisie par le hasard.
+              <span className="text-foreground font-medium">{t.noProfileJustVoice}</span> {t.connectedByChance}
             </motion.p>
 
             <motion.div
@@ -349,7 +351,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
             >
               <Play className={`w-4 h-4 ${canCall ? "text-primary-foreground" : ""}`} />
               <span className={`text-sm ${canCall ? "text-primary-foreground" : ""}`}>
-                {canCall ? "Commencer" : "Limite atteinte"}
+                {canCall ? t.start : t.limitReachedCalls}
               </span>
             </motion.button>
           </>

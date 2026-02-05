@@ -242,7 +242,7 @@ const Likes = () => {
           </button>
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5 text-destructive fill-destructive" />
-            <h1 className="text-lg font-semibold">Qui m'a liké</h1>
+            <h1 className="text-lg font-semibold">{t.whoLikedMe}</h1>
           </div>
           <div className="w-9" /> {/* Spacer */}
         </div>
@@ -307,17 +307,17 @@ const Likes = () => {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-foreground mb-1">
-                  Débloque qui t'a liké ! ✨
+                {t.unlockWhoLikedYou}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  {likes.length} personne{likes.length > 1 ? "s" : ""} t'ont liké. Passe à Gold pour voir leurs photos et matcher instantanément !
+                {likes.length} {t.peopleLikedYou}
                 </p>
                 <Button
                   onClick={() => navigate("/subscriptions")}
                   className="bg-gradient-to-r from-primary to-yellow-500 text-primary-foreground hover:opacity-90"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Devenir Gold
+                {t.becomeGold}
                 </Button>
               </div>
             </div>
@@ -344,21 +344,21 @@ const Likes = () => {
               {activeTab === "rose" && <span className="text-4xl opacity-50">🌹</span>}
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              {activeTab === "all" && "Aucun like pour le moment"}
-              {activeTab === "super" && "Aucune ZFlamme pour le moment"}
-              {activeTab === "rose" && "Aucune rose pour le moment"}
+              {activeTab === "all" && t.noLikesYet}
+              {activeTab === "super" && t.noSuperLikesYet}
+              {activeTab === "rose" && t.noRosesYet}
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs">
-              {activeTab === "all" && "Continue à swiper pour attirer l'attention et recevoir tes premiers likes !"}
-              {activeTab === "super" && "Les ZFlammes 🔥 montrent un intérêt particulier. Continue à explorer !"}
-              {activeTab === "rose" && "Les roses sont des cadeaux premium. Tu en recevras bientôt !"}
+              {activeTab === "all" && t.keepSwipingForLikes}
+              {activeTab === "super" && t.superLikesShowInterest}
+              {activeTab === "rose" && t.rosesArePremium}
             </p>
             <Button
               onClick={() => navigate("/")}
               variant="outline"
               className="mt-6"
             >
-              Découvrir des profils
+              {t.discoverProfiles}
             </Button>
           </motion.div>
         )}
