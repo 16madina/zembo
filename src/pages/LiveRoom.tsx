@@ -1421,13 +1421,16 @@ const LiveRoom = () => {
           >
             <Heart className="w-5 h-5 text-foreground" />
           </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
-            onClick={() => setShowGiftPanel(true)}
-          >
-            <Gift className="w-5 h-5 text-primary" />
-          </motion.button>
+          {/* Gift button - only for viewers, not the streamer */}
+          {!isStreamer && (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-primary/80 transition-colors"
+              onClick={() => setShowGiftPanel(true)}
+            >
+              <Gift className="w-5 h-5 text-primary" />
+            </motion.button>
+          )}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={async () => {
