@@ -1552,19 +1552,22 @@ const LiveRoom = () => {
       </div>
 
       {/* Chat Area - Compact overlay */}
-      <div className="absolute bottom-20 left-0 right-0 pointer-events-none">
+      <div className="absolute bottom-24 left-0 right-0 pointer-events-none">
         {/* Messages */}
-        <div className="flex flex-col-reverse px-3 space-y-reverse space-y-1">
+        <div className="flex flex-col justify-end h-44 px-3 space-y-1.5 overflow-hidden">
           <AnimatePresence initial={false}>
             {messages.slice(-8).map((msg, index) => {
-              const opacity = Math.min(1, 0.4 + (index / 8) * 0.6);
+              const totalMessages = Math.min(messages.length, 8);
+              // Index 0 = oldest (top, faded), last index = newest (bottom, opaque)
+              const opacity = Math.min(1, 0.25 + ((index + 1) / totalMessages) * 0.75);
               return (
                 <motion.div
                   key={msg.id}
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity, x: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 400 }}
+                  layout
+                  initial={{ opacity: 0, y: 20, x: -15 }}
+                  animate={{ opacity, y: 0, x: 0 }}
+                  exit={{ opacity: 0, y: -25, scale: 0.85 }}
+                  transition={{ type: "spring", damping: 22, stiffness: 350 }}
                   className="flex items-center gap-2 max-w-[85%]"
                 >
                   <Avatar className="w-7 h-7 ring-1 ring-white/20">
