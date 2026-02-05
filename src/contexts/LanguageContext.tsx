@@ -300,6 +300,20 @@ export const translations = {
     prioritySupport: "Support prioritaire",
     currentPlan: "Plan actuel",
     subscribe: "S'abonner",
+    currentBalance: "Solde actuel",
+    priceIn: "Prix en",
+    priorityMessages: "Messages prioritaires",
+    platinumBadge: "Badge Platinum",
+    readReceipts: "Accusés de lecture",
+    incognitoMode: "Mode Incognito",
+    priorityMatches: "Matchs prioritaires",
+    
+    // Calls
+    missed: "Manqué",
+    missedPlural: "manqués",
+    noAnswer: "Non répondu",
+    outgoing: "Sortant",
+    incoming: "Entrant",
     
     // General actions
     continue: "Continuer",
@@ -629,6 +643,20 @@ export const translations = {
     prioritySupport: "Priority support",
     currentPlan: "Current plan",
     subscribe: "Subscribe",
+    currentBalance: "Current balance",
+    priceIn: "Price in",
+    priorityMessages: "Priority messages",
+    platinumBadge: "Platinum badge",
+    readReceipts: "Read receipts",
+    incognitoMode: "Incognito mode",
+    priorityMatches: "Priority matches",
+    
+    // Calls
+    missed: "Missed",
+    missedPlural: "missed",
+    noAnswer: "No answer",
+    outgoing: "Outgoing",
+    incoming: "Incoming",
     
     // General actions
     continue: "Continue",

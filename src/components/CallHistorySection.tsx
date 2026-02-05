@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CallHistoryItem {
   id: string;
@@ -30,6 +31,7 @@ interface CallHistorySectionProps {
 
 const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const [calls, setCalls] = useState<CallHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -61,7 +63,7 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
       ))];
 
       const { data: profilesData } = await supabase
-        .from("profiles")
+       .from("profiles")
         .select("user_id, display_name, avatar_url")
         .in("user_id", otherUserIds);
 
@@ -85,7 +87,7 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
           direction: isOutgoing ? "outgoing" : "incoming",
           otherUser: {
             id: otherUserId,
-            name: profile?.display_name || "Utilisateur",
+            name: profile?.display_name || (language === "en" ? "User" : "Utilisateur"),
             photo: profile?.avatar_url || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
           },
         };
@@ -143,7 +145,7 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
       return {
         icon: PhoneMissed,
         color: "text-destructive",
-        label: call.direction === "incoming" ? "Manqué" : "Non répondu",
+        label: call.direction === "incoming" ? t.missed : t.noAnswer,
       };
     }
     
@@ -151,14 +153,14 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
       return {
         icon: PhoneOutgoing,
         color: isEnded ? "text-success" : "text-muted-foreground",
-        label: "Sortant",
+        label: t.outgoing,
       };
     }
     
     return {
       icon: PhoneIncoming,
       color: isEnded ? "text-success" : "text-muted-foreground",
-      label: "Entrant",
+      label: t.incoming,
     };
   };
 
@@ -171,7 +173,7 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
 
   const formatTime = (dateString: string) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true, locale: fr });
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true, locale: language === "fr" ? fr : undefined });
     } catch {
       return "";
     }
@@ -190,7 +192,7 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
           className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted hover:bg-accent/50 transition-colors"
         >
           <Phone className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">Appels</span>
+          <span className="text-sm font-medium text-foreground">{t.calls}</span>
           {missedCount > 0 && (
             <span className="flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold bg-destructive text-destructive-foreground rounded-full animate-pulse">
               {missedCount}
@@ -203,10 +205,10 @@ const CallHistorySection = ({ onCallUser }: CallHistorySectionProps) => {
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2">
             <Phone className="w-5 h-5 text-primary" />
-            Historique des appels
+            {t.callHistory}
             {missedCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium bg-destructive text-destructive-foreground rounded-full">
-                {missedCount} manqué{missedCount > 1 ? "s" : ""}
+                {missedCount} {missedCount > 1 ? t.missedPlural : t.missed.toLowerCase()}
               </span>
             )}
           </SheetTitle>

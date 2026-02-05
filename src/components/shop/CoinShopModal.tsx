@@ -27,6 +27,7 @@ import {
   COIN_PACK_TO_PRODUCT 
 } from "@/lib/revenuecat";
 import PaymentMethodModal, { PaymentMethod } from "./PaymentMethodModal";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CoinPack {
   id: string;
@@ -90,106 +91,7 @@ interface PlanFeature {
   platinum: string | boolean;
 }
 
-const subscriptionFeatures: PlanFeature[] = [
-  {
-    name: "Likes par jour",
-    icon: <Heart className="w-4 h-4" />,
-    free: "10",
-    gold: "Illimités",
-    platinum: "Illimités",
-  },
-  {
-    name: "Super Likes",
-    icon: <Star className="w-4 h-4" />,
-    free: "1/semaine",
-    gold: "5/jour",
-    platinum: "Illimités",
-  },
-  {
-    name: "Voir qui vous a liké",
-    icon: <Eye className="w-4 h-4" />,
-    free: "Flouté",
-    gold: true,
-    platinum: true,
-  },
-  {
-    name: "Boosts gratuits",
-    icon: <Rocket className="w-4 h-4" />,
-    free: false,
-    gold: "1/mois",
-    platinum: "5/mois",
-  },
-  {
-    name: "Retour en arrière",
-    icon: <Undo2 className="w-4 h-4" />,
-    free: false,
-    gold: true,
-    platinum: true,
-  },
-  {
-    name: "Sans publicités",
-    icon: <Shield className="w-4 h-4" />,
-    free: false,
-    gold: true,
-    platinum: true,
-  },
-  {
-    name: "Passeport",
-    icon: <MapPin className="w-4 h-4" />,
-    free: false,
-    gold: true,
-    platinum: true,
-  },
-  {
-    name: "Filtres avancés",
-    icon: <Filter className="w-4 h-4" />,
-    free: false,
-    gold: true,
-    platinum: true,
-  },
-  {
-    name: "Messages prioritaires",
-    icon: <MessageCircle className="w-4 h-4" />,
-    free: false,
-    gold: false,
-    platinum: true,
-  },
-  {
-    name: "Badge Platinum",
-    icon: <Sparkles className="w-4 h-4" />,
-    free: false,
-    gold: false,
-    platinum: true,
-  },
-  {
-    name: "Accusés de lecture",
-    icon: <Check className="w-4 h-4" />,
-    free: false,
-    gold: false,
-    platinum: true,
-  },
-  {
-    name: "Mode Incognito",
-    icon: <Lock className="w-4 h-4" />,
-    free: false,
-    gold: false,
-    platinum: true,
-  },
-  {
-    name: "Matchs prioritaires",
-    icon: <Zap className="w-4 h-4" />,
-    free: false,
-    gold: false,
-    platinum: true,
-  },
-  {
-    name: "Support prioritaire",
-    icon: <Headphones className="w-4 h-4" />,
-    free: false,
-    gold: false,
-    platinum: true,
-  },
-];
+// subscriptionFeatures moved inside component to use translations
 
 interface CoinShopModalProps {
   isOpen: boolean;
@@ -198,6 +100,7 @@ interface CoinShopModalProps {
 
 const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { balance, addCoins } = useCoins();
   const { subscription, fetchSubscription } = useSubscription();
   const { subscribe, isProcessing, processingPlan, isStripe, isRevenueCat } = usePayment();
@@ -213,6 +116,108 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
 
   const currentTier = subscription?.tier || "free";
   const useRevenueCatForCoins = isNative && isRevenueCatAvailable();
+
+  // Subscription features with translations
+  const subscriptionFeatures: PlanFeature[] = [
+    {
+      name: t.likesPerDay,
+      icon: <Heart className="w-4 h-4" />,
+      free: "10",
+      gold: t.unlimited,
+      platinum: t.unlimited,
+    },
+    {
+      name: t.superLikes,
+      icon: <Star className="w-4 h-4" />,
+      free: `1${t.perWeek}`,
+      gold: `5${t.perDay}`,
+      platinum: t.unlimited,
+    },
+    {
+      name: t.seeWhoLikedYou,
+      icon: <Eye className="w-4 h-4" />,
+      free: t.blurred,
+      gold: true,
+      platinum: true,
+    },
+    {
+      name: t.freeBoosts,
+      icon: <Rocket className="w-4 h-4" />,
+      free: false,
+      gold: `1${t.perMonth}`,
+      platinum: `5${t.perMonth}`,
+    },
+    {
+      name: t.rewind,
+      icon: <Undo2 className="w-4 h-4" />,
+      free: false,
+      gold: true,
+      platinum: true,
+    },
+    {
+      name: t.noAds,
+      icon: <Shield className="w-4 h-4" />,
+      free: false,
+      gold: true,
+      platinum: true,
+    },
+    {
+      name: t.passport,
+      icon: <MapPin className="w-4 h-4" />,
+      free: false,
+      gold: true,
+      platinum: true,
+    },
+    {
+      name: t.advancedFilters,
+      icon: <Filter className="w-4 h-4" />,
+      free: false,
+      gold: true,
+      platinum: true,
+    },
+    {
+      name: t.priorityMessages,
+      icon: <MessageCircle className="w-4 h-4" />,
+      free: false,
+      gold: false,
+      platinum: true,
+    },
+    {
+      name: t.platinumBadge,
+      icon: <Sparkles className="w-4 h-4" />,
+      free: false,
+      gold: false,
+      platinum: true,
+    },
+    {
+      name: t.readReceipts,
+      icon: <Check className="w-4 h-4" />,
+      free: false,
+      gold: false,
+      platinum: true,
+    },
+    {
+      name: t.incognitoMode,
+      icon: <Lock className="w-4 h-4" />,
+      free: false,
+      gold: false,
+      platinum: true,
+    },
+    {
+      name: t.priorityMatches,
+      icon: <Zap className="w-4 h-4" />,
+      free: false,
+      gold: false,
+      platinum: true,
+    },
+    {
+      name: t.prioritySupport,
+      icon: <Headphones className="w-4 h-4" />,
+      free: false,
+      gold: false,
+      platinum: true,
+    },
+  ];
 
   useEffect(() => {
     const fetchUserCountry = async () => {
@@ -441,7 +446,7 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-20 h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50 rounded-full" />
           <DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
             <Sparkles className="w-7 h-7 text-primary" />
-            Boutique
+            {t.shop}
           </DialogTitle>
         </DialogHeader>
 
@@ -450,11 +455,11 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="coins" className="gap-2">
               <Coins className="w-4 h-4" />
-              Coins
+              {t.coins}
             </TabsTrigger>
             <TabsTrigger value="subscriptions" className="gap-2">
               <Crown className="w-4 h-4" />
-              Abonnements
+              {t.subscriptions}
             </TabsTrigger>
           </TabsList>
 
@@ -463,18 +468,18 @@ const CoinShopModal = ({ isOpen, onClose }: CoinShopModalProps) => {
             {/* Balance Display */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-2">
-                <span className="text-muted-foreground">Solde actuel:</span>
+                <span className="text-muted-foreground">{t.currentBalance}:</span>
                 <motion.span 
                   key={balance}
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
                   className="font-bold text-primary text-lg"
                 >
-                  {balance} coins
+                  {balance} {t.coins.toLowerCase()}
                 </motion.span>
               </div>
               <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mt-1">
-                <span>Prix en</span>
+                <span>{t.priceIn}</span>
                 <span className="font-semibold text-foreground">{currency.name} ({currency.symbol})</span>
               </div>
             </div>
