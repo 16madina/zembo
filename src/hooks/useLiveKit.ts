@@ -800,12 +800,17 @@ export const useLiveKit = ({
       const localParticipant = room.localParticipant;
       const newVideoOffState = !isVideoOff;
 
+      // If we are publishing an existing MediaStream (from useLocalStream),
+      // DO NOT use setCameraEnabled() because it can stop/replace the underlying camera track.
+      // That breaks the local preview and can leave the stream stuck OFF→ON on mobile.
+      const currentStream = publishStreamRef.current;
+      const isUsingExternalStream = !!currentStream;
+
       console.log("[LiveKit] Setting camera enabled:", !newVideoOffState);
 
       // Always toggle the underlying MediaStreamTrack(s) if we reused an existing stream.
       // This guarantees the local preview also resumes on mobile webviews.
-      const stream = publishStreamRef.current;
-      stream?.getVideoTracks?.()?.forEach((t) => {
+      currentStream?.getVideoTracks?.()?.forEach((t) => {
         t.enabled = !newVideoOffState;
       });
 
@@ -825,7 +830,6 @@ export const useLiveKit = ({
       };
 
       const republishVideo = async () => {
-        const currentStream = publishStreamRef.current;
         const existingVideoTrack = currentStream?.getVideoTracks?.()?.[0] || null;
 
         if (existingVideoTrack && existingVideoTrack.readyState === "live") {
@@ -837,7 +841,43 @@ export const useLiveKit = ({
           return;
         }
 
-        console.log("[LiveKit] No usable existing video track, creating a new camera track...");
+        // If we have a stream object, replace its ended/missing video track so the local preview can recover.
+        if (currentStream) {
+          console.warn(
+            "[LiveKit] Existing stream has no live video track — recreating camera track and replacing stream video track..."
+          );
+
+          const lkTrack = await createLocalVideoTrack({
+            facingMode: "user",
+            resolution: VideoPresets.h720.resolution,
+          });
+          const mst = lkTrack.mediaStreamTrack;
+
+          // Replace tracks inside the existing MediaStream (keeps LocalVideoPlayer working)
+          const oldTracks = currentStream.getVideoTracks();
+          oldTracks.forEach((t) => {
+            try {
+              currentStream.removeTrack(t);
+            } catch {
+              // ignore
+            }
+            try {
+              t.stop();
+            } catch {
+              // ignore
+            }
+          });
+          currentStream.addTrack(mst);
+          mst.enabled = true;
+
+          await localParticipant.publishTrack(mst, {
+            source: Track.Source.Camera,
+          });
+          console.log("[LiveKit] ✓ New camera MediaStreamTrack published (stream replaced)");
+          return;
+        }
+
+        console.log("[LiveKit] No stream provided — creating a new camera track...");
         const newVideoTrack = await createLocalVideoTrack({
           facingMode: "user",
           resolution: VideoPresets.h720.resolution,
@@ -852,13 +892,34 @@ export const useLiveKit = ({
       // (We also publish with source: Camera, but older sessions may still have untagged pubs.)
       const hasCameraPub = !!localParticipant.getTrackPublication(Track.Source.Camera);
 
+      const getVideoPubs = () => Array.from(localParticipant.videoTrackPublications.values());
+      const isPubTrackLive = (p: LocalTrackPublication) => {
+        const t: any = p.track;
+        const mst: MediaStreamTrack | undefined = t?.mediaStreamTrack;
+        const ready = mst?.readyState;
+        return !!t && !t.isMuted && (ready ? ready === "live" : true);
+      };
+
       if (newVideoOffState) {
         // Turning video OFF
-        if (hasCameraPub) {
+        // For external streams, NEVER call setCameraEnabled(false) (it can stop the source track).
+        // Just mute publications + disable the underlying MediaStreamTrack (done above).
+        if (isUsingExternalStream) {
+          const videoPubs = getVideoPubs();
+          await Promise.all(
+            videoPubs.map(async (pub) => {
+              try {
+                await pub.mute();
+              } catch (e) {
+                console.warn("[LiveKit] Video pub mute failed:", e);
+              }
+            })
+          );
+        } else if (hasCameraPub) {
           await localParticipant.setCameraEnabled(false);
         } else {
           // Fallback: untagged pubs
-          const videoPubs = Array.from(localParticipant.videoTrackPublications.values());
+          const videoPubs = getVideoPubs();
           await Promise.all(
             videoPubs.map(async (pub) => {
               try {
@@ -871,11 +932,25 @@ export const useLiveKit = ({
         }
       } else {
         // Turning video ON
-        if (hasCameraPub) {
+        if (isUsingExternalStream) {
+          // For external streams, unmute pubs (and rely on the stream track being re-enabled).
+          const videoPubs = getVideoPubs();
+          if (videoPubs.length > 0) {
+            await Promise.all(
+              videoPubs.map(async (pub) => {
+                try {
+                  await pub.unmute();
+                } catch (e) {
+                  console.warn("[LiveKit] Video pub unmute failed:", e);
+                }
+              })
+            );
+          }
+        } else if (hasCameraPub) {
           await localParticipant.setCameraEnabled(true);
         } else {
           // Fallback for older sessions: try unmute pubs first
-          const videoPubs = Array.from(localParticipant.videoTrackPublications.values());
+          const videoPubs = getVideoPubs();
           if (videoPubs.length > 0) {
             await Promise.all(
               videoPubs.map(async (pub) => {
@@ -891,13 +966,8 @@ export const useLiveKit = ({
 
         // HARDENING: if after turning ON we still don't have an active video track,
         // force a clean republish. This fixes the common OFF→ON "video never comes back" case.
-        const pubsAfter = Array.from(localParticipant.videoTrackPublications.values());
-        const hasActiveVideo = pubsAfter.some((p) => {
-          const t: any = p.track;
-          const mst: MediaStreamTrack | undefined = t?.mediaStreamTrack;
-          const ready = mst?.readyState;
-          return !!t && !t.isMuted && (ready ? ready === "live" : true);
-        });
+        const pubsAfter = getVideoPubs();
+        const hasActiveVideo = pubsAfter.some(isPubTrackLive);
 
         if (!hasActiveVideo) {
           console.warn("[LiveKit] No active video after enabling — forcing republish...");
