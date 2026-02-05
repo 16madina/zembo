@@ -219,10 +219,10 @@ const LocalVideoPlayer = ({
             >
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/80 backdrop-blur-sm">
                 <VideoOff className="w-5 h-5 text-amber-500" />
-                <span className="text-sm font-medium text-foreground">Caméra en pause</span>
+                <span className="text-sm font-medium text-foreground">Vidéo en pause</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Le streamer reviendra bientôt
+                {streamerName || "Le streamer"} a mis sa caméra en pause
               </p>
             </motion.div>
           </motion.div>
