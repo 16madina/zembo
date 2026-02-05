@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { isNative, isAndroid as isCapacitorAndroid } from "@/lib/capacitor";
 
 interface UseLocalStreamOptions {
   autoStart?: boolean;
@@ -7,7 +8,7 @@ interface UseLocalStreamOptions {
 // Detect Android
 const isAndroid = (): boolean => {
   if (typeof window === "undefined") return false;
-  return /Android/.test(navigator.userAgent);
+  return /Android/.test(navigator.userAgent) || isCapacitorAndroid;
 };
 
 // Detect iOS
@@ -15,6 +16,11 @@ const isIOS = (): boolean => {
   if (typeof window === "undefined") return false;
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+};
+
+// Detect if running in Capacitor WebView
+const isCapacitorWebView = (): boolean => {
+  return isNative && isCapacitorAndroid;
 };
 
 export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}) => {
@@ -26,12 +32,17 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const initAttemptRef = useRef(0);
+  const permissionRetryRef = useRef(0);
 
   // Initialize camera with robust fallback for Android/iOS
   const initCamera = useCallback(async () => {
+    const isCapacitorApp = isCapacitorWebView();
+    
     console.log("[useLocalStream] Initializing camera...", {
       isAndroid: isAndroid(),
       isIOS: isIOS(),
+      isCapacitorWebView: isCapacitorApp,
+      isNative,
       attempt: initAttemptRef.current + 1,
       userAgent: navigator.userAgent,
     });
@@ -39,30 +50,54 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
     initAttemptRef.current += 1;
     setError(null);
 
+    // CRITICAL: For Capacitor Android WebView, check if getUserMedia exists
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error("[useLocalStream] ❌ getUserMedia not available - WebView may need configuration");
+      console.error("[useLocalStream] See ANDROID_SETUP.md for MainActivity.java configuration");
+      setError("Camera API not available. Please update app or check permissions.");
+      setIsInitialized(false);
+      return null;
+    }
+
+    // On Capacitor Android, add a small delay to let WebView initialize
+    if (isCapacitorApp && initAttemptRef.current === 1) {
+      console.log("[useLocalStream] Capacitor Android: waiting 500ms for WebView camera init...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     // Define constraint sets to try in order (from most preferred to most basic)
     // CRITICAL: Use explicit "user" facingMode for front camera on mobile
-    const constraintSets: MediaStreamConstraints[] = [
-      // Try 1: Ideal resolution for live streaming
-      {
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
-      },
-      // Try 2: Lower resolution for older devices
-      {
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: true,
-      },
-      // Try 3: Very basic constraints for problematic WebViews
-      {
-        video: { facingMode: "user" },
-        audio: true,
-      },
-      // Try 4: Just video, no specific constraints (last resort)
-      {
-        video: true,
-        audio: true,
-      },
-    ];
+    // On Capacitor Android, start with simpler constraints as WebView can be picky
+    const constraintSets: MediaStreamConstraints[] = isCapacitorApp
+      ? [
+          // Capacitor Android: Start simple, WebViews often fail with complex constraints
+          { video: true, audio: true },
+          { video: { facingMode: "user" }, audio: true },
+          { video: { facingMode: { ideal: "user" } }, audio: true },
+          { video: { width: { ideal: 640 }, height: { ideal: 480 } }, audio: true },
+        ]
+      : [
+          // Try 1: Ideal resolution for live streaming
+          {
+            video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: true,
+          },
+          // Try 2: Lower resolution for older devices
+          {
+            video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+            audio: true,
+          },
+          // Try 3: Very basic constraints for problematic WebViews
+          {
+            video: { facingMode: "user" },
+            audio: true,
+          },
+          // Try 4: Just video, no specific constraints (last resort)
+          {
+            video: true,
+            audio: true,
+          },
+        ];
 
     for (let i = 0; i < constraintSets.length; i++) {
       const constraints = constraintSets[i];
@@ -70,10 +105,11 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
 
       try {
         // Add timeout for getUserMedia (can hang on some Android WebViews)
-        // INCREASED to 15s for slow mobile devices
+        // INCREASED to 20s for slow Capacitor WebViews
+        const timeoutDuration = isCapacitorApp ? 20000 : 15000;
         const mediaPromise = navigator.mediaDevices.getUserMedia(constraints);
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error("getUserMedia timeout after 15s")), 15000);
+          setTimeout(() => reject(new Error(`getUserMedia timeout after ${timeoutDuration / 1000}s`)), timeoutDuration);
         });
 
         const mediaStream = await Promise.race([mediaPromise, timeoutPromise]);
@@ -100,14 +136,29 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
 
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          // Force play on Android WebViews
-          try {
-            await videoRef.current.play();
-            console.log("[useLocalStream] ✓ Video element play() successful");
-          } catch (playErr: any) {
-            console.warn("[useLocalStream] Video play failed (may need user interaction):", playErr?.message);
+          
+          // CRITICAL: For Capacitor Android, we need explicit setup
+          if (isCapacitorApp) {
+            videoRef.current.setAttribute("playsinline", "true");
+            videoRef.current.setAttribute("webkit-playsinline", "true");
+            videoRef.current.muted = true; // Must be muted to autoplay
           }
-        }
+          
+          // Force play on Android WebViews with retry
+          const tryPlay = async (attempt = 1): Promise<void> => {
+            try {
+              await videoRef.current?.play();
+              console.log("[useLocalStream] ✓ Video element play() successful");
+            } catch (playErr: any) {
+              console.warn(`[useLocalStream] Video play failed (attempt ${attempt}):`, playErr?.message);
+              if (attempt < 3 && isCapacitorApp) {
+                await new Promise(r => setTimeout(r, 300));
+                return tryPlay(attempt + 1);
+              }
+            }
+          };
+          await tryPlay();
+          }
 
         return mediaStream;
       } catch (err: any) {
@@ -118,7 +169,16 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
         // If it's a permission error, stop trying
         if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
           console.error("[useLocalStream] ❌ Camera permission denied by user or system");
-          setError("Camera permission denied");
+          
+          // On Capacitor Android, permissions might need re-requesting
+          if (isCapacitorApp && permissionRetryRef.current < 2) {
+            permissionRetryRef.current += 1;
+            console.log("[useLocalStream] Capacitor: Retrying after permission prompt delay...");
+            await new Promise(r => setTimeout(r, 1000));
+            continue; // Try next constraint set, might work after permission is granted
+          }
+          
+          setError("Camera permission denied. Please enable camera access in app settings.");
           setIsInitialized(false);
           return null;
         }
@@ -143,8 +203,17 @@ export const useLocalStream = ({ autoStart = false }: UseLocalStreamOptions = {}
 
     // All constraint sets failed
     console.error("[useLocalStream] ❌ All constraint sets failed - camera could not be accessed");
-    console.error("[useLocalStream] This may be a WebView restriction or hardware issue");
-    setError("Could not access camera");
+    
+    if (isCapacitorApp) {
+      console.error("[useLocalStream] CAPACITOR ANDROID: Camera access blocked by WebView");
+      console.error("[useLocalStream] Ensure MainActivity.java has WebChromeClient.onPermissionRequest override");
+      console.error("[useLocalStream] See ANDROID_SETUP.md for configuration instructions");
+      setError("Camera blocked. Please reinstall app or check system permissions.");
+    } else {
+      console.error("[useLocalStream] This may be a WebView restriction or hardware issue");
+      setError("Could not access camera");
+    }
+    
     setIsInitialized(false);
     return null;
   }, [facingMode]);
