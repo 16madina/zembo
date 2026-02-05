@@ -110,6 +110,34 @@ export const useCoins = () => {
     fetchCoins();
   }, [fetchCoins]);
 
+   // Subscribe to realtime changes on user_coins table
+   useEffect(() => {
+     if (!user) return;
+ 
+     const channel = supabase
+       .channel(`user_coins_${user.id}`)
+       .on(
+         "postgres_changes",
+         {
+           event: "*",
+           schema: "public",
+           table: "user_coins",
+           filter: `user_id=eq.${user.id}`,
+         },
+         (payload) => {
+           console.log("[useCoins] Realtime update received:", payload);
+           if (payload.eventType === "UPDATE" || payload.eventType === "INSERT") {
+             setCoins(payload.new as UserCoins);
+           }
+         }
+       )
+       .subscribe();
+ 
+     return () => {
+       supabase.removeChannel(channel);
+     };
+   }, [user]);
+ 
   return {
     coins,
     balance: coins?.balance ?? 0,
