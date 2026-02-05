@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CreateLiveModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ const CreateLiveModal = ({
   isLoading,
 }: CreateLiveModalProps) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -206,10 +208,10 @@ const CreateLiveModal = ({
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-foreground">
-                      Lancer un Live
+                      {t.startLive}
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                      Partagez un moment avec votre communauté
+                      {t.shareWithCommunity}
                     </p>
                   </div>
                 </div>
@@ -227,7 +229,7 @@ const CreateLiveModal = ({
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     <ImagePlus className="w-4 h-4 inline mr-1" />
-                    Vignette du live
+                    {t.liveThumbnail}
                   </label>
                   
                   <div className="flex gap-3">
@@ -272,7 +274,7 @@ const CreateLiveModal = ({
                         }`}
                       >
                         <User className="w-4 h-4" />
-                        <span className="text-xs font-medium">Photo de profil</span>
+                        <span className="text-xs font-medium">{t.profilePhoto}</span>
                       </button>
                       
                       <button
@@ -286,7 +288,7 @@ const CreateLiveModal = ({
                       >
                         <ImagePlus className="w-4 h-4" />
                         <span className="text-xs font-medium">
-                          {thumbnailPreview ? 'Changer l\'image' : 'Importer une image'}
+                          {thumbnailPreview ? t.changeImage : t.uploadImage}
                         </span>
                       </button>
                       
@@ -308,10 +310,10 @@ const CreateLiveModal = ({
                 {/* Title */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
-                    Titre du live *
+                    {t.liveTitle} *
                   </label>
                   <Input
-                    placeholder="Ex: Soirée chill, venez discuter !"
+                    placeholder={t.liveTitlePlaceholder}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     maxLength={100}
@@ -323,10 +325,10 @@ const CreateLiveModal = ({
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     <FileText className="w-4 h-4 inline mr-1" />
-                    Description (optionnel)
+                    {t.descriptionOptional}
                   </label>
                   <Textarea
-                    placeholder="Décrivez votre live..."
+                    placeholder={t.describeLive}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     maxLength={500}
@@ -339,7 +341,7 @@ const CreateLiveModal = ({
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     <Hash className="w-4 h-4 inline mr-1" />
-                    Tags ({tags.length}/5)
+                    {t.tags} ({tags.length}/5)
                   </label>
 
                   {/* Selected Tags */}
@@ -377,7 +379,7 @@ const CreateLiveModal = ({
                   {/* Custom Tag Input */}
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Ajouter un tag..."
+                      placeholder={t.addTag}
                       value={customTag}
                       onChange={(e) => setCustomTag(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && handleAddCustomTag()}
@@ -403,7 +405,7 @@ const CreateLiveModal = ({
                   onClick={onClose}
                   disabled={isLoading || uploadingThumbnail}
                 >
-                  Annuler
+                  {t.cancel}
                 </Button>
                 <Button
                   className="flex-1 btn-gold"
@@ -413,12 +415,12 @@ const CreateLiveModal = ({
                   {isLoading || uploadingThumbnail ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      {uploadingThumbnail ? "Upload..." : "Lancement..."}
+                      {uploadingThumbnail ? t.upload : t.launching}
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
                       <Radio className="w-4 h-4" />
-                      Go Live
+                      {t.goLive}
                     </span>
                   )}
                 </Button>

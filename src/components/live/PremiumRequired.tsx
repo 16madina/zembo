@@ -1,12 +1,15 @@
 import { motion } from "framer-motion";
 import { Crown, Sparkles, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PremiumRequiredProps {
   onUpgrade?: () => void;
 }
 
 const PremiumRequired = ({ onUpgrade }: PremiumRequiredProps) => {
+  const { t, language } = useLanguage();
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -18,31 +21,33 @@ const PremiumRequired = ({ onUpgrade }: PremiumRequiredProps) => {
       </div>
       
       <h3 className="text-lg font-bold text-foreground mb-2">
-        Fonctionnalité Premium
+        {language === "en" ? "Premium Feature" : "Fonctionnalité Premium"}
       </h3>
       
       <p className="text-sm text-muted-foreground mb-4">
-        Devenez Premium ou VIP pour lancer vos propres lives et partager des moments uniques avec votre communauté.
+        {language === "en" 
+          ? "Become Premium or VIP to launch your own lives and share unique moments with your community."
+          : "Devenez Premium ou VIP pour lancer vos propres lives et partager des moments uniques avec votre communauté."}
       </p>
 
       <div className="space-y-2 text-left mb-6">
         <div className="flex items-center gap-2 text-sm text-foreground/80">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span>Lancez des lives illimités</span>
+          <span>{language === "en" ? "Launch unlimited lives" : "Lancez des lives illimités"}</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-foreground/80">
           <Radio className="w-4 h-4 text-primary" />
-          <span>Streaming vidéo HD</span>
+          <span>{language === "en" ? "HD video streaming" : "Streaming vidéo HD"}</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-foreground/80">
           <Crown className="w-4 h-4 text-primary" />
-          <span>Recevez des cadeaux virtuels</span>
+          <span>{language === "en" ? "Receive virtual gifts" : "Recevez des cadeaux virtuels"}</span>
         </div>
       </div>
 
       <Button className="w-full btn-gold" onClick={onUpgrade}>
         <Crown className="w-4 h-4 mr-2" />
-        Passer Premium
+        {language === "en" ? "Go Premium" : "Passer Premium"}
       </Button>
     </motion.div>
   );

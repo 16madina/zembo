@@ -8,6 +8,7 @@ import LiveCard from "@/components/live/LiveCard";
 import CreateLiveModal from "@/components/live/CreateLiveModal";
 import { useLives } from "@/hooks/useLives";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -29,13 +30,14 @@ const item = {
 const Live = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { lives, loading, createLive } = useLives();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreatingLive, setIsCreatingLive] = useState(false);
 
   const handleGoLive = () => {
     if (!user) {
-      toast.error("Connectez-vous pour lancer un live");
+      toast.error(t.login);
       navigate("/auth");
       return;
     }
@@ -61,7 +63,7 @@ const Live = () => {
 
     if (data) {
       setShowCreateModal(false);
-      toast.success("Live lancé avec succès !");
+      toast.success(t.success);
       navigate(`/live/${data.id}`);
     }
   };
@@ -98,7 +100,7 @@ const Live = () => {
             <Radio className="w-5 h-5 text-primary-foreground" />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
           </div>
-          <span className="text-primary-foreground">Go Live</span>
+          <span className="text-primary-foreground">{t.goLive}</span>
         </motion.button>
       </motion.div>
 
@@ -111,8 +113,8 @@ const Live = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-xl font-bold text-foreground">Lives en cours</h2>
-          <p className="text-sm text-muted-foreground">Rejoignez une diffusion</p>
+          <h2 className="text-xl font-bold text-foreground">{t.liveInProgress}</h2>
+          <p className="text-sm text-muted-foreground">{t.joinBroadcast}</p>
         </motion.div>
 
         {/* Live Streams Grid */}
@@ -132,10 +134,10 @@ const Live = () => {
               <Radio className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              Aucun live en cours
+              {t.noLivesYet}
             </h3>
             <p className="text-sm text-muted-foreground">
-              Soyez le premier à lancer un live !
+              {t.beFirstToLive}
             </p>
           </motion.div>
         ) : (

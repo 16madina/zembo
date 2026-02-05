@@ -34,6 +34,7 @@ import IdentityVerificationBanner from "@/components/profile/IdentityVerificatio
 import ShopButton from "@/components/shop/ShopButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import { toast } from "sonner";
@@ -106,6 +107,7 @@ const MAX_EMAILS_PER_DAY = 3;
 const Profile = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
   const { isAdmin } = useUserRole();
   const { status: identityStatus, rejectionReason: identityRejectionReason, refetch: refetchIdentity } = useIdentityVerification();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -332,7 +334,7 @@ const Profile = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-xl font-bold text-primary-foreground">Mon Profil</h1>
+          <h1 className="text-xl font-bold text-primary-foreground">{t.myProfile}</h1>
           <div className="flex gap-2">
             {/* Shop Button - Coin Balance */}
             <ShopButton variant="compact" className="bg-primary/20 backdrop-blur-sm border-primary/30 text-primary-foreground hover:bg-primary/30" />
@@ -409,12 +411,12 @@ const Profile = () => {
             {isVerified ? (
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-success/20 text-success">
                 <ShieldCheck className="w-4 h-4" />
-                <span className="text-sm font-medium">Profil vérifié</span>
+                <span className="text-sm font-medium">{t.verifiedProfile}</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 text-muted-foreground">
                 <ShieldOff className="w-4 h-4" />
-                <span className="text-sm font-medium">Profil non vérifié</span>
+                <span className="text-sm font-medium">{t.unverifiedProfile}</span>
               </div>
             )}
 
@@ -422,14 +424,14 @@ const Profile = () => {
             {profile?.email_verified ? (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-400">
                 <Mail className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">Email vérifié : {profile?.email}</span>
+                <span className="text-xs font-medium">{t.emailVerified} : {profile?.email}</span>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 {profile?.email ? (
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-400">
                     <Mail className="w-3.5 h-3.5" />
-                    <span className="text-xs font-medium">Email en attente : {profile?.email}</span>
+                    <span className="text-xs font-medium">{t.emailPending} : {profile?.email}</span>
                   </div>
                 ) : null}
                 
@@ -438,12 +440,12 @@ const Profile = () => {
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/20 text-red-400">
                       <Clock className="w-3.5 h-3.5" />
-                      <span className="text-xs font-medium">Limite atteinte (3/3)</span>
+                      <span className="text-xs font-medium">{t.limitReached} (3/3)</span>
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/30 border border-muted">
                       <Clock className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm font-mono text-muted-foreground">
-                        Réessayez dans <span className="text-foreground font-semibold">{countdown}</span>
+                        {t.retryIn} <span className="text-foreground font-semibold">{countdown}</span>
                       </span>
                     </div>
                   </div>
@@ -453,7 +455,7 @@ const Profile = () => {
                     {(profile?.verification_email_count || 0) > 0 && (
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/30 text-muted-foreground">
                         <span className="text-xs">
-                          {MAX_EMAILS_PER_DAY - (profile?.verification_email_count || 0)} envoi{MAX_EMAILS_PER_DAY - (profile?.verification_email_count || 0) > 1 ? 's' : ''} restant{MAX_EMAILS_PER_DAY - (profile?.verification_email_count || 0) > 1 ? 's' : ''}
+                          {MAX_EMAILS_PER_DAY - (profile?.verification_email_count || 0)} {t.remainingSends}
                         </span>
                       </div>
                     )}

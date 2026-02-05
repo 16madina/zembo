@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MatchModalProps {
   profile: Profile | null;
@@ -16,6 +17,7 @@ interface MatchModalProps {
 
 const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [currentUserPhoto, setCurrentUserPhoto] = useState<string | null>(null);
 
   // Fetch current user's photo
@@ -157,10 +159,10 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
               className="mb-10"
             >
               <h1 className="text-5xl font-bold text-gradient-gold mb-3 drop-shadow-lg">
-                C'est un Match !
+                {t.itsAMatch}
               </h1>
               <p className="text-lg text-muted-foreground">
-                Vous et <span className="text-foreground font-semibold">{profile.name}</span> vous êtes likés
+                {t.youAndMatch.replace("{name}", profile.name)}
               </p>
             </motion.div>
 
@@ -276,7 +278,7 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
                 className="w-full py-4 btn-gold rounded-2xl font-semibold flex items-center justify-center gap-3"
               >
                 <MessageCircle className="w-5 h-5 text-primary-foreground" />
-                <span className="text-primary-foreground">Envoyer un message</span>
+                <span className="text-primary-foreground">{t.sendMessage}</span>
               </motion.button>
               <motion.button
                 onClick={onClose}
@@ -284,7 +286,7 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-4 glass rounded-2xl font-semibold text-secondary-foreground"
               >
-                Continuer à swiper
+                {t.keepSwiping}
               </motion.button>
             </motion.div>
           </motion.div>

@@ -5,6 +5,7 @@ import { Profile } from "@/data/mockProfiles";
 import SubscriptionBadge from "./SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
 import FireParticles from "./FireParticles";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ProfileCardProps {
   profile: Profile;
@@ -17,6 +18,7 @@ interface ProfileCardProps {
 }
 
 const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLike, onSendRose }: ProfileCardProps) => {
+  const { t } = useLanguage();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const controls = useAnimation();
@@ -217,7 +219,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
           className="absolute top-8 left-4 px-4 py-2 border-[3px] border-success rounded-xl -rotate-12 bg-success/10 backdrop-blur-sm pointer-events-none"
           style={{ opacity: likeOpacity }}
         >
-          <span className="text-2xl font-bold text-success tracking-wider">LIKE</span>
+          <span className="text-2xl font-bold text-success tracking-wider">{t.like}</span>
         </motion.div>
 
         {/* NOPE Overlay */}
@@ -225,7 +227,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
           className="absolute top-8 right-4 px-4 py-2 border-[3px] border-destructive rounded-xl rotate-12 bg-destructive/10 backdrop-blur-sm pointer-events-none"
           style={{ opacity: nopeOpacity }}
         >
-          <span className="text-2xl font-bold text-destructive tracking-wider">NOPE</span>
+          <span className="text-2xl font-bold text-destructive tracking-wider">{t.nope}</span>
         </motion.div>
 
         {/* ZFLAMME Overlay */}
@@ -234,7 +236,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
           style={{ opacity: superLikeOpacity }}
         >
           <span className="text-6xl">🔥</span>
-          <span className="text-lg font-bold text-orange-500 tracking-wider">ZFLAMME</span>
+          <span className="text-lg font-bold text-orange-500 tracking-wider">{t.zflamme}</span>
         </motion.div>
 
         {/* Gradient Overlay */}
@@ -265,7 +267,7 @@ const ProfileCard = ({ profile, onSwipe, onInfoClick, onLike, onPass, onSuperLik
                   <span className="w-2 h-2 bg-success rounded-full block" />
                   <span className="absolute inset-0 w-2 h-2 bg-success rounded-full animate-ping opacity-75" />
                 </span>
-                <span className="text-success">En ligne</span>
+                <span className="text-success">{t.online}</span>
               </span>
             )}
             <span className="flex items-center gap-1 text-xs text-foreground/70">
