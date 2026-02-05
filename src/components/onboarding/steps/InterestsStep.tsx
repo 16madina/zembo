@@ -18,7 +18,7 @@ const InterestsStep = ({ data, updateData }: InterestsStepProps) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 px-1">
       <p className="text-muted-foreground text-sm mb-2">
         Choisissez au moins 3 centres d'intérêt (max 10)
       </p>
@@ -26,7 +26,7 @@ const InterestsStep = ({ data, updateData }: InterestsStepProps) => {
         {data.interests.length}/10 sélectionné(s)
       </p>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {interestsList.map((interest, index) => {
           const isSelected = data.interests.includes(interest);
           return (
@@ -37,7 +37,7 @@ const InterestsStep = ({ data, updateData }: InterestsStepProps) => {
               transition={{ delay: index * 0.02 }}
               onClick={() => toggleInterest(interest)}
               disabled={!isSelected && data.interests.length >= 10}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all tap-highlight ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all tap-highlight ${
                 isSelected
                   ? "bg-primary text-primary-foreground"
                   : "glass text-foreground hover:bg-secondary/50 disabled:opacity-50"
