@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Phone, ArrowLeft } from "lucide-react";
+import { Play, Phone, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRandomCallLiveKit } from "@/hooks/useRandomCallLiveKit";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
@@ -36,6 +36,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     status,
     sessionId,
     matchedUserId,
+    roomName,
     isConnected,
     isMuted,
     isSpeakerOn,
@@ -50,10 +51,12 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     toggleMute,
     toggleSpeaker,
     submitDecision,
+    acceptConnection,
   } = useRandomCallLiveKit();
   
   const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
   const { canCall, remainingCalls, maxCalls, incrementCallCount, isLoading: isLoadingCalls } = useDailyRandomCalls();
+  const [isAccepting, setIsAccepting] = useState(false);
 
   const handleCommencer = async () => {
     if (!canCall) {
@@ -91,8 +94,18 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     setAcceptedConnection(false);
   };
 
-  const handleAcceptConnection = () => {
+  const handleAcceptConnection = async () => {
+    setIsAccepting(true);
+    try {
+      await acceptConnection();
+    } catch (err) {
+      console.error("Error accepting connection:", err);
+      toast.error("Erreur lors de la connexion");
+      setIsAccepting(false);
+      return;
+    }
     setAcceptedConnection(true);
+    setIsAccepting(false);
   };
 
   const handleDeclineConnection = () => {
@@ -131,8 +144,9 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
         );
       
       case "matched":
-        // ALWAYS show PreConnectionScreen first - user MUST accept before call starts
-        if (!acceptedConnection) {
+      case "connecting":
+        // ALWAYS show PreConnectionScreen first until we're in_call
+        if (status === "matched" || status === "connecting") {
           if (!matchedUserId) {
             // Still waiting for matchedUserId, show loading state
             return (
@@ -148,25 +162,12 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
               onAccept={handleAcceptConnection}
               onDecline={handleDeclineConnection}
               onSkip={handleSkipConnection}
+              isLoading={isAccepting || status === "connecting"}
             />
           );
         }
-        // Only proceed to InCallScreen AFTER user explicitly accepted
-        return (
-          <InCallScreenLiveKit 
-            timeRemaining={timeRemaining}
-            isConnected={isConnected}
-            isMuted={isMuted}
-            isSpeakerOn={isSpeakerOn}
-            audioLevel={audioLevel}
-            error={error}
-            matchedUserId={matchedUserId || undefined}
-            sessionId={sessionId || undefined}
-            onToggleMute={toggleMute}
-            onToggleSpeaker={toggleSpeaker}
-            onEndCall={handleReset}
-          />
-        );
+        // This case shouldn't be reached now, but keep as fallback
+        return null;
       
       case "in_call":
         return (
