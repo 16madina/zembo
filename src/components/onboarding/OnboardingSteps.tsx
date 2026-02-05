@@ -241,7 +241,7 @@ const OnboardingStepsInner = ({ onComplete, onBack }: OnboardingStepsProps) => {
         </motion.h1>
 
         {/* Step Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -249,6 +249,7 @@ const OnboardingStepsInner = ({ onComplete, onBack }: OnboardingStepsProps) => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3 }}
+              className="max-w-full"
             >
               {renderStep()}
             </motion.div>
