@@ -1552,61 +1552,63 @@ const LiveRoom = () => {
       </div>
 
       {/* Chat Area - Compact overlay */}
-      <div className="absolute bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]">
+      <div className="absolute bottom-20 left-0 right-0 pointer-events-none">
         {/* Messages */}
-        <div className="relative h-36 overflow-hidden px-4 pt-6">
-          {/* Fade gradient at top */}
-          <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-10" />
-          
-          {/* Messages container - show only last 6 messages */}
-          <div className="flex flex-col justify-end h-full space-y-1.5">
-            <AnimatePresence initial={false} mode="popLayout">
-              {messages.slice(-6).map((msg) => (
+        <div className="flex flex-col-reverse px-3 space-y-reverse space-y-1">
+          <AnimatePresence initial={false}>
+            {messages.slice(-8).map((msg, index) => {
+              const opacity = Math.min(1, 0.4 + (index / 8) * 0.6);
+              return (
                 <motion.div
                   key={msg.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                  transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                  className="flex items-start gap-2 bg-black/40 backdrop-blur-sm rounded-xl px-2.5 py-1.5 max-w-[85%]"
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity, x: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 400 }}
+                  className="flex items-center gap-2 max-w-[85%]"
                 >
-                  <Avatar className="w-6 h-6 flex-shrink-0">
+                  <Avatar className="w-7 h-7 ring-1 ring-white/20">
                     <AvatarImage
                       src={
                         msg.profile?.avatar_url ||
                         `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.user_id}`
                       }
                     />
-                    <AvatarFallback className="text-[10px]">
+                    <AvatarFallback className="text-[10px] bg-primary/20">
                       {msg.profile?.display_name?.[0] || "?"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0">
-                    <span className="text-xs font-semibold text-primary">
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className="text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                       {msg.profile?.display_name || "Anonyme"}
                     </span>
-                    <p className="text-sm text-white leading-tight break-words">{msg.content}</p>
+                    <span className="text-sm text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                      {msg.content}
+                    </span>
                   </div>
                 </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+              );
+            })}
+          </AnimatePresence>
         </div>
+      </div>
 
-        {/* Message Input */}
-        <div className="px-4 pb-4 pt-2 flex gap-2 bg-gradient-to-t from-background/95 via-background/80 to-transparent">
+      {/* Message Input - Fixed at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)] px-4 py-3">
+        <div className="flex gap-2">
           <Input
             placeholder="Envoyer un message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-            className="flex-1 bg-background/50 backdrop-blur-sm border-border/50"
+            className="flex-1 h-10 bg-black/40 backdrop-blur-sm border-white/10 text-white placeholder:text-white/50"
             disabled={!user}
           />
           <Button
             size="icon"
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || !user}
+            className="h-10 w-10 bg-primary/80 hover:bg-primary"
           >
             <Send className="w-4 h-4" />
           </Button>
