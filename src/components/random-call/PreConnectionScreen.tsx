@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, X, SkipForward, MapPin, User, Loader2 } from "lucide-react";
+import { Check, X, SkipForward, MapPin, User, Loader2, MoreVertical, Flag, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ReportModal from "./ReportModal";
+import BlockUserModal from "@/components/BlockUserModal";
 
 interface MatchedUserInfo {
   display_name: string | null;
@@ -30,6 +38,8 @@ const PreConnectionScreen = ({
 }: PreConnectionScreenProps) => {
   const [matchedUser, setMatchedUser] = useState<MatchedUserInfo | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -87,7 +97,34 @@ const PreConnectionScreen = ({
       exit={{ opacity: 0, scale: 0.9 }}
       className="flex flex-col items-center justify-center gap-6 px-4"
     >
-      {/* Title */}
+    {/* Header with options menu */}
+    <div className="w-full max-w-xs flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreVertical className="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => setShowReportModal(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Flag className="w-4 h-4 mr-2" />
+            Signaler
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setShowBlockModal(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Ban className="w-4 h-4 mr-2" />
+            Bloquer
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+
+    {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -223,6 +260,19 @@ const PreConnectionScreen = ({
         <span className="text-primary font-medium">Accepter</span>
         <span>Passer</span>
       </motion.div>
+
+    {/* Modals */}
+    <ReportModal
+      isOpen={showReportModal}
+      onClose={() => setShowReportModal(false)}
+      reportedUserId={matchedUserId}
+    />
+    <BlockUserModal
+      isOpen={showBlockModal}
+      onClose={() => setShowBlockModal(false)}
+      userId={matchedUserId}
+      userName={matchedUser?.display_name || undefined}
+    />
     </motion.div>
   );
 };
