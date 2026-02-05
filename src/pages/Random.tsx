@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import GameHub from "@/components/random/GameHub";
@@ -15,9 +16,22 @@ type GameMode = "hub" | "zconnect" | "speedDating" | "oracle" | "compatibility";
 
 const Random = () => {
   const [currentGame, setCurrentGame] = useState<GameMode>("hub");
+   const location = useLocation();
    const { hasConsented, isLoading } = useAIDataConsent();
    const { language } = useLanguage();
 
+   // Reset to hub when navigating to this page (e.g., clicking nav button while in a game)
+   useEffect(() => {
+     // When location key changes (new navigation) and we're on /, reset to hub
+     if (location.pathname === "/" && currentGame !== "hub") {
+       // Check if this is a new navigation (not initial mount)
+       const isNewNavigation = location.key !== "default";
+       if (isNewNavigation) {
+         setCurrentGame("hub");
+       }
+     }
+   }, [location.key]);
+ 
   const handleSelectGame = (game: "zconnect" | "speedDating" | "oracle" | "compatibility") => {
      // AI games require consent
      const aiGames = ["compatibility", "oracle", "speedDating"];
