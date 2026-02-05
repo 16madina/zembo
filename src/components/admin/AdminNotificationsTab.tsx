@@ -38,7 +38,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+ import { fr, enUS } from "date-fns/locale";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AdminNotification {
   id: string;
@@ -58,6 +59,7 @@ interface AdminNotification {
 }
 
 const AdminNotificationsTab = () => {
+   const { t, language } = useLanguage();
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
@@ -107,7 +109,7 @@ const AdminNotificationsTab = () => {
       setNotifications(notificationsWithProfiles);
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      toast.error("Erreur lors du chargement des notifications");
+       toast.error(t.errorLoadingData);
     } finally {
       setIsLoading(false);
     }
@@ -127,10 +129,10 @@ const AdminNotificationsTab = () => {
       if (error) throw error;
 
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-      toast.success("Notification supprimée");
+       toast.success(t.notificationDeleted);
     } catch (error) {
       console.error("Error deleting notification:", error);
-      toast.error("Erreur lors de la suppression");
+       toast.error(t.errorDeleting);
     }
   };
 
@@ -141,22 +143,22 @@ const AdminNotificationsTab = () => {
       if (error) throw error;
 
       setNotifications([]);
-      toast.success("Toutes les notifications ont été supprimées");
+       toast.success(t.allNotificationsDeleted);
     } catch (error) {
       console.error("Error deleting all notifications:", error);
-      toast.error("Erreur lors de la suppression");
+       toast.error(t.errorDeleting);
     }
   };
 
   const getNotificationTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
-      announcement: { label: "Annonce", color: "bg-blue-500" },
-      warning: { label: "Avertissement", color: "bg-amber-500" },
-      system: { label: "Système", color: "bg-slate-500" },
-      promotion: { label: "Promotion", color: "bg-green-500" },
-      identity_verification: { label: "Vérification", color: "bg-purple-500" },
+       announcement: { label: t.announcements, color: "bg-blue-500" },
+       warning: { label: t.warning, color: "bg-amber-500" },
+       system: { label: t.system, color: "bg-slate-500" },
+       promotion: { label: t.promotion, color: "bg-green-500" },
+       identity_verification: { label: t.verifications, color: "bg-purple-500" },
     };
-    return types[type] || { label: type, color: "bg-gray-500" };
+     return types[type] || { label: t.general, color: "bg-gray-500" };
   };
 
   const getRecipientLabel = (notification: AdminNotification) => {
@@ -164,14 +166,14 @@ const AdminNotificationsTab = () => {
       return (
         <span className="flex items-center gap-1">
           <Users className="w-3 h-3" />
-          Tous les utilisateurs
+           {t.allUsers}
         </span>
       );
     }
     return (
       <span className="flex items-center gap-1">
         <User className="w-3 h-3" />
-        {notification.recipient_profile?.display_name || "Utilisateur inconnu"}
+         {notification.recipient_profile?.display_name || t.unknownUser}
       </span>
     );
   };
@@ -182,22 +184,22 @@ const AdminNotificationsTab = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-primary" />
-            <CardTitle>Historique des Notifications</CardTitle>
+             <CardTitle>{t.notificationsHistory}</CardTitle>
           </div>
 
           <div className="flex items-center gap-2">
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filtrer par type" />
+                 <SelectValue placeholder={t.filterByType} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="announcement">Annonces</SelectItem>
-                <SelectItem value="warning">Avertissements</SelectItem>
-                <SelectItem value="system">Système</SelectItem>
-                <SelectItem value="promotion">Promotions</SelectItem>
-                <SelectItem value="identity_verification">Vérifications</SelectItem>
+                 <SelectItem value="all">{t.allTypes}</SelectItem>
+                 <SelectItem value="announcement">{t.announcements}</SelectItem>
+                 <SelectItem value="warning">{t.warnings}</SelectItem>
+                 <SelectItem value="system">{t.system}</SelectItem>
+                 <SelectItem value="promotion">{t.promotions}</SelectItem>
+                 <SelectItem value="identity_verification">{t.verifications}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -210,21 +212,21 @@ const AdminNotificationsTab = () => {
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm">
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Tout supprimer
+                     {t.deleteAll}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                     <AlertDialogTitle>{t.confirmDeleteAll}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Êtes-vous sûr de vouloir supprimer toutes les notifications ?
-                      Cette action est irréversible.
+                       {t.confirmDeleteAllNotifications}
+                       {t.irreversibleAction}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                     <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteAll}>
-                      Supprimer tout
+                       {t.deleteAllNotifications}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -242,7 +244,7 @@ const AdminNotificationsTab = () => {
         ) : notifications.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Aucune notification trouvée</p>
+             <p>{t.noNotificationsFound}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -266,7 +268,7 @@ const AdminNotificationsTab = () => {
                           </Badge>
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {format(new Date(notification.created_at), "dd MMM yyyy HH:mm", { locale: fr })}
+                             {format(new Date(notification.created_at), "dd MMM yyyy HH:mm", { locale: language === "fr" ? fr : enUS })}
                           </span>
                         </div>
 
@@ -278,8 +280,8 @@ const AdminNotificationsTab = () => {
                         </p>
 
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>Destinataire: {getRecipientLabel(notification)}</span>
-                          <span>Expéditeur: {notification.sender_profile?.display_name || "Admin"}</span>
+                           <span>{t.recipientLabel}: {getRecipientLabel(notification)}</span>
+                           <span>{t.senderLabel}: {notification.sender_profile?.display_name || t.admin}</span>
                         </div>
 
                         <div className="flex items-center gap-3 mt-2">
@@ -289,12 +291,12 @@ const AdminNotificationsTab = () => {
                               {notification.email_sent_at ? (
                                 <span className="text-green-600 flex items-center gap-1">
                                   <CheckCircle className="w-3 h-3" />
-                                  Envoyé
+                                   {t.sent}
                                 </span>
                               ) : (
                                 <span className="text-amber-600 flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3" />
-                                  En attente
+                                   {t.waitingStatus}
                                 </span>
                               )}
                             </span>
@@ -305,12 +307,12 @@ const AdminNotificationsTab = () => {
                               {notification.push_sent_at ? (
                                 <span className="text-green-600 flex items-center gap-1">
                                   <CheckCircle className="w-3 h-3" />
-                                  Envoyé
+                                   {t.sent}
                                 </span>
                               ) : (
                                 <span className="text-amber-600 flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3" />
-                                  En attente
+                                   {t.waitingStatus}
                                 </span>
                               )}
                             </span>
@@ -326,15 +328,15 @@ const AdminNotificationsTab = () => {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer cette notification ?</AlertDialogTitle>
+                             <AlertDialogTitle>{t.deleteThisNotification}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Cette action est irréversible.
+                               {t.irreversibleAction}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                             <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
                             <AlertDialogAction onClick={() => handleDelete(notification.id)}>
-                              Supprimer
+                               {t.delete}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

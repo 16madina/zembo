@@ -33,6 +33,7 @@ import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
 import AdminNotificationsTab from "@/components/admin/AdminNotificationsTab";
 import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
 import AdminTruthOrDareTab from "@/components/admin/AdminTruthOrDareTab";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Report {
   id: string;
@@ -62,6 +63,7 @@ interface Stats {
 const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
+   const { t } = useLanguage();
   const [reports, setReports] = useState<Report[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +71,7 @@ const Admin = () => {
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
       toast.error("Accès refusé");
+       // Note: This toast could also be localized but it's an error case before context is fully loaded
       navigate("/profile");
     }
   }, [isAdmin, roleLoading, navigate]);
@@ -170,7 +173,7 @@ const Admin = () => {
         </Button>
         <div className="flex items-center gap-2">
           <Shield className="w-6 h-6 text-primary" />
-          <h1 className="text-xl font-bold">Administration</h1>
+           <h1 className="text-xl font-bold">{t.administration}</h1>
         </div>
       </motion.header>
 
@@ -181,11 +184,11 @@ const Admin = () => {
           <TabsList className="grid w-full grid-cols-10 mb-4">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
-              <span className="hidden sm:inline">Signalements</span>
+               <span className="hidden sm:inline">{t.reports}</span>
             </TabsTrigger>
             <TabsTrigger value="identity" className="flex items-center gap-2 relative">
               <UserCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Identités</span>
+               <span className="hidden sm:inline">{t.identities}</span>
               {stats && stats.pendingIdentityVerifications > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center px-1.5 text-xs font-bold bg-amber-500 text-white rounded-full">
                   {stats.pendingIdentityVerifications}
@@ -194,35 +197,35 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Utilisateurs</span>
+               <span className="hidden sm:inline">{t.users}</span>
             </TabsTrigger>
             <TabsTrigger value="bans" className="flex items-center gap-2">
               <Ban className="w-4 h-4" />
-              <span className="hidden sm:inline">Bans</span>
+               <span className="hidden sm:inline">{t.bans}</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="w-4 h-4" />
-              <span className="hidden sm:inline">Notifications</span>
+               <span className="hidden sm:inline">{t.notifications}</span>
             </TabsTrigger>
             <TabsTrigger value="communication" className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Messages</span>
+               <span className="hidden sm:inline">{t.communication}</span>
             </TabsTrigger>
             <TabsTrigger value="games" className="flex items-center gap-2">
               <Gamepad2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Jeux</span>
+               <span className="hidden sm:inline">{t.games}</span>
             </TabsTrigger>
             <TabsTrigger value="emails" className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              <span className="hidden sm:inline">Emails</span>
+               <span className="hidden sm:inline">{t.emails}</span>
             </TabsTrigger>
             <TabsTrigger value="maintenance" className="flex items-center gap-2">
               <Wrench className="w-4 h-4" />
-              <span className="hidden sm:inline">Maintenance</span>
+               <span className="hidden sm:inline">{t.maintenance}</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Paramètres</span>
+               <span className="hidden sm:inline">{t.settingsAdmin}</span>
             </TabsTrigger>
           </TabsList>
 

@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AppSetting {
   id: string;
@@ -45,6 +46,7 @@ const socialIcons: Record<string, React.ReactNode> = {
 };
 
 const AdminSettingsTab = () => {
+   const { t } = useLanguage();
   const [settings, setSettings] = useState<AppSetting[]>([]);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -73,7 +75,7 @@ const AdminSettingsTab = () => {
       setEditedValues(values);
     } catch (error) {
       console.error("Error fetching settings:", error);
-      toast.error("Erreur lors du chargement des paramètres");
+       toast.error(t.errorLoadingSettings);
     } finally {
       setIsLoading(false);
     }
@@ -99,10 +101,10 @@ const AdminSettingsTab = () => {
       }
 
       await fetchSettings();
-      toast.success("Paramètres enregistrés avec succès");
+       toast.success(t.settingsSaved);
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error("Erreur lors de l'enregistrement");
+       toast.error(t.errorSavingSettings);
     } finally {
       setIsSaving(false);
     }
@@ -136,19 +138,19 @@ const AdminSettingsTab = () => {
         <TabsList className="grid w-full grid-cols-4 mb-4">
           <TabsTrigger value="discovery" className="flex items-center gap-2">
             <Shuffle className="w-4 h-4" />
-            <span className="hidden sm:inline">Découverte</span>
+             <span className="hidden sm:inline">{t.discovery}</span>
           </TabsTrigger>
           <TabsTrigger value="social" className="flex items-center gap-2">
             <Link className="w-4 h-4" />
-            <span className="hidden sm:inline">Réseaux</span>
+             <span className="hidden sm:inline">{t.networks}</span>
           </TabsTrigger>
           <TabsTrigger value="legal" className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Légal</span>
+             <span className="hidden sm:inline">{t.legal}</span>
           </TabsTrigger>
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Général</span>
+             <span className="hidden sm:inline">{t.general}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -158,10 +160,10 @@ const AdminSettingsTab = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shuffle className="w-5 h-5 text-primary" />
-                Paramètres de découverte
+                 {t.discoverySettings}
               </CardTitle>
               <CardDescription>
-                Contrôlez le filtrage des profils dans le feed de découverte. Désactivez pour faciliter les tests.
+                 {t.discoverySettingsDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -170,10 +172,10 @@ const AdminSettingsTab = () => {
                 <div className="space-y-1">
                   <Label className="flex items-center gap-2 text-base font-medium">
                     <Heart className="w-4 h-4 text-primary" />
-                    Filtrer les profils likés
+                     {t.filterLikedProfiles}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Les profils déjà likés ne réapparaîtront pas dans le feed
+                     {t.filterLikedProfilesDesc}
                   </p>
                 </div>
                 <Switch
@@ -192,10 +194,10 @@ const AdminSettingsTab = () => {
                 <div className="space-y-1">
                   <Label className="flex items-center gap-2 text-base font-medium">
                     <Users className="w-4 h-4 text-primary" />
-                    Filtrer les matchs
+                     {t.filterMatches}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Les profils déjà matchés ne réapparaîtront pas dans le feed
+                     {t.filterMatchesDesc}
                   </p>
                 </div>
                 <Switch
@@ -214,10 +216,10 @@ const AdminSettingsTab = () => {
                 <div className="space-y-1">
                   <Label className="flex items-center gap-2 text-base font-medium">
                     <X className="w-4 h-4 text-destructive" />
-                    Filtrer les swipes gauche (passes)
+                     {t.filterLeftSwipes}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Les profils swipés à gauche ne réapparaîtront pas
+                     {t.filterLeftSwipesDesc}
                   </p>
                 </div>
                 <Switch
@@ -242,7 +244,7 @@ const AdminSettingsTab = () => {
                   ) : (
                     <Save className="w-4 h-4 mr-2" />
                   )}
-                  Enregistrer
+                   {t.save}
                 </Button>
               </div>
             </CardContent>
@@ -255,10 +257,10 @@ const AdminSettingsTab = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Link className="w-5 h-5 text-primary" />
-                Réseaux sociaux
+                 {t.socialNetworks}
               </CardTitle>
               <CardDescription>
-                Configurez les liens vers vos réseaux sociaux affichés dans les emails.
+                 {t.socialNetworksDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -293,7 +295,7 @@ const AdminSettingsTab = () => {
                   ) : (
                     <Save className="w-4 h-4 mr-2" />
                   )}
-                  Enregistrer
+                   {t.save}
                 </Button>
               </div>
             </CardContent>
@@ -306,10 +308,10 @@ const AdminSettingsTab = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary" />
-                Liens légaux
+                 {t.legalLinks}
               </CardTitle>
               <CardDescription>
-                Configurez les liens vers vos pages légales affichés dans les emails.
+                 {t.legalLinksDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -344,7 +346,7 @@ const AdminSettingsTab = () => {
                   ) : (
                     <Save className="w-4 h-4 mr-2" />
                   )}
-                  Enregistrer
+                   {t.save}
                 </Button>
               </div>
             </CardContent>
@@ -357,10 +359,10 @@ const AdminSettingsTab = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-primary" />
-                Paramètres généraux
+                 {t.generalSettings}
               </CardTitle>
               <CardDescription>
-                Configurez les paramètres généraux de l'application.
+                 {t.generalSettingsDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -398,7 +400,7 @@ const AdminSettingsTab = () => {
                   ) : (
                     <Save className="w-4 h-4 mr-2" />
                   )}
-                  Enregistrer
+                   {t.save}
                 </Button>
               </div>
             </CardContent>

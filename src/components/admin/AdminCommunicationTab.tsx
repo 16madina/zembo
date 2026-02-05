@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PredefinedMessage {
   id: string;
@@ -58,6 +59,7 @@ interface UserProfile {
 
 const AdminCommunicationTab = () => {
   const { user: currentUser } = useAuth();
+   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("send");
   const [predefinedMessages, setPredefinedMessages] = useState<PredefinedMessage[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -105,7 +107,7 @@ const AdminCommunicationTab = () => {
       setUsers(usersRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast.error("Erreur lors du chargement des données");
+       toast.error(t.errorLoadingData);
     } finally {
       setIsLoading(false);
     }
@@ -113,17 +115,17 @@ const AdminCommunicationTab = () => {
 
   const handleSendNotification = async () => {
     if (!currentUser || !messageTitle || !messageContent) {
-      toast.error("Veuillez remplir tous les champs");
+       toast.error(t.fillAllFields);
       return;
     }
 
     if (recipientType === "individual" && !selectedUserId) {
-      toast.error("Veuillez sélectionner un destinataire");
+       toast.error(t.selectRecipient);
       return;
     }
 
     if (!sendEmail && !sendPush) {
-      toast.error("Veuillez sélectionner au moins un canal d'envoi");
+       toast.error(t.selectChannel);
       return;
     }
 
@@ -189,11 +191,11 @@ const AdminCommunicationTab = () => {
       let successMessage = "";
       if (sendEmail && emailResult) {
         successMessage = recipientType === "all"
-          ? `Email envoyé à ${emailResult.sent}/${emailResult.total} utilisateurs`
-          : "Email envoyé avec succès";
+           ? `${t.emailSentTo} ${emailResult.sent}/${emailResult.total}`
+           : t.emailSentSuccess;
       }
       if (sendPush) {
-        successMessage += sendEmail ? " + Push enregistré" : "Notification push enregistrée";
+         successMessage += sendEmail ? ` + ${t.pushRegistered}` : t.notificationPushRegistered;
       }
 
       toast.success(successMessage);
@@ -206,7 +208,7 @@ const AdminCommunicationTab = () => {
       setSendPush(true);
     } catch (error) {
       console.error("Error sending notification:", error);
-      toast.error(error instanceof Error ? error.message : "Erreur lors de l'envoi");
+       toast.error(error instanceof Error ? error.message : t.errorSending);
     } finally {
       setIsSending(false);
     }
@@ -214,7 +216,7 @@ const AdminCommunicationTab = () => {
 
   const handleSavePredefinedMessage = async () => {
     if (!currentUser || !newMessageTitle || !newMessageContent) {
-      toast.error("Veuillez remplir tous les champs");
+       toast.error(t.fillAllFields);
       return;
     }
 
@@ -243,7 +245,7 @@ const AdminCommunicationTab = () => {
               : m
           )
         );
-        toast.success("Message modifié");
+         toast.success(t.messageModified);
       } else {
         const { data, error } = await supabase
           .from("predefined_messages")
@@ -259,14 +261,14 @@ const AdminCommunicationTab = () => {
         if (error) throw error;
 
         setPredefinedMessages((prev) => [data, ...prev]);
-        toast.success("Message créé");
+         toast.success(t.messageCreated);
       }
 
       setShowMessageDialog(false);
       resetMessageForm();
     } catch (error) {
       console.error("Error saving message:", error);
-      toast.error("Erreur lors de la sauvegarde");
+       toast.error(t.errorSaving);
     }
   };
 
@@ -280,10 +282,10 @@ const AdminCommunicationTab = () => {
       if (error) throw error;
 
       setPredefinedMessages((prev) => prev.filter((m) => m.id !== id));
-      toast.success("Message supprimé");
+       toast.success(t.messageDeleted);
     } catch (error) {
       console.error("Error deleting message:", error);
-      toast.error("Erreur lors de la suppression");
+       toast.error(t.errorDeleting);
     }
   };
 
@@ -291,7 +293,7 @@ const AdminCommunicationTab = () => {
     setMessageTitle(message.title);
     setMessageContent(message.message);
     setActiveTab("send");
-    toast.success("Message prédéfini chargé");
+     toast.success(t.predefinedMessageLoaded);
   };
 
   const resetMessageForm = () => {
@@ -326,11 +328,11 @@ const AdminCommunicationTab = () => {
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="send" className="flex items-center gap-2">
             <Send className="w-4 h-4" />
-            Envoyer
+             {t.send}
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
-            Messages prédéfinis
+             {t.predefinedMessages}
           </TabsTrigger>
         </TabsList>
 
@@ -340,7 +342,7 @@ const AdminCommunicationTab = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5 text-primary" />
-                Envoyer une notification
+                 {t.sendNotification}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -352,7 +354,7 @@ const AdminCommunicationTab = () => {
                   className="flex-1"
                 >
                   <User className="w-4 h-4 mr-2" />
-                  Individuel
+                   {t.individual}
                 </Button>
                 <Button
                   variant={recipientType === "all" ? "default" : "outline"}
@@ -360,22 +362,22 @@ const AdminCommunicationTab = () => {
                   className="flex-1"
                 >
                   <Users className="w-4 h-4 mr-2" />
-                  Tous les utilisateurs
+                   {t.allUsers}
                 </Button>
               </div>
 
               {/* Individual User Select */}
               {recipientType === "individual" && (
                 <div>
-                  <Label>Destinataire</Label>
+                   <Label>{t.recipient}</Label>
                   <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un utilisateur" />
+                       <SelectValue placeholder={t.selectUser} />
                     </SelectTrigger>
                     <SelectContent>
                       {users.map((user) => (
                         <SelectItem key={user.user_id} value={user.user_id}>
-                          {user.display_name || user.email || "Sans nom"}
+                           {user.display_name || user.email || t.noName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -385,25 +387,25 @@ const AdminCommunicationTab = () => {
 
               {/* Notification Type */}
               <div>
-                <Label>Type de notification</Label>
+                 <Label>{t.notificationType}</Label>
                 <Select value={notificationType} onValueChange={setNotificationType}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="info">Information</SelectItem>
-                    <SelectItem value="warning">Avertissement</SelectItem>
-                    <SelectItem value="success">Succès</SelectItem>
-                    <SelectItem value="promo">Promotion</SelectItem>
+                     <SelectItem value="info">{t.information}</SelectItem>
+                     <SelectItem value="warning">{t.warning}</SelectItem>
+                     <SelectItem value="success">{t.success}</SelectItem>
+                     <SelectItem value="promo">{t.promotion}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Title */}
               <div>
-                <Label>Titre</Label>
+                 <Label>{t.title}</Label>
                 <Input
-                  placeholder="Titre de la notification"
+                   placeholder={t.notificationTitle}
                   value={messageTitle}
                   onChange={(e) => setMessageTitle(e.target.value)}
                 />
@@ -411,9 +413,9 @@ const AdminCommunicationTab = () => {
 
               {/* Message */}
               <div>
-                <Label>Message</Label>
+                 <Label>{t.message}</Label>
                 <Textarea
-                  placeholder="Contenu du message..."
+                   placeholder={t.messageContent}
                   value={messageContent}
                   onChange={(e) => setMessageContent(e.target.value)}
                   rows={4}
@@ -430,7 +432,7 @@ const AdminCommunicationTab = () => {
                   />
                   <Label htmlFor="push" className="flex items-center gap-1">
                     <Bell className="w-4 h-4" />
-                    Push
+                     {t.push}
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -441,7 +443,7 @@ const AdminCommunicationTab = () => {
                   />
                   <Label htmlFor="email" className="flex items-center gap-1">
                     <Mail className="w-4 h-4" />
-                    Email
+                     {t.email}
                   </Label>
                 </div>
               </div>
@@ -456,7 +458,7 @@ const AdminCommunicationTab = () => {
                 ) : (
                   <Send className="w-4 h-4 mr-2" />
                 )}
-                Envoyer
+                 {t.send}
               </Button>
             </CardContent>
           </Card>
@@ -468,7 +470,7 @@ const AdminCommunicationTab = () => {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-primary" />
-                Messages prédéfinis
+                 {t.predefinedMessages}
               </CardTitle>
               <Button
                 size="sm"
@@ -478,14 +480,14 @@ const AdminCommunicationTab = () => {
                 }}
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Nouveau
+                 {t.new}
               </Button>
             </CardHeader>
             <CardContent>
               {predefinedMessages.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucun message prédéfini</p>
+                   <p>{t.noPredefinedMessages}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -547,16 +549,16 @@ const AdminCommunicationTab = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingMessage ? "Modifier le message" : "Nouveau message prédéfini"}
+               {editingMessage ? t.editMessage : t.newMessage}
             </DialogTitle>
             <DialogDescription>
-              Créez un message réutilisable pour vos communications.
+               {t.messageContent}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label>Catégorie</Label>
+               <Label>{t.category}</Label>
               <Select
                 value={newMessageCategory}
                 onValueChange={setNewMessageCategory}
@@ -565,28 +567,28 @@ const AdminCommunicationTab = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="general">Général</SelectItem>
-                  <SelectItem value="warning">Avertissement</SelectItem>
-                  <SelectItem value="promo">Promotion</SelectItem>
-                  <SelectItem value="update">Mise à jour</SelectItem>
-                  <SelectItem value="welcome">Bienvenue</SelectItem>
+                   <SelectItem value="general">{t.general}</SelectItem>
+                   <SelectItem value="warning">{t.warning}</SelectItem>
+                   <SelectItem value="promo">{t.promotion}</SelectItem>
+                   <SelectItem value="update">{t.system}</SelectItem>
+                   <SelectItem value="welcome">{t.information}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label>Titre</Label>
+               <Label>{t.title}</Label>
               <Input
-                placeholder="Titre du message"
+                 placeholder={t.messageTitle}
                 value={newMessageTitle}
                 onChange={(e) => setNewMessageTitle(e.target.value)}
               />
             </div>
 
             <div>
-              <Label>Message</Label>
+               <Label>{t.message}</Label>
               <Textarea
-                placeholder="Contenu du message..."
+                 placeholder={t.messageContent}
                 value={newMessageContent}
                 onChange={(e) => setNewMessageContent(e.target.value)}
                 rows={4}
@@ -596,14 +598,14 @@ const AdminCommunicationTab = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMessageDialog(false)}>
-              Annuler
+               {t.cancel}
             </Button>
             <Button
               onClick={handleSavePredefinedMessage}
               disabled={!newMessageTitle || !newMessageContent}
             >
               <Save className="w-4 h-4 mr-2" />
-              {editingMessage ? "Modifier" : "Créer"}
+               {editingMessage ? t.edit : t.save}
             </Button>
           </DialogFooter>
         </DialogContent>

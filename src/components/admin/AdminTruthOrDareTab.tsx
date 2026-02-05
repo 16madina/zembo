@@ -50,6 +50,7 @@ import {
   Zap,
   MessageCircle,
 } from "lucide-react";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Challenge {
   id: string;
@@ -78,6 +79,7 @@ const DIFFICULTIES = [
 ];
 
 const AdminTruthOrDareTab = () => {
+   const { t } = useLanguage();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,7 +117,7 @@ const AdminTruthOrDareTab = () => {
       setChallenges(data || []);
     } catch (error) {
       console.error("Error fetching challenges:", error);
-      toast.error("Erreur lors du chargement des défis");
+       toast.error(t.errorLoadingChallenges);
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +148,7 @@ const AdminTruthOrDareTab = () => {
 
   const handleSubmit = async () => {
     if (!formData.content.trim()) {
-      toast.error("Le contenu est requis");
+       toast.error(t.contentRequired);
       return;
     }
 
@@ -165,7 +167,7 @@ const AdminTruthOrDareTab = () => {
           .eq("id", editingChallenge.id);
 
         if (error) throw error;
-        toast.success("Défi mis à jour");
+         toast.success(t.challengeUpdated);
       } else {
         const { error } = await supabase
           .from("truth_or_dare_challenges")
@@ -178,14 +180,14 @@ const AdminTruthOrDareTab = () => {
           });
 
         if (error) throw error;
-        toast.success("Défi créé");
+         toast.success(t.challengeCreated);
       }
 
       setIsFormOpen(false);
       fetchChallenges();
     } catch (error) {
       console.error("Error saving challenge:", error);
-      toast.error("Erreur lors de la sauvegarde");
+       toast.error(t.errorSaving);
     } finally {
       setIsSubmitting(false);
     }
@@ -201,13 +203,13 @@ const AdminTruthOrDareTab = () => {
         .eq("id", deletingChallengeId);
 
       if (error) throw error;
-      toast.success("Défi supprimé");
+       toast.success(t.challengeDeleted);
       setIsDeleteDialogOpen(false);
       setDeletingChallengeId(null);
       fetchChallenges();
     } catch (error) {
       console.error("Error deleting challenge:", error);
-      toast.error("Erreur lors de la suppression");
+       toast.error(t.errorDeleting);
     }
   };
 
@@ -219,11 +221,11 @@ const AdminTruthOrDareTab = () => {
         .eq("id", challenge.id);
 
       if (error) throw error;
-      toast.success(challenge.is_active ? "Défi désactivé" : "Défi activé");
+       toast.success(challenge.is_active ? t.challengeDeactivated : t.challengeActivated);
       fetchChallenges();
     } catch (error) {
       console.error("Error toggling challenge:", error);
-      toast.error("Erreur lors de la modification");
+       toast.error(t.errorModifying);
     }
   };
 
@@ -263,23 +265,23 @@ const AdminTruthOrDareTab = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-card border border-border">
-          <p className="text-sm text-muted-foreground">Total</p>
+           <p className="text-sm text-muted-foreground">{t.total}</p>
           <p className="text-2xl font-bold">{stats.total}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border border-border">
           <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <MessageCircle className="w-4 h-4" /> Vérités
+             <MessageCircle className="w-4 h-4" /> {t.truths}
           </p>
           <p className="text-2xl font-bold text-blue-500">{stats.truths}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border border-border">
           <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <Zap className="w-4 h-4" /> Défis
+             <Zap className="w-4 h-4" /> {t.dares}
           </p>
           <p className="text-2xl font-bold text-amber-500">{stats.dares}</p>
         </div>
         <div className="p-4 rounded-xl bg-card border border-border">
-          <p className="text-sm text-muted-foreground">Actifs</p>
+           <p className="text-sm text-muted-foreground">{t.active}</p>
           <p className="text-2xl font-bold text-green-500">{stats.active}</p>
         </div>
       </div>
@@ -290,7 +292,7 @@ const AdminTruthOrDareTab = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher..."
+               placeholder={t.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 w-[200px]"
@@ -299,21 +301,21 @@ const AdminTruthOrDareTab = () => {
 
           <Select value={filterType} onValueChange={(v) => setFilterType(v as typeof filterType)}>
             <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Type" />
+               <SelectValue placeholder={t.type} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              <SelectItem value="truth">Vérité</SelectItem>
-              <SelectItem value="dare">Défi</SelectItem>
+               <SelectItem value="all">{t.all}</SelectItem>
+               <SelectItem value="truth">{t.truth}</SelectItem>
+               <SelectItem value="dare">{t.dare}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Catégorie" />
+               <SelectValue placeholder={t.category} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes</SelectItem>
+               <SelectItem value="all">{t.all}</SelectItem>
               {CATEGORIES.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -324,19 +326,19 @@ const AdminTruthOrDareTab = () => {
 
           <Select value={filterActive} onValueChange={(v) => setFilterActive(v as typeof filterActive)}>
             <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Statut" />
+               <SelectValue placeholder={t.status} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              <SelectItem value="active">Actifs</SelectItem>
-              <SelectItem value="inactive">Inactifs</SelectItem>
+               <SelectItem value="all">{t.all}</SelectItem>
+               <SelectItem value="active">{t.active}</SelectItem>
+               <SelectItem value="inactive">{t.inactive}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <Button onClick={() => handleOpenForm()} className="gap-2">
           <Plus className="w-4 h-4" />
-          Nouveau défi
+           {t.newChallenge}
         </Button>
       </div>
 
@@ -345,12 +347,12 @@ const AdminTruthOrDareTab = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">Type</TableHead>
-              <TableHead>Contenu</TableHead>
-              <TableHead className="w-[120px]">Catégorie</TableHead>
-              <TableHead className="w-[100px]">Difficulté</TableHead>
-              <TableHead className="w-[80px]">Actif</TableHead>
-              <TableHead className="w-[100px] text-right">Actions</TableHead>
+               <TableHead className="w-[100px]">{t.type}</TableHead>
+               <TableHead>{t.content}</TableHead>
+               <TableHead className="w-[120px]">{t.category}</TableHead>
+               <TableHead className="w-[100px]">{t.difficulty}</TableHead>
+               <TableHead className="w-[80px]">{t.active}</TableHead>
+               <TableHead className="w-[100px] text-right">{t.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -372,7 +374,7 @@ const AdminTruthOrDareTab = () => {
                           : "bg-amber-500/20 text-amber-400 border-amber-500/30"
                       }
                     >
-                      {challenge.type === "truth" ? "Vérité" : "Défi"}
+                       {challenge.type === "truth" ? t.truth : t.dare}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate">{challenge.content}</TableCell>
@@ -429,7 +431,7 @@ const AdminTruthOrDareTab = () => {
 
         {filteredChallenges.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
-            Aucun défi trouvé
+             {t.noChallengeFound}
           </div>
         )}
       </div>
@@ -439,13 +441,13 @@ const AdminTruthOrDareTab = () => {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingChallenge ? "Modifier le défi" : "Nouveau défi"}
+               {editingChallenge ? t.editChallenge : t.newChallenge}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Type</Label>
+               <Label>{t.type}</Label>
               <Select
                 value={formData.type}
                 onValueChange={(v) => setFormData({ ...formData, type: v as "truth" | "dare" })}
@@ -454,14 +456,14 @@ const AdminTruthOrDareTab = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="truth">Vérité</SelectItem>
-                  <SelectItem value="dare">Défi</SelectItem>
+                   <SelectItem value="truth">{t.truth}</SelectItem>
+                   <SelectItem value="dare">{t.dare}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Contenu</Label>
+               <Label>{t.content}</Label>
               <Textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -475,7 +477,7 @@ const AdminTruthOrDareTab = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Catégorie</Label>
+               <Label>{t.category}</Label>
               <Select
                 value={formData.category}
                 onValueChange={(v) => setFormData({ ...formData, category: v })}
@@ -494,7 +496,7 @@ const AdminTruthOrDareTab = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Difficulté</Label>
+               <Label>{t.difficulty}</Label>
               <Select
                 value={formData.difficulty.toString()}
                 onValueChange={(v) => setFormData({ ...formData, difficulty: parseInt(v) })}

@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface QueueStats {
   waiting: number;
@@ -30,6 +31,7 @@ interface SessionStats {
 }
 
 const AdminMaintenanceTab = () => {
+   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
@@ -98,11 +100,11 @@ const AdminMaintenanceTab = () => {
       if (error) throw error;
 
       const count = data?.length || 0;
-      toast.success(`${count} session(s) 'deciding' clôturée(s)`);
+       toast.success(`${count} ${t.decidingSessionsClosed}`);
       await fetchStats();
     } catch (error) {
       console.error("Error cleaning up sessions:", error);
-      toast.error("Erreur lors du nettoyage");
+       toast.error(t.errorCleaning);
     } finally {
       setIsLoading(false);
     }
@@ -123,11 +125,11 @@ const AdminMaintenanceTab = () => {
       if (error) throw error;
 
       const count = data?.length || 0;
-      toast.success(`${count} entrée(s) de queue obsolètes supprimée(s)`);
+       toast.success(`${count} ${t.staleQueueEntriesRemoved}`);
       await fetchStats();
     } catch (error) {
       console.error("Error cleaning up queue:", error);
-      toast.error("Erreur lors du nettoyage");
+       toast.error(t.errorCleaning);
     } finally {
       setIsLoading(false);
     }
@@ -145,11 +147,11 @@ const AdminMaintenanceTab = () => {
       if (error) throw error;
 
       const count = data?.length || 0;
-      toast.success(`${count} session(s) 'deciding' clôturée(s)`);
+       toast.success(`${count} ${t.decidingSessionsClosed}`);
       await fetchStats();
     } catch (error) {
       console.error("Error cleaning up all deciding sessions:", error);
-      toast.error("Erreur lors du nettoyage");
+       toast.error(t.errorCleaning);
     } finally {
       setIsLoading(false);
     }
@@ -167,11 +169,11 @@ const AdminMaintenanceTab = () => {
       if (error) throw error;
 
       const count = data?.length || 0;
-      toast.success(`Queue vidée (${count} entrée(s) supprimée(s))`);
+       toast.success(`${t.queueCleared} (${count} ${t.entriesRemoved})`);
       await fetchStats();
     } catch (error) {
       console.error("Error resetting queue:", error);
-      toast.error("Erreur lors de la réinitialisation");
+       toast.error(t.errorResetting);
     } finally {
       setIsLoading(false);
     }
@@ -189,7 +191,7 @@ const AdminMaintenanceTab = () => {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Queue - En attente</p>
+                 <p className="text-sm text-muted-foreground">{t.queueWaiting}</p>
                 <p className="text-2xl font-bold">{queueStats?.waiting ?? "-"}</p>
               </div>
               <Users className="w-8 h-8 text-blue-500" />
@@ -201,7 +203,7 @@ const AdminMaintenanceTab = () => {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Queue - Matchés</p>
+                 <p className="text-sm text-muted-foreground">{t.queueMatched}</p>
                 <p className="text-2xl font-bold">{queueStats?.matched ?? "-"}</p>
               </div>
               <CheckCircle2 className="w-8 h-8 text-green-500" />
@@ -213,7 +215,7 @@ const AdminMaintenanceTab = () => {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Sessions - Deciding</p>
+                 <p className="text-sm text-muted-foreground">{t.sessionsDeciding}</p>
                 <p className="text-2xl font-bold text-amber-500">
                   {sessionStats?.deciding ?? "-"}
                 </p>
@@ -227,7 +229,7 @@ const AdminMaintenanceTab = () => {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Deciding obsolètes</p>
+                 <p className="text-sm text-muted-foreground">{t.staleDeciding}</p>
                 <p className="text-2xl font-bold text-red-500">
                   {sessionStats?.decidingStale ?? "-"}
                 </p>
@@ -243,25 +245,25 @@ const AdminMaintenanceTab = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wrench className="w-5 h-5" />
-           Outils de maintenance Z Connect
+            {t.maintenanceTools}
           </CardTitle>
           <CardDescription>
-            Nettoyer les sessions bloquées et la file d'attente pour débloquer le système
+             {t.maintenanceDesc}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Refresh */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <div>
-              <p className="font-medium">Actualiser les statistiques</p>
+               <p className="font-medium">{t.refreshStats}</p>
               <p className="text-sm text-muted-foreground">
-                Dernière actualisation:{" "}
-                {lastRefresh ? lastRefresh.toLocaleTimeString() : "jamais"}
+                 {t.lastRefresh}:{" "}
+                 {lastRefresh ? lastRefresh.toLocaleTimeString() : t.never}
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={fetchStats} disabled={isLoading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-              Actualiser
+               {t.refresh}
             </Button>
           </div>
 
@@ -269,13 +271,13 @@ const AdminMaintenanceTab = () => {
           <div className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-medium">Clôturer sessions 'deciding' obsolètes</p>
+                 <p className="font-medium">{t.closeStaleDeciding}</p>
                 {sessionStats?.decidingStale ? (
                   <Badge variant="destructive">{sessionStats.decidingStale}</Badge>
                 ) : null}
               </div>
               <p className="text-sm text-muted-foreground">
-                Sessions en attente de décision depuis plus de 5 minutes
+                 {t.sessionsWaitingOver5min}
               </p>
             </div>
             <Button
@@ -290,7 +292,7 @@ const AdminMaintenanceTab = () => {
               ) : (
                 <Clock className="w-4 h-4 mr-2" />
               )}
-              Nettoyer
+               {t.clean}
             </Button>
           </div>
 
@@ -298,13 +300,13 @@ const AdminMaintenanceTab = () => {
           <div className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-medium">Clôturer TOUTES les sessions 'deciding'</p>
+                 <p className="font-medium">{t.closeAllDeciding}</p>
                 {sessionStats?.deciding ? (
                   <Badge className="bg-orange-500">{sessionStats.deciding}</Badge>
                 ) : null}
               </div>
               <p className="text-sm text-muted-foreground">
-                Force la clôture de toutes les sessions en phase de décision
+                 {t.forceCloseAllDeciding}
               </p>
             </div>
             <Button
@@ -319,7 +321,7 @@ const AdminMaintenanceTab = () => {
               ) : (
                 <Trash2 className="w-4 h-4 mr-2" />
               )}
-              Tout clôturer
+               {t.closeAll}
             </Button>
           </div>
 
@@ -327,13 +329,13 @@ const AdminMaintenanceTab = () => {
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-medium">Nettoyer queue obsolète</p>
+                 <p className="font-medium">{t.cleanStaleQueue}</p>
                 {queueStats?.stale ? (
                   <Badge variant="secondary">{queueStats.stale}</Badge>
                 ) : null}
               </div>
               <p className="text-sm text-muted-foreground">
-                Supprimer les entrées sans heartbeat depuis plus de 2 minutes
+                 {t.removeEntriesNoHeartbeat}
               </p>
             </div>
             <Button
@@ -347,16 +349,16 @@ const AdminMaintenanceTab = () => {
               ) : (
                 <Trash2 className="w-4 h-4 mr-2" />
               )}
-              Nettoyer
+               {t.clean}
             </Button>
           </div>
 
           {/* Reset entire queue (danger) */}
           <div className="flex items-center justify-between p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
             <div>
-              <p className="font-medium text-destructive">Réinitialiser toute la queue</p>
+               <p className="font-medium text-destructive">{t.resetEntireQueue}</p>
               <p className="text-sm text-muted-foreground">
-                Supprime toutes les entrées de la file d'attente (action irréversible)
+                 {t.resetQueueDesc}
               </p>
             </div>
             <Button
@@ -370,7 +372,7 @@ const AdminMaintenanceTab = () => {
               ) : (
                 <Trash2 className="w-4 h-4 mr-2" />
               )}
-              Réinitialiser
+               {t.reset}
             </Button>
           </div>
         </CardContent>

@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface IdentityVerification {
   id: string;
@@ -40,6 +41,7 @@ interface IdentityVerification {
 
 const AdminIdentityTab = () => {
   const { user } = useAuth();
+   const { t } = useLanguage();
   const [verifications, setVerifications] = useState<IdentityVerification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<IdentityVerification | null>(null);
@@ -80,7 +82,7 @@ const AdminIdentityTab = () => {
       setVerifications(verificationsWithProfiles);
     } catch (error) {
       console.error("Error fetching verifications:", error);
-      toast.error("Erreur lors du chargement des vérifications");
+       toast.error(t.errorLoadingVerifications);
     } finally {
       setIsLoading(false);
     }
@@ -137,8 +139,8 @@ const AdminIdentityTab = () => {
 
       toast.success(
         approved
-          ? "Identité approuvée avec succès"
-          : "Demande refusée"
+           ? t.identityApproved
+           : t.requestRejected
       );
 
       setIsReviewDialogOpen(false);
@@ -147,7 +149,7 @@ const AdminIdentityTab = () => {
       fetchVerifications();
     } catch (error) {
       console.error("Error updating verification:", error);
-      toast.error("Erreur lors de la mise à jour");
+       toast.error(t.errorUpdating);
     } finally {
       setIsProcessing(false);
     }
@@ -162,11 +164,11 @@ const AdminIdentityTab = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30"><Clock className="w-3 h-3 mr-1" />En attente</Badge>;
+         return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30"><Clock className="w-3 h-3 mr-1" />{t.pending}</Badge>;
       case "approved":
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30"><CheckCircle className="w-3 h-3 mr-1" />Approuvé</Badge>;
+         return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30"><CheckCircle className="w-3 h-3 mr-1" />{t.approved}</Badge>;
       case "rejected":
-        return <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30"><XCircle className="w-3 h-3 mr-1" />Refusé</Badge>;
+         return <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30"><XCircle className="w-3 h-3 mr-1" />{t.rejected}</Badge>;
       default:
         return null;
     }
@@ -179,14 +181,14 @@ const AdminIdentityTab = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Vérifications d'identité</h2>
+           <h2 className="text-lg font-semibold">{t.identityVerifications}</h2>
           <p className="text-sm text-muted-foreground">
-            {pendingCount > 0 ? `${pendingCount} demande(s) en attente` : "Aucune demande en attente"}
+             {pendingCount > 0 ? `${pendingCount} ${t.pendingRequests}` : t.noPendingRequests}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchVerifications}>
           <RefreshCw className="w-4 h-4 mr-2" />
-          Actualiser
+           {t.refresh}
         </Button>
       </div>
 
@@ -203,7 +205,7 @@ const AdminIdentityTab = () => {
             {status === "approved" && <CheckCircle className="w-3 h-3 mr-1" />}
             {status === "rejected" && <XCircle className="w-3 h-3 mr-1" />}
             {status === "all" && <User className="w-3 h-3 mr-1" />}
-            {status === "pending" ? "En attente" : status === "approved" ? "Approuvés" : status === "rejected" ? "Refusés" : "Tous"}
+             {status === "pending" ? t.pending : status === "approved" ? t.approved : status === "rejected" ? t.rejected : t.all}
           </Button>
         ))}
       </div>
@@ -217,7 +219,7 @@ const AdminIdentityTab = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertCircle className="w-12 h-12 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">Aucune vérification à afficher</p>
+             <p className="text-muted-foreground">{t.noVerificationsToDisplay}</p>
           </CardContent>
         </Card>
       ) : (
@@ -250,13 +252,13 @@ const AdminIdentityTab = () => {
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground truncate">
-                          {verification.profile?.display_name || "Utilisateur inconnu"}
+                           {verification.profile?.display_name || t.unknownUser}
                         </p>
                         <p className="text-sm text-muted-foreground truncate">
                           {verification.profile?.email || verification.user_id}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Soumis le {new Date(verification.created_at).toLocaleDateString("fr-FR", {
+                           {t.submittedOn} {new Date(verification.created_at).toLocaleDateString("fr-FR", {
                             day: "numeric",
                             month: "short",
                             year: "numeric",
@@ -278,7 +280,7 @@ const AdminIdentityTab = () => {
                         onClick={() => openReviewDialog(verification)}
                       >
                         <Eye className="w-4 h-4 mr-2" />
-                        Examiner
+                         {t.examine}
                       </Button>
                     </div>
 
@@ -286,7 +288,7 @@ const AdminIdentityTab = () => {
                     {verification.status === "rejected" && verification.rejection_reason && (
                       <div className="mt-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
                         <p className="text-xs text-red-600">
-                          <strong>Raison du refus :</strong> {verification.rejection_reason}
+                           <strong>{t.rejectionReasonLabel}:</strong> {verification.rejection_reason}
                         </p>
                       </div>
                     )}
@@ -304,7 +306,7 @@ const AdminIdentityTab = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileImage className="w-5 h-5" />
-              Vérification d'identité
+               {t.identityVerification}
             </DialogTitle>
           </DialogHeader>
 
@@ -325,7 +327,7 @@ const AdminIdentityTab = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-lg">
-                    {selectedVerification.profile?.display_name || "Utilisateur"}
+                     {selectedVerification.profile?.display_name || t.unknownUser}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {selectedVerification.profile?.email}
@@ -341,7 +343,7 @@ const AdminIdentityTab = () => {
                 <div>
                   <p className="text-sm font-medium mb-2 flex items-center gap-2">
                     <FileImage className="w-4 h-4" />
-                    Pièce d'identité
+                     {t.idDocument}
                   </p>
                   <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted border">
                     <img
@@ -362,7 +364,7 @@ const AdminIdentityTab = () => {
                 <div>
                   <p className="text-sm font-medium mb-2 flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    Selfie
+                     {t.selfie}
                   </p>
                   <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-muted border">
                     <img
@@ -385,9 +387,9 @@ const AdminIdentityTab = () => {
               {/* Rejection reason input (only for pending) */}
               {selectedVerification.status === "pending" && (
                 <div>
-                  <p className="text-sm font-medium mb-2">Raison du refus (optionnel)</p>
+                   <p className="text-sm font-medium mb-2">{t.rejectionReasonOptional}</p>
                   <Textarea
-                    placeholder="Ex: Photo floue, document illisible, visage non visible..."
+                     placeholder={t.rejectionPlaceholder}
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                     rows={2}
@@ -410,7 +412,7 @@ const AdminIdentityTab = () => {
                   ) : (
                     <XCircle className="w-4 h-4 mr-2" />
                   )}
-                  Refuser
+                 {t.reject}
                 </Button>
                 <Button
                   onClick={() => handleReview(true)}
@@ -422,12 +424,12 @@ const AdminIdentityTab = () => {
                   ) : (
                     <CheckCircle className="w-4 h-4 mr-2" />
                   )}
-                  Approuver
+                 {t.approve}
                 </Button>
               </>
             )}
             <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
-              Fermer
+             {t.close}
             </Button>
           </DialogFooter>
         </DialogContent>
