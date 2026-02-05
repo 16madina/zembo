@@ -23,12 +23,18 @@ const GiftPanel = ({
   onGiftSent,
 }: GiftPanelProps) => {
   const { gifts, sendGift, loading } = useGifts(liveId);
-  const { balance } = useCoins();
+  const { balance, refetch: refetchCoins } = useCoins();
   const [selectedGift, setSelectedGift] = useState<VirtualGift | null>(null);
   const [sending, setSending] = useState(false);
   const [showCoinShop, setShowCoinShop] = useState(false);
   const [giftCount, setGiftCount] = useState(1);
 
+   const handleCoinShopClose = () => {
+     setShowCoinShop(false);
+     // Refetch coins when shop closes in case user made a purchase
+     refetchCoins();
+   };
+ 
   const handleGiftTap = (gift: VirtualGift) => {
     if (selectedGift?.id === gift.id) {
       // Same gift tapped - increment count if affordable
@@ -256,7 +262,7 @@ const GiftPanel = ({
       {/* Coin Shop Modal - Opens on top of gift panel */}
       <CoinShopModal 
         isOpen={showCoinShop} 
-        onClose={() => setShowCoinShop(false)} 
+        onClose={handleCoinShopClose} 
       />
     </AnimatePresence>
   );
