@@ -1,9 +1,17 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi, MoreVertical, Flag, Ban } from "lucide-react";
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useZemboRingtone } from "@/hooks/useZemboRingtone";
 import { useAudioLevel } from "@/hooks/useAudioLevel";
 import AudioLevelMeter from "@/components/random-call/AudioLevelMeter";
+import ReportModal from "@/components/random-call/ReportModal";
+import BlockUserModal from "@/components/BlockUserModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { haptics, isNative, ImpactStyle } from "@/lib/capacitor";
 
 interface VoiceCallModalProps {
@@ -14,6 +22,7 @@ interface VoiceCallModalProps {
   callType: "audio" | "video";
   remoteUserName: string | null;
   remoteUserPhoto: string | null;
+  remoteUserId?: string;
   isMuted: boolean;
   duration: number;
   onAccept: () => void;
@@ -34,6 +43,7 @@ const VoiceCallModal = ({
   callType,
   remoteUserName,
   remoteUserPhoto,
+  remoteUserId,
   isMuted,
   duration,
   onAccept,
@@ -50,6 +60,10 @@ const VoiceCallModal = ({
   const zemboRingtoneRef = useRef<HTMLAudioElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  
+  // Safety modals
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   
   // Audio level monitoring
   const { audioLevel: remoteAudioLevel, isActive: remoteAudioActive } = useAudioLevel(remoteStreamRef?.current || null);
@@ -386,6 +400,36 @@ const VoiceCallModal = ({
           ) : (
             // In call controls
             <div className="flex items-center justify-center gap-8">
+              {/* Safety menu */}
+              {remoteUserId && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      className="w-12 h-12 rounded-full glass flex items-center justify-center text-muted-foreground"
+                    >
+                      <MoreVertical className="w-5 h-5" />
+                    </motion.button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      onClick={() => setShowReportModal(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Flag className="w-4 h-4 mr-2" />
+                      Signaler
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setShowBlockModal(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Ban className="w-4 h-4 mr-2" />
+                      Bloquer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => {
@@ -419,6 +463,23 @@ const VoiceCallModal = ({
             </div>
           )}
         </div>
+
+        {/* Safety Modals */}
+        {remoteUserId && (
+          <>
+            <ReportModal
+              isOpen={showReportModal}
+              onClose={() => setShowReportModal(false)}
+              reportedUserId={remoteUserId}
+            />
+            <BlockUserModal
+              isOpen={showBlockModal}
+              onClose={() => setShowBlockModal(false)}
+              userId={remoteUserId}
+              userName={remoteUserName || undefined}
+            />
+          </>
+        )}
       </motion.div>
     </AnimatePresence>
   );
