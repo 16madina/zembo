@@ -32,6 +32,13 @@ import { useLiveJoinRequests } from "@/hooks/useLiveJoinRequests";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -43,6 +50,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import ReportModal from "@/components/random-call/ReportModal";
+import BlockUserModal from "@/components/BlockUserModal";
 import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
 import LocalVideoPlayer from "@/components/live/LocalVideoPlayer";
@@ -94,6 +103,8 @@ const LiveRoom = () => {
   const [showBeautyPanel, setShowBeautyPanel] = useState(false);
   const [showStageQueue, setShowStageQueue] = useState(false);
   const [showViewModeSelector, setShowViewModeSelector] = useState(false);
+  const [showReportLiveModal, setShowReportLiveModal] = useState(false);
+  const [showBlockStreamerModal, setShowBlockStreamerModal] = useState(false);
   const [guestViewMode, setGuestViewMode] = useState<GuestViewMode>("pip");
   const [realtimeViewers, setRealtimeViewers] = useState(0);
   const [activeGift, setActiveGift] = useState<{
@@ -1497,13 +1508,46 @@ const LiveRoom = () => {
             />
           )}
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => toast.info("Plus d'options bientôt disponibles")}
-            className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
-          >
-            <MoreVertical className="w-5 h-5 text-foreground" />
-          </motion.button>
+          {!isStreamer ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
+                >
+                  <MoreVertical className="w-5 h-5 text-foreground" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setShowReportLiveModal(true);
+                  }}
+                >
+                  Signaler le live
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setShowBlockStreamerModal(true);
+                  }}
+                >
+                  Bloquer le streamer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => toast.info("Plus d'options bientôt disponibles")}
+              className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
+            >
+              <MoreVertical className="w-5 h-5 text-foreground" />
+            </motion.button>
+          )}
         </div>
       </div>
 
@@ -1622,6 +1666,23 @@ const LiveRoom = () => {
 
       {/* Recent Gifts Display */}
       <RecentGiftsDisplay recentGifts={recentGifts} />
+
+      {/* Viewer safety actions */}
+      {!isStreamer && live && (
+        <>
+          <ReportModal
+            isOpen={showReportLiveModal}
+            onClose={() => setShowReportLiveModal(false)}
+            reportedUserId={live.streamer_id}
+          />
+          <BlockUserModal
+            isOpen={showBlockStreamerModal}
+            onClose={() => setShowBlockStreamerModal(false)}
+            userId={live.streamer_id}
+            userName={live.streamer?.display_name || undefined}
+          />
+        </>
+      )}
 
       {/* Join Live Modal - Access Control */}
       {live && (
