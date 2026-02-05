@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Shield, Database, Lock, Clock, UserCheck, Share2, Brain, Server } from "lucide-react";
+import { ArrowLeft, Shield, Database, Lock, Clock, UserCheck, Share2, Brain, Server, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -23,11 +23,21 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. Fonctionnalités IA et partage de données",
-        content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle), nous partageons certaines données avec des fournisseurs d'intelligence artificielle tiers : Google (via Google Gemini) et OpenAI (via GPT). Les données partagées incluent : votre profil (prénom, âge, centres d'intérêt), vos réponses aux questionnaires de compatibilité, et vos préférences de rencontre. Nous demandons votre consentement explicite avant tout partage via un modal dédié. Ces données sont chiffrées en transit (TLS) et ne sont pas stockées de manière permanente par Google ni OpenAI.",
+        content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle, Speed Dating), nous partageons certaines données avec des fournisseurs d'intelligence artificielle tiers. Avant d'utiliser ces fonctionnalités, vous devez donner votre consentement explicite via un modal dédié qui détaille précisément les données partagées.",
+      },
+      {
+        icon: AlertCircle,
+        title: "3.1 Données partagées avec l'IA",
+        content: "Les données partagées avec les fournisseurs IA incluent : votre prénom, votre âge, vos centres d'intérêt, vos préférences de rencontre, et vos réponses aux questionnaires de compatibilité. Vos photos ne sont PAS envoyées aux services IA sauf mention explicite. Ces données sont utilisées uniquement pour générer des analyses de compatibilité et des recommandations personnalisées.",
       },
       {
         icon: Server,
-        title: "4. Fournisseurs de services tiers",
+        title: "3.2 Fournisseurs IA et sécurité",
+        content: "Nos fournisseurs IA sont : Google LLC (via l'API Google Gemini, basé aux États-Unis) et OpenAI Inc. (via l'API GPT, basé aux États-Unis). Ces entreprises respectent les standards SOC 2 et ISO 27001. Les données sont chiffrées en transit (TLS 1.3) et ne sont pas conservées de manière permanente par ces fournisseurs après le traitement de votre requête.",
+      },
+      {
+        icon: Server,
+        title: "4. Autres fournisseurs de services",
         content: "Nous utilisons les services suivants pour faire fonctionner l'application : Google Gemini (intelligence artificielle pour l'analyse de compatibilité), OpenAI GPT (intelligence artificielle pour les prédictions et recommandations), Supabase (hébergement de base de données sécurisé), LiveKit (appels audio/vidéo en temps réel), Stripe (traitement des paiements). Tous nos partenaires sont conformes au RGPD et s'engagent contractuellement à protéger vos données selon les mêmes standards que nous.",
       },
       {
@@ -71,11 +81,21 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. AI Features and Data Sharing",
-        content: "For AI features (Compatibility Test, Zembo Oracle), we share certain data with third-party artificial intelligence providers: Google (via Google Gemini) and OpenAI (via GPT). Shared data includes: your profile (first name, age, interests), your compatibility questionnaire answers, and your dating preferences. We ask for your explicit consent before any sharing via a dedicated modal. This data is encrypted in transit (TLS) and is not permanently stored by Google or OpenAI.",
+        content: "For AI features (Compatibility Test, Zembo Oracle, Speed Dating), we share certain data with third-party artificial intelligence providers. Before using these features, you must give your explicit consent via a dedicated modal that details exactly what data is shared.",
+      },
+      {
+        icon: AlertCircle,
+        title: "3.1 Data Shared with AI",
+        content: "Data shared with AI providers includes: your first name, age, interests, dating preferences, and your compatibility questionnaire answers. Your photos are NOT sent to AI services unless explicitly stated. This data is used solely to generate compatibility analyses and personalized recommendations.",
       },
       {
         icon: Server,
-        title: "4. Third-Party Service Providers",
+        title: "3.2 AI Providers and Security",
+        content: "Our AI providers are: Google LLC (via Google Gemini API, based in the United States) and OpenAI Inc. (via GPT API, based in the United States). These companies comply with SOC 2 and ISO 27001 standards. Data is encrypted in transit (TLS 1.3) and is not permanently retained by these providers after processing your request.",
+      },
+      {
+        icon: Server,
+        title: "4. Other Service Providers",
         content: "We use the following services to operate the application: Google Gemini (artificial intelligence for compatibility analysis), OpenAI GPT (artificial intelligence for predictions and recommendations), Supabase (secure database hosting), LiveKit (real-time audio/video calls), Stripe (payment processing). All our partners are GDPR compliant and contractually committed to protecting your data to the same standards as we do.",
       },
       {

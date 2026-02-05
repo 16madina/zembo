@@ -61,12 +61,12 @@ const tutorialsByPage: Record<string, { title: string; steps: TutorialStep[] }> 
     ]
   },
   "/random": {
-    title: "Z Roulette",
+   title: "Z Games",
     steps: [
       {
         icon: <Video className="w-5 h-5 text-primary" />,
-        title: "Appel vidéo aléatoire",
-        description: "Rencontrez de nouvelles personnes en appel vidéo de 30 secondes"
+       title: "Z Connect",
+       description: "Rencontrez de nouvelles personnes en appel audio avec leur profil"
       },
       {
         icon: <Heart className="w-5 h-5 text-green-500" />,

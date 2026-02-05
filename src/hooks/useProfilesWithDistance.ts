@@ -144,9 +144,17 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
         matchedUserIds = matches?.map(m => m.user1_id === user.id ? m.user2_id : m.user1_id) || [];
       }
       
+     // Fetch blocked user IDs
+     const { data: blockedData } = await supabase
+       .from("blocked_users")
+       .select("blocked_id")
+       .eq("blocker_id", user.id);
+     
+     const blockedUserIds = blockedData?.map(b => b.blocked_id) || [];
+     
       // Combine all IDs to exclude
-      const excludeIds = [...new Set([...likedUserIds, ...matchedUserIds])];
-      console.log(`[profiles] Excluding ${excludeIds.length} profiles (${likedUserIds.length} swiped, ${matchedUserIds.length} matched)`);
+     const excludeIds = [...new Set([...likedUserIds, ...matchedUserIds, ...blockedUserIds])];
+     console.log(`[profiles] Excluding ${excludeIds.length} profiles (${likedUserIds.length} swiped, ${matchedUserIds.length} matched, ${blockedUserIds.length} blocked)`);
       
       // Build query
       let query = supabase
