@@ -4,12 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Room, RoomEvent, Track } from "livekit-client";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { haptics, isNative } from "@/lib/capacitor";
+import { toast } from "sonner";
 
 export type RandomCallStatus = 
   | "idle"
   | "searching"
   | "matched"
   | "connecting"
+  | "declined_by_other"
   | "in_call"
   | "in_call_deciding" // New: in call + decision overlay shown
   | "deciding"
@@ -45,9 +47,12 @@ interface UseRandomCallLiveKitReturn {
   decisionResult: "matched" | "rejected" | "continued" | null;
   waitingForOther: boolean;
   otherUserRejected: boolean;
+  declinedByOther: boolean;
   startSearch: (preference: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
   acceptConnection: () => Promise<void>;
+  declineConnection: () => Promise<void>;
+  skipConnection: () => Promise<void>;
   endCall: () => void;
   toggleMute: () => void;
   toggleSpeaker: () => Promise<void>;
@@ -78,6 +83,8 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const [userGender, setUserGender] = useState<string | null>(null);
   const [waitingForOther, setWaitingForOther] = useState(false);
   const [otherUserRejected, setOtherUserRejected] = useState(false);
+  const [declinedByOther, setDeclinedByOther] = useState(false);
+  const lastPreferenceRef = useRef<string>("tous");
 
   const [decisionResult, setDecisionResult] = useState<"matched" | "rejected" | "continued" | null>(null);
 
@@ -168,6 +175,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     setIsConnected(false);
     setIsRoomConnected(false);
     setAudioLevel(0);
+  setDeclinedByOther(false);
     sessionEndsAtRef.current = null;
   }, [user?.id]);
 
@@ -181,6 +189,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     setStatus("searching");
     setError(null);
     setTimeRemaining(CALL_DURATION_SECONDS);
+  lastPreferenceRef.current = preference;
 
     console.log("[random-call-lk]", "startSearch", { preference, gender: userGender });
 
@@ -210,6 +219,12 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           setRoomName(result.room_name);
           setSessionId(result.session_id || null);
           setMatchedUserId(result.matched_user_id || null);
+        
+        // Subscribe to session updates for pre-connection decline detection
+        if (result.session_id) {
+          subscribeToPreConnectionUpdates(result.session_id);
+        }
+        
           setStatus("matched");
           // Don't auto-join - wait for user to accept via acceptConnection()
         }
@@ -323,7 +338,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
             setRoomName(updated.room_name);
             setStatus("matched");
             
-            // Fetch session info including ends_at - CRITICAL: Get the matched user
+            // Fetch session info - CRITICAL: Get the matched user and subscribe
             const { data: sessions, error: sessionError } = await supabase
               .from("random_call_sessions")
               .select("id, user1_id, user2_id, ends_at")
@@ -353,6 +368,9 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
               if (sessions.ends_at) {
                 sessionEndsAtRef.current = new Date(sessions.ends_at);
               }
+              
+              // Subscribe to pre-connection updates to detect if other user declines
+              subscribeToPreConnectionUpdates(sessions.id);
             } else {
               console.warn("[random-call-lk]", "no active session found for room", updated.room_name);
             }
@@ -367,6 +385,57 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       });
 
     channelRef.current = channel;
+  }, []);
+
+  // Subscribe to session updates for PRE-CONNECTION phase (detect decline/skip)
+  const subscribeToPreConnectionUpdates = useCallback((currentSessionId: string) => {
+    console.log("[random-call-lk]", "subscribing to pre-connection updates", { sessionId: currentSessionId });
+
+    // Avoid duplicate subscriptions
+    if (sessionChannelRef.current) {
+      console.log("[random-call-lk]", "already subscribed to session, skipping");
+      return;
+    }
+
+    const channel = supabase
+      .channel(`random-call-preconnect-${currentSessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "random_call_sessions",
+          filter: `id=eq.${currentSessionId}`,
+        },
+        async (payload) => {
+          const updated = payload.new as {
+            status: string;
+            user1_id: string;
+            user2_id: string;
+          };
+
+          console.log("[random-call-lk]", "pre-connection session update", updated);
+
+          // If session was declined/cancelled before call started
+          if (updated.status === "declined" || updated.status === "cancelled") {
+            console.log("[random-call-lk]", "Other user declined/cancelled the connection");
+            setDeclinedByOther(true);
+            setStatus("declined_by_other");
+            toast.info("L'autre personne n'était pas disponible");
+            
+            // Cleanup without cancelling our queue (we'll restart search)
+            if (sessionChannelRef.current) {
+              sessionChannelRef.current.unsubscribe();
+              sessionChannelRef.current = null;
+            }
+          }
+        }
+      )
+      .subscribe((state) => {
+        console.log("[random-call-lk]", "pre-connection channel state", state);
+      });
+
+    sessionChannelRef.current = channel;
   }, []);
 
   // Join LiveKit room for audio call
@@ -676,6 +745,97 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     setTimeout(() => setStatus("idle"), 500);
   }, [cleanup]);
 
+  // Decline connection - user explicitly refuses the match
+  const declineConnection = useCallback(async () => {
+    if (!sessionId) {
+      console.log("[random-call-lk]", "declineConnection: no sessionId");
+      await cleanup(true);
+      setStatus("idle");
+      return;
+    }
+
+    console.log("[random-call-lk]", "User declined connection", { sessionId });
+
+    try {
+      // Update session status to "declined" so other user is notified
+      await supabase
+        .from("random_call_sessions")
+        .update({ status: "declined" })
+        .eq("id", sessionId);
+
+      // Also cancel our queue entry
+      if (user?.id) {
+        await supabase.rpc("random_call_cancel", { p_user_id: user.id });
+      }
+    } catch (err) {
+      console.error("[random-call-lk]", "declineConnection error", err);
+    }
+
+    await cleanup(false);
+    setRoomName(null);
+    setSessionId(null);
+    setMatchedUserId(null);
+    setStatus("idle");
+  }, [sessionId, user?.id, cleanup]);
+
+  // Skip connection - user passes and wants to find someone else
+  const skipConnection = useCallback(async () => {
+    if (!sessionId) {
+      console.log("[random-call-lk]", "skipConnection: no sessionId");
+      return;
+    }
+
+    console.log("[random-call-lk]", "User skipped connection", { sessionId });
+
+    try {
+      // Update session status to "declined" so other user is notified
+      await supabase
+        .from("random_call_sessions")
+        .update({ status: "declined" })
+        .eq("id", sessionId);
+
+      // Cancel our current queue entry
+      if (user?.id) {
+        await supabase.rpc("random_call_cancel", { p_user_id: user.id });
+      }
+    } catch (err) {
+      console.error("[random-call-lk]", "skipConnection error", err);
+    }
+
+    // Cleanup current session
+    if (sessionChannelRef.current) {
+      sessionChannelRef.current.unsubscribe();
+      sessionChannelRef.current = null;
+    }
+    
+    setRoomName(null);
+    setSessionId(null);
+    setMatchedUserId(null);
+    setDeclinedByOther(false);
+    
+    // Restart search with same preference
+    setStatus("searching");
+    
+    // Small delay then restart
+    setTimeout(() => {
+      startSearch(lastPreferenceRef.current);
+    }, 500);
+  }, [sessionId, user?.id, startSearch]);
+
+  // Auto-restart search when declined by other user
+  const restartSearchAfterDecline = useCallback(() => {
+    console.log("[random-call-lk]", "Restarting search after being declined");
+    setDeclinedByOther(false);
+    setRoomName(null);
+    setSessionId(null);
+    setMatchedUserId(null);
+    setStatus("searching");
+    
+    setTimeout(() => {
+      startSearch(lastPreferenceRef.current);
+    }, 500);
+  }, [startSearch]);
+
   // End call - also cancels queue entry
   const endCall = useCallback(() => {
     console.log("[random-call-lk]", "endCall");
@@ -937,9 +1097,12 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     decisionResult,
     waitingForOther,
     otherUserRejected,
+    declinedByOther,
     startSearch,
     cancelSearch,
     acceptConnection,
+    declineConnection,
+    skipConnection,
     endCall,
     toggleMute,
     toggleSpeaker,
