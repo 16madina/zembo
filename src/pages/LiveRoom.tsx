@@ -1541,13 +1541,39 @@ const LiveRoom = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => toast.info("Plus d'options bientôt disponibles")}
-              className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
-            >
-              <MoreVertical className="w-5 h-5 text-foreground" />
-            </motion.button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center active:bg-muted transition-colors"
+                >
+                  <MoreVertical className="w-5 h-5 text-foreground" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onSelect={() => {
+                    toast.info(
+                      `📊 Stats en direct\n👁️ ${realtimeViewers || live.viewer_count} spectateurs\n🎁 ${recentGifts.length} cadeaux reçus`,
+                      { duration: 5000 }
+                    );
+                  }}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Voir les stats en temps réel
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() => {
+                    toast.info("Reconnexion en cours...");
+                    liveKitForceReconnect();
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Forcer la reconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>
