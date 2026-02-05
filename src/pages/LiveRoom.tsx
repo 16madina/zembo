@@ -1299,6 +1299,7 @@ const LiveRoom = () => {
               isLiveKitConnected={liveKitConnected}
               isLiveKitConnecting={liveKitConnecting}
               setRemoteVideoRef={setRemoteVideoRef}
+              isStreamerVideoOff={!isStreamer && liveKitVideoOff}
             />
 
             {/* Guest PiP View (Picture-in-Picture) */}

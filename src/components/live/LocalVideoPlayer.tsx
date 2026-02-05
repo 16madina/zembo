@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Camera, CameraOff, Wifi, Loader2, WifiOff } from "lucide-react";
+import { Camera, CameraOff, Wifi, Loader2, WifiOff, VideoOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Track } from "livekit-client";
 
@@ -19,6 +19,7 @@ interface LocalVideoPlayerProps {
   isLiveKitConnected?: boolean;
   isLiveKitConnecting?: boolean;
   setRemoteVideoRef?: (ref: HTMLVideoElement | null) => void;
+  isStreamerVideoOff?: boolean;
 }
 
 const LocalVideoPlayer = ({
@@ -35,6 +36,7 @@ const LocalVideoPlayer = ({
   isLiveKitConnected = false,
   isLiveKitConnecting = false,
   setRemoteVideoRef,
+  isStreamerVideoOff = false,
 }: LocalVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -191,6 +193,50 @@ const LocalVideoPlayer = ({
 
   // Viewer: Connected but waiting for video
   if (isLiveKitConnected && !remoteVideoTrack) {
+    // Streamer has intentionally turned off camera
+    if (isStreamerVideoOff) {
+      return (
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center"
+          >
+            <Avatar className="w-28 h-28 mx-auto mb-4 border-4 border-primary/50 shadow-lg">
+              <AvatarImage src={streamerAvatar || defaultAvatar} />
+              <AvatarFallback className="text-2xl">
+                {streamerName?.[0] || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <h2 className="text-xl font-bold text-foreground mb-3">
+              {streamerName || "Streamer"}
+            </h2>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col items-center gap-2"
+            >
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-muted/80 backdrop-blur-sm">
+                <VideoOff className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-medium text-foreground">Caméra en pause</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Le streamer reviendra bientôt
+              </p>
+            </motion.div>
+          </motion.div>
+          
+          {/* Pause badge */}
+          <div className="absolute top-16 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/90 backdrop-blur-sm z-10">
+            <VideoOff className="w-3 h-3 text-white" />
+            <span className="text-xs font-bold text-white">PAUSE</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Normal state: waiting for video track
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-muted to-background flex items-center justify-center">
         <motion.div
