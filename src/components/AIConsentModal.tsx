@@ -22,28 +22,24 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
 
   const content = {
     fr: {
-      title: "Fonctionnalités IA",
-      subtitle: "Consentement pour l'utilisation des données",
-      dataSharedTitle: "Données partagées avec l'IA",
+      title: "Consentement IA",
+      subtitle: "Zembo utilise l'intelligence artificielle",
+      introText: "Zembo utilise un service d'IA externe pour :",
+      aiPurposes: [
+        "Analyser la compatibilité",
+        "Améliorer les recommandations",
+        "Personnaliser votre expérience",
+      ],
+      dataSharedTitle: "Données partagées",
+      dataSharedIntro: "Pour cela, nous pouvons partager :",
       dataItems: [
-        "Votre profil (nom, âge, intérêts)",
-        "Vos réponses au test de compatibilité",
-        "Vos préférences de rencontre",
+        "Votre photo",
+        "Votre âge",
+        "Vos préférences",
       ],
       providerTitle: "Fournisseur IA",
       providerText: "Lovable AI (modèles Google Gemini & OpenAI GPT)",
-      purposeTitle: "Objectif",
-      purposeItems: [
-        "Calculer votre compatibilité avec d'autres utilisateurs",
-        "Générer des prédictions personnalisées (Zembo Oracle)",
-        "Améliorer les suggestions de matchs",
-      ],
-      securityTitle: "Sécurité",
-      securityItems: [
-        "Vos données sont chiffrées en transit",
-        "Aucune donnée n'est stockée par les fournisseurs IA",
-        "Vous pouvez révoquer ce consentement à tout moment",
-      ],
+      securityText: "Ces données sont utilisées uniquement pour améliorer votre expérience sur Zembo et sont protégées conformément à notre politique de confidentialité.",
       acceptTerms: "J'accepte le partage de mes données pour les fonctionnalités IA",
       privacyLink: "Voir notre politique de confidentialité",
       acceptButton: "Accepter et continuer",
@@ -58,28 +54,24 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
       ],
     },
     en: {
-      title: "AI Features",
-      subtitle: "Consent for data usage",
-      dataSharedTitle: "Data shared with AI",
+      title: "AI Consent",
+      subtitle: "Zembo uses artificial intelligence",
+      introText: "Zembo uses an external AI service to:",
+      aiPurposes: [
+        "Analyze compatibility",
+        "Improve recommendations",
+        "Personalize your experience",
+      ],
+      dataSharedTitle: "Data shared",
+      dataSharedIntro: "For this, we may share:",
       dataItems: [
-        "Your profile (name, age, interests)",
-        "Your compatibility test answers",
-        "Your dating preferences",
+        "Your photo",
+        "Your age",
+        "Your preferences",
       ],
       providerTitle: "AI Provider",
       providerText: "Lovable AI (Google Gemini & OpenAI GPT models)",
-      purposeTitle: "Purpose",
-      purposeItems: [
-        "Calculate your compatibility with other users",
-        "Generate personalized predictions (Zembo Oracle)",
-        "Improve match suggestions",
-      ],
-      securityTitle: "Security",
-      securityItems: [
-        "Your data is encrypted in transit",
-        "No data is stored by AI providers",
-        "You can revoke this consent at any time",
-      ],
+      securityText: "This data is used solely to improve your experience on Zembo and is protected in accordance with our privacy policy.",
       acceptTerms: "I accept sharing my data for AI features",
       privacyLink: "View our privacy policy",
       acceptButton: "Accept and continue",
@@ -154,11 +146,26 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
 
             {/* Data shared */}
             <div className="space-y-4 mb-6">
+              {/* Intro - Why AI */}
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+                <p className="text-sm font-medium text-foreground mb-3">{t.introText}</p>
+                <ul className="space-y-2">
+                  {t.aiPurposes.map((item, index) => (
+                    <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle className="w-3 h-3 text-primary flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Data shared */}
               <div className="bg-muted/50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Globe className="w-4 h-4 text-primary" />
                   <h3 className="font-semibold text-sm">{t.dataSharedTitle}</h3>
                 </div>
+                <p className="text-sm text-muted-foreground mb-3">{t.dataSharedIntro}</p>
                 <ul className="space-y-2">
                   {t.dataItems.map((item, index) => (
                     <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -178,33 +185,13 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
                 <p className="text-sm text-muted-foreground">{t.providerText}</p>
               </div>
 
-              {/* Purpose */}
-              <div className="bg-muted/50 rounded-xl p-4">
-                <h3 className="font-semibold text-sm mb-3">{t.purposeTitle}</h3>
-                <ul className="space-y-2">
-                  {t.purposeItems.map((item, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CheckCircle className="w-3 h-3 text-primary flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
               {/* Security */}
-              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+              <div className="bg-muted/50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Shield className="w-4 h-4 text-primary" />
-                  <h3 className="font-semibold text-sm">{t.securityTitle}</h3>
+                  <h3 className="font-semibold text-sm">Protection des données</h3>
                 </div>
-                <ul className="space-y-2">
-                  {t.securityItems.map((item, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CheckCircle className="w-3 h-3 text-primary flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-muted-foreground leading-relaxed">{t.securityText}</p>
               </div>
             </div>
 
