@@ -9,6 +9,7 @@ export type RandomCallStatus =
   | "idle"
   | "searching"
   | "matched"
+  | "connecting"
   | "in_call"
   | "in_call_deciding" // New: in call + decision overlay shown
   | "deciding"
@@ -46,6 +47,7 @@ interface UseRandomCallLiveKitReturn {
   otherUserRejected: boolean;
   startSearch: (preference: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
+  acceptConnection: () => Promise<void>;
   endCall: () => void;
   toggleMute: () => void;
   toggleSpeaker: () => Promise<void>;
@@ -209,8 +211,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           setSessionId(result.session_id || null);
           setMatchedUserId(result.matched_user_id || null);
           setStatus("matched");
-          
-          await joinLiveKitRoom(result.room_name);
+          // Don't auto-join - wait for user to accept via acceptConnection()
         }
       } catch (err) {
         console.error("[random-call-lk]", "poll error", err);
@@ -263,8 +264,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
             sessionEndsAtRef.current = new Date(sessionData.ends_at);
           }
         }
-        
-        await joinLiveKitRoom(result.room_name);
+        // Don't auto-join - wait for user to accept via acceptConnection()
         return;
       }
 
@@ -358,9 +358,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
             }
 
             // Join the LiveKit room using ref to avoid circular dependency
-            if (joinLiveKitRoomRef.current) {
-              await joinLiveKitRoomRef.current(updated.room_name);
-            }
+            // Don't auto-join - wait for user to accept via acceptConnection()
           }
         }
       )
@@ -898,6 +896,25 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     }
   }, [status, sessionId, subscribeToSessionUpdates]);
 
+  // Accept connection - called when user explicitly accepts the pre-connection screen
+  const acceptConnection = useCallback(async () => {
+    if (!roomName) {
+      console.error("[random-call-lk]", "acceptConnection called without roomName");
+      return;
+    }
+    
+    console.log("[random-call-lk]", "User accepted connection, joining LiveKit room");
+    setStatus("connecting");
+    
+    try {
+      await joinLiveKitRoom(roomName);
+    } catch (err) {
+      console.error("[random-call-lk]", "Failed to join after accepting:", err);
+      setError("Erreur de connexion");
+      setStatus("error");
+    }
+  }, [roomName, joinLiveKitRoom]);
+
   // Cleanup on unmount - cancel queue to release user
   useEffect(() => {
     return () => {
@@ -922,6 +939,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     otherUserRejected,
     startSearch,
     cancelSearch,
+    acceptConnection,
     endCall,
     toggleMute,
     toggleSpeaker,
