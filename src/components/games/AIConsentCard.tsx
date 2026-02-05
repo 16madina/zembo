@@ -12,11 +12,11 @@
    const content = {
      fr: {
        notConsented: "Acceptez l'utilisation avant de commencer",
-       consented: "Consentement IA accepté",
+       consented: "Utilisation IA · Déjà accepté",
      },
      en: {
        notConsented: "Accept usage before starting",
-       consented: "AI consent accepted",
+       consented: "AI usage · Already accepted",
      },
    };
  
