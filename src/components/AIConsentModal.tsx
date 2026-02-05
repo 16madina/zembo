@@ -48,7 +48,8 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
       privacyBack: "Retour",
       privacySections: [
         { title: "Collecte des données", content: "Nous collectons les informations que vous nous fournissez directement : nom, email, date de naissance, photos de profil, localisation, préférences de rencontre et centres d'intérêt." },
-        { title: "Fonctionnalités IA", content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle), nous partageons certaines données avec Google (Gemini) et OpenAI (GPT). Les données sont chiffrées en transit et ne sont pas stockées de manière permanente." },
+        { title: "Partage avec un tiers IA", content: "Nous partageons certaines données (photo, âge, préférences) avec un service d'IA tiers pour analyser la compatibilité et améliorer l'expérience utilisateur. Ce tiers respecte des standards équivalents de protection des données." },
+        { title: "Fournisseurs IA", content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle), nous utilisons les services de Google (Gemini) et OpenAI (GPT). Les données sont chiffrées en transit et ne sont pas stockées de manière permanente par ces fournisseurs." },
         { title: "Sécurité", content: "Nous utilisons des mesures de sécurité techniques : chiffrement SSL/TLS, stockage sécurisé, contrôles d'accès stricts." },
         { title: "Vos droits (RGPD)", content: "Vous avez le droit d'accéder, rectifier, supprimer, exporter vos données. Vous pouvez révoquer votre consentement IA à tout moment." },
       ],
@@ -80,7 +81,8 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
       privacyBack: "Back",
       privacySections: [
         { title: "Data Collection", content: "We collect information you provide directly: name, email, date of birth, profile photos, location, dating preferences and interests." },
-        { title: "AI Features", content: "For AI features (Compatibility Test, Zembo Oracle), we share certain data with Google (Gemini) and OpenAI (GPT). Data is encrypted in transit and not permanently stored." },
+        { title: "Third-Party AI Sharing", content: "We share certain data (photo, age, preferences) with a third-party AI service to analyze compatibility and improve user experience. This third party adheres to equivalent data protection standards." },
+        { title: "AI Providers", content: "For AI features (Compatibility Test, Zembo Oracle), we use Google (Gemini) and OpenAI (GPT) services. Data is encrypted in transit and not permanently stored by these providers." },
         { title: "Security", content: "We use technical security measures: SSL/TLS encryption, secure storage, strict access controls." },
         { title: "Your Rights (GDPR)", content: "You have the right to access, rectify, delete, export your data. You can revoke your AI consent at any time." },
       ],
