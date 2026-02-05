@@ -1035,6 +1035,7 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         callType={callState.callType}
         remoteUserName={callState.remoteUserName}
         remoteUserPhoto={callState.remoteUserPhoto}
+        remoteUserId={callState.remoteUserId || undefined}
         isMuted={callState.isMuted}
         duration={callState.duration}
         onAccept={acceptCall}
