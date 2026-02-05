@@ -338,10 +338,16 @@ export const useLiveKit = ({
   // Sync remote tracks - finds and attaches any available video/audio tracks from remote participants
   // Now stores tracks by participant identity for multi-participant scenarios (DUO mode)
   const syncRemoteTracks = useCallback((currentRoom: Room) => {
-    // Stage guests also need to receive the streamer's video (they don't publish-only)
-    if (isStreamer && !isStageGuest) return;
+    // In DUO mode, even the streamer needs to receive the guest's video tracks
+    // Stage guests need to receive the streamer's video
+    // So we allow sync for: viewers, stage guests, AND streamers (for DUO mode)
+    // The streamer won't attach to their own track (filtered below)
 
     console.log("[LiveKit] syncRemoteTracks - Scanning for remote tracks...");
+    
+    // Get local participant identity to avoid attaching our own tracks
+    const localIdentity = currentRoom.localParticipant.identity;
+    console.log("[LiveKit] Local participant identity:", localIdentity);
     
     const remoteParticipants = Array.from(currentRoom.remoteParticipants.values());
     console.log("[LiveKit] Remote participants:", remoteParticipants.map(p => ({
@@ -353,8 +359,10 @@ export const useLiveKit = ({
 
     const newVideoTracks = new Map<string, Track>();
     const newAudioTracks = new Map<string, Track>();
-    let foundPrimaryVideo = false;
-    let foundPrimaryAudio = false;
+    // For streamers, we don't need a primary video (they have their own camera)
+    // For viewers, the first video track found is the streamer's (primary)
+    let foundPrimaryVideo = isStreamer; // Streamer already has video, skip primary assignment
+    let foundPrimaryAudio = isStreamer; // Streamer already has audio, skip primary assignment
 
     for (const participant of remoteParticipants) {
       console.log("[LiveKit] Processing participant:", participant.identity, 
@@ -505,19 +513,17 @@ export const useLiveKit = ({
         setParticipantCount(newRoom.numParticipants);
         hasConnectedRef.current = true;
         
-        // VIEWER or STAGE GUEST: Sync remote tracks immediately after connection
-        if (!isStreamer || isStageGuest) {
-          setTimeout(() => syncRemoteTracks(newRoom), 500);
-        }
+        // ALL participants sync remote tracks for DUO mode support
+        // Streamer needs to see guest's video, viewer needs to see both
+        setTimeout(() => syncRemoteTracks(newRoom), 500);
         
         updateDebugInfo(newRoom);
       });
 
       newRoom.on(RoomEvent.Reconnected, () => {
         console.log("[LiveKit] Room reconnected");
-        if (!isStreamer || isStageGuest) {
-          syncRemoteTracks(newRoom);
-        }
+        // ALL participants resync on reconnect for DUO mode
+        syncRemoteTracks(newRoom);
         updateDebugInfo(newRoom);
       });
 
@@ -534,10 +540,8 @@ export const useLiveKit = ({
         setParticipantCount(newRoom.numParticipants);
         onParticipantJoined?.(participant);
         
-        // VIEWER or STAGE GUEST: Try to sync tracks when a new participant joins
-        if (!isStreamer || isStageGuest) {
-          setTimeout(() => syncRemoteTracks(newRoom), 500);
-        }
+        // ALL participants sync when someone new joins (guest might be joining)
+        setTimeout(() => syncRemoteTracks(newRoom), 500);
         updateDebugInfo(newRoom);
       });
 
@@ -551,9 +555,8 @@ export const useLiveKit = ({
       // Track published event - important for viewers and stage guests to catch streamer publishing
       newRoom.on(RoomEvent.TrackPublished, (publication, participant) => {
         console.log("[LiveKit] TrackPublished:", publication.kind, "from", participant.identity);
-        if (!isStreamer || isStageGuest) {
-          setTimeout(() => syncRemoteTracks(newRoom), 300);
-        }
+        // ALL participants sync when tracks are published (guest publishes their video)
+        setTimeout(() => syncRemoteTracks(newRoom), 300);
         updateDebugInfo(newRoom);
       });
 
