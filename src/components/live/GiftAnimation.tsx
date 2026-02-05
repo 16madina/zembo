@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import type { VirtualGift } from "@/hooks/useGifts";
@@ -12,14 +12,33 @@ interface GiftAnimationProps {
 
 const GiftAnimation = ({ gift, senderName, onComplete }: GiftAnimationProps) => {
   const [show, setShow] = useState(false);
+  const [displayedGift, setDisplayedGift] = useState<VirtualGift | null>(null);
+  const [displayedSenderName, setDisplayedSenderName] = useState<string | undefined>(undefined);
   // Track the current gift ID to detect when a NEW gift arrives
   const currentGiftIdRef = useRef<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Clear the animation
+  const clearAnimation = useCallback(() => {
+    setShow(false);
+    setDisplayedGift(null);
+    setDisplayedSenderName(undefined);
+    currentGiftIdRef.current = null;
+    onComplete?.();
+  }, [onComplete]);
 
   useEffect(() => {
     // Only trigger animation if this is a NEW gift (different ID)
     if (gift && gift.id !== currentGiftIdRef.current) {
       currentGiftIdRef.current = gift.id;
+      setDisplayedGift(gift);
+      setDisplayedSenderName(senderName);
       setShow(true);
+      
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
 
       // Trigger confetti for special gifts
       if (gift.animation_type === "premium" || gift.price_coins >= 100) {
@@ -41,24 +60,23 @@ const GiftAnimation = ({ gift, senderName, onComplete }: GiftAnimationProps) => 
       }
 
       // Auto-hide after animation
-      const timer = setTimeout(() => {
-        setShow(false);
-        onComplete?.();
+      timerRef.current = setTimeout(() => {
+        clearAnimation();
       }, 3000);
-
-      return () => clearTimeout(timer);
     }
     
-    // If gift becomes null, reset the ref
-    if (!gift) {
-      currentGiftIdRef.current = null;
-    }
-  }, [gift, onComplete]);
+    // Cleanup on unmount
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [gift, senderName, clearAnimation]);
 
-  if (!gift) return null;
+  if (!displayedGift) return null;
 
   const getAnimationVariant = () => {
-    switch (gift.animation_type) {
+    switch (displayedGift.animation_type) {
       case "premium":
         return {
           initial: { scale: 0, rotate: -180, opacity: 0 },
@@ -121,10 +139,10 @@ const GiftAnimation = ({ gift, senderName, onComplete }: GiftAnimationProps) => 
                 duration: 0.5,
               }}
             >
-              <span className="text-8xl filter drop-shadow-lg">{gift.emoji}</span>
+              <span className="text-8xl filter drop-shadow-lg">{displayedGift.emoji}</span>
               
               {/* Sparkle effects for premium */}
-              {(gift.animation_type === "premium" || gift.price_coins >= 100) && (
+              {(displayedGift.animation_type === "premium" || displayedGift.price_coins >= 100) && (
                 <>
                   {[...Array(6)].map((_, i) => (
                     <motion.div
@@ -166,9 +184,9 @@ const GiftAnimation = ({ gift, senderName, onComplete }: GiftAnimationProps) => 
               transition={{ delay: 0.3 }}
             >
               <p className="text-center font-semibold text-foreground">
-                <span className="text-primary">{senderName || "Quelqu'un"}</span>
+                <span className="text-primary">{displayedSenderName || "Quelqu'un"}</span>
                 {" a envoyé "}
-                <span className="text-primary">{gift.name}</span>
+                <span className="text-primary">{displayedGift.name}</span>
               </p>
             </motion.div>
           </motion.div>

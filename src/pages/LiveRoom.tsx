@@ -59,6 +59,7 @@ import LiveDebugPanel from "@/components/live/LiveDebugPanel";
 import JoinRequestButton from "@/components/live/JoinRequestButton";
 import { JoinRequestQueue } from "@/components/live/JoinRequestNotification";
 import LiveEndedScreen from "@/components/live/LiveEndedScreen";
+import RecentGiftsDisplay from "@/components/live/RecentGiftsDisplay";
 import type { Tables } from "@/integrations/supabase/types";
 
 type LiveMessage = Tables<"live_messages"> & {
@@ -1620,32 +1621,7 @@ const LiveRoom = () => {
       )}
 
       {/* Recent Gifts Display */}
-      <AnimatePresence>
-        {recentGifts.slice(0, 3).map((transaction, index) => (
-          <motion.div
-            key={transaction.id}
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ delay: index * 0.1 }}
-            className="absolute left-4 z-30"
-            style={{ bottom: `${320 + index * 50}px` }}
-          >
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border">
-              <span className="text-lg">{transaction.gift?.emoji}</span>
-              <span className="text-xs">
-                <span className="font-semibold text-primary">
-                  {transaction.sender_name}
-                </span>{" "}
-                <span className="text-muted-foreground">a envoyé</span>{" "}
-                <span className="font-medium text-foreground">
-                  {transaction.gift?.name}
-                </span>
-              </span>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      <RecentGiftsDisplay recentGifts={recentGifts} />
 
       {/* Join Live Modal - Access Control */}
       {live && (
