@@ -15,10 +15,12 @@
  }
  
  const DISPLAY_DURATION = 5000; // 5 seconds
+const MAX_AGE_MS = 10000; // Only show gifts from last 10 seconds
  
  const RecentGiftsDisplay = ({ recentGifts }: RecentGiftsDisplayProps) => {
    const [displayedGifts, setDisplayedGifts] = useState<DisplayedGift[]>([]);
    const processedIdsRef = useRef<Set<string>>(new Set());
+  const mountTimeRef = useRef<number>(Date.now());
  
    // Process new gifts and add them to display
    useEffect(() => {
@@ -30,6 +32,17 @@
        // Skip if already processed
        if (processedIdsRef.current.has(transaction.id)) return;
        
+      // Skip old gifts (loaded from database on page load)
+      const transactionTime = new Date(transaction.created_at).getTime();
+      const age = now - transactionTime;
+      
+      // Only show gifts that were sent recently (within MAX_AGE_MS) 
+      // This filters out old gifts loaded from the database
+      if (age > MAX_AGE_MS) {
+        processedIdsRef.current.add(transaction.id); // Mark as processed to avoid reprocessing
+        return;
+      }
+      
        processedIdsRef.current.add(transaction.id);
        
        const newGift: DisplayedGift = {
