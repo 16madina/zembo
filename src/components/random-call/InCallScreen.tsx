@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2, MoreVertical, Ban } from "lucide-react";
-import { useState, useEffect, useRef, memo, useMemo } from "react";
+ import React, { useState, useEffect, useRef, memo, useMemo } from "react";
+ import { useLanguage } from "@/contexts/LanguageContext";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useAuth } from "@/contexts/AuthContext";
 import ReportModal from "./ReportModal";
@@ -31,6 +32,7 @@ interface InCallScreenProps {
 
 const InCallScreen = memo(({ timeRemaining, otherUserId, sessionId, onHangUp }: InCallScreenProps) => {
   const { user } = useAuth();
+   const { t } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showHangUpConfirm, setShowHangUpConfirm] = useState(false);
@@ -113,7 +115,7 @@ const InCallScreen = memo(({ timeRemaining, otherUserId, sessionId, onHangUp }: 
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary"
           >
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm font-medium">Connexion en cours...</span>
+             <span className="text-sm font-medium">{t.connecting}</span>
           </motion.div>
         )}
 
@@ -124,7 +126,7 @@ const InCallScreen = memo(({ timeRemaining, otherUserId, sessionId, onHangUp }: 
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-500"
           >
             <Phone className="w-4 h-4" />
-            <span className="text-sm font-medium">Connecté</span>
+             <span className="text-sm font-medium">{t.connected}</span>
           </motion.div>
         )}
 

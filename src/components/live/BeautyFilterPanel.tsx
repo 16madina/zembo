@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { BeautySettings, BeautyPreset } from "@/hooks/useBeautyFilters";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BeautyFilterPanelProps {
   isOpen: boolean;
@@ -17,27 +18,6 @@ interface BeautyFilterPanelProps {
   onApplyPreset: (preset: BeautyPreset) => void;
 }
 
-const presets: { id: BeautyPreset; label: string; emoji: string }[] = [
-  { id: "none", label: "Aucun", emoji: "🚫" },
-  { id: "natural", label: "Naturel", emoji: "🌿" },
-  { id: "soft", label: "Doux", emoji: "☁️" },
-  { id: "glamour", label: "Glamour", emoji: "✨" },
-  { id: "vivid", label: "Vif", emoji: "🎨" },
-];
-
-const sliderSettings: {
-  key: keyof BeautySettings;
-  label: string;
-  icon: React.ReactNode;
-}[] = [
-  { key: "smoothness", label: "Lissage", icon: <Droplets className="w-4 h-4" /> },
-  { key: "brightness", label: "Luminosité", icon: <Sun className="w-4 h-4" /> },
-  { key: "contrast", label: "Contraste", icon: <Contrast className="w-4 h-4" /> },
-  { key: "saturation", label: "Saturation", icon: <Palette className="w-4 h-4" /> },
-  { key: "warmth", label: "Chaleur", icon: <Thermometer className="w-4 h-4" /> },
-  { key: "sharpness", label: "Netteté", icon: <Focus className="w-4 h-4" /> },
-];
-
 const BeautyFilterPanel = ({
   isOpen,
   onClose,
@@ -48,6 +28,29 @@ const BeautyFilterPanel = ({
   onToggleFilters,
   onApplyPreset,
 }: BeautyFilterPanelProps) => {
+   const { t } = useLanguage();
+ 
+   const presets: { id: BeautyPreset; label: string; emoji: string }[] = [
+     { id: "none", label: t.none, emoji: "🚫" },
+     { id: "natural", label: t.natural, emoji: "🌿" },
+     { id: "soft", label: t.soft, emoji: "☁️" },
+     { id: "glamour", label: t.glamour, emoji: "✨" },
+     { id: "vivid", label: t.vivid, emoji: "🎨" },
+   ];
+ 
+   const sliderSettings: {
+     key: keyof BeautySettings;
+     label: string;
+     icon: React.ReactNode;
+   }[] = [
+     { key: "smoothness", label: t.smoothing, icon: <Droplets className="w-4 h-4" /> },
+     { key: "brightness", label: t.brightness, icon: <Sun className="w-4 h-4" /> },
+     { key: "contrast", label: t.contrast, icon: <Contrast className="w-4 h-4" /> },
+     { key: "saturation", label: t.saturation, icon: <Palette className="w-4 h-4" /> },
+     { key: "warmth", label: t.warmth, icon: <Thermometer className="w-4 h-4" /> },
+     { key: "sharpness", label: t.sharpness, icon: <Focus className="w-4 h-4" /> },
+   ];
+ 
   return (
     <AnimatePresence>
       {isOpen && (
@@ -73,12 +76,12 @@ const BeautyFilterPanel = ({
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-lg">Filtres Beauté</h2>
+               <h2 className="font-semibold text-lg">{t.beautyFilters}</h2>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {isEnabled ? "Activé" : "Désactivé"}
+                   {isEnabled ? t.enabled : t.disabled}
                   </span>
                   <Switch checked={isEnabled} onCheckedChange={onToggleFilters} />
                 </div>
@@ -91,7 +94,7 @@ const BeautyFilterPanel = ({
             <div className="p-4 space-y-6 overflow-y-auto max-h-[calc(80vh-80px)]">
               {/* Presets */}
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Préréglages</h3>
+               <h3 className="text-sm font-medium text-muted-foreground">{t.presets}</h3>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {presets.map((preset) => (
                     <motion.button
@@ -114,7 +117,7 @@ const BeautyFilterPanel = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium text-muted-foreground">
-                    Réglages avancés
+                   {t.advancedSettings}
                   </h3>
                   <Button
                     size="sm"
@@ -123,7 +126,7 @@ const BeautyFilterPanel = ({
                     className="text-xs"
                   >
                     <RotateCcw className="w-3 h-3 mr-1" />
-                    Réinitialiser
+                   {t.reset}
                   </Button>
                 </div>
 
