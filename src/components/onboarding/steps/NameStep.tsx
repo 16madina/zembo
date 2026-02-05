@@ -74,7 +74,7 @@ const NameStep = ({ data, updateData }: NameStepProps) => {
   const lastNameValid = lastNameTouched && !lastNameError && data.lastName.trim().length >= 2;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full overflow-hidden">
       <p className="text-muted-foreground text-sm mb-6">
         Comment souhaitez-vous être appelé(e) ?
       </p>
@@ -88,7 +88,7 @@ const NameStep = ({ data, updateData }: NameStepProps) => {
             value={data.firstName}
             onChange={(e) => handleFirstNameChange(e.target.value)}
             onBlur={handleFirstNameBlur}
-            className={`pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
+            className={`w-full pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
               firstNameError ? "ring-2 ring-destructive" : firstNameValid ? "ring-2 ring-green-500" : ""
             }`}
             autoFocus
@@ -117,7 +117,7 @@ const NameStep = ({ data, updateData }: NameStepProps) => {
             value={data.lastName}
             onChange={(e) => handleLastNameChange(e.target.value)}
             onBlur={handleLastNameBlur}
-            className={`pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
+            className={`w-full pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
               lastNameError ? "ring-2 ring-destructive" : lastNameValid ? "ring-2 ring-green-500" : ""
             }`}
           />

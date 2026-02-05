@@ -102,7 +102,7 @@ const EmailStep = ({ data, updateData }: EmailStepProps) => {
   const passwordValid = data.password.length >= 6;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full overflow-hidden">
       <p className="text-muted-foreground text-sm mb-6">
         Créez vos identifiants de connexion
       </p>
@@ -116,7 +116,7 @@ const EmailStep = ({ data, updateData }: EmailStepProps) => {
             value={data.email}
             onChange={(e) => handleEmailChange(e.target.value)}
             onBlur={handleEmailBlur}
-            className={`pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
+            className={`w-full pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
               emailError || isTaken ? "ring-2 ring-destructive" : emailValid ? "ring-2 ring-green-500" : ""
             }`}
             autoFocus
@@ -144,7 +144,7 @@ const EmailStep = ({ data, updateData }: EmailStepProps) => {
           placeholder="Mot de passe (min. 6 caractères)"
           value={data.password}
           onChange={(e) => updateData({ password: e.target.value })}
-          className={`pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
+          className={`w-full pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
             passwordValid ? "ring-2 ring-green-500" : ""
           }`}
         />
