@@ -4,6 +4,7 @@ import { Coins, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCoins } from "@/hooks/useCoins";
 import CoinShopModal from "./CoinShopModal";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ShopButtonProps {
   variant?: "icon" | "full" | "compact";
@@ -14,6 +15,7 @@ interface ShopButtonProps {
 const ShopButton = ({ variant = "full", className = "", lowBalanceThreshold = 50 }: ShopButtonProps) => {
   const [isShopOpen, setIsShopOpen] = useState(false);
   const { balance, loading } = useCoins();
+   const { t } = useLanguage();
 
   const isLowBalance = !loading && balance < lowBalanceThreshold;
 
@@ -55,7 +57,7 @@ const ShopButton = ({ variant = "full", className = "", lowBalanceThreshold = 50
             className={`gap-2 ${isLowBalance ? 'border-primary/50 bg-primary/10' : ''} ${className}`}
           >
             <Coins className="w-4 h-4 text-primary" />
-            <span className="font-semibold text-sm">Boutique</span>
+             <span className="font-semibold text-sm">{t.shop}</span>
             {isLowBalance && (
               <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
             )}
@@ -77,7 +79,7 @@ const ShopButton = ({ variant = "full", className = "", lowBalanceThreshold = 50
           className={`gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity ${className}`}
         >
           <Coins className="w-5 h-5" />
-          <span className="font-semibold">Boutique</span>
+           <span className="font-semibold">{t.shop}</span>
           <ShoppingBag className="w-4 h-4 ml-1" />
         </Button>
       </motion.div>
