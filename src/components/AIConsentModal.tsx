@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Shield, Globe, CheckCircle, X, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAIDataConsent } from "@/hooks/useAIDataConsent";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -17,6 +18,7 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
   const { language } = useLanguage();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPrivacyPopup, setShowPrivacyPopup] = useState(false);
 
   const content = {
     fr: {
@@ -46,6 +48,14 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
       privacyLink: "Voir notre politique de confidentialité",
       acceptButton: "Accepter et continuer",
       declineButton: "Refuser",
+      privacyTitle: "Politique de confidentialité",
+      privacyBack: "Retour",
+      privacySections: [
+        { title: "Collecte des données", content: "Nous collectons les informations que vous nous fournissez directement : nom, email, date de naissance, photos de profil, localisation, préférences de rencontre et centres d'intérêt." },
+        { title: "Fonctionnalités IA", content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle), nous partageons certaines données avec Google (Gemini) et OpenAI (GPT). Les données sont chiffrées en transit et ne sont pas stockées de manière permanente." },
+        { title: "Sécurité", content: "Nous utilisons des mesures de sécurité techniques : chiffrement SSL/TLS, stockage sécurisé, contrôles d'accès stricts." },
+        { title: "Vos droits (RGPD)", content: "Vous avez le droit d'accéder, rectifier, supprimer, exporter vos données. Vous pouvez révoquer votre consentement IA à tout moment." },
+      ],
     },
     en: {
       title: "AI Features",
@@ -74,6 +84,14 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
       privacyLink: "View our privacy policy",
       acceptButton: "Accept and continue",
       declineButton: "Decline",
+      privacyTitle: "Privacy Policy",
+      privacyBack: "Back",
+      privacySections: [
+        { title: "Data Collection", content: "We collect information you provide directly: name, email, date of birth, profile photos, location, dating preferences and interests." },
+        { title: "AI Features", content: "For AI features (Compatibility Test, Zembo Oracle), we share certain data with Google (Gemini) and OpenAI (GPT). Data is encrypted in transit and not permanently stored." },
+        { title: "Security", content: "We use technical security measures: SSL/TLS encryption, secure storage, strict access controls." },
+        { title: "Your Rights (GDPR)", content: "You have the right to access, rectify, delete, export your data. You can revoke your AI consent at any time." },
+      ],
     },
   };
 
@@ -207,14 +225,13 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
             </div>
 
             {/* Privacy link */}
-            <a
-              href="/privacy"
-              target="_blank"
+            <button
+              onClick={() => setShowPrivacyPopup(true)}
               className="flex items-center justify-center gap-2 text-sm text-primary hover:underline mb-6"
             >
               <ExternalLink className="w-4 h-4" />
               {t.privacyLink}
-            </a>
+            </button>
 
             {/* Buttons */}
             <div className="space-y-3">
@@ -245,6 +262,55 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
                 {t.declineButton}
               </Button>
             </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Privacy Policy Popup */}
+      {showPrivacyPopup && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setShowPrivacyPopup(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-background rounded-3xl p-6 max-h-[85vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-foreground">{t.privacyTitle}</h2>
+              <button
+                onClick={() => setShowPrivacyPopup(false)}
+                className="w-8 h-8 rounded-full glass flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <ScrollArea className="flex-1 pr-2">
+              <div className="space-y-4">
+                {t.privacySections.map((section, index) => (
+                  <div key={index} className="bg-muted/50 rounded-xl p-4">
+                    <h3 className="font-semibold text-sm mb-2 text-foreground">{section.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{section.content}</p>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+
+            <Button
+              onClick={() => setShowPrivacyPopup(false)}
+              className="w-full mt-4"
+              variant="outline"
+            >
+              {t.privacyBack}
+            </Button>
           </motion.div>
         </motion.div>
       )}
