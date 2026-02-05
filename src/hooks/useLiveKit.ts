@@ -565,6 +565,14 @@ export const useLiveKit = ({
         RoomEvent.TrackSubscribed,
         (track, publication, participant) => {
           console.log("[LiveKit] TrackSubscribed:", track.kind, "from", participant.identity);
+         
+         // Listen for mute/unmute events on the track for proper state sync
+         track.on("muted", () => {
+           console.log("[LiveKit] Track muted:", track.kind, "from", participant.identity);
+         });
+         track.on("unmuted", () => {
+           console.log("[LiveKit] Track unmuted:", track.kind, "from", participant.identity);
+         });
           
           // Store track in Map by participant identity
           if (track.kind === Track.Kind.Video) {
@@ -730,7 +738,30 @@ export const useLiveKit = ({
       const newMutedState = !isMuted;
       
       console.log("[LiveKit] Setting microphone enabled:", !newMutedState);
-      await localParticipant.setMicrophoneEnabled(!newMutedState);
+     
+     // Get current audio publication
+     const audioPublication = localParticipant.getTrackPublication(Track.Source.Microphone);
+     
+     if (newMutedState) {
+       // Muting: disable the microphone
+       if (audioPublication?.track) {
+         await audioPublication.mute();
+         console.log("[LiveKit] ✓ Audio track muted via publication.mute()");
+       } else {
+         await localParticipant.setMicrophoneEnabled(false);
+         console.log("[LiveKit] ✓ Microphone disabled");
+       }
+     } else {
+       // Unmuting: enable the microphone
+       if (audioPublication?.track) {
+         await audioPublication.unmute();
+         console.log("[LiveKit] ✓ Audio track unmuted via publication.unmute()");
+       } else {
+         await localParticipant.setMicrophoneEnabled(true);
+         console.log("[LiveKit] ✓ Microphone enabled");
+       }
+     }
+     
       setIsMuted(newMutedState);
       console.log("[LiveKit] Microphone muted state updated to:", newMutedState);
     } catch (error) {
@@ -752,7 +783,45 @@ export const useLiveKit = ({
       const newVideoOffState = !isVideoOff;
       
       console.log("[LiveKit] Setting camera enabled:", !newVideoOffState);
-      await localParticipant.setCameraEnabled(!newVideoOffState);
+     
+     // Get current video publication
+     const videoPublication = localParticipant.getTrackPublication(Track.Source.Camera);
+     
+     if (newVideoOffState) {
+       // Turning video off: mute the track (keeps it published but paused)
+       if (videoPublication?.track) {
+         await videoPublication.mute();
+         console.log("[LiveKit] ✓ Video track muted via publication.mute()");
+       } else {
+         await localParticipant.setCameraEnabled(false);
+         console.log("[LiveKit] ✓ Camera disabled");
+       }
+     } else {
+       // Turning video on: unmute existing track or re-enable camera
+       if (videoPublication?.track) {
+         await videoPublication.unmute();
+         console.log("[LiveKit] ✓ Video track unmuted via publication.unmute()");
+         
+         // Attach to local video element if available
+         if (localVideoRef.current) {
+           videoPublication.track.attach(localVideoRef.current);
+         }
+       } else {
+         // No existing track, create a new one
+         console.log("[LiveKit] No existing video track, creating new one...");
+         const newVideoTrack = await createLocalVideoTrack({
+           facingMode: "user",
+           resolution: VideoPresets.h720.resolution,
+         });
+         const newPub = await localParticipant.publishTrack(newVideoTrack);
+         console.log("[LiveKit] ✓ New video track published");
+         
+         if (localVideoRef.current && newPub?.track) {
+           newPub.track.attach(localVideoRef.current);
+         }
+       }
+     }
+     
       setIsVideoOff(newVideoOffState);
       console.log("[LiveKit] Camera off state updated to:", newVideoOffState);
     } catch (error) {
