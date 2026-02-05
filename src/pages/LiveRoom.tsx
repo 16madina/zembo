@@ -1552,39 +1552,49 @@ const LiveRoom = () => {
       </div>
 
       {/* Chat Area - Compact overlay */}
-      <div className="absolute bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)] bg-gradient-to-t from-background/95 via-background/80 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]">
         {/* Messages */}
-        <div className="h-32 overflow-y-auto px-4 pt-4 space-y-2">
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-start gap-2"
-            >
-              <Avatar className="w-6 h-6">
-                <AvatarImage
-                  src={
-                    msg.profile?.avatar_url ||
-                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.user_id}`
-                  }
-                />
-                <AvatarFallback>
-                  {msg.profile?.display_name?.[0] || "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <span className="text-xs font-semibold text-primary">
-                  {msg.profile?.display_name || "Anonyme"}
-                </span>
-                <p className="text-sm text-foreground">{msg.content}</p>
-              </div>
-            </motion.div>
-          ))}
+        <div className="relative h-36 overflow-hidden px-4 pt-6">
+          {/* Fade gradient at top */}
+          <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-10" />
+          
+          {/* Messages container - show only last 6 messages */}
+          <div className="flex flex-col justify-end h-full space-y-1.5">
+            <AnimatePresence initial={false} mode="popLayout">
+              {messages.slice(-6).map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                  transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                  className="flex items-start gap-2 bg-black/40 backdrop-blur-sm rounded-xl px-2.5 py-1.5 max-w-[85%]"
+                >
+                  <Avatar className="w-6 h-6 flex-shrink-0">
+                    <AvatarImage
+                      src={
+                        msg.profile?.avatar_url ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.user_id}`
+                      }
+                    />
+                    <AvatarFallback className="text-[10px]">
+                      {msg.profile?.display_name?.[0] || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <span className="text-xs font-semibold text-primary">
+                      {msg.profile?.display_name || "Anonyme"}
+                    </span>
+                    <p className="text-sm text-white leading-tight break-words">{msg.content}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Message Input */}
-        <div className="px-4 pb-4 flex gap-2">
+        <div className="px-4 pb-4 pt-2 flex gap-2 bg-gradient-to-t from-background/95 via-background/80 to-transparent">
           <Input
             placeholder="Envoyer un message..."
             value={newMessage}
