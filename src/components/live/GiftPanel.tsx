@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Coins } from "lucide-react";
+import { X, Coins, Plus } from "lucide-react";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import CoinShopModal from "@/components/shop/CoinShopModal";
 
 interface GiftPanelProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ const GiftPanel = ({
   const { balance } = useCoins();
   const [selectedGift, setSelectedGift] = useState<VirtualGift | null>(null);
   const [sending, setSending] = useState(false);
+  const [showCoinShop, setShowCoinShop] = useState(false);
 
   const handleSendGift = async () => {
     if (!selectedGift) return;
@@ -71,10 +73,14 @@ const GiftPanel = ({
                 </h3>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20">
+                <button
+                  onClick={() => setShowCoinShop(true)}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors"
+                >
                   <Coins className="w-4 h-4 text-primary" />
                   <span className="font-semibold text-primary">{balance}</span>
-                </div>
+                  <Plus className="w-3 h-3 text-primary" />
+                </button>
                 <button onClick={onClose}>
                   <X className="w-5 h-5 text-muted-foreground" />
                 </button>
@@ -132,6 +138,17 @@ const GiftPanel = ({
 
             {/* Send Button */}
             <div className="p-4 border-t border-border">
+              {/* Show recharge button when balance is low */}
+              {balance < 10 && (
+                <Button
+                  variant="outline"
+                  className="w-full mb-2 border-primary/50 text-primary hover:bg-primary/10"
+                  onClick={() => setShowCoinShop(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Recharger mes coins
+                </Button>
+              )}
               <Button
                 className="w-full"
                 size="lg"
@@ -152,6 +169,12 @@ const GiftPanel = ({
           </motion.div>
         </>
       )}
+      
+      {/* Coin Shop Modal - Opens on top of gift panel */}
+      <CoinShopModal 
+        isOpen={showCoinShop} 
+        onClose={() => setShowCoinShop(false)} 
+      />
     </AnimatePresence>
   );
 };
