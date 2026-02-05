@@ -7,33 +7,29 @@ import ZConnectGame from "@/components/random/ZConnectGame";
 import CompatibilityGameModal from "@/components/games/CompatibilityGameModal";
 import SpeedDatingGame from "@/components/games/SpeedDatingGame";
 import AIMatchFinderGame from "@/components/games/AIMatchFinderGame";
-import AIConsentModal from "@/components/AIConsentModal";
-import { useAIDataConsent } from "@/hooks/useAIDataConsent";
+ import { useAIDataConsent } from "@/hooks/useAIDataConsent";
+ import { toast } from "sonner";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 type GameMode = "hub" | "zconnect" | "speedDating" | "oracle" | "compatibility";
 
 const Random = () => {
   const [currentGame, setCurrentGame] = useState<GameMode>("hub");
-  const [showAIConsentModal, setShowAIConsentModal] = useState(false);
-  const [pendingAIFeature, setPendingAIFeature] = useState<string | null>(null);
-  
-  const { hasConsented: hasAIConsent, isLoading: isLoadingConsent } = useAIDataConsent();
+   const { hasConsented, isLoading } = useAIDataConsent();
+   const { language } = useLanguage();
 
   const handleSelectGame = (game: "zconnect" | "speedDating" | "oracle" | "compatibility") => {
-    // AI features require consent
-    if ((game === "compatibility" || game === "oracle" || game === "speedDating") && !hasAIConsent && !isLoadingConsent) {
-      setPendingAIFeature(game);
-      setShowAIConsentModal(true);
+     // AI games require consent
+     const aiGames = ["compatibility", "oracle", "speedDating"];
+     if (aiGames.includes(game) && !hasConsented && !isLoading) {
+       toast.error(
+         language === "fr"
+           ? "Tu dois accepter le consentement IA ci-dessus pour accéder à ce jeu."
+           : "You must accept the AI consent above to access this game."
+       );
       return;
     }
     setCurrentGame(game);
-  };
-
-  const handleAIConsent = () => {
-    if (pendingAIFeature) {
-      setCurrentGame(pendingAIFeature as GameMode);
-      setPendingAIFeature(null);
-    }
   };
 
   const handleBackToHub = () => {
@@ -127,15 +123,6 @@ const Random = () => {
           <AIMatchFinderGame onClose={handleBackToHub} />
         )}
       </AnimatePresence>
-
-      <AIConsentModal
-        isOpen={showAIConsentModal}
-        onClose={() => {
-          setShowAIConsentModal(false);
-          setPendingAIFeature(null);
-        }}
-        onConsent={handleAIConsent}
-      />
 
       <BottomNavigation />
     </div>
