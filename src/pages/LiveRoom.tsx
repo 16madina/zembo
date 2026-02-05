@@ -261,14 +261,27 @@ const LiveRoom = () => {
     }
   }, [isOnStage, isStreamer, isStageGuestState]);
 
+  // ONCE: Show media activation modal ONLY when guest first joins stage and needs camera
+  // Use a ref to track if we've already shown the modal to prevent re-triggering
+  const hasShownMediaModalRef = useRef(false);
+  
   useEffect(() => {
     if (isOnStage && !isStreamer) {
-      const needs = !isInitialized && !stream && !localStreamError;
-      setGuestNeedsMediaAccess(needs || !!localStreamError);
+      // Only show modal if we haven't shown it yet and camera is not initialized
+      if (!hasShownMediaModalRef.current && !isInitialized && !stream) {
+        console.log("[LiveRoom] Guest on stage needs media access - showing modal");
+        setGuestNeedsMediaAccess(true);
+        hasShownMediaModalRef.current = true;
+      } else if (isInitialized && stream) {
+        // Camera is now working, hide the modal
+        setGuestNeedsMediaAccess(false);
+      }
     } else {
+      // Reset when guest leaves stage
       setGuestNeedsMediaAccess(false);
+      hasShownMediaModalRef.current = false;
     }
-  }, [isOnStage, isStreamer, isInitialized, stream, localStreamError]);
+  }, [isOnStage, isStreamer, isInitialized, stream]);
 
   // BUG #3 FIX: Stage guest connection status derived from unified LiveKit hook
   const stageGuestLiveKitConnected = effectiveIsStageGuest ? liveKitConnected : false;
