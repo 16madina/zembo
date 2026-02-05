@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2, Volume2, VolumeX, Ban, MoreVertical } from "lucide-react";
 import { useState, memo } from "react";
 import ReportModal from "./ReportModal";
+import BlockUserModal from "@/components/BlockUserModal";
 import AudioLevelMeter from "./AudioLevelMeter";
 import {
   AlertDialog,
@@ -13,6 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface InCallScreenLiveKitProps {
   timeRemaining: number;
@@ -42,6 +49,7 @@ const InCallScreenLiveKit = memo(({
   onEndCall,
 }: InCallScreenLiveKitProps) => {
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
   const [showHangUpConfirm, setShowHangUpConfirm] = useState(false);
 
   const formatTime = (seconds: number) => {
@@ -192,15 +200,34 @@ const InCallScreenLiveKit = memo(({
             <PhoneOff className="w-7 h-7" />
           </motion.button>
 
-          {/* Report button */}
+          {/* Safety options menu */}
           {matchedUserId && (
-            <motion.button
-              onClick={() => setShowReportModal(true)}
-              className="w-14 h-14 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
-              whileTap={{ scale: 0.95 }}
-            >
-              <Flag className="w-5 h-5" />
-            </motion.button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  className="w-14 h-14 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setShowReportModal(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Flag className="w-4 h-4 mr-2" />
+                  Signaler
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setShowBlockModal(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  Bloquer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
 
@@ -235,12 +262,19 @@ const InCallScreenLiveKit = memo(({
       </AlertDialog>
 
       {matchedUserId && (
-        <ReportModal
-          isOpen={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          reportedUserId={matchedUserId}
-          sessionId={sessionId}
-        />
+        <>
+          <ReportModal
+            isOpen={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            reportedUserId={matchedUserId}
+            sessionId={sessionId}
+          />
+          <BlockUserModal
+            isOpen={showBlockModal}
+            onClose={() => setShowBlockModal(false)}
+            userId={matchedUserId}
+          />
+        </>
       )}
     </>
   );
