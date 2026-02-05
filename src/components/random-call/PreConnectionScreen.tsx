@@ -117,13 +117,26 @@ const PreConnectionScreen = ({
         ) : (
           <>
             {/* Avatar */}
-            <div className="flex justify-center mb-4">
-              <Avatar className="w-24 h-24 border-4 border-primary/20">
-                <AvatarImage src={matchedUser?.avatar_url || undefined} />
+            <div className="flex justify-center mb-4 relative">
+              <Avatar className="w-24 h-24 border-4 border-primary/20 overflow-hidden">
+                <AvatarImage 
+                  src={matchedUser?.avatar_url || undefined} 
+                  className="blur-[6px] scale-110"
+                />
                 <AvatarFallback className="bg-primary/10 text-primary text-3xl">
                   {getGenderEmoji()}
                 </AvatarFallback>
               </Avatar>
+              {/* Mystery overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div
+                  className="text-4xl"
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  🎲
+                </motion.div>
+              </div>
             </div>
 
             {/* Info */}

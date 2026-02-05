@@ -131,7 +131,17 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
         );
       
       case "matched":
-        if (!acceptedConnection && matchedUserId) {
+        // ALWAYS show PreConnectionScreen first - user MUST accept before call starts
+        if (!acceptedConnection) {
+          if (!matchedUserId) {
+            // Still waiting for matchedUserId, show loading state
+            return (
+              <div className="flex flex-col items-center justify-center gap-4">
+                <div className="w-24 h-24 rounded-full bg-muted animate-pulse" />
+                <p className="text-muted-foreground text-sm">Chargement du profil...</p>
+              </div>
+            );
+          }
           return (
             <PreConnectionScreen
               matchedUserId={matchedUserId}
@@ -141,6 +151,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
             />
           );
         }
+        // Only proceed to InCallScreen AFTER user explicitly accepted
         return (
           <InCallScreenLiveKit 
             timeRemaining={timeRemaining}
