@@ -186,6 +186,21 @@ export const translations = {
     lastUpdated: "Dernière mise à jour : Janvier 2026",
     contactUs: "Pour toute question, contactez-nous à",
     back: "Retour",
+    
+    // Welcome screen
+    findLove: "Trouvez l'amour",
+    welcomeSubtitle: "Rejoignez des milliers de célibataires et trouvez votre âme sœur",
+    createAccount: "Créer un compte",
+    login: "Se connecter",
+    acceptTermsPrompt: "Veuillez accepter les conditions pour continuer",
+    iAcceptThe: "J'accepte les",
+    andThe: "et la",
+    termsOfUse: "Conditions d'utilisation",
+    
+    // ZGames
+    welcomeTo: "Bienvenue sur",
+    readyToPlay: "Es-tu prêt(e) à jouer ? 🎮",
+    aiConsentRequired: "Tu dois accepter le consentement IA ci-dessus pour accéder à ce jeu.",
   },
   en: {
     // Navigation
@@ -369,6 +384,21 @@ export const translations = {
     lastUpdated: "Last updated: January 2026",
     contactUs: "For any questions, contact us at",
     back: "Back",
+    
+    // Welcome screen
+    findLove: "Find Love",
+    welcomeSubtitle: "Join thousands of singles and find your soulmate",
+    createAccount: "Create Account",
+    login: "Sign In",
+    acceptTermsPrompt: "Please accept the terms to continue",
+    iAcceptThe: "I accept the",
+    andThe: "and the",
+    termsOfUse: "Terms of Use",
+    
+    // ZGames
+    welcomeTo: "Welcome to",
+    readyToPlay: "Are you ready to play? 🎮",
+    aiConsentRequired: "You must accept the AI consent above to access this game.",
   },
 };
 

@@ -12,6 +12,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ZemboLogo from "@/components/ZemboLogo";
 import welcomeBg from "@/assets/welcome-bg.jpg";
+import LanguageSelector from "@/components/LanguageSelector";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WelcomeScreenProps {
   onSignUp: () => void;
@@ -88,6 +90,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
@@ -103,6 +106,16 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full px-6 pt-[calc(env(safe-area-inset-top)+48px)] pb-[calc(env(safe-area-inset-bottom)+32px)] overflow-hidden">
+        {/* Language selector at top right */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4 }}
+          className="absolute top-[calc(env(safe-area-inset-top)+16px)] right-4 z-20"
+        >
+          <LanguageSelector variant="compact" />
+        </motion.div>
+
         {/* Logo at top */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -125,10 +138,10 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
         >
           <div className="text-center space-y-3">
             <h1 className="text-3xl font-bold text-foreground">
-              Trouvez l'amour
+              {t.findLove}
             </h1>
             <p className="text-muted-foreground text-base max-w-xs mx-auto">
-              Rejoignez des milliers de célibataires et trouvez votre âme sœur
+              {t.welcomeSubtitle}
             </p>
           </div>
 
@@ -144,7 +157,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
               htmlFor="terms-acceptance" 
               className="text-xs text-muted-foreground cursor-pointer leading-relaxed"
             >
-              J'accepte les{" "}
+              {t.iAcceptThe}{" "}
               <button
                 type="button"
                 onClick={(e) => {
@@ -153,9 +166,9 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
                 }}
                 className="text-primary hover:underline font-medium"
               >
-                Conditions d'utilisation
+                {t.termsOfUse}
               </button>{" "}
-              et la{" "}
+              {t.andThe}{" "}
               <button
                 type="button"
                 onClick={(e) => {
@@ -164,7 +177,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
                 }}
                 className="text-primary hover:underline font-medium"
               >
-                Politique de confidentialité
+                {t.privacyPolicy}
               </button>
             </label>
           </div>
@@ -175,7 +188,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
               disabled={!termsAccepted}
               className="w-full h-14 btn-gold rounded-2xl text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Créer un compte
+              {t.createAccount}
               <ArrowRight className="w-5 h-5" />
             </Button>
 
@@ -185,7 +198,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
               variant="outline"
               className="w-full h-14 glass border-0 rounded-2xl text-base font-medium text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Se connecter
+              {t.login}
             </Button>
           </div>
 
@@ -195,7 +208,7 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
               animate={{ opacity: 1 }}
               className="text-xs text-center text-muted-foreground/70"
             >
-              Veuillez accepter les conditions pour continuer
+              {t.acceptTermsPrompt}
             </motion.p>
           )}
         </motion.div>

@@ -11,6 +11,7 @@ import AIMatchFinderGame from "@/components/games/AIMatchFinderGame";
  import { useAIDataConsent } from "@/hooks/useAIDataConsent";
  import { toast } from "sonner";
  import { useLanguage } from "@/contexts/LanguageContext";
+import LanguageSelector from "@/components/LanguageSelector";
 
 type GameMode = "hub" | "zconnect" | "speedDating" | "oracle" | "compatibility";
 
@@ -18,7 +19,7 @@ const Random = () => {
   const [currentGame, setCurrentGame] = useState<GameMode>("hub");
    const location = useLocation();
    const { hasConsented, isLoading } = useAIDataConsent();
-   const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
    // Reset to hub when navigating to this page (e.g., clicking nav button while in a game)
    useEffect(() => {
@@ -36,11 +37,7 @@ const Random = () => {
      // AI games require consent
      const aiGames = ["compatibility", "oracle", "speedDating"];
      if (aiGames.includes(game) && !hasConsented && !isLoading) {
-       toast.error(
-         language === "fr"
-           ? "Tu dois accepter le consentement IA ci-dessus pour accéder à ce jeu."
-           : "You must accept the AI consent above to access this game."
-       );
+        toast.error(t.aiConsentRequired);
       return;
     }
     setCurrentGame(game);
@@ -68,7 +65,10 @@ const Random = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         <div className="w-full flex justify-start">
+          <div className="w-full flex items-center justify-between">
           <ZemboLogo size="sm" animate={false} />
+            <LanguageSelector variant="compact" />
+          </div>
         </div>
         {currentGame === "hub" && (
           <motion.div 
@@ -78,7 +78,7 @@ const Random = () => {
             transition={{ delay: 0.1 }}
           >
             <p className="text-sm font-semibold text-foreground/90 tracking-wide mb-1">
-              ✨ Bienvenue sur ✨
+              ✨ {t.welcomeTo} ✨
             </p>
             <motion.h1 
               className="text-3xl font-black tracking-tight relative inline-block"
@@ -100,7 +100,7 @@ const Random = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              Es-tu prêt(e) à jouer ? 🎮
+              {t.readyToPlay}
             </motion.p>
           </motion.div>
         )}
