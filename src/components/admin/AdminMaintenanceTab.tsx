@@ -243,7 +243,7 @@ const AdminMaintenanceTab = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wrench className="w-5 h-5" />
-            Outils de maintenance Z Roulette
+           Outils de maintenance Z Connect
           </CardTitle>
           <CardDescription>
             Nettoyer les sessions bloquées et la file d'attente pour débloquer le système
