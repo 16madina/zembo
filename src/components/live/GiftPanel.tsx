@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Coins, Plus } from "lucide-react";
+import { X, Coins, Plus, Minus } from "lucide-react";
 import { useGifts, type VirtualGift } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { Button } from "@/components/ui/button";
@@ -27,20 +27,63 @@ const GiftPanel = ({
   const [selectedGift, setSelectedGift] = useState<VirtualGift | null>(null);
   const [sending, setSending] = useState(false);
   const [showCoinShop, setShowCoinShop] = useState(false);
+  const [giftCount, setGiftCount] = useState(1);
+
+  const handleGiftTap = (gift: VirtualGift) => {
+    if (selectedGift?.id === gift.id) {
+      // Same gift tapped - increment count if affordable
+      const newCount = giftCount + 1;
+      if (balance >= gift.price_coins * newCount) {
+        setGiftCount(newCount);
+      }
+    } else {
+      // Different gift selected - reset count
+      setSelectedGift(gift);
+      setGiftCount(1);
+    }
+  };
+
+  const handleDecrementCount = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (giftCount > 1) {
+      setGiftCount(giftCount - 1);
+    }
+  };
 
   const handleSendGift = async () => {
     if (!selectedGift) return;
 
-    setSending(true);
-    const result = await sendGift(selectedGift, streamerId);
-    setSending(false);
+    const totalCost = selectedGift.price_coins * giftCount;
+    if (balance < totalCost) {
+      toast.error("Solde insuffisant");
+      return;
+    }
 
-    if (result.success) {
-      toast.success(`${selectedGift.emoji} Cadeau envoyé !`);
-      onGiftSent?.(selectedGift);
+    setSending(true);
+    
+    // Send gifts one by one for animation purposes
+    let successCount = 0;
+    for (let i = 0; i < giftCount; i++) {
+      const result = await sendGift(selectedGift, streamerId);
+      if (result.success) {
+        successCount++;
+        onGiftSent?.(selectedGift);
+        // Small delay between sends for animation effect
+        if (i < giftCount - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      } else {
+        toast.error(result.error || "Erreur lors de l'envoi");
+        break;
+      }
+    }
+
+    setSending(false);
+    
+    if (successCount > 0) {
+      toast.success(`${selectedGift.emoji} x${successCount} envoyé${successCount > 1 ? 's' : ''} !`);
       setSelectedGift(null);
-    } else {
-      toast.error(result.error || "Erreur lors de l'envoi");
+      setGiftCount(1);
     }
   };
 
@@ -96,27 +139,56 @@ const GiftPanel = ({
               ) : (
                 <div className="grid grid-cols-4 gap-3">
                   {gifts.map((gift) => {
-                    const canAfford = balance >= gift.price_coins;
                     const isSelected = selectedGift?.id === gift.id;
+                    const currentCount = isSelected ? giftCount : 1;
+                    const canAfford = balance >= gift.price_coins * currentCount;
+                    const canAffordOne = balance >= gift.price_coins;
+                    const canAffordMore = balance >= gift.price_coins * (currentCount + 1);
 
                     return (
                       <motion.button
                         key={gift.id}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setSelectedGift(gift)}
+                        onClick={() => canAffordOne && handleGiftTap(gift)}
                         className={`relative flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
                           isSelected
                             ? "bg-primary/20 ring-2 ring-primary"
-                            : canAfford
+                            : canAffordOne
                             ? "bg-muted hover:bg-muted/80"
                             : "bg-muted/50 opacity-50"
                         }`}
-                        disabled={!canAfford}
+                        disabled={!canAffordOne}
                       >
+                        {/* Count badge */}
+                        {isSelected && giftCount > 1 && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+                          >
+                            <span className="text-xs font-bold text-primary-foreground">
+                              x{giftCount}
+                            </span>
+                          </motion.div>
+                        )}
+                        
+                        {/* Decrement button when count > 1 */}
+                        {isSelected && giftCount > 1 && (
+                          <motion.button
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            onClick={handleDecrementCount}
+                            className="absolute -top-1 -left-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center"
+                          >
+                            <Minus className="w-3 h-3 text-destructive-foreground" />
+                          </motion.button>
+                        )}
+                        
                         <motion.span
                           className="text-3xl"
-                          animate={isSelected ? { scale: [1, 1.2, 1] } : {}}
-                          transition={{ repeat: isSelected ? Infinity : 0, duration: 1 }}
+                          animate={isSelected ? { scale: [1, 1.3, 1] } : {}}
+                          transition={{ duration: 0.2 }}
+                          key={isSelected ? giftCount : 0}
                         >
                           {gift.emoji}
                         </motion.span>
@@ -125,10 +197,21 @@ const GiftPanel = ({
                         </span>
                         <div className="flex items-center gap-0.5">
                           <Coins className="w-3 h-3 text-primary" />
-                          <span className="text-xs font-semibold text-primary">
-                            {gift.price_coins}
+                          <span className={`text-xs font-semibold ${isSelected && giftCount > 1 ? 'text-primary' : 'text-primary'}`}>
+                            {isSelected ? gift.price_coins * giftCount : gift.price_coins}
                           </span>
                         </div>
+                        
+                        {/* Hint to tap more */}
+                        {isSelected && canAffordMore && (
+                          <motion.span 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-[10px] text-muted-foreground mt-0.5"
+                          >
+                            Tapotez +
+                          </motion.span>
+                        )}
                       </motion.button>
                     );
                   })}
@@ -152,14 +235,14 @@ const GiftPanel = ({
               <Button
                 className="w-full"
                 size="lg"
-                disabled={!selectedGift || sending}
+                disabled={!selectedGift || sending || (selectedGift && balance < selectedGift.price_coins * giftCount)}
                 onClick={handleSendGift}
               >
                 {sending ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : selectedGift ? (
                   <>
-                    Envoyer {selectedGift.emoji} ({selectedGift.price_coins} coins)
+                    Envoyer {selectedGift.emoji} x{giftCount} ({selectedGift.price_coins * giftCount} coins)
                   </>
                 ) : (
                   "Sélectionnez un cadeau"
