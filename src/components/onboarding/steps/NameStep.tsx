@@ -74,7 +74,7 @@ const NameStep = ({ data, updateData }: NameStepProps) => {
   const lastNameValid = lastNameTouched && !lastNameError && data.lastName.trim().length >= 2;
 
   return (
-    <div className="space-y-4 max-w-full overflow-hidden">
+    <div className="space-y-4 max-w-full px-1">
       <p className="text-muted-foreground text-sm mb-6">
         Comment souhaitez-vous être appelé(e) ?
       </p>

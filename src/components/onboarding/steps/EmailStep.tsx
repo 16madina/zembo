@@ -102,7 +102,7 @@ const EmailStep = ({ data, updateData }: EmailStepProps) => {
   const passwordValid = data.password.length >= 6;
 
   return (
-    <div className="space-y-4 max-w-full overflow-hidden">
+    <div className="space-y-4 max-w-full px-1">
       <p className="text-muted-foreground text-sm mb-6">
         Créez vos identifiants de connexion
       </p>
