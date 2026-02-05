@@ -58,21 +58,21 @@ const PhoneStep = ({ data, updateData }: PhoneStepProps) => {
   const isValid = isValidLength && !isTaken;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 px-1">
       <p className="text-muted-foreground text-sm mb-6">
         Entrez votre numéro de téléphone
       </p>
 
       <div className="flex gap-3">
         {/* Country code (auto-filled) */}
-        <div className="w-28 h-14 glass rounded-2xl flex items-center justify-center gap-2 text-foreground font-medium">
-          <FlagIcon countryCode={data.countryCode || ""} className="w-6 h-4" />
+        <div className="w-24 h-12 glass rounded-xl flex items-center justify-center gap-2 text-foreground font-medium text-sm">
+          <FlagIcon countryCode={data.countryCode || ""} className="w-5 h-3" />
           <span>{data.dialCode || "+--"}</span>
         </div>
 
         {/* Phone number input */}
         <div className="relative flex-1">
-          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="tel"
             placeholder="Numéro de téléphone"
@@ -84,7 +84,7 @@ const PhoneStep = ({ data, updateData }: PhoneStepProps) => {
               // Reset taken state when typing
               if (isTaken) setIsTaken(false);
             }}
-            className={`pl-12 pr-12 h-14 glass border-2 rounded-2xl text-base ${
+            className={`w-full pl-10 pr-10 h-12 glass border-2 rounded-xl text-sm ${
               hasInput
                 ? isTaken
                   ? "border-red-500/50 focus:border-red-500"
@@ -96,15 +96,15 @@ const PhoneStep = ({ data, updateData }: PhoneStepProps) => {
             autoFocus
           />
           {hasInput && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {isChecking ? (
-                <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+                <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
               ) : isTaken ? (
-                <AlertCircle className="w-5 h-5 text-red-500" />
+                <AlertCircle className="w-4 h-4 text-red-500" />
               ) : isValidLength ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
+                <CheckCircle className="w-4 h-4 text-green-500" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-red-500" />
+                <AlertCircle className="w-4 h-4 text-red-500" />
               )}
             </div>
           )}
