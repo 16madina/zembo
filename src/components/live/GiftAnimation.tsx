@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import type { VirtualGift } from "@/hooks/useGifts";
@@ -11,9 +12,13 @@ interface GiftAnimationProps {
 
 const GiftAnimation = ({ gift, senderName, onComplete }: GiftAnimationProps) => {
   const [show, setShow] = useState(false);
+  // Track the current gift ID to detect when a NEW gift arrives
+  const currentGiftIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (gift) {
+    // Only trigger animation if this is a NEW gift (different ID)
+    if (gift && gift.id !== currentGiftIdRef.current) {
+      currentGiftIdRef.current = gift.id;
       setShow(true);
 
       // Trigger confetti for special gifts
@@ -42,6 +47,11 @@ const GiftAnimation = ({ gift, senderName, onComplete }: GiftAnimationProps) => 
       }, 3000);
 
       return () => clearTimeout(timer);
+    }
+    
+    // If gift becomes null, reset the ref
+    if (!gift) {
+      currentGiftIdRef.current = null;
     }
   }, [gift, onComplete]);
 
