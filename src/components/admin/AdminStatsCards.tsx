@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Phone, TrendingUp, Clock, AlertTriangle, Users, Ban } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Stats {
   totalSessions: number;
@@ -18,6 +19,8 @@ interface AdminStatsCardsProps {
 }
 
 const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
+   const { t } = useLanguage();
+   
   return (
     <motion.div
       className="grid grid-cols-2 lg:grid-cols-4 gap-4"
@@ -29,7 +32,7 @@ const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Utilisateurs
+             {t.totalUsers}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -41,7 +44,7 @@ const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Phone className="w-4 h-4" />
-            Appels totaux
+             {t.totalCalls}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -53,7 +56,7 @@ const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
-            Matchs créés
+             {t.matchesCreated}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -67,7 +70,7 @@ const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Clock className="w-4 h-4" />
-            Appels actifs
+             {t.activeCalls}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -81,7 +84,7 @@ const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
-            Signalements en attente
+             {t.pendingReports}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -95,7 +98,7 @@ const AdminStatsCards = ({ stats }: AdminStatsCardsProps) => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Ban className="w-4 h-4" />
-            Utilisateurs bannis
+             {t.bannedUsers}
           </CardTitle>
         </CardHeader>
         <CardContent>

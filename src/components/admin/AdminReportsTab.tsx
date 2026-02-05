@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Report {
   id: string;
@@ -46,17 +47,18 @@ interface AdminReportsTabProps {
   setReports: React.Dispatch<React.SetStateAction<Report[]>>;
 }
 
-const reasonLabels: Record<string, string> = {
-  harassment: "Harcèlement",
-  inappropriate: "Contenu inapproprié",
-  spam: "Spam",
-  fake: "Faux profil",
-  other: "Autre",
-};
-
 const AdminReportsTab = ({ reports, setReports }: AdminReportsTabProps) => {
+   const { t, language } = useLanguage();
   const [updatingReport, setUpdatingReport] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+   
+   const reasonLabels: Record<string, string> = {
+     harassment: language === "fr" ? "Harcèlement" : "Harassment",
+     inappropriate: language === "fr" ? "Contenu inapproprié" : "Inappropriate content",
+     spam: "Spam",
+     fake: language === "fr" ? "Faux profil" : "Fake profile",
+     other: language === "fr" ? "Autre" : "Other",
+   };
 
   const handleUpdateReportStatus = async (
     reportId: string,
@@ -79,11 +81,13 @@ const AdminReportsTab = ({ reports, setReports }: AdminReportsTabProps) => {
       );
 
       toast.success(
-        `Signalement ${newStatus === "resolved" ? "résolu" : "rejeté"}`
+         newStatus === "resolved" 
+           ? (language === "fr" ? "Signalement résolu" : "Report resolved")
+           : (language === "fr" ? "Signalement rejeté" : "Report rejected")
       );
     } catch (error) {
       console.error("Error updating report:", error);
-      toast.error("Erreur lors de la mise à jour");
+       toast.error(t.errorUpdating);
     } finally {
       setUpdatingReport(null);
     }
@@ -98,26 +102,26 @@ const AdminReportsTab = ({ reports, setReports }: AdminReportsTabProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-500" />
-            Signalements ({reports.length})
+             {t.reports} ({reports.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {reports.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>Aucun signalement pour le moment</p>
+               <p>{language === "fr" ? "Aucun signalement pour le moment" : "No reports at the moment"}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Signaleur</TableHead>
-                    <TableHead>Signalé</TableHead>
-                    <TableHead>Raison</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
+                     <TableHead>{language === "fr" ? "Date" : "Date"}</TableHead>
+                     <TableHead>{language === "fr" ? "Signaleur" : "Reporter"}</TableHead>
+                     <TableHead>{language === "fr" ? "Signalé" : "Reported"}</TableHead>
+                     <TableHead>{language === "fr" ? "Raison" : "Reason"}</TableHead>
+                     <TableHead>{t.status}</TableHead>
+                     <TableHead>{t.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -125,7 +129,7 @@ const AdminReportsTab = ({ reports, setReports }: AdminReportsTabProps) => {
                     <TableRow key={report.id}>
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(report.created_at).toLocaleDateString(
-                          "fr-FR",
+                           language === "fr" ? "fr-FR" : "en-US",
                           {
                             day: "2-digit",
                             month: "short",
@@ -135,10 +139,10 @@ const AdminReportsTab = ({ reports, setReports }: AdminReportsTabProps) => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {report.reporter_profile?.display_name || "Anonyme"}
+                         {report.reporter_profile?.display_name || (language === "fr" ? "Anonyme" : "Anonymous")}
                       </TableCell>
                       <TableCell>
-                        {report.reported_profile?.display_name || "Anonyme"}
+                         {report.reported_profile?.display_name || (language === "fr" ? "Anonyme" : "Anonymous")}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
@@ -163,10 +167,10 @@ const AdminReportsTab = ({ reports, setReports }: AdminReportsTabProps) => {
                           }
                         >
                           {report.status === "pending"
-                            ? "En attente"
+                             ? t.pending
                             : report.status === "resolved"
-                            ? "Résolu"
-                            : "Rejeté"}
+                             ? (language === "fr" ? "Résolu" : "Resolved")
+                             : t.rejected}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -230,38 +234,38 @@ const AdminReportsTab = ({ reports, setReports }: AdminReportsTabProps) => {
       <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Détails du signalement</DialogTitle>
+             <DialogTitle>{language === "fr" ? "Détails du signalement" : "Report details"}</DialogTitle>
           </DialogHeader>
           {selectedReport && (
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Signaleur</p>
+                 <p className="text-sm text-muted-foreground">{language === "fr" ? "Signaleur" : "Reporter"}</p>
                 <p className="font-medium">
-                  {selectedReport.reporter_profile?.display_name || "Anonyme"}
+                   {selectedReport.reporter_profile?.display_name || (language === "fr" ? "Anonyme" : "Anonymous")}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Utilisateur signalé</p>
+                 <p className="text-sm text-muted-foreground">{language === "fr" ? "Utilisateur signalé" : "Reported user"}</p>
                 <p className="font-medium">
-                  {selectedReport.reported_profile?.display_name || "Anonyme"}
+                   {selectedReport.reported_profile?.display_name || (language === "fr" ? "Anonyme" : "Anonymous")}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Raison</p>
+                 <p className="text-sm text-muted-foreground">{language === "fr" ? "Raison" : "Reason"}</p>
                 <Badge variant="outline">
                   {reasonLabels[selectedReport.reason] || selectedReport.reason}
                 </Badge>
               </div>
               {selectedReport.description && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Description</p>
+                   <p className="text-sm text-muted-foreground">{t.description}</p>
                   <p className="text-sm">{selectedReport.description}</p>
                 </div>
               )}
               <div>
-                <p className="text-sm text-muted-foreground">Date</p>
+                 <p className="text-sm text-muted-foreground">{language === "fr" ? "Date" : "Date"}</p>
                 <p className="text-sm">
-                  {new Date(selectedReport.created_at).toLocaleString("fr-FR")}
+                   {new Date(selectedReport.created_at).toLocaleString(language === "fr" ? "fr-FR" : "en-US")}
                 </p>
               </div>
             </div>
