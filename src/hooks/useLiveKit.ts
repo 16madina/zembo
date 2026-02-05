@@ -478,11 +478,12 @@ export const useLiveKit = ({
 
   // Force resync remote tracks
   const forceResyncTracks = useCallback(() => {
-    if (room && !isStreamer) {
+    // Allow for ALL participants including streamer (for DUO mode)
+    if (room) {
       console.log("[LiveKit] Force resync remote tracks");
       syncRemoteTracks(room);
     }
-  }, [room, isStreamer, syncRemoteTracks]);
+  }, [room, syncRemoteTracks]);
 
   // Connect to room
   const connect = useCallback(async () => {

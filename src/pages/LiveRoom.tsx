@@ -309,16 +309,47 @@ const LiveRoom = () => {
   // BUG #4 FIX: Force resync remote tracks when a guest joins/changes (for spectators to see guest)
   // Increased delay from 1500ms to 3000ms to allow guest stream to fully publish
   useEffect(() => {
-    if (currentGuest && !isStreamer && !isOnStage && liveKitConnected) {
-      console.log("[LiveRoom] Guest changed, forcing track resync for spectators in 3s...");
+    // INCLUDES STREAMER: The streamer also needs to see the guest's video
+    // Anyone who is NOT the guest themselves should resync
+    if (currentGuest && !isOnStage && liveKitConnected) {
+      console.log("[LiveRoom] Guest changed, forcing track resync in 3s...", {
+        isStreamer,
+        guestUserId: currentGuest.user_id,
+      });
       // Give the guest time to publish their track (increased to 3s)
       const timer = setTimeout(() => {
-        console.log("[LiveRoom] Executing delayed track resync for guest video");
+        console.log("[LiveRoom] Executing delayed track resync for guest video", { isStreamer });
         liveKitResyncTracks();
       }, 3000);
       return () => clearTimeout(timer);
     }
   }, [currentGuest?.user_id, isStreamer, isOnStage, liveKitConnected, liveKitResyncTracks]);
+
+  // STREAMER-SPECIFIC: Force additional resync attempts when a guest is on stage
+  // This handles the case where the guest takes time to publish their tracks
+  useEffect(() => {
+    if (isStreamer && currentGuest && liveKitConnected) {
+      console.log("[LiveRoom] Streamer: Setting up multiple resync attempts for guest visibility");
+      
+      // Multiple retry attempts at different intervals
+      const timers = [
+        setTimeout(() => {
+          console.log("[LiveRoom] Streamer resync attempt 1 (5s)");
+          liveKitResyncTracks();
+        }, 5000),
+        setTimeout(() => {
+          console.log("[LiveRoom] Streamer resync attempt 2 (8s)");
+          liveKitResyncTracks();
+        }, 8000),
+        setTimeout(() => {
+          console.log("[LiveRoom] Streamer resync attempt 3 (12s)");
+          liveKitResyncTracks();
+        }, 12000),
+      ];
+      
+      return () => timers.forEach(clearTimeout);
+    }
+  }, [isStreamer, currentGuest?.user_id, liveKitConnected, liveKitResyncTracks]);
 
   // BUG #3 FIX: Auto-connect stage guest via UNIFIED LiveKit hook
   // The unified hook handles role changes automatically - stage guest just needs to trigger connect
