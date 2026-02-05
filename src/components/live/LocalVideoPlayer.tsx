@@ -48,6 +48,26 @@ const LocalVideoPlayer = ({
     }
   }, [stream]);
 
+  // Mobile/WebView hardening: after turning video back ON, force play() again.
+  // Some environments pause the element after track.enabled toggles.
+  useEffect(() => {
+    if (!isStreamer) return;
+    if (!videoRef.current) return;
+    if (!isInitialized) return;
+    if (!stream) return;
+    if (isVideoOff) return;
+
+    const el = videoRef.current;
+    // Defer one tick to let track state propagate
+    const t = window.setTimeout(() => {
+      el.play().catch(() => {
+        // ignore: may require user interaction on some platforms
+      });
+    }, 50);
+
+    return () => window.clearTimeout(t);
+  }, [isStreamer, isVideoOff, isInitialized, stream]);
+
   // Pass ref to parent
   useEffect(() => {
     if (videoRef.current) {

@@ -663,7 +663,9 @@ export const useLiveKit = ({
         
         try {
           publishedVideoPub = existingVideoTrack
-            ? await newRoom.localParticipant.publishTrack(existingVideoTrack)
+            ? await newRoom.localParticipant.publishTrack(existingVideoTrack, {
+                source: Track.Source.Camera,
+              })
             : await newRoom.localParticipant.publishTrack(
                 await createLocalVideoTrack({
                   facingMode: "user",
@@ -672,7 +674,9 @@ export const useLiveKit = ({
               );
 
           if (existingAudioTrack) {
-            await newRoom.localParticipant.publishTrack(existingAudioTrack);
+            await newRoom.localParticipant.publishTrack(existingAudioTrack, {
+              source: Track.Source.Microphone,
+            });
           } else {
             await newRoom.localParticipant.publishTrack(await createLocalAudioTrack());
           }
@@ -795,66 +799,113 @@ export const useLiveKit = ({
     try {
       const localParticipant = room.localParticipant;
       const newVideoOffState = !isVideoOff;
-      
+
       console.log("[LiveKit] Setting camera enabled:", !newVideoOffState);
 
-      const videoPubs = Array.from(localParticipant.videoTrackPublications.values());
-      if (videoPubs.length > 0) {
-        await Promise.all(
-          videoPubs.map(async (pub) => {
-            try {
-              if (newVideoOffState) {
-                await pub.mute();
-              } else {
-                await pub.unmute();
-              }
-            } catch (e) {
-              console.warn("[LiveKit] Video pub mute/unmute failed:", e);
-            }
-          })
-        );
-
-        // Attach any available local video track after turning back on
-        if (!newVideoOffState && localVideoRef.current) {
-          for (const pub of videoPubs) {
-            if (pub.track) {
-              try {
-                pub.track.attach(localVideoRef.current);
-                break;
-              } catch (e) {
-                console.warn("[LiveKit] Failed attaching local video track:", e);
-              }
-            }
-          }
-        }
-
-        console.log("[LiveKit] ✓ Video publications toggled:", { count: videoPubs.length, newVideoOffState });
-      } else {
-        // Fallback: No publications, rely on LiveKit helpers
-        if (newVideoOffState) {
-          await localParticipant.setCameraEnabled(false);
-          console.log("[LiveKit] ✓ Camera disabled");
-        } else {
-          console.log("[LiveKit] No existing video track, creating new one...");
-          const newVideoTrack = await createLocalVideoTrack({
-            facingMode: "user",
-            resolution: VideoPresets.h720.resolution,
-          });
-          const newPub = await localParticipant.publishTrack(newVideoTrack);
-          console.log("[LiveKit] ✓ New video track published");
-
-          if (localVideoRef.current && newPub?.track) {
-            newPub.track.attach(localVideoRef.current);
-          }
-        }
-      }
-
-      // Also toggle the underlying MediaStreamTrack(s) if we reused an existing stream.
+      // Always toggle the underlying MediaStreamTrack(s) if we reused an existing stream.
+      // This guarantees the local preview also resumes on mobile webviews.
       const stream = publishStreamRef.current;
       stream?.getVideoTracks?.()?.forEach((t) => {
         t.enabled = !newVideoOffState;
       });
-     
+
+      const unpublishAllLocalVideo = async () => {
+        const pubs = Array.from(localParticipant.videoTrackPublications.values());
+        await Promise.all(
+          pubs.map(async (pub) => {
+            if (!pub.track) return;
+            try {
+              // IMPORTANT: don't stop underlying user-provided track (keep local preview alive)
+              await localParticipant.unpublishTrack(pub.track, false);
+            } catch (e) {
+              console.warn("[LiveKit] Failed to unpublish video track:", e);
+            }
+          })
+        );
+      };
+
+      const republishVideo = async () => {
+        const currentStream = publishStreamRef.current;
+        const existingVideoTrack = currentStream?.getVideoTracks?.()?.[0] || null;
+
+        if (existingVideoTrack && existingVideoTrack.readyState === "live") {
+          existingVideoTrack.enabled = true;
+          await localParticipant.publishTrack(existingVideoTrack, {
+            source: Track.Source.Camera,
+          });
+          console.log("[LiveKit] ✓ Republished video from existing stream track");
+          return;
+        }
+
+        console.log("[LiveKit] No usable existing video track, creating a new camera track...");
+        const newVideoTrack = await createLocalVideoTrack({
+          facingMode: "user",
+          resolution: VideoPresets.h720.resolution,
+        });
+        await localParticipant.publishTrack(newVideoTrack, {
+          source: Track.Source.Camera,
+        });
+        console.log("[LiveKit] ✓ New camera track published");
+      };
+
+      // Prefer the LiveKit helper when we have a proper Camera source publication.
+      // (We also publish with source: Camera, but older sessions may still have untagged pubs.)
+      const hasCameraPub = !!localParticipant.getTrackPublication(Track.Source.Camera);
+
+      if (newVideoOffState) {
+        // Turning video OFF
+        if (hasCameraPub) {
+          await localParticipant.setCameraEnabled(false);
+        } else {
+          // Fallback: untagged pubs
+          const videoPubs = Array.from(localParticipant.videoTrackPublications.values());
+          await Promise.all(
+            videoPubs.map(async (pub) => {
+              try {
+                await pub.mute();
+              } catch (e) {
+                console.warn("[LiveKit] Video pub mute failed:", e);
+              }
+            })
+          );
+        }
+      } else {
+        // Turning video ON
+        if (hasCameraPub) {
+          await localParticipant.setCameraEnabled(true);
+        } else {
+          // Fallback for older sessions: try unmute pubs first
+          const videoPubs = Array.from(localParticipant.videoTrackPublications.values());
+          if (videoPubs.length > 0) {
+            await Promise.all(
+              videoPubs.map(async (pub) => {
+                try {
+                  await pub.unmute();
+                } catch (e) {
+                  console.warn("[LiveKit] Video pub unmute failed:", e);
+                }
+              })
+            );
+          }
+        }
+
+        // HARDENING: if after turning ON we still don't have an active video track,
+        // force a clean republish. This fixes the common OFF→ON "video never comes back" case.
+        const pubsAfter = Array.from(localParticipant.videoTrackPublications.values());
+        const hasActiveVideo = pubsAfter.some((p) => {
+          const t: any = p.track;
+          const mst: MediaStreamTrack | undefined = t?.mediaStreamTrack;
+          const ready = mst?.readyState;
+          return !!t && !t.isMuted && (ready ? ready === "live" : true);
+        });
+
+        if (!hasActiveVideo) {
+          console.warn("[LiveKit] No active video after enabling — forcing republish...");
+          await unpublishAllLocalVideo();
+          await republishVideo();
+        }
+      }
+
       setIsVideoOff(newVideoOffState);
       console.log("[LiveKit] Camera off state updated to:", newVideoOffState);
     } catch (error) {
@@ -993,11 +1044,15 @@ export const useLiveKit = ({
         });
 
         if (existingVideoTrack) {
-          await room.localParticipant.publishTrack(existingVideoTrack);
+          await room.localParticipant.publishTrack(existingVideoTrack, {
+            source: Track.Source.Camera,
+          });
           console.log("[LiveKit] ✓ Late video track published");
         }
         if (existingAudioTrack) {
-          await room.localParticipant.publishTrack(existingAudioTrack);
+          await room.localParticipant.publishTrack(existingAudioTrack, {
+            source: Track.Source.Microphone,
+          });
           console.log("[LiveKit] ✓ Late audio track published");
         }
 
