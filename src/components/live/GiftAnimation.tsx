@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import type { VirtualGift } from "@/hooks/useGifts";
@@ -14,18 +13,24 @@ const GiftAnimation = ({ gift, senderName, onComplete }: GiftAnimationProps) => 
   const [show, setShow] = useState(false);
   const [displayedGift, setDisplayedGift] = useState<VirtualGift | null>(null);
   const [displayedSenderName, setDisplayedSenderName] = useState<string | undefined>(undefined);
+  // Avoid re-running effects due to unstable callback identity from parents
+  const onCompleteRef = useRef<GiftAnimationProps["onComplete"]>(onComplete);
   // Track the current gift ID to detect when a NEW gift arrives
   const currentGiftIdRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
   // Clear the animation
   const clearAnimation = useCallback(() => {
     setShow(false);
     setDisplayedGift(null);
     setDisplayedSenderName(undefined);
     currentGiftIdRef.current = null;
-    onComplete?.();
-  }, [onComplete]);
+    onCompleteRef.current?.();
+  }, []);
 
   useEffect(() => {
     // Only trigger animation if this is a NEW gift (different ID)
