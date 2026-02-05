@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Phone, Zap, Sparkles, Heart } from "lucide-react";
  import AIConsentCard from "@/components/games/AIConsentCard";
+ import { useLanguage } from "@/contexts/LanguageContext";
 import goldenHand from "@/assets/golden-hand.png";
 import speedDatingPhones from "@/assets/games/speed-dating-phones.png";
 import zemboOracle from "@/assets/games/zembo-oracle.png";
@@ -10,58 +11,60 @@ interface GameHubProps {
   onSelectGame: (game: "zconnect" | "speedDating" | "oracle" | "compatibility") => void;
 }
 
-const games = [
-  {
-    id: "zconnect" as const,
-    name: "Z Connect",
-    description: "Appel vocal aléatoire avec un inconnu",
-    icon: Phone,
-    emoji: "📞",
-    gradient: "from-primary/20 to-primary/5",
-    borderColor: "border-primary/30",
-    iconBg: "bg-primary/20",
-    iconColor: "text-primary",
-    customImage: goldenHand,
-  },
-  {
-    id: "speedDating" as const,
-    name: "Speed Dating",
-    description: "Rencontres rapides en vidéo",
-    icon: Zap,
-    emoji: "⚡",
-    gradient: "from-accent/30 to-accent/10",
-    borderColor: "border-accent/40",
-    iconBg: "bg-accent/30",
-    iconColor: "text-accent-foreground",
-    customImage: speedDatingPhones,
-  },
-  {
-    id: "oracle" as const,
-    name: "Zembo Oracle",
-    description: "Trouve ton match parfait par l'IA",
-    icon: Sparkles,
-    emoji: "🔮",
-    gradient: "from-secondary/50 to-secondary/20",
-    borderColor: "border-secondary",
-    iconBg: "bg-secondary/50",
-    iconColor: "text-secondary-foreground",
-    customImage: zemboOracle,
-  },
-  {
-    id: "compatibility" as const,
-    name: "Compatibilité",
-    description: "Test de compatibilité avec tous",
-    icon: Heart,
-    emoji: "💕",
-    gradient: "from-pink-500/20 to-pink-500/5",
-    borderColor: "border-pink-500/30",
-    iconBg: "bg-pink-500/20",
-    iconColor: "text-pink-400",
-    customImage: compatibilityTest,
-  },
-];
-
 const GameHub = ({ onSelectGame }: GameHubProps) => {
+   const { t } = useLanguage();
+ 
+   const games = [
+     {
+       id: "zconnect" as const,
+       name: "Z Connect",
+       description: t.zconnectDesc,
+       icon: Phone,
+       emoji: "📞",
+       gradient: "from-primary/20 to-primary/5",
+       borderColor: "border-primary/30",
+       iconBg: "bg-primary/20",
+       iconColor: "text-primary",
+       customImage: goldenHand,
+     },
+     {
+       id: "speedDating" as const,
+       name: "Speed Dating",
+       description: t.speedDatingDesc,
+       icon: Zap,
+       emoji: "⚡",
+       gradient: "from-accent/30 to-accent/10",
+       borderColor: "border-accent/40",
+       iconBg: "bg-accent/30",
+       iconColor: "text-accent-foreground",
+       customImage: speedDatingPhones,
+     },
+     {
+       id: "oracle" as const,
+       name: "Zembo Oracle",
+       description: t.oracleDesc,
+       icon: Sparkles,
+       emoji: "🔮",
+       gradient: "from-secondary/50 to-secondary/20",
+       borderColor: "border-secondary",
+       iconBg: "bg-secondary/50",
+       iconColor: "text-secondary-foreground",
+       customImage: zemboOracle,
+     },
+     {
+       id: "compatibility" as const,
+       name: t.compatibility,
+       description: t.compatibilityDesc,
+       icon: Heart,
+       emoji: "💕",
+       gradient: "from-pink-500/20 to-pink-500/5",
+       borderColor: "border-pink-500/30",
+       iconBg: "bg-pink-500/20",
+       iconColor: "text-pink-400",
+       customImage: compatibilityTest,
+     },
+   ];
+ 
   return (
     <div className="w-full max-w-lg mx-auto px-4">
        {/* AI Consent Card */}
