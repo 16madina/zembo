@@ -81,23 +81,23 @@ const NameStep = ({ data, updateData }: NameStepProps) => {
 
       <div className="space-y-1">
         <div className="relative">
-          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Prénom"
             value={data.firstName}
             onChange={(e) => handleFirstNameChange(e.target.value)}
             onBlur={handleFirstNameBlur}
-            className={`w-full pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
+            className={`w-full pl-10 pr-10 h-12 glass border-0 rounded-xl text-sm ${
               firstNameError ? "ring-2 ring-destructive" : firstNameValid ? "ring-2 ring-green-500" : ""
             }`}
             autoFocus
           />
           {firstNameValid && (
-            <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+            <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
           )}
           {firstNameError && (
-            <AlertCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive" />
+            <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-destructive" />
           )}
         </div>
         {firstNameError && (
@@ -110,22 +110,22 @@ const NameStep = ({ data, updateData }: NameStepProps) => {
 
       <div className="space-y-1">
         <div className="relative">
-          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Nom"
             value={data.lastName}
             onChange={(e) => handleLastNameChange(e.target.value)}
             onBlur={handleLastNameBlur}
-            className={`w-full pl-12 pr-12 h-14 glass border-0 rounded-2xl text-base ${
+            className={`w-full pl-10 pr-10 h-12 glass border-0 rounded-xl text-sm ${
               lastNameError ? "ring-2 ring-destructive" : lastNameValid ? "ring-2 ring-green-500" : ""
             }`}
           />
           {lastNameValid && (
-            <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+            <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
           )}
           {lastNameError && (
-            <AlertCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive" />
+            <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-destructive" />
           )}
         </div>
         {lastNameError && (
