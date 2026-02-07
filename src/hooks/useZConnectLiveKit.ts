@@ -1096,22 +1096,46 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
 
   // Accept connection - called when user explicitly accepts the pre-connection screen
   const acceptConnection = useCallback(async () => {
-    if (!roomName) {
-      console.error("[random-call-lk]", "acceptConnection called without roomName");
+    if (!roomName || !sessionId) {
+      console.error("[random-call-lk]", "acceptConnection called without roomName or sessionId");
       return;
     }
     
-    console.log("[random-call-lk]", "User accepted connection, joining LiveKit room");
+    console.log("[random-call-lk]", "User accepted connection, checking session status first");
     setStatus("connecting");
     
     try {
+      // CRITICAL: Check if session is still active before joining
+      // The other user might have declined/skipped while we were deciding
+      const { data: session, error: sessionError } = await supabase
+        .from("random_call_sessions")
+        .select("status")
+        .eq("id", sessionId)
+        .single();
+      
+      if (sessionError) {
+        console.error("[random-call-lk]", "Failed to check session status:", sessionError);
+        throw new Error("Impossible de vérifier la session");
+      }
+      
+      // If session was declined/cancelled, notify user and go back
+      if (session.status === "declined" || session.status === "cancelled" || session.status === "ended") {
+        console.log("[random-call-lk]", "Session no longer active, other user declined/left", { status: session.status });
+        setDeclinedByOther(true);
+        setStatus("declined_by_other");
+        toast.info("L'autre personne n'était pas disponible");
+        return;
+      }
+      
+      // Session is still active, proceed to join LiveKit
+      console.log("[random-call-lk]", "Session still active, joining LiveKit room");
       await joinLiveKitRoom(roomName);
     } catch (err) {
       console.error("[random-call-lk]", "Failed to join after accepting:", err);
       setError("Erreur de connexion");
       setStatus("error");
     }
-  }, [roomName, joinLiveKitRoom]);
+  }, [roomName, sessionId, joinLiveKitRoom]);
 
   // Cleanup on unmount - cancel queue to release user
   useEffect(() => {
