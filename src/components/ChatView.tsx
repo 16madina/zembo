@@ -19,7 +19,7 @@ import VoiceRecorder from "@/components/chat/VoiceRecorder";
 import SwipeableMessage from "@/components/chat/SwipeableMessage";
 import ReplyPreview from "@/components/chat/ReplyPreview";
 import QuotedMessage from "@/components/chat/QuotedMessage";
-import ReportModal from "@/components/random-call/ReportModal";
+import ReportModal from "@/components/zconnect/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import { isNative } from "@/lib/capacitor";
 import {

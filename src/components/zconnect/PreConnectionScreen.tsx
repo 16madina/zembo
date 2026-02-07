@@ -294,6 +294,18 @@ const PreConnectionScreen = ({
         )}
       </motion.div>
 
+      {/* Consent Text - Apple Compliance */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="text-xs text-muted-foreground text-center px-4 italic"
+      >
+        {language === "fr" 
+          ? "En acceptant, vous initiez un appel audio avec ce profil." 
+          : "By accepting, you initiate an audio call with this profile."}
+      </motion.p>
+
       {/* Action Buttons */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

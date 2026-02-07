@@ -2,21 +2,21 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Phone, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useRandomCallLiveKit } from "@/hooks/useRandomCallLiveKit";
+import { useZConnectLiveKit } from "@/hooks/useZConnectLiveKit";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useDailyRandomCalls } from "@/hooks/useDailyRandomCalls";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import PreferenceSelector from "@/components/random-call/PreferenceSelector";
-import SearchingScreen from "@/components/random-call/SearchingScreen";
-import InCallScreenLiveKit from "@/components/random-call/InCallScreenLiveKit";
-import DecisionOverlay from "@/components/random-call/DecisionOverlay";
-import ResultScreen from "@/components/random-call/ResultScreen";
-import DiceAnimation from "@/components/random-call/DiceAnimation";
-import MicrophoneTest from "@/components/random-call/MicrophoneTest";
-import UpgradeModal from "@/components/random-call/UpgradeModal";
-import PreConnectionScreen from "@/components/random-call/PreConnectionScreen";
+import PreferenceSelector from "@/components/zconnect/PreferenceSelector";
+import SearchingScreen from "@/components/zconnect/SearchingScreen";
+import InCallScreenLiveKit from "@/components/zconnect/InCallScreenLiveKit";
+import DecisionOverlay from "@/components/zconnect/DecisionOverlay";
+import ResultScreen from "@/components/zconnect/ResultScreen";
+import DiceAnimation from "@/components/zconnect/DiceAnimation";
+import MicrophoneTest from "@/components/zconnect/MicrophoneTest";
+import UpgradeModal from "@/components/zconnect/UpgradeModal";
+import PreConnectionScreen from "@/components/zconnect/PreConnectionScreen";
 
 interface ZConnectGameProps {
   onBack: () => void;
@@ -58,7 +58,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     declineConnection,
     skipConnection,
     declinedByOther,
-  } = useRandomCallLiveKit();
+  } = useZConnectLiveKit();
   
   const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
   const { canCall, remainingCalls, maxCalls, incrementCallCount, isLoading: isLoadingCalls } = useDailyRandomCalls();
@@ -311,7 +311,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
             </div>
             
             <motion.p className="text-muted-foreground max-w-xs leading-snug text-center z-10 text-xs -mt-12" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <span className="text-foreground font-medium">{t.noProfileJustVoice}</span> {t.connectedByChance}
+              <span className="text-foreground font-medium">{t.noProfileJustVoice}</span> {t.connectedByInterests}
             </motion.p>
 
             <motion.div
