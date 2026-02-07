@@ -23,7 +23,7 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. Fonctionnalités IA et partage de données",
-        content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle, Speed Dating), nous partageons certaines données avec des fournisseurs d'intelligence artificielle tiers. Avant d'utiliser ces fonctionnalités, vous devez donner votre consentement explicite via un modal dédié qui détaille précisément les données partagées.",
+        content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle, Flash Connect), nous partageons certaines données avec des fournisseurs d'intelligence artificielle tiers. Avant d'utiliser ces fonctionnalités, vous devez donner votre consentement explicite via un modal dédié qui détaille précisément les données partagées.",
       },
       {
         icon: AlertCircle,
@@ -81,7 +81,7 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. AI Features and Data Sharing",
-        content: "For AI features (Compatibility Test, Zembo Oracle, Speed Dating), we share certain data with third-party artificial intelligence providers. Before using these features, you must give your explicit consent via a dedicated modal that details exactly what data is shared.",
+        content: "For AI features (Compatibility Test, Zembo Oracle, Flash Connect), we share certain data with third-party artificial intelligence providers. Before using these features, you must give your explicit consent via a dedicated modal that details exactly what data is shared.",
       },
       {
         icon: AlertCircle,

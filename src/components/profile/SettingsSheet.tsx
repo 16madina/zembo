@@ -206,7 +206,7 @@ const privacyPolicyContent = {
     sections: [
       {
         title: "1. Collecte des données",
-        content: "Nous collectons les informations que vous nous fournissez directement : nom, email, date de naissance, photos de profil, localisation, préférences de rencontre et centres d'intérêt. Ces données sont nécessaires au fonctionnement du service de mise en relation.",
+        content: "Nous collectons les informations que vous nous fournissez directement : nom, email, date de naissance, photos de profil, localisation, préférences de connexion et centres d'intérêt. Ces données sont nécessaires au fonctionnement du service de mise en relation.",
       },
       {
         title: "2. Utilisation des données",
@@ -236,11 +236,11 @@ const privacyPolicyContent = {
     sections: [
       {
         title: "1. Data Collection",
-        content: "We collect information you provide directly: name, email, date of birth, profile photos, location, dating preferences and interests. This data is necessary for the matchmaking service to function.",
+        content: "We collect information you provide directly: name, email, date of birth, profile photos, location, connection preferences and interests. This data is necessary for the matchmaking service to function.",
       },
       {
         title: "2. Data Usage",
-        content: "Your data is used to: create and manage your profile, suggest relevant matches, improve our services, ensure platform security, and send you important communications.",
+        content: "Your data is used to: create and manage your profile, suggest relevant connections, improve our services, ensure platform security, and send you important communications.",
       },
       {
         title: "3. Data Sharing",

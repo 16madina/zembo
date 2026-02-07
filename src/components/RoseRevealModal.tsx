@@ -317,7 +317,7 @@ const RoseRevealModal = ({
 
                   {/* Question */}
                   <h2 className="text-xl font-bold text-white mb-6">
-                    Voulez-vous matcher avec {profile.displayName.split(" ")[0]} ? 💕
+                    Voulez-vous vibrer avec {profile.displayName.split(" ")[0]} ? 💕
                   </h2>
 
                   {/* Action buttons */}
@@ -336,7 +336,7 @@ const RoseRevealModal = ({
                       className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white py-5 gap-2"
                     >
                       <Heart className="w-5 h-5 fill-current" />
-                      {isLoading ? "..." : "Oui, matcher !"}
+                      {isLoading ? "..." : "Oui, vibrer !"}
                     </Button>
                   </div>
                 </motion.div>

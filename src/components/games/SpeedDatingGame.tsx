@@ -66,11 +66,11 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 bg-background flex flex-col"
     >
-      {/* Header with Speed Dating title */}
+      {/* Header with Flash Connect title */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
-          <span className="font-bold text-lg">Speed Dating</span>
+          <span className="font-bold text-lg">Flash Connect</span>
         </div>
         <Button variant="ghost" size="icon" onClick={handleClose}>
           <X className="w-5 h-5" />
@@ -490,7 +490,7 @@ const WaitingRoomScreen = ({ participants }: { participants: Array<{ user_id: st
           En attente de participants compatibles...
         </div>
         <span className="text-xs text-center max-w-[280px]">
-          Le Speed Dating commencera dès que 4+ personnes avec des préférences compatibles seront présentes.
+          Le Flash Connect commencera dès que 4+ personnes avec des préférences compatibles seront présentes.
         </span>
       </motion.div>
     </div>

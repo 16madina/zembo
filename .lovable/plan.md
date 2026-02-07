@@ -1,6 +1,6 @@
+# ✅ Plan de Rebranding Terminologique - COMPLÉTÉ
 
-
-# Plan de Rebranding Terminologique
+## Statut : TERMINÉ
 
 ## Objectif
 Remplacer les termes "dating", "match" et "Speed Dating" dans toute l'application pour repositionner Zembo en tant qu'application "Social Gaming" plutôt que "Dating App" afin de contourner le rejet Apple (Directive 4.3b).
