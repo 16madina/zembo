@@ -209,7 +209,7 @@ export const translations = {
     aiConsentRequired: "Tu dois accepter le consentement IA ci-dessus pour accéder à ce jeu.",
      zconnectDesc: "Appel vocal aléatoire avec un inconnu",
      speedDatingDesc: "Connexions rapides en vidéo",
-     oracleDesc: "Trouve ton match parfait par l'IA",
+     oracleDesc: "Découvre ton Oracle par l'IA",
      compatibility: "Compatibilité",
      compatibilityDesc: "Test de compatibilité avec tous",
     
@@ -780,7 +780,7 @@ export const translations = {
     aiConsentRequired: "You must accept the AI consent above to access this game.",
      zconnectDesc: "Random voice call with a stranger",
      speedDatingDesc: "Fast video connections",
-     oracleDesc: "Find your perfect match by AI",
+     oracleDesc: "Discover your Oracle by AI",
      compatibility: "Compatibility",
      compatibilityDesc: "Compatibility test with everyone",
     
