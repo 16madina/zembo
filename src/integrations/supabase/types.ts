@@ -373,6 +373,33 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_skips: {
+        Row: {
+          created_at: string
+          id: string
+          skip_count: number
+          skip_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          skip_count?: number
+          skip_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          skip_count?: number
+          skip_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           coin_amount: number

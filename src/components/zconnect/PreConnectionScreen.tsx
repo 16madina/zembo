@@ -32,6 +32,9 @@ interface PreConnectionScreenProps {
   onSkip: () => void;
   isLoading?: boolean;
   sharedInterests?: string[];
+  remainingSkips?: number;
+  maxSkips?: number;
+  canSkip?: boolean;
 }
 
 const PreConnectionScreen = ({
@@ -41,6 +44,9 @@ const PreConnectionScreen = ({
   onSkip,
   isLoading = false,
   sharedInterests = [],
+  remainingSkips = 0,
+  maxSkips = 3,
+  canSkip = true,
 }: PreConnectionScreenProps) => {
   const [matchedUser, setMatchedUser] = useState<MatchedUserInfo | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -338,16 +344,26 @@ const PreConnectionScreen = ({
           )}
         </Button>
 
-        {/* Skip */}
-        <Button
-          onClick={onSkip}
-          disabled={isLoading || loadingProfile}
-          variant="outline"
-          size="lg"
-          className="w-14 h-14 rounded-full border-muted-foreground/30 text-muted-foreground hover:bg-muted"
-        >
-          <SkipForward className="w-5 h-5" />
-        </Button>
+        {/* Skip with counter */}
+        <div className="flex flex-col items-center gap-1">
+          <Button
+            onClick={onSkip}
+            disabled={isLoading || loadingProfile || !canSkip}
+            variant="outline"
+            size="lg"
+            className={`w-14 h-14 rounded-full border-muted-foreground/30 text-muted-foreground hover:bg-muted relative ${
+              !canSkip ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            <SkipForward className="w-5 h-5" />
+          </Button>
+          {/* Skip counter badge */}
+          <span className={`text-[10px] font-medium ${
+            remainingSkips === 0 ? "text-destructive" : "text-muted-foreground"
+          }`}>
+            {remainingSkips}/{maxSkips}
+          </span>
+        </div>
       </motion.div>
 
       {/* Labels */}

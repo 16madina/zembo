@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Phone, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useZConnectLiveKit } from "@/hooks/useZConnectLiveKit";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useDailyRandomCalls } from "@/hooks/useDailyRandomCalls";
+import { useDailySkips } from "@/hooks/useDailySkips";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,7 +29,10 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
   const [hasPlayedZemboSound, setHasPlayedZemboSound] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [acceptedConnection, setAcceptedConnection] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
+  const [showSkipDice, setShowSkipDice] = useState(false);
   const diceRef = useRef<HTMLDivElement>(null);
+  const lastPreferenceRef = useRef<string>("tous");
   
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -62,6 +66,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
   
   const { playDiceSound, playZemboVoice, playRevealSound, isDrumrollPlaying } = useSoundEffects();
   const { canCall, remainingCalls, maxCalls, incrementCallCount, isLoading: isLoadingCalls } = useDailyRandomCalls();
+  const { canSkip, remainingSkips, maxSkips, incrementSkipCount, isLoading: isLoadingSkips } = useDailySkips(user?.id);
   const [isAccepting, setIsAccepting] = useState(false);
 
   const handleCommencer = async () => {
@@ -86,6 +91,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
   };
 
   const handleStartSearch = async (preference: string) => {
+    lastPreferenceRef.current = preference;
     if (!hasPlayedZemboSound) {
       playZemboVoice();
       setHasPlayedZemboSound(true);
@@ -98,6 +104,8 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     setIsSelecting(false);
     setHasPlayedZemboSound(false);
     setAcceptedConnection(false);
+    setIsSkipping(false);
+    setShowSkipDice(false);
   };
 
   const handleAcceptConnection = async () => {
@@ -122,10 +130,37 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     toast.info(t.connectionRefused);
   };
 
-  const handleSkipConnection = async () => {
+  const handleSkipConnection = useCallback(async () => {
+    // Check if user can still skip
+    if (!canSkip) {
+      toast.error(t.limitReached);
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // Increment skip count
+    const success = await incrementSkipCount();
+    if (!success) {
+      toast.error(t.limitReached);
+      return;
+    }
+
+    setIsSkipping(true);
+    setShowSkipDice(true);
+    
+    // Play dice sound for the skip animation
+    playDiceSound();
+    
+    // Skip the current connection
     await skipConnection();
-    toast.info(t.searchingAnotherProfile);
-  };
+    
+    // Show dice animation for a moment, then search
+    setTimeout(() => {
+      setShowSkipDice(false);
+      setIsSkipping(false);
+      toast.info(t.searchingAnotherProfile);
+    }, 1500);
+  }, [canSkip, incrementSkipCount, skipConnection, playDiceSound, t]);
 
   const renderContent = () => {
     if (isSelecting && status === "idle") {
@@ -150,6 +185,16 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
       
       case "matched":
       case "connecting":
+        // Show dice animation when skipping
+        if (showSkipDice) {
+          return (
+            <div className="flex flex-col items-center justify-center gap-4">
+              <DiceAnimation isExiting={true} />
+              <p className="text-muted-foreground text-sm">{t.searchingAnotherProfile}</p>
+            </div>
+          );
+        }
+        
         // ALWAYS show PreConnectionScreen first until we're in_call
         if (status === "matched" || status === "connecting") {
           if (!matchedUserId) {
@@ -167,8 +212,11 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
               onAccept={handleAcceptConnection}
               onDecline={handleDeclineConnection}
               onSkip={handleSkipConnection}
-              isLoading={isAccepting || status === "connecting"}
+              isLoading={isAccepting || status === "connecting" || isSkipping}
               sharedInterests={sharedInterests}
+              remainingSkips={remainingSkips}
+              maxSkips={maxSkips}
+              canSkip={canSkip}
             />
           );
         }
