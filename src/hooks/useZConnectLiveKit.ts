@@ -602,9 +602,17 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
         console.log("[random-call-lk]", "participant disconnected", { id: participant.identity });
-        // If no remote participants left, go back to waiting state
+        // If no remote participants left, the other user has left - end the call
         if (room.remoteParticipants.size === 0) {
+          console.log("[random-call-lk]", "No more remote participants - other user left the call");
           setIsConnected(false);
+          
+          // Show toast and end call
+          toast.info("L'autre personne a quitté l'appel");
+          
+          // Cleanup and go to completed state
+          cleanup(true);
+          setStatus("completed");
         }
       });
 
@@ -843,13 +851,27 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
     }, 500);
   }, [startSearch]);
 
-  // End call - also cancels queue entry
-  const endCall = useCallback(() => {
-    console.log("[random-call-lk]", "endCall");
-    cleanup(true);
+  // End call - also cancels queue entry and notifies other user
+  const endCall = useCallback(async () => {
+    console.log("[random-call-lk]", "endCall", { sessionId });
+    
+    // Update session status to notify the other user via Realtime
+    if (sessionId) {
+      try {
+        await supabase
+          .from("random_call_sessions")
+          .update({ status: "ended" })
+          .eq("id", sessionId);
+        console.log("[random-call-lk]", "Session marked as ended");
+      } catch (err) {
+        console.error("[random-call-lk]", "Failed to update session status:", err);
+      }
+    }
+    
+    await cleanup(true);
     setStatus("completed");
     setTimeout(() => setStatus("idle"), 500);
-  }, [cleanup]);
+  }, [cleanup, sessionId]);
 
   // Toggle mute
   const toggleMute = useCallback(async () => {
@@ -946,6 +968,15 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
               }
               setDecisionResult("matched");
               setWaitingForOther(false);
+              await cleanup(true);
+              setStatus("completed");
+              return;
+            }
+
+            // OTHER USER ENDED THE CALL: If session is ended, notify and cleanup
+            if (updated.status === "ended") {
+              console.log("[random-call-lk]", "Other user ended the call via Realtime");
+              toast.info("L'autre personne a quitté l'appel");
               await cleanup(true);
               setStatus("completed");
               return;
