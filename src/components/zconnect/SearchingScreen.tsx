@@ -68,7 +68,7 @@ const SearchingScreen = ({ preference, onCancel, timeRemaining }: SearchingScree
           animate={{ opacity: [1, 0.7, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
         >
-          {t.searchingForSomeone}
+          {t.searchingForCompatible}
         </motion.h2>
         <p className="text-muted-foreground text-sm">
           {language === "fr" 

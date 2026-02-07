@@ -35,7 +35,7 @@ interface RpcResult {
   shared_count?: number;
 }
 
-interface UseRandomCallLiveKitReturn {
+interface UseZConnectLiveKitReturn {
   status: RandomCallStatus;
   roomName: string | null;
   sessionId: string | null;
@@ -69,7 +69,7 @@ const SEARCH_POLL_INTERVAL_MS = 1500; // Poll every 1.5s
 const INITIAL_DELAY_MS = 1500; // Wait before first match attempt
 const HEARTBEAT_INTERVAL_MS = 5000; // Update queue entry every 5s
 
-export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
+export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
   const { user } = useAuth();
   const [status, setStatus] = useState<RandomCallStatus>("idle");
   const [roomName, setRoomName] = useState<string | null>(null);

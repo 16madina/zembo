@@ -3,8 +3,8 @@ import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi, MoreVertic
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useZemboRingtone } from "@/hooks/useZemboRingtone";
 import { useAudioLevel } from "@/hooks/useAudioLevel";
-import AudioLevelMeter from "@/components/random-call/AudioLevelMeter";
-import ReportModal from "@/components/random-call/ReportModal";
+import AudioLevelMeter from "@/components/zconnect/AudioLevelMeter";
+import ReportModal from "@/components/zconnect/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import {
   DropdownMenu,

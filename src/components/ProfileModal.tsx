@@ -4,7 +4,7 @@ import { X, MapPin, BadgeCheck, Heart, Flame, User, Briefcase, GraduationCap, Ru
 import { useRef, useState } from "react";
 import SubscriptionBadge from "./SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
-import ReportModal from "./random-call/ReportModal";
+import ReportModal from "./zconnect/ReportModal";
 import BlockUserModal from "./BlockUserModal";
 
 interface ProfileData {

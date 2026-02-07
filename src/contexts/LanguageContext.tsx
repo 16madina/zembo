@@ -8,7 +8,7 @@ export const translations = {
     // Navigation
     home: "Accueil",
     live: "Live",
-    random: "Random",
+    connect: "Connect",
     messages: "Messages",
     profile: "Profil",
     
@@ -335,15 +335,15 @@ export const translations = {
     yes: "Oui",
     no: "Non",
     
-    // Z Connect game
+     // Z Connect game
     zConnect: "Z Connect",
     readyToMeet: "Es-tu prêt(e) à rencontrer quelqu'un ?",
     noProfileJustVoice: "Connecte-toi par la voix.",
-    connectedByChance: "Tu seras mis(e) en relation avec quelqu'un qui partage tes intérêts.",
+    connectedByInterests: "Tu seras mis(e) en relation avec quelqu'un qui partage tes intérêts.",
     start: "Commencer",
     limitReachedCalls: "Limite atteinte",
     callsRemaining: "appels restants",
-    searchingForSomeone: "Recherche d'un profil compatible...",
+    searchingForCompatible: "Recherche d'un profil compatible...",
     cancelSearch: "Annuler",
     otherPersonNotAvailable: "L'autre personne n'était pas disponible",
     noWorries: "Pas de soucis, on te trouve quelqu'un d'autre !",
@@ -578,7 +578,7 @@ export const translations = {
     // Navigation
     home: "Home",
     live: "Live",
-    random: "Random",
+    connect: "Connect",
     messages: "Messages",
     profile: "Profile",
     
@@ -909,11 +909,11 @@ export const translations = {
     zConnect: "Z Connect",
     readyToMeet: "Are you ready to meet someone?",
     noProfileJustVoice: "Connect by voice.",
-    connectedByChance: "You'll be matched with someone who shares your interests.",
+    connectedByInterests: "You'll be matched with someone who shares your interests.",
     start: "Start",
     limitReachedCalls: "Limit reached",
     callsRemaining: "calls remaining",
-    searchingForSomeone: "Finding a compatible profile...",
+    searchingForCompatible: "Finding a compatible profile...",
     cancelSearch: "Cancel",
     otherPersonNotAvailable: "The other person wasn't available",
     noWorries: "No worries, we'll find someone else!",
