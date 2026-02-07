@@ -38,6 +38,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     status,
     sessionId,
     matchedUserId,
+    sharedInterests,
     roomName,
     isConnected,
     isMuted,
@@ -167,6 +168,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
               onDecline={handleDeclineConnection}
               onSkip={handleSkipConnection}
               isLoading={isAccepting || status === "connecting"}
+              sharedInterests={sharedInterests}
             />
           );
         }
