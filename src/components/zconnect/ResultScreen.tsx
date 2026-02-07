@@ -108,7 +108,7 @@ const ResultScreen = ({ matched, onRetry, otherUserId, onRevealSound }: ResultSc
           className="text-center space-y-2"
         >
           <h2 className="text-3xl font-bold text-foreground">
-            C'est un Match ! 🎉
+            C'est un Vibe ! 🎉
           </h2>
           <p className="text-muted-foreground text-sm">
             Découvrez votre nouvelle connexion

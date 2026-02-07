@@ -154,7 +154,7 @@ const RoseMessageModal = ({
                   <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/20 border border-red-500/30">
                     <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                     <p className="text-xs text-red-200">
-                      Les {contactDetection.type}s ne sont pas autorisés. Matchez d'abord pour discuter ! 😊
+                      Les {contactDetection.type}s ne sont pas autorisés. Vibez d'abord pour discuter ! 😊
                     </p>
                   </div>
                 </motion.div>
