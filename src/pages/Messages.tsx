@@ -12,6 +12,7 @@ import RoseMessageModal from "@/components/RoseMessageModal";
 import CallHistorySection from "@/components/CallHistorySection";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { useGifts } from "@/hooks/useGifts";
@@ -98,6 +99,7 @@ const MessageStatus = ({ status }: { status: Conversation["status"] }) => {
 const Messages = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { isPremium } = useSubscription();
   const { playNotificationSound, playMatchSound } = useSoundEffects();
   const { gifts, sendGift } = useGifts();
@@ -585,7 +587,7 @@ const Messages = () => {
       >
         <div>
           <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-          <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} matchs</p>
+          <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} vibes</p>
         </div>
       </motion.div>
 
@@ -600,7 +602,7 @@ const Messages = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
           >
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Nouveaux matchs</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">{t.newMatches}</h3>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               {newMatches.map((match) => (
                 <motion.button
