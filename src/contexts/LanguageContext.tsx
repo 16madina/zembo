@@ -193,14 +193,15 @@ export const translations = {
     back: "Retour",
     
     // Welcome screen
-    findLove: "Trouvez l'amour",
-    welcomeSubtitle: "Rejoignez des milliers de célibataires et trouvez votre âme sœur",
-    createAccount: "Créer un compte",
+    findLove: "Jouez, Connectez, Vibrez.",
+    welcomeSubtitle: "Le réseau social où chaque connexion devient une aventure",
+    createAccount: "Entrer dans Zembo",
     login: "Se connecter",
     acceptTermsPrompt: "Veuillez accepter les conditions pour continuer",
     iAcceptThe: "J'accepte les",
     andThe: "et la",
     termsOfUse: "Conditions d'utilisation",
+    socialGamingBadge: "🎮 Social Gaming & Live Connections",
     
     // ZGames
     welcomeTo: "Bienvenue sur",
@@ -763,14 +764,15 @@ export const translations = {
     back: "Back",
     
     // Welcome screen
-    findLove: "Find Love",
-    welcomeSubtitle: "Join thousands of singles and find your soulmate",
-    createAccount: "Create Account",
+    findLove: "Play, Connect, Vibe.",
+    welcomeSubtitle: "The social network where every connection becomes an adventure",
+    createAccount: "Enter Zembo",
     login: "Sign In",
     acceptTermsPrompt: "Please accept the terms to continue",
     iAcceptThe: "I accept the",
     andThe: "and the",
     termsOfUse: "Terms of Use",
+    socialGamingBadge: "🎮 Social Gaming & Live Connections",
     
     // ZGames
     welcomeTo: "Welcome to",
