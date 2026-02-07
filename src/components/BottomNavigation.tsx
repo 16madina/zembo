@@ -14,7 +14,7 @@ const BottomNavigation = () => {
   const { playNavSound } = useSoundEffects();
 
   const navItems = [
-    { path: "/", icon: null, customIcon: zIcon, label: t.random, needsBlend: false, size: "w-5 h-5" },
+    { path: "/", icon: null, customIcon: zIcon, label: "Connect", needsBlend: false, size: "w-5 h-5" },
     { path: "/live", icon: null, customIcon: eIcon, label: t.live, needsBlend: true, size: "w-5 h-5" },
     { path: "/discover", icon: null, customIcon: mIcon, label: "Zvibes", needsBlend: true, size: "w-5 h-5" },
     { path: "/messages", icon: null, customIcon: bIcon, label: t.messages, needsBlend: true, size: "w-5 h-5" },

@@ -16,7 +16,7 @@ import { VoiceCallProvider } from "@/contexts/VoiceCallContext";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
 import LiveRoom from "./pages/LiveRoom";
-import Random from "./pages/Random";
+import Connect from "./pages/Connect";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -93,7 +93,7 @@ const AppRoutes = () => (
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/" element={<ProtectedRoute><Random /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
       <Route path="/discover" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
