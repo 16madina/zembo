@@ -31,6 +31,8 @@ interface RpcResult {
   continued?: boolean;
   waiting?: boolean;
   success?: boolean;
+  shared_interests?: string[];
+  shared_count?: number;
 }
 
 interface UseRandomCallLiveKitReturn {
@@ -38,6 +40,7 @@ interface UseRandomCallLiveKitReturn {
   roomName: string | null;
   sessionId: string | null;
   matchedUserId: string | null;
+  sharedInterests: string[];
   isConnected: boolean;
   isMuted: boolean;
   isSpeakerOn: boolean;
@@ -84,6 +87,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
   const [waitingForOther, setWaitingForOther] = useState(false);
   const [otherUserRejected, setOtherUserRejected] = useState(false);
   const [declinedByOther, setDeclinedByOther] = useState(false);
+  const [sharedInterests, setSharedInterests] = useState<string[]>([]);
   const lastPreferenceRef = useRef<string>("tous");
 
   const [decisionResult, setDecisionResult] = useState<"matched" | "rejected" | "continued" | null>(null);
@@ -179,7 +183,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     sessionEndsAtRef.current = null;
   }, [user?.id]);
 
-  // Start search for a random call
+  // Start search for a Z Connect call (interest-based matching)
   const startSearch = useCallback(async (preference: string) => {
     if (!user?.id || !userGender) {
       setError("Profil incomplet");
@@ -188,27 +192,28 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
     setStatus("searching");
     setError(null);
+    setSharedInterests([]);
     setTimeRemaining(CALL_DURATION_SECONDS);
-  lastPreferenceRef.current = preference;
+    lastPreferenceRef.current = preference;
 
-    console.log("[random-call-lk]", "startSearch", { preference, gender: userGender });
+    console.log("[zconnect]", "startSearch", { preference, gender: userGender });
 
-    // Helper to poll for matches
+    // Helper to poll for matches using interest-based algorithm
     const pollForMatch = async () => {
       try {
-        const { data, error: rpcError } = await supabase.rpc("random_call_find_or_create_match", {
+        const { data, error: rpcError } = await supabase.rpc("zconnect_find_interest_match", {
           p_user_id: user.id,
           p_user_gender: userGender,
           p_looking_for: preference,
         });
 
         if (rpcError) {
-          console.error("[random-call-lk]", "RPC error", rpcError);
+          console.error("[zconnect]", "RPC error", rpcError);
           return;
         }
 
         const result = data as RpcResult;
-        console.log("[random-call-lk]", "poll result", result);
+        console.log("[zconnect]", "poll result", result);
 
         if (result.action === "matched" && result.room_name) {
           // Stop polling/heartbeat
@@ -219,17 +224,18 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
           setRoomName(result.room_name);
           setSessionId(result.session_id || null);
           setMatchedUserId(result.matched_user_id || null);
+          setSharedInterests(result.shared_interests || []);
         
-        // Subscribe to session updates for pre-connection decline detection
-        if (result.session_id) {
-          subscribeToPreConnectionUpdates(result.session_id);
-        }
+          // Subscribe to session updates for pre-connection decline detection
+          if (result.session_id) {
+            subscribeToPreConnectionUpdates(result.session_id);
+          }
         
           setStatus("matched");
           // Don't auto-join - wait for user to accept via acceptConnection()
         }
       } catch (err) {
-        console.error("[random-call-lk]", "poll error", err);
+        console.error("[zconnect]", "poll error", err);
       }
     };
 
@@ -238,33 +244,34 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
       try {
         await supabase.rpc("random_call_heartbeat", { p_user_id: user.id });
       } catch (err) {
-        console.error("[random-call-lk]", "heartbeat error", err);
+        console.error("[zconnect]", "heartbeat error", err);
       }
     };
 
     try {
-      // Initial call to RPC (UPSERT into queue)
-      const { data, error: rpcError } = await supabase.rpc("random_call_find_or_create_match", {
+      // Initial call to interest-based RPC
+      const { data, error: rpcError } = await supabase.rpc("zconnect_find_interest_match", {
         p_user_id: user.id,
         p_user_gender: userGender,
         p_looking_for: preference,
       });
 
       if (rpcError) {
-        console.error("[random-call-lk]", "RPC error", rpcError);
+        console.error("[zconnect]", "RPC error", rpcError);
         setError("Erreur lors de la recherche");
         setStatus("error");
         return;
       }
 
       const result = data as RpcResult;
-      console.log("[random-call-lk]", "initial RPC result", result);
+      console.log("[zconnect]", "initial RPC result", result);
 
       if (result.action === "matched" && result.room_name) {
-        // Immediate match found
+        // Immediate match found based on shared interests
         setRoomName(result.room_name);
         setSessionId(result.session_id || null);
         setMatchedUserId(result.matched_user_id || null);
+        setSharedInterests(result.shared_interests || []);
         setStatus("matched");
         
         // Fetch ends_at for timer synchronization
@@ -297,7 +304,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
       // Set search timeout
       searchTimeoutRef.current = setTimeout(async () => {
-        console.log("[random-call-lk]", "search timeout reached");
+        console.log("[zconnect]", "search timeout reached");
         await cleanup(true);
         setStatus("error");
         setError("Aucun utilisateur trouvé. Réessayez plus tard.");
@@ -305,7 +312,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur inconnue";
-      console.error("[random-call-lk]", "startSearch error", err);
+      console.error("[zconnect]", "startSearch error", err);
       setError(message);
       setStatus("error");
     }
@@ -1088,6 +1095,7 @@ export const useRandomCallLiveKit = (): UseRandomCallLiveKitReturn => {
     roomName,
     sessionId,
     matchedUserId,
+    sharedInterests,
     isConnected,
     isMuted,
     isSpeakerOn,

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
-import { Phone, X } from "lucide-react";
+import { Heart, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SearchingScreenProps {
   preference: string;
@@ -8,14 +9,18 @@ interface SearchingScreenProps {
   timeRemaining: number;
 }
 
-const preferenceLabels: Record<string, string> = {
-  homme: "un homme",
-  femme: "une femme",
-  tous: "quelqu'un",
-};
-
 const SearchingScreen = ({ preference, onCancel, timeRemaining }: SearchingScreenProps) => {
+  const { language, t } = useLanguage();
   const progress = (timeRemaining / 30) * 100;
+  
+  const preferenceLabels: Record<string, { fr: string; en: string }> = {
+    homme: { fr: "un homme compatible", en: "a compatible man" },
+    femme: { fr: "une femme compatible", en: "a compatible woman" },
+    lgbt: { fr: "un profil LGBTQ+ compatible", en: "a compatible LGBTQ+ profile" },
+    tous: { fr: "quelqu'un de compatible", en: "someone compatible" },
+  };
+  
+  const label = preferenceLabels[preference]?.[language] || preferenceLabels.tous[language];
   
   return (
     <motion.div
@@ -42,17 +47,17 @@ const SearchingScreen = ({ preference, onCancel, timeRemaining }: SearchingScree
           />
         ))}
         
-        {/* Center circle */}
+        {/* Center circle with heart icon */}
         <motion.div
           className="absolute inset-0 rounded-full glass flex items-center justify-center"
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
           <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Phone className="w-12 h-12 text-primary" />
+            <Heart className="w-12 h-12 text-primary fill-primary/20" />
           </motion.div>
         </motion.div>
       </div>
@@ -63,17 +68,21 @@ const SearchingScreen = ({ preference, onCancel, timeRemaining }: SearchingScree
           animate={{ opacity: [1, 0.7, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
         >
-          Recherche en cours...
+          {t.searchingForSomeone}
         </motion.h2>
-        <p className="text-muted-foreground">
-          Recherche de {preferenceLabels[preference] || "quelqu'un"} en ligne
+        <p className="text-muted-foreground text-sm">
+          {language === "fr" 
+            ? `Analyse de vos intérêts pour trouver ${label}` 
+            : `Analyzing your interests to find ${label}`}
         </p>
       </div>
 
       {/* Countdown progress bar */}
       <div className="w-full max-w-xs space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Temps restant</span>
+          <span className="text-muted-foreground">
+            {language === "fr" ? "Temps restant" : "Time remaining"}
+          </span>
           <span className="text-primary font-medium">{timeRemaining}s</span>
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -108,7 +117,7 @@ const SearchingScreen = ({ preference, onCancel, timeRemaining }: SearchingScree
         className="mt-4 gap-2"
       >
         <X className="w-4 h-4" />
-        Annuler
+        {t.cancelSearch}
       </Button>
     </motion.div>
   );

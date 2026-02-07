@@ -1645,6 +1645,14 @@ export type Database = {
         Args: { p_decision: string; p_session_id: string; p_user_id: string }
         Returns: Json
       }
+      zconnect_find_interest_match: {
+        Args: {
+          p_looking_for: string
+          p_user_gender: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

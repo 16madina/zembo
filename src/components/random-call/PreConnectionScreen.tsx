@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, X, SkipForward, MapPin, User, Loader2, MoreVertical, Flag, Ban } from "lucide-react";
+import { Check, X, SkipForward, MapPin, User, Loader2, MoreVertical, Flag, Ban, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +21,8 @@ interface MatchedUserInfo {
   location: string | null;
   age: number | null;
   gender: string | null;
+  bio: string | null;
+  interests: string[] | null;
 }
 
 interface PreConnectionScreenProps {
@@ -27,6 +31,7 @@ interface PreConnectionScreenProps {
   onDecline: () => void;
   onSkip: () => void;
   isLoading?: boolean;
+  sharedInterests?: string[];
 }
 
 const PreConnectionScreen = ({
@@ -35,11 +40,14 @@ const PreConnectionScreen = ({
   onDecline,
   onSkip,
   isLoading = false,
+  sharedInterests = [],
 }: PreConnectionScreenProps) => {
   const [matchedUser, setMatchedUser] = useState<MatchedUserInfo | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -48,12 +56,31 @@ const PreConnectionScreen = ({
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("display_name, avatar_url, location, age, gender")
+          .select("display_name, avatar_url, location, age, gender, bio, interests")
           .eq("user_id", matchedUserId)
           .single();
 
         if (error) throw error;
         setMatchedUser(data);
+
+        // Fetch additional photos
+        const { data: photoData } = await supabase.storage
+          .from("profile-photos")
+          .list(matchedUserId, { limit: 5 });
+
+        if (photoData && photoData.length > 0) {
+          const photoUrls = photoData
+            .filter(file => !file.name.startsWith('.'))
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .slice(0, 3)
+            .map(file => {
+              const { data: urlData } = supabase.storage
+                .from("profile-photos")
+                .getPublicUrl(`${matchedUserId}/${file.name}`);
+              return urlData.publicUrl;
+            });
+          setPhotos(photoUrls);
+        }
       } catch (error) {
         console.error("Error fetching matched user profile:", error);
         setMatchedUser({
@@ -62,6 +89,8 @@ const PreConnectionScreen = ({
           location: null,
           age: null,
           gender: null,
+          bio: null,
+          interests: null,
         });
       } finally {
         setLoadingProfile(false);
@@ -73,132 +102,192 @@ const PreConnectionScreen = ({
 
   const getDisplayName = () => {
     if (matchedUser?.display_name) {
-      // Only show first name
       return matchedUser.display_name.split(" ")[0];
     }
-    return "Utilisateur";
+    return language === "fr" ? "Utilisateur" : "User";
   };
 
-  const getGenderEmoji = () => {
-    switch (matchedUser?.gender) {
-      case "homme":
-        return "👨";
-      case "femme":
-        return "👩";
-      default:
-        return "🧑";
-    }
+  const getGenderLabel = () => {
+    const genderMap: Record<string, { fr: string; en: string }> = {
+      homme: { fr: "Homme", en: "Man" },
+      femme: { fr: "Femme", en: "Woman" },
+      homme_gay: { fr: "Homme gay", en: "Gay man" },
+      femme_lesbienne: { fr: "Femme lesbienne", en: "Lesbian woman" },
+      non_binaire: { fr: "Non-binaire", en: "Non-binary" },
+      autre_lgbt: { fr: "LGBTQ+", en: "LGBTQ+" },
+    };
+    const gender = matchedUser?.gender || "";
+    return genderMap[gender]?.[language] || gender;
   };
+
+  // Display interests - prioritize shared, then show others
+  const displayInterests = () => {
+    const allInterests = matchedUser?.interests || [];
+    const shared = sharedInterests.filter(i => allInterests.includes(i));
+    const others = allInterests.filter(i => !shared.includes(i)).slice(0, 3 - shared.length);
+    return { shared, others };
+  };
+
+  const { shared, others } = displayInterests();
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="flex flex-col items-center justify-center gap-6 px-4"
+      className="flex flex-col items-center justify-center gap-4 px-4 w-full max-w-sm mx-auto"
     >
-    {/* Header with options menu */}
-    <div className="w-full max-w-xs flex justify-end">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+      {/* Header with options menu */}
+      <div className="w-full flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          {sharedInterests.length > 0 && (
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+              <Heart className="w-3 h-3 mr-1 fill-primary" />
+              {sharedInterests.length} {language === "fr" ? "intérêt(s) commun(s)" : "shared interest(s)"}
+            </Badge>
+          )}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
           <DropdownMenuItem
             onClick={() => setShowReportModal(true)}
             className="text-destructive focus:text-destructive"
           >
             <Flag className="w-4 h-4 mr-2" />
-            Signaler
+            {language === "fr" ? "Signaler" : "Report"}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setShowBlockModal(true)}
             className="text-destructive focus:text-destructive"
           >
             <Ban className="w-4 h-4 mr-2" />
-            Bloquer
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+            {language === "fr" ? "Bloquer" : "Block"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-    {/* Title */}
+      {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <h2 className="text-2xl font-bold text-foreground mb-2">
-          Quelqu'un trouvé ! 🎲
+        <h2 className="text-xl font-bold text-foreground mb-1">
+          {language === "fr" ? "Profil compatible trouvé !" : "Compatible profile found!"}
         </h2>
         <p className="text-muted-foreground text-sm">
-          Voulez-vous accepter cette connexion ?
+          {language === "fr" 
+            ? "Basé sur vos intérêts communs" 
+            : "Based on your shared interests"}
         </p>
       </motion.div>
 
-      {/* User Card */}
+      {/* User Card - Full Profile */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="w-full max-w-xs bg-card border border-border rounded-3xl p-6 shadow-lg"
+        className="w-full bg-card border border-border rounded-3xl overflow-hidden shadow-lg"
       >
         {loadingProfile ? (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 p-6">
             <div className="w-24 h-24 rounded-full bg-muted animate-pulse" />
             <div className="w-32 h-6 bg-muted rounded animate-pulse" />
             <div className="w-24 h-4 bg-muted rounded animate-pulse" />
           </div>
         ) : (
           <>
-            {/* Avatar */}
-            <div className="flex justify-center mb-4 relative">
-              <Avatar className="w-24 h-24 border-4 border-primary/20 overflow-hidden">
-                <AvatarImage 
-                  src={matchedUser?.avatar_url || undefined} 
-                  className="blur-[6px] scale-110"
+            {/* Photo - Full, not blurred */}
+            <div className="relative w-full aspect-[4/3] bg-muted">
+              {photos.length > 0 ? (
+                <img
+                  src={photos[0]}
+                  alt={getDisplayName()}
+                  className="w-full h-full object-cover"
                 />
-                <AvatarFallback className="bg-primary/10 text-primary text-3xl">
-                  {getGenderEmoji()}
-                </AvatarFallback>
-              </Avatar>
-              {/* Mystery overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  className="text-4xl"
-                  animate={{ opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  🎲
-                </motion.div>
+              ) : matchedUser?.avatar_url ? (
+                <img
+                  src={matchedUser.avatar_url}
+                  alt={getDisplayName()}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                  <User className="w-16 h-16 text-primary/50" />
+                </div>
+              )}
+              
+              {/* Gradient overlay with name */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+                <h3 className="text-xl font-bold text-white">
+                  {getDisplayName()}
+                  {matchedUser?.age && (
+                    <span className="font-normal ml-2">{matchedUser.age}</span>
+                  )}
+                </h3>
+                <div className="flex items-center gap-2 text-white/80 text-sm">
+                  {matchedUser?.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {matchedUser.location}
+                    </span>
+                  )}
+                  {matchedUser?.gender && (
+                    <span className="flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      {getGenderLabel()}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Info */}
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-bold text-foreground">
-                {getDisplayName()}
-                {matchedUser?.age && (
-                  <span className="text-muted-foreground font-normal ml-2">
-                    {matchedUser.age}
-                  </span>
-                )}
-              </h3>
+            {/* Info section */}
+            <div className="p-4 space-y-3">
+              {/* Bio */}
+              {matchedUser?.bio && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {matchedUser.bio}
+                </p>
+              )}
 
-              {matchedUser?.location && (
-                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  <span>{matchedUser.location}</span>
+              {/* Shared Interests */}
+              {(shared.length > 0 || others.length > 0) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {shared.map((interest) => (
+                    <Badge 
+                      key={interest} 
+                      className="bg-primary/20 text-primary border-primary/30 text-xs"
+                    >
+                      <Heart className="w-2.5 h-2.5 mr-1 fill-primary" />
+                      {interest}
+                    </Badge>
+                  ))}
+                  {others.map((interest) => (
+                    <Badge 
+                      key={interest} 
+                      variant="secondary"
+                      className="text-xs"
+                    >
+                      {interest}
+                    </Badge>
+                  ))}
                 </div>
               )}
 
-              {matchedUser?.gender && (
-                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                  <User className="w-3 h-3" />
-                  <span className="capitalize">{matchedUser.gender}</span>
-                </div>
+              {/* Match reason */}
+              {sharedInterests.length > 0 && (
+                <p className="text-xs text-primary/80 text-center">
+                  {language === "fr" 
+                    ? `Vous partagez ${sharedInterests.length} intérêt${sharedInterests.length > 1 ? 's' : ''}` 
+                    : `You share ${sharedInterests.length} interest${sharedInterests.length > 1 ? 's' : ''}`}
+                </p>
               )}
             </div>
           </>
@@ -218,9 +307,9 @@ const PreConnectionScreen = ({
           disabled={isLoading || loadingProfile}
           variant="outline"
           size="lg"
-          className="w-16 h-16 rounded-full border-destructive/50 text-destructive hover:bg-destructive/10"
+          className="w-14 h-14 rounded-full border-destructive/50 text-destructive hover:bg-destructive/10"
         >
-          <X className="w-8 h-8" />
+          <X className="w-6 h-6" />
         </Button>
 
         {/* Accept */}
@@ -228,12 +317,12 @@ const PreConnectionScreen = ({
           onClick={onAccept}
           disabled={isLoading || loadingProfile}
           size="lg"
-          className="w-20 h-20 rounded-full btn-gold"
+          className="w-18 h-18 rounded-full btn-gold"
         >
           {isLoading ? (
-            <Loader2 className="w-10 h-10 animate-spin" />
+            <Loader2 className="w-8 h-8 animate-spin" />
           ) : (
-            <Check className="w-10 h-10" />
+            <Check className="w-8 h-8" />
           )}
         </Button>
 
@@ -243,9 +332,9 @@ const PreConnectionScreen = ({
           disabled={isLoading || loadingProfile}
           variant="outline"
           size="lg"
-          className="w-16 h-16 rounded-full border-muted-foreground/30 text-muted-foreground hover:bg-muted"
+          className="w-14 h-14 rounded-full border-muted-foreground/30 text-muted-foreground hover:bg-muted"
         >
-          <SkipForward className="w-6 h-6" />
+          <SkipForward className="w-5 h-5" />
         </Button>
       </motion.div>
 
@@ -256,23 +345,23 @@ const PreConnectionScreen = ({
         transition={{ delay: 0.6 }}
         className="flex items-center gap-8 text-xs text-muted-foreground"
       >
-        <span>Refuser</span>
-        <span className="text-primary font-medium">Accepter</span>
-        <span>Passer</span>
+        <span>{language === "fr" ? "Refuser" : "Decline"}</span>
+        <span className="text-primary font-medium">{language === "fr" ? "Accepter" : "Accept"}</span>
+        <span>{language === "fr" ? "Passer" : "Skip"}</span>
       </motion.div>
 
-    {/* Modals */}
-    <ReportModal
-      isOpen={showReportModal}
-      onClose={() => setShowReportModal(false)}
-      reportedUserId={matchedUserId}
-    />
-    <BlockUserModal
-      isOpen={showBlockModal}
-      onClose={() => setShowBlockModal(false)}
-      userId={matchedUserId}
-      userName={matchedUser?.display_name || undefined}
-    />
+      {/* Modals */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUserId={matchedUserId}
+      />
+      <BlockUserModal
+        isOpen={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        userId={matchedUserId}
+        userName={matchedUser?.display_name || undefined}
+      />
     </motion.div>
   );
 };
