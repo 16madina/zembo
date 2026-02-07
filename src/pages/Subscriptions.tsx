@@ -393,22 +393,39 @@ const Subscriptions = () => {
             Annulez à tout moment • Paiement sécurisé
           </p>
           
-          {/* Restore Purchases Button (iOS only) */}
-          {isNative && (
-            <Button
-              variant="ghost"
-              className="w-full mt-3 text-muted-foreground"
-              onClick={handleRestorePurchases}
-              disabled={isRestoring}
+          {/* Restore Purchases Button - Always visible per App Store guidelines */}
+          <Button
+            variant="ghost"
+            className="w-full mt-3 text-muted-foreground"
+            onClick={handleRestorePurchases}
+            disabled={isRestoring}
+          >
+            {isRestoring ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Restaurer mes achats
+          </Button>
+          
+          {/* Terms of Use Link - Required by App Store guideline 3.1.2 */}
+          <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
+            <Button 
+              variant="link" 
+              className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
+              onClick={() => navigate("/terms")}
             >
-              {isRestoring ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Restaurer mes achats
+              Conditions d'utilisation
             </Button>
-          )}
+            <span>•</span>
+            <Button 
+              variant="link" 
+              className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
+              onClick={() => navigate("/privacy")}
+            >
+              Politique de confidentialité
+            </Button>
+          </div>
         </motion.div>
 
         {/* Feature Comparison Table */}
