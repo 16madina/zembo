@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ZemboLogo from "@/components/ZemboLogo";
-import welcomeBg from "@/assets/welcome-bg.jpg";
+import welcomeBg from "@/assets/welcome-social-bg.jpg";
 import LanguageSelector from "@/components/LanguageSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -98,10 +98,10 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
       <div className="absolute inset-0">
         <img
           src={welcomeBg}
-          alt="Couple romantique"
+          alt="Social connections"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
       </div>
 
       {/* Content */}
@@ -116,12 +116,26 @@ const WelcomeScreen = ({ onSignUp, onLogin }: WelcomeScreenProps) => {
           <LanguageSelector variant="compact" />
         </motion.div>
 
-        {/* Logo at top */}
+        {/* Social Gaming Badge at top */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex justify-center pt-4"
+        >
+          <div className="px-4 py-2 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30">
+            <span className="text-sm font-medium text-primary">
+              {t.socialGamingBadge}
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex justify-center pt-8"
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="flex justify-center pt-4"
         >
           <ZemboLogo size="lg" />
         </motion.div>
