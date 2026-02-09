@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi, MoreVertical, Flag, Ban } from "lucide-react";
 import { useEffect, useRef, useCallback, useState } from "react";
@@ -464,8 +465,8 @@ const VoiceCallModal = ({
           )}
         </div>
 
-        {/* Safety Modals */}
-        {remoteUserId && (
+        {/* Safety Modals - Using portals for proper z-index */}
+        {remoteUserId && createPortal(
           <>
             <ReportModal
               isOpen={showReportModal}
@@ -478,7 +479,8 @@ const VoiceCallModal = ({
               userId={remoteUserId}
               userName={remoteUserName || undefined}
             />
-          </>
+          </>,
+          document.body
         )}
       </motion.div>
     </AnimatePresence>
