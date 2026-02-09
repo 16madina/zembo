@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Phone, Video, MoreVertical, Send, Smile, Image, Check, CheckCheck, X, Mic, Flag, Ban } from "lucide-react";
 import data from "@emoji-mart/data";
@@ -1048,20 +1049,26 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
         remoteStreamRef={remoteStreamRef}
       />
 
-      {/* Report Modal */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        reportedUserId={user.id}
-      />
+      {/* Report Modal - Using portal for proper z-index stacking */}
+      {createPortal(
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedUserId={user.id}
+        />,
+        document.body
+      )}
 
-      {/* Block User Modal */}
-      <BlockUserModal
-        isOpen={showBlockModal}
-        onClose={() => setShowBlockModal(false)}
-        userId={user.id}
-        userName={user.name}
-      />
+      {/* Block User Modal - Using portal for proper z-index stacking */}
+      {createPortal(
+        <BlockUserModal
+          isOpen={showBlockModal}
+          onClose={() => setShowBlockModal(false)}
+          userId={user.id}
+          userName={user.name}
+        />,
+        document.body
+      )}
     </>
   );
 };

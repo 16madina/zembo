@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -1709,8 +1710,8 @@ const LiveRoom = () => {
       {/* Recent Gifts Display */}
       <RecentGiftsDisplay recentGifts={recentGifts} />
 
-      {/* Viewer safety actions */}
-      {!isStreamer && live && (
+      {/* Viewer safety actions - Using portals for proper z-index */}
+      {!isStreamer && live && createPortal(
         <>
           <ReportModal
             isOpen={showReportLiveModal}
@@ -1723,7 +1724,8 @@ const LiveRoom = () => {
             userId={live.streamer_id}
             userName={live.streamer?.display_name || undefined}
           />
-        </>
+        </>,
+        document.body
       )}
 
       {/* Join Live Modal - Access Control */}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Check, X, SkipForward, MapPin, User, Loader2, MoreVertical, Flag, Ban, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -378,18 +379,24 @@ const PreConnectionScreen = ({
         <span>{language === "fr" ? "Passer" : "Skip"}</span>
       </motion.div>
 
-      {/* Modals */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        reportedUserId={matchedUserId}
-      />
-      <BlockUserModal
-        isOpen={showBlockModal}
-        onClose={() => setShowBlockModal(false)}
-        userId={matchedUserId}
-        userName={matchedUser?.display_name || undefined}
-      />
+      {/* Modals - Using portals for proper z-index stacking (App Store compliance) */}
+      {createPortal(
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedUserId={matchedUserId}
+        />,
+        document.body
+      )}
+      {createPortal(
+        <BlockUserModal
+          isOpen={showBlockModal}
+          onClose={() => setShowBlockModal(false)}
+          userId={matchedUserId}
+          userName={matchedUser?.display_name || undefined}
+        />,
+        document.body
+      )}
     </motion.div>
   );
 };

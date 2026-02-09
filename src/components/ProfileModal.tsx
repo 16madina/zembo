@@ -576,23 +576,29 @@ const ProfileModal = ({ profile, isOpen, onClose, onLike, onSuperLike, onSendRos
     <>
       {createPortal(modalContent, document.body)}
       
-      {/* Report Modal */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        reportedUserId={profile?.id || ""}
-      />
+      {/* Report Modal - Must use portal to appear above ProfileModal's portal */}
+      {createPortal(
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedUserId={profile?.id || ""}
+        />,
+        document.body
+      )}
       
-      {/* Block Modal */}
-      <BlockUserModal
-        isOpen={showBlockModal}
-        onClose={() => {
-          setShowBlockModal(false);
-          onClose();
-        }}
-        userId={profile?.id || ""}
-        userName={profile?.name || ""}
-      />
+      {/* Block Modal - Must use portal to appear above ProfileModal's portal */}
+      {createPortal(
+        <BlockUserModal
+          isOpen={showBlockModal}
+          onClose={() => {
+            setShowBlockModal(false);
+            onClose();
+          }}
+          userId={profile?.id || ""}
+          userName={profile?.name || ""}
+        />,
+        document.body
+      )}
     </>
   );
 };

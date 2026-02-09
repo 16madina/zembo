@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Mic, MicOff, UserCircle, Flag, Phone, PhoneOff, Loader2, Volume2, VolumeX, Ban, MoreVertical } from "lucide-react";
 import { useState, memo } from "react";
@@ -261,7 +262,7 @@ const InCallScreenLiveKit = memo(({
         </AlertDialogContent>
       </AlertDialog>
 
-      {matchedUserId && (
+      {matchedUserId && createPortal(
         <>
           <ReportModal
             isOpen={showReportModal}
@@ -274,7 +275,8 @@ const InCallScreenLiveKit = memo(({
             onClose={() => setShowBlockModal(false)}
             userId={matchedUserId}
           />
-        </>
+        </>,
+        document.body
       )}
     </>
   );
