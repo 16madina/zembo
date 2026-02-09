@@ -408,24 +408,28 @@ const Subscriptions = () => {
             Restaurer mes achats
           </Button>
           
-          {/* Terms of Use Link - Required by App Store guideline 3.1.2 */}
-          <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
-            <Button 
-              variant="link" 
-              className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
+          {/* Terms of Use and Privacy Policy Links - Required by App Store guideline 3.1.2 */}
+          <div className="flex items-center justify-center gap-4 mt-4 text-xs">
+            <button 
+              className="text-primary underline hover:text-primary/80 transition-colors"
               onClick={() => navigate("/terms")}
             >
               Conditions d'utilisation
-            </Button>
-            <span>•</span>
-            <Button 
-              variant="link" 
-              className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
+            </button>
+            <span className="text-muted-foreground">•</span>
+            <button 
+              className="text-primary underline hover:text-primary/80 transition-colors"
               onClick={() => navigate("/privacy")}
             >
               Politique de confidentialité
-            </Button>
+            </button>
           </div>
+          
+          {/* Subscription details required by App Store */}
+          <p className="text-center text-[10px] text-muted-foreground mt-3 leading-relaxed">
+            L'abonnement se renouvelle automatiquement chaque mois sauf annulation 24h avant la fin de la période. 
+            Le paiement sera débité de votre compte iTunes à la confirmation de l'achat.
+          </p>
         </motion.div>
 
         {/* Feature Comparison Table */}
