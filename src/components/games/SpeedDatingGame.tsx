@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Zap, Users, Clock, Heart, X, Mic, MicOff, 
-  Video, VideoOff, PhoneOff, Sparkles, Crown, SkipForward, AlertTriangle
+  Video, VideoOff, PhoneOff, Sparkles, Crown, SkipForward, AlertTriangle,
+  Flag, Ban, UserCheck, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +13,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useSpeedDating, SpeedDatingStatus } from "@/hooks/useSpeedDating";
 import { cn } from "@/lib/utils";
+import ReportModal from "@/components/zconnect/ReportModal";
+import BlockUserModal from "@/components/BlockUserModal";
 import speedDatingBg from "@/assets/speed-dating-bg.jpeg";
 
 interface SpeedDatingGameProps {
@@ -41,10 +45,14 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
     confirmVotes,
     toggleMute,
     toggleVideo,
+    acceptRound,
     skipToNextRound,
     localVideoRef,
     remoteVideoRef,
   } = useSpeedDating();
+
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
   const handleClose = () => {
     leaveSession();
@@ -100,6 +108,19 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
             <CountdownScreen timeRemaining={timeRemaining} />
           )}
 
+          {/* Pre-Round: Show partner profile before connecting */}
+          {status === "pre_round" && currentRound && (
+            <PreRoundScreen
+              round={currentRound}
+              roundNumber={roundNumber}
+              totalRounds={totalRounds}
+              onAccept={acceptRound}
+              onSkip={skipToNextRound}
+              onReport={() => setShowReportModal(true)}
+              onBlock={() => setShowBlockModal(true)}
+            />
+          )}
+
           {/* In Call */}
           {status === "in_call" && currentRound && (
             <InCallScreen
@@ -117,6 +138,8 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
               onToggleVideo={toggleVideo}
               onEndCall={handleClose}
               onSkipRound={skipToNextRound}
+              onReport={() => setShowReportModal(true)}
+              onBlock={() => setShowBlockModal(true)}
               progressPercent={progressPercent}
               error={error}
               partnerTimedOut={partnerTimedOut}
@@ -141,6 +164,23 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Report & Block modals via portal */}
+      {currentRound?.partner_id && createPortal(
+        <>
+          <ReportModal
+            isOpen={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            reportedUserId={currentRound.partner_id}
+          />
+          <BlockUserModal
+            isOpen={showBlockModal}
+            onClose={() => setShowBlockModal(false)}
+            userId={currentRound.partner_id}
+          />
+        </>,
+        document.body
+      )}
     </motion.div>
   );
 };
@@ -555,6 +595,103 @@ const CountdownScreen = ({ timeRemaining }: { timeRemaining: number }) => (
   </motion.div>
 );
 
+// Pre-Round Screen - Shows partner profile before connecting
+interface PreRoundScreenProps {
+  round: { partner_id: string; partner_name: string; partner_avatar: string | null };
+  roundNumber: number;
+  totalRounds: number;
+  onAccept: () => void;
+  onSkip: () => void;
+  onReport: () => void;
+  onBlock: () => void;
+}
+
+const PreRoundScreen = ({ round, roundNumber, totalRounds, onAccept, onSkip, onReport, onBlock }: PreRoundScreenProps) => (
+  <motion.div
+    key="pre_round"
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
+  >
+    {/* Background */}
+    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
+    <div className="absolute inset-0 pointer-events-none">
+      <GoldenSparkles />
+    </div>
+
+    <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
+      {/* Round indicator */}
+      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
+        <Zap className="w-4 h-4 text-primary" />
+        <span className="text-sm font-semibold text-foreground">
+          Round {roundNumber}/{totalRounds}
+        </span>
+      </div>
+
+      {/* Partner profile card */}
+      <motion.div
+        className="bg-background/80 backdrop-blur-md border border-primary/30 rounded-3xl p-8 shadow-[0_0_40px_rgba(214,178,107,0.2)] w-full text-center"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <p className="text-sm text-muted-foreground mb-4">Votre prochain partenaire</p>
+        
+        <Avatar className="w-28 h-28 mx-auto mb-4 border-3 border-primary shadow-[0_0_25px_rgba(214,178,107,0.4)]">
+          <AvatarImage src={round.partner_avatar || undefined} />
+          <AvatarFallback className="text-3xl bg-primary/20 text-primary font-bold">
+            {round.partner_name[0]}
+          </AvatarFallback>
+        </Avatar>
+
+        <h3 className="text-2xl font-bold text-foreground mb-2">{round.partner_name}</h3>
+
+        <p className="text-xs text-muted-foreground mb-6">
+          En acceptant, vous initiez un appel vidéo avec ce profil.
+        </p>
+
+        {/* Accept / Skip buttons */}
+        <div className="flex gap-3">
+          <Button
+            onClick={onSkip}
+            variant="outline"
+            className="flex-1 py-5 border-border"
+          >
+            <SkipForward className="w-5 h-5 mr-2" />
+            Passer
+          </Button>
+          <Button
+            onClick={onAccept}
+            className="flex-1 py-5 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground"
+          >
+            <UserCheck className="w-5 h-5 mr-2" />
+            Accepter
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Report / Block links */}
+      <div className="flex items-center gap-4 mt-4">
+        <button
+          onClick={onReport}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+        >
+          <Flag className="w-3.5 h-3.5" />
+          Signaler
+        </button>
+        <button
+          onClick={onBlock}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+        >
+          <Ban className="w-3.5 h-3.5" />
+          Bloquer
+        </button>
+      </div>
+    </div>
+  </motion.div>
+);
+
 // In Call Screen
 interface InCallScreenProps {
   round: { partner_id: string; partner_name: string; partner_avatar: string | null; room_name: string };
@@ -571,6 +708,8 @@ interface InCallScreenProps {
   onToggleVideo: () => void;
   onEndCall: () => void;
   onSkipRound: () => void;
+  onReport: () => void;
+  onBlock: () => void;
   progressPercent: number;
   error: string | null;
   partnerTimedOut: boolean;
@@ -592,6 +731,8 @@ const InCallScreen = ({
   onToggleVideo,
   onEndCall,
   onSkipRound,
+  onReport,
+  onBlock,
   error,
   partnerTimedOut,
   partnerConnectionTimer,
@@ -762,6 +903,15 @@ const InCallScreen = ({
           whileTap={{ scale: 0.95 }}
         >
           {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6" />}
+        </motion.button>
+
+        {/* Report/Block buttons */}
+        <motion.button
+          onClick={onReport}
+          className="w-10 h-10 rounded-full flex items-center justify-center bg-muted shadow-lg"
+          whileTap={{ scale: 0.95 }}
+        >
+          <Flag className="w-4 h-4 text-muted-foreground" />
         </motion.button>
       </div>
     </motion.div>
