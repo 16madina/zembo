@@ -121,7 +121,7 @@ const AdminEmailPreviewTab = () => {
             <strong style="color: #d4af37;">Admin ZEMBO</strong> pense que vous allez adorer Zembo.
           </p>
           <p style="margin: 0 0 30px; color: ${mutedColor}; font-size: 14px; line-height: 1.6;">
-            Découvrez des connexions authentiques grâce à nos appels vidéo basés sur vos centres d'intérêt et notre système de matching intelligent.
+            Découvrez des connexions authentiques grâce à nos appels vidéo aléatoires et notre système de matching intelligent.
           </p>
           <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
             <a href="#" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%); color: #0a0a0a; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 600; font-size: 14px;">
