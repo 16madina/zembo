@@ -31,46 +31,56 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let initialSessionHandled = false;
+
+    // Set up auth state listener as SINGLE source of truth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        console.log("[Auth] onAuthStateChange:", event, !!session);
+
+        // Prevent SIGNED_OUT events from clearing state if we just signed in
+        // (Safari/WebKit on iPad can fire spurious TOKEN_REFRESHED → null)
+        if (event === "SIGNED_OUT") {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        initialSessionHandled = true;
 
-        // Update online status
+        // Update online status (deferred to avoid blocking state updates)
         if (session?.user) {
-          setTimeout(async () => {
-            await supabase
+          const userId = session.user.id;
+          setTimeout(() => {
+            supabase
               .from("profiles")
               .update({ is_online: true, last_seen: new Date().toISOString() })
-              .eq("user_id", session.user.id);
+              .eq("user_id", userId)
+              .then(({ error }) => {
+                if (error) console.error("Failed to set online status:", error);
+              });
           }, 0);
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-
-      // IMPORTANT: when restoring an existing session, onAuthStateChange may not fire,
-      // so we must also mark the user online here.
-      if (session?.user) {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ is_online: true, last_seen: new Date().toISOString() })
-          .eq("user_id", session.user.id);
-
-        if (error) {
-          console.error("Failed to set online status on session restore:", error);
-        }
+    // Fallback: if onAuthStateChange hasn't fired after 2s, use getSession
+    const fallbackTimer = setTimeout(async () => {
+      if (!initialSessionHandled) {
+        console.log("[Auth] Fallback: using getSession");
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
-    });
+    }, 2000);
 
     return () => {
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, []);
