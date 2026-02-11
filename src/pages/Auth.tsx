@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import WelcomeScreen from "@/components/onboarding/WelcomeScreen";
@@ -11,7 +10,6 @@ import { formatPhoneForStorage } from "@/lib/uniqueCheck";
 type AuthView = "welcome" | "signup" | "login";
 
 const Auth = () => {
-  const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
   const [view, setView] = useState<AuthView>("welcome");
   const [loading, setLoading] = useState(false);
@@ -129,7 +127,7 @@ const Auth = () => {
       }
 
       toast.success("Compte créé avec succès ! Un email de vérification vous a été envoyé 💫");
-      navigate("/");
+      // Don't navigate manually — PublicRoute will auto-redirect when user state updates
     } catch (err) {
       toast.error("Une erreur est survenue");
     } finally {
@@ -145,7 +143,7 @@ const Auth = () => {
         toast.error(error.message);
       } else {
         toast.success("Connexion réussie !");
-        navigate("/");
+        // Don't navigate manually — PublicRoute will auto-redirect when user state updates
       }
     } catch (err) {
       toast.error("Une erreur est survenue");
