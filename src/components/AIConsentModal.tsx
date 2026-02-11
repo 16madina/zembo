@@ -22,11 +22,11 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
 
   const content = {
     fr: {
-      title: "Consentement IA",
-      subtitle: "Autorisation requise avant utilisation",
-      warningTitle: "⚠️ Données partagées avec des tiers",
-      warningText: "Cette fonctionnalité partage vos données avec des services d'intelligence artificielle tiers. Vous devez donner votre consentement explicite avant de continuer.",
-      introText: "Zembo utilise un service d'IA externe pour :",
+      title: "Consentement – Partage de données IA",
+      subtitle: "Votre autorisation est requise AVANT tout envoi de données",
+      warningTitle: "⚠️ IMPORTANT : Vos données seront partagées avec des services tiers",
+      warningText: "En acceptant, certaines de vos données personnelles seront envoyées à des services d'intelligence artificielle tiers situés aux États-Unis. Aucune donnée ne sera partagée tant que vous n'aurez pas donné votre consentement explicite ci-dessous.",
+      introText: "Zembo souhaite utiliser un service d'IA externe pour :",
       aiPurposes: [
         "Analyser la compatibilité entre utilisateurs",
         "Générer des prédictions personnalisées (Zembo Oracle)",
@@ -60,7 +60,7 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
         "Données non stockées de manière permanente par les fournisseurs",
         "Conformité SOC 2 et ISO 27001",
       ],
-      acceptTerms: "Je comprends et j'accepte le partage de mes données avec les fournisseurs IA tiers listés ci-dessus",
+      acceptTerms: "Je comprends que mes données (prénom, âge, intérêts, préférences, réponses aux questionnaires) seront envoyées à Google LLC (Gemini) et OpenAI Inc. (GPT) aux États-Unis, et j'accepte ce partage",
       privacyLink: "Lire la politique de confidentialité complète",
       acceptButton: "Accepter et continuer",
       declineButton: "Refuser",
@@ -75,11 +75,11 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
       ],
     },
     en: {
-      title: "AI Consent",
-      subtitle: "Authorization required before use",
-      warningTitle: "⚠️ Data shared with third parties",
-      warningText: "This feature shares your data with third-party artificial intelligence services. You must give your explicit consent before continuing.",
-      introText: "Zembo uses an external AI service to:",
+      title: "Consent – AI Data Sharing",
+      subtitle: "Your authorization is required BEFORE any data is sent",
+      warningTitle: "⚠️ IMPORTANT: Your data will be shared with third parties",
+      warningText: "By accepting, some of your personal data will be sent to third-party artificial intelligence services located in the United States. No data will be shared until you give your explicit consent below.",
+      introText: "Zembo would like to use an external AI service to:",
       aiPurposes: [
         "Analyze compatibility between users",
         "Generate personalized predictions (Zembo Oracle)",
@@ -113,7 +113,7 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
         "Data not permanently stored by providers",
         "SOC 2 and ISO 27001 compliance",
       ],
-      acceptTerms: "I understand and accept sharing my data with the third-party AI providers listed above",
+      acceptTerms: "I understand that my data (first name, age, interests, preferences, questionnaire answers) will be sent to Google LLC (Gemini) and OpenAI Inc. (GPT) in the United States, and I accept this sharing",
       privacyLink: "Read the full privacy policy",
       acceptButton: "Accept and continue",
       declineButton: "Decline",
