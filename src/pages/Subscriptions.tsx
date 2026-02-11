@@ -312,16 +312,16 @@ const Subscriptions = () => {
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                   <Crown className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-amber-400">Gold</h3>
-                  <p className="text-sm text-muted-foreground">L'essentiel premium</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-amber-400">{getPrice("gold")}</div>
-                <div className="text-xs text-muted-foreground">/mois</div>
-              </div>
-            </div>
+                 <div>
+316:                   <h3 className="font-bold text-lg text-amber-400">ZEMBO Gold</h3>
+317:                   <p className="text-sm text-muted-foreground">Abonnement mensuel • 1 mois</p>
+318:                 </div>
+319:               </div>
+320:               <div className="text-right">
+321:                 <div className="text-2xl font-bold text-amber-400">{getPrice("gold")}</div>
+322:                 <div className="text-xs text-muted-foreground">/mois</div>
+323:               </div>
+324:             </div>
           </motion.div>
 
           {/* Platinum Plan */}
@@ -345,16 +345,16 @@ const Subscriptions = () => {
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-purple-400">Platinum</h3>
-                  <p className="text-sm text-muted-foreground">L'expérience ultime</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-purple-400">{getPrice("platinum")}</div>
-                <div className="text-xs text-muted-foreground">/mois</div>
-              </div>
-            </div>
+                 <div>
+                   <h3 className="font-bold text-lg text-purple-400">ZEMBO Platinum</h3>
+                   <p className="text-sm text-muted-foreground">Abonnement mensuel • 1 mois</p>
+                 </div>
+               </div>
+               <div className="text-right">
+                 <div className="text-2xl font-bold text-purple-400">{getPrice("platinum")}</div>
+                 <div className="text-xs text-muted-foreground">/mois</div>
+               </div>
+             </div>
           </motion.div>
         </div>
 
@@ -425,11 +425,15 @@ const Subscriptions = () => {
             </button>
           </div>
           
-          {/* Subscription details required by App Store */}
-          <p className="text-center text-[10px] text-muted-foreground mt-3 leading-relaxed">
-            L'abonnement se renouvelle automatiquement chaque mois sauf annulation 24h avant la fin de la période. 
-            Le paiement sera débité de votre compte iTunes à la confirmation de l'achat.
-          </p>
+          {/* Subscription disclosure required by App Store Guideline 3.1.2 */}
+          <div className="mt-4 p-3 rounded-xl bg-muted/30 border border-border/30">
+            <p className="text-center text-[11px] text-muted-foreground leading-relaxed">
+              <strong>ZEMBO Gold</strong> ({getPrice("gold")}/mois) et <strong>ZEMBO Platinum</strong> ({getPrice("platinum")}/mois) sont des abonnements à renouvellement automatique d'une durée de 1 mois.
+              Le paiement sera débité de votre compte Apple iTunes à la confirmation de l'achat.
+              L'abonnement se renouvelle automatiquement sauf annulation au moins 24 heures avant la fin de la période en cours.
+              Vous pouvez gérer et annuler vos abonnements dans les réglages de votre compte App Store.
+            </p>
+          </div>
         </motion.div>
 
         {/* Feature Comparison Table */}
