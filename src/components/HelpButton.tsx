@@ -11,7 +11,7 @@ const HelpButton = () => {
 
   // Tutorials with translations
   const getTutorialsByPage = () => ({
-    "/": {
+    "/discover": {
       title: language === "en" ? "Discover profiles" : "Découvrir des profils",
       steps: [
         {
@@ -61,7 +61,7 @@ const HelpButton = () => {
         }
       ]
     },
-    "/random": {
+    "/": {
       title: "Z Games",
       steps: [
         {

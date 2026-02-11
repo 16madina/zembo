@@ -15,7 +15,7 @@ import LanguageSelector from "@/components/LanguageSelector";
 
 type GameMode = "hub" | "zconnect" | "speedDating" | "oracle" | "compatibility";
 
-const Random = () => {
+const ConnectPage = () => {
   const [currentGame, setCurrentGame] = useState<GameMode>("hub");
    const location = useLocation();
    const { hasConsented, isLoading } = useAIDataConsent();
@@ -143,4 +143,4 @@ const Random = () => {
   );
 };
 
-export default Random;
+export default ConnectPage;
