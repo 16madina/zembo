@@ -9,7 +9,6 @@ export type SpeedDatingStatus =
   | "searching"
   | "waiting_room"
   | "countdown"
-  | "pre_round"
   | "in_call"
   | "voting"
   | "results";
@@ -61,7 +60,6 @@ interface UseSpeedDatingReturn {
   confirmVotes: () => Promise<void>;
   toggleMute: () => void;
   toggleVideo: () => void;
-  acceptRound: () => Promise<void>;
   skipToNextRound: () => Promise<void>;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
@@ -354,15 +352,6 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     }, 1000);
   }, []);
 
-  // Accept the current round and join the video call
-  const acceptRound = useCallback(async () => {
-    if (!currentRound) return;
-    setStatus("in_call");
-    await joinLiveKitRoom(currentRound.room_name);
-    startRoundTimer();
-    console.log("[speed-dating] User accepted round, joining room:", currentRound.room_name);
-  }, [currentRound, joinLiveKitRoom, startRoundTimer]);
-
   const syncToLatestRound = useCallback(
     async (opts?: { expectedMinRound?: number; reason?: string }) => {
       if (!sessionId || !user) return;
@@ -409,12 +398,14 @@ export function useSpeedDating(): UseSpeedDatingReturn {
           room_name: latest.room_name,
         });
         setRoundNumber(latest.round_number);
-        setStatus("pre_round");
+        setStatus("in_call");
 
         // Important: set this before connecting to avoid double-joins when multiple events arrive.
         lastJoinedRoomRef.current = latest.room_name;
 
-        console.log("[speed-dating] Synced to latest round (pre_round)", {
+        await joinLiveKitRoom(latest.room_name);
+        startRoundTimer();
+        console.log("[speed-dating] Synced to latest round", {
           reason: opts?.reason,
           round: latest.round_number,
           room: latest.room_name,
@@ -723,9 +714,13 @@ export function useSpeedDating(): UseSpeedDatingReturn {
               room_name: round.room_name,
             });
             setRoundNumber(round.round_number);
-            setStatus("pre_round");
+            setStatus("in_call");
 
             lastJoinedRoomRef.current = round.room_name;
+            
+            // Join the video room
+            await joinLiveKitRoom(round.room_name);
+            startRoundTimer();
           }
         }
       )
@@ -865,7 +860,6 @@ export function useSpeedDating(): UseSpeedDatingReturn {
     confirmVotes,
     toggleMute,
     toggleVideo,
-    acceptRound,
     skipToNextRound,
     localVideoRef: localVideoRef as React.RefObject<HTMLVideoElement>,
     remoteVideoRef: remoteVideoRef as React.RefObject<HTMLVideoElement>,
