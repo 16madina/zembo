@@ -312,16 +312,16 @@ const Subscriptions = () => {
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                   <Crown className="w-6 h-6 text-white" />
                 </div>
-                 <div>
-316:                   <h3 className="font-bold text-lg text-amber-400">ZEMBO Gold</h3>
-317:                   <p className="text-sm text-muted-foreground">Abonnement mensuel • 1 mois</p>
-318:                 </div>
-319:               </div>
-320:               <div className="text-right">
-321:                 <div className="text-2xl font-bold text-amber-400">{getPrice("gold")}</div>
-322:                 <div className="text-xs text-muted-foreground">/mois</div>
-323:               </div>
-324:             </div>
+                <div>
+                  <h3 className="font-bold text-lg text-amber-400">ZEMBO Gold</h3>
+                  <p className="text-sm text-muted-foreground">Abonnement mensuel • 1 mois</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-amber-400">{getPrice("gold")}</div>
+                <div className="text-xs text-muted-foreground">/mois</div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Platinum Plan */}
