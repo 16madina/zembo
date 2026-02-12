@@ -44,7 +44,7 @@ interface PlanFeature {
 
 const features: PlanFeature[] = [
   {
-    name: "Likes par jour",
+    name: "Vibes par jour",
     icon: <Heart className="w-4 h-4" />,
     free: "5",
     gold: "Illimités",
@@ -58,7 +58,7 @@ const features: PlanFeature[] = [
     platinum: "Illimités",
   },
   {
-    name: "Voir qui vous a liké",
+    name: "Voir qui vous a vibé",
     icon: <Eye className="w-4 h-4" />,
     free: "Flouté",
     gold: true,
@@ -128,7 +128,7 @@ const features: PlanFeature[] = [
     platinum: true,
   },
   {
-    name: "Matchs prioritaires",
+    name: "Connexions prioritaires",
     icon: <Zap className="w-4 h-4" />,
     free: false,
     gold: false,
@@ -283,7 +283,7 @@ const Subscriptions = () => {
           </div>
           <h2 className="text-2xl font-bold mb-2">Passez à la vitesse supérieure</h2>
           <p className="text-muted-foreground">
-            Débloquez toutes les fonctionnalités et trouvez l'amour plus vite
+            Débloquez toutes les fonctionnalités premium
           </p>
         </motion.div>
 
