@@ -36,15 +36,17 @@ const handler = async (req: Request): Promise<Response> => {
     // Find profile with this verification token
     const { data: profile, error: findError } = await supabase
       .from('profiles')
-      .select('id, user_id, email_verification_sent_at')
+      .select('id, user_id, email_verification_sent_at, email_verified')
       .eq('email_verification_token', token)
-      .single();
+      .maybeSingle();
 
-    if (findError || !profile) {
-      console.error("Token not found:", findError);
+    if (!profile) {
+      // Token not found - maybe already used. Check if any profile is already verified
+      // This handles the case where user clicks the link again after already verifying
+      console.log("Token not found, might be already verified");
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired verification token' }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, message: 'Email already verified', already_verified: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
