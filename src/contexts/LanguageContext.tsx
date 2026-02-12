@@ -207,7 +207,7 @@ export const translations = {
     welcomeTo: "Bienvenue sur",
     readyToPlay: "Es-tu prêt(e) à jouer ? 🎮",
     aiConsentRequired: "Tu dois accepter le consentement IA ci-dessus pour accéder à ce jeu.",
-     zconnectDesc: "Appel vocal aléatoire avec un inconnu",
+     zconnectDesc: "Appel vocal avec un inconnu",
      speedDatingDesc: "Connexions rapides en vidéo",
      oracleDesc: "Découvre ton Oracle par l'IA",
      compatibility: "Compatibilité",
