@@ -66,7 +66,7 @@ export const useAIDataConsent = () => {
         .from("ai_data_consents")
         .upsert(consentData, { onConflict: "user_id" })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
