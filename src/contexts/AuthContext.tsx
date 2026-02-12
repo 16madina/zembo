@@ -32,15 +32,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     let initialSessionHandled = false;
+    let lastSignInTimestamp = 0;
 
     // Set up auth state listener as SINGLE source of truth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("[Auth] onAuthStateChange:", event, !!session);
 
-        // Prevent SIGNED_OUT events from clearing state if we just signed in
-        // (Safari/WebKit on iPad can fire spurious TOKEN_REFRESHED → null)
+        // Track when we last signed in
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          lastSignInTimestamp = Date.now();
+        }
+
+        // On iOS/Safari WebKit, a spurious SIGNED_OUT can fire right after
+        // SIGNED_IN or TOKEN_REFRESHED. Ignore SIGNED_OUT if it arrives
+        // within 3 seconds of a sign-in event.
         if (event === "SIGNED_OUT") {
+          const timeSinceSignIn = Date.now() - lastSignInTimestamp;
+          if (timeSinceSignIn < 3000 && lastSignInTimestamp > 0) {
+            console.log("[Auth] Ignoring spurious SIGNED_OUT on iOS (came", timeSinceSignIn, "ms after sign-in)");
+            return;
+          }
           setSession(null);
           setUser(null);
           setLoading(false);
