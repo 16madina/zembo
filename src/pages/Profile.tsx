@@ -401,8 +401,8 @@ const Profile = () => {
             onClick={() => openEditModal("display_name")}
             className="mt-4 flex items-center gap-2 group"
           >
-            <h2 className="text-2xl font-bold text-primary-foreground">{displayName}</h2>
-            <Pencil className="w-4 h-4 text-primary-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <h2 className="text-2xl font-bold text-foreground">{displayName}</h2>
+            <Pencil className="w-4 h-4 text-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
 
           {/* Verification badges and actions */}
