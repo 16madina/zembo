@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAIDataConsent } from "@/hooks/useAIDataConsent";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 
 interface AIConsentModalProps {
   isOpen: boolean;
@@ -136,17 +137,28 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
     
     setIsSubmitting(true);
     
-    const success = await grantConsent({
-      accepted_at: new Date().toISOString(),
-      features: ["compatibility", "oracle", "suggestions"],
-    });
-    
-    if (success) {
-      onConsent();
-      onClose();
+    try {
+      const success = await grantConsent({
+        accepted_at: new Date().toISOString(),
+        features: ["compatibility", "oracle", "suggestions"],
+      });
+      
+      if (success) {
+        onConsent();
+        onClose();
+      } else {
+        toast.error(language === "fr" 
+          ? "Erreur lors de l'enregistrement du consentement. Veuillez réessayer." 
+          : "Error saving consent. Please try again.");
+      }
+    } catch (error) {
+      console.error("Consent error:", error);
+      toast.error(language === "fr" 
+        ? "Une erreur est survenue. Veuillez réessayer." 
+        : "An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsSubmitting(false);
   };
 
   return (
