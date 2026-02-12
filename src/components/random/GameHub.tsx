@@ -78,7 +78,7 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
             <motion.button
               key={game.id}
               onClick={() => onSelectGame(game.id)}
-              className={`relative flex flex-col items-center justify-end p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[160px] sm:min-h-[180px] overflow-hidden`}
+              className={`relative flex flex-col items-center justify-end p-4 rounded-2xl border ${game.borderColor} bg-gradient-to-br ${game.gradient} backdrop-blur-sm transition-all duration-200 active:scale-95 min-h-[200px] sm:min-h-[220px] overflow-hidden`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
