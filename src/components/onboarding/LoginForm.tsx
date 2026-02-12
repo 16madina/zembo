@@ -93,7 +93,7 @@ const LoginForm = ({ onSubmit, onBack, loading }: LoginFormProps) => {
             Bon retour !
           </h1>
           <p className="text-muted-foreground text-sm">
-            Connectez-vous pour retrouver vos matchs
+            Connectez-vous pour retrouver vos vibes
           </p>
         </motion.div>
 
