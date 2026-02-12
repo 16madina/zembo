@@ -105,7 +105,7 @@ const SplashScreen = ({ onComplete, minDuration = 2500 }: SplashScreenProps) => 
               transition={{ duration: 0.6, delay: 1 }}
               className="mt-6 text-sm font-medium tracking-[0.3em] text-muted-foreground uppercase"
             >
-              L'amour à l'africaine
+              Jouez, Connectez, Vibrez.
             </motion.p>
           </motion.div>
 
