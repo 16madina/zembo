@@ -18,6 +18,7 @@ import DiceAnimation from "@/components/zconnect/DiceAnimation";
 import MicrophoneTest from "@/components/zconnect/MicrophoneTest";
 import UpgradeModal from "@/components/zconnect/UpgradeModal";
 import PreConnectionScreen from "@/components/zconnect/PreConnectionScreen";
+import LobbyScreen from "@/components/zconnect/LobbyScreen";
 
 interface ZConnectGameProps {
   onBack: () => void;
@@ -53,6 +54,7 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     decisionResult,
     waitingForOther,
     startSearch,
+    initiateConnection,
     cancelSearch,
     endCall,
     toggleMute,
@@ -176,10 +178,11 @@ const ZConnectGame = ({ onBack }: ZConnectGameProps) => {
     switch (status) {
       case "searching":
         return (
-          <SearchingScreen 
-            preference="tous" 
+          <LobbyScreen 
+            preference={lastPreferenceRef.current} 
             onCancel={cancelSearch}
-            timeRemaining={60}
+            onSelectUser={initiateConnection}
+            isInitiating={(status as string) === "connecting"}
           />
         );
       

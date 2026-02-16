@@ -52,6 +52,7 @@ interface UseZConnectLiveKitReturn {
   otherUserRejected: boolean;
   declinedByOther: boolean;
   startSearch: (preference: string) => Promise<void>;
+  initiateConnection: (targetUserId: string) => Promise<void>;
   cancelSearch: () => Promise<void>;
   acceptConnection: () => Promise<void>;
   declineConnection: () => Promise<void>;
@@ -106,7 +107,58 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
   // Ref to store joinLiveKitRoom function to avoid circular dependency
   const joinLiveKitRoomRef = useRef<((roomName: string) => Promise<void>) | null>(null);
 
-  // Fetch user gender on mount
+  // Subscribe to session updates for PRE-CONNECTION phase (detect decline/skip)
+  const subscribeToPreConnectionUpdates = useCallback((currentSessionId: string) => {
+    console.log("[random-call-lk]", "subscribing to pre-connection updates", { sessionId: currentSessionId });
+
+    // Avoid duplicate subscriptions
+    if (sessionChannelRef.current) {
+      console.log("[random-call-lk]", "already subscribed to session, skipping");
+      return;
+    }
+
+    const channel = supabase
+      .channel(`random-call-preconnect-${currentSessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "random_call_sessions",
+          filter: `id=eq.${currentSessionId}`,
+        },
+        async (payload) => {
+          const updated = payload.new as {
+            status: string;
+            user1_id: string;
+            user2_id: string;
+          };
+
+          console.log("[random-call-lk]", "pre-connection session update", updated);
+
+          // If session was declined/cancelled before call started
+          if (updated.status === "declined" || updated.status === "cancelled") {
+            console.log("[random-call-lk]", "Other user declined/cancelled the connection");
+            setDeclinedByOther(true);
+            setStatus("declined_by_other");
+            toast.info("L'autre personne n'était pas disponible");
+            
+            // Cleanup without cancelling our queue (we'll restart search)
+            if (sessionChannelRef.current) {
+              sessionChannelRef.current.unsubscribe();
+              sessionChannelRef.current = null;
+            }
+          }
+        }
+      )
+      .subscribe((state) => {
+        console.log("[random-call-lk]", "pre-connection channel state", state);
+      });
+
+    sessionChannelRef.current = channel;
+  }, []);
+
+  // Fetch user gender and listen for incoming invitations
   useEffect(() => {
     if (!user?.id) return;
     
@@ -120,7 +172,50 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
           setUserGender(data.gender);
         }
       });
-  }, [user?.id]);
+
+    // Listen for incoming Z Connect invitations
+    const invitationsChannel = supabase
+      .channel("zconnect-invitations")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "random_call_sessions",
+          filter: `user2_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const newSession = payload.new as { id: string; user1_id: string; room_name: string; status: string };
+          console.log("[zconnect]", "Incoming invitation detected", newSession);
+          
+          if (newSession.status === "pending" || newSession.status === "active") {
+            setSessionId(newSession.id);
+            setMatchedUserId(newSession.user1_id);
+            setRoomName(newSession.room_name);
+            setStatus("matched");
+            
+            // Fetch partner profile info
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("interests")
+              .eq("user_id", newSession.user1_id)
+              .single();
+            
+            if (profile?.interests) {
+              setSharedInterests(profile.interests);
+            }
+            
+            toast.info("Nouvel appel entrant !");
+            subscribeToPreConnectionUpdates(newSession.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      invitationsChannel.unsubscribe();
+    };
+  }, [user?.id, subscribeToPreConnectionUpdates]);
 
   // Cleanup function - does NOT cancel queue entry (only cancelSearch does that)
   const cleanup = useCallback(async (shouldCancelQueue = false) => {
@@ -318,6 +413,57 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
     }
   }, [user?.id, userGender, cleanup]);
 
+  // Initiate connection with a specific user (Lobby Mode)
+  const initiateConnection = useCallback(async (targetUserId: string) => {
+    if (!user?.id || !userGender) return;
+
+    console.log("[zconnect]", "initiateConnection with", targetUserId);
+    setStatus("connecting");
+
+    try {
+      const roomName = `zconnect_${user.id.slice(0, 8)}_${targetUserId.slice(0, 8)}_${Date.now()}`;
+      
+      // Create a session entry directly to notify the target
+      const { data: session, error: sessionError } = await supabase
+        .from("random_call_sessions")
+        .insert({
+          user1_id: user.id,
+          user2_id: targetUserId,
+          room_name: roomName,
+          status: "pending",
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+      
+      setRoomName(roomName);
+      setSessionId(session.id);
+      setMatchedUserId(targetUserId);
+      
+      // Subscribe to updates for this session to see if they accept
+      subscribeToPreConnectionUpdates(session.id);
+      
+      // Also fetch target profile interests for UI
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("interests")
+        .eq("user_id", targetUserId)
+        .single();
+      
+      if (profile?.interests) {
+        setSharedInterests(profile.interests);
+      }
+      
+      setStatus("matched"); // Moves to PreConnectionScreen where we wait for THEM to accept (or for us to confirm)
+    } catch (err) {
+      console.error("[zconnect]", "initiateConnection error", err);
+      setError("Erreur lors de la connexion");
+      setStatus("error");
+    }
+  }, [user?.id, userGender, subscribeToPreConnectionUpdates]);
+
   // Subscribe to realtime updates on our queue entry
   const subscribeToQueueUpdates = useCallback((userId: string) => {
     console.log("[random-call-lk]", "subscribing to queue updates", { userId });
@@ -335,6 +481,10 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
         async (payload) => {
           const updated = payload.new as { status: string; room_name: string | null };
           console.log("[random-call-lk]", "queue update received", updated);
+
+          if (updated.status === "waiting") {
+             // User is now in the lobby waiting for others
+          }
 
           if (updated.status === "matched" && updated.room_name) {
             // Stop polling/heartbeat/timeout
@@ -394,56 +544,7 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
     channelRef.current = channel;
   }, []);
 
-  // Subscribe to session updates for PRE-CONNECTION phase (detect decline/skip)
-  const subscribeToPreConnectionUpdates = useCallback((currentSessionId: string) => {
-    console.log("[random-call-lk]", "subscribing to pre-connection updates", { sessionId: currentSessionId });
-
-    // Avoid duplicate subscriptions
-    if (sessionChannelRef.current) {
-      console.log("[random-call-lk]", "already subscribed to session, skipping");
-      return;
-    }
-
-    const channel = supabase
-      .channel(`random-call-preconnect-${currentSessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "random_call_sessions",
-          filter: `id=eq.${currentSessionId}`,
-        },
-        async (payload) => {
-          const updated = payload.new as {
-            status: string;
-            user1_id: string;
-            user2_id: string;
-          };
-
-          console.log("[random-call-lk]", "pre-connection session update", updated);
-
-          // If session was declined/cancelled before call started
-          if (updated.status === "declined" || updated.status === "cancelled") {
-            console.log("[random-call-lk]", "Other user declined/cancelled the connection");
-            setDeclinedByOther(true);
-            setStatus("declined_by_other");
-            toast.info("L'autre personne n'était pas disponible");
-            
-            // Cleanup without cancelling our queue (we'll restart search)
-            if (sessionChannelRef.current) {
-              sessionChannelRef.current.unsubscribe();
-              sessionChannelRef.current = null;
-            }
-          }
-        }
-      )
-      .subscribe((state) => {
-        console.log("[random-call-lk]", "pre-connection channel state", state);
-      });
-
-    sessionChannelRef.current = channel;
-  }, []);
+  // subscribeToPreConnectionUpdates was moved up to avoid hoist errors
 
   // Join LiveKit room for audio call
   const joinLiveKitRoom = useCallback(async (liveKitRoomName: string) => {
@@ -1162,6 +1263,7 @@ export const useZConnectLiveKit = (): UseZConnectLiveKitReturn => {
     otherUserRejected,
     declinedByOther,
     startSearch,
+    initiateConnection,
     cancelSearch,
     acceptConnection,
     declineConnection,
