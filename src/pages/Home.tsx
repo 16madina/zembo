@@ -42,6 +42,7 @@ export interface Profile {
   isOnline: boolean;
   isVerified: boolean;
   interests: string[];
+  lookingFor?: string[];
 }
 
 const Home = () => {
@@ -99,6 +100,7 @@ const Home = () => {
       isOnline: p.isOnline,
       isVerified: p.isVerified,
       interests: p.interests,
+      lookingFor: p.lookingFor,
     }))
   , [profilesWithDistance]);
 

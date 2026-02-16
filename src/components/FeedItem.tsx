@@ -1,11 +1,13 @@
-import { motion } from "framer-motion";
-import { Heart, MessageCircle, Share2, MoreHorizontal, MapPin, User, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, MessageCircle, Share2, MoreHorizontal, MapPin, User, Sparkles, ChevronLeft, ChevronRight, Target } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Profile } from "@/pages/Home";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FeedItemProps {
   profile: Profile;
@@ -16,15 +18,73 @@ interface FeedItemProps {
   isPremium: boolean;
 }
 
+const lookingForLabels: Record<string, { label: string; emoji: string; color: string }> = {
+  "relation_serieuse": { label: "Relation sérieuse", emoji: "💍", color: "bg-pink-500/90" },
+  "amitie": { label: "Amitié", emoji: "🤝", color: "bg-blue-500/90" },
+  "soiree": { label: "Soirée", emoji: "🎉", color: "bg-purple-500/90" },
+  "discussion": { label: "Discussion", emoji: "💬", color: "bg-emerald-500/90" },
+  "casual": { label: "Pas prise de tête", emoji: "😎", color: "bg-amber-500/90" },
+  "relation": { label: "Relation", emoji: "❤️", color: "bg-pink-500/90" },
+  "networking": { label: "Networking", emoji: "🔗", color: "bg-cyan-500/90" },
+};
+
+const getLookingForInfo = (value: string) => {
+  const lower = value.toLowerCase().replace(/\s+/g, '_');
+  return lookingForLabels[lower] || { label: value, emoji: "✨", color: "bg-muted" };
+};
+
 const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium }: FeedItemProps) => {
   const [liked, setLiked] = useState(isLiked);
   const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 50) + 5);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const { user } = useAuth();
+  const [myInterests, setMyInterests] = useState<string[]>([]);
+
+  // Fetch current user interests once
+  useMemo(() => {
+    if (!user) return;
+    supabase.from("profiles").select("interests").eq("user_id", user.id).single().then(({ data }) => {
+      if (data?.interests) setMyInterests(data.interests);
+    });
+  }, [user]);
+
+  const compatibilityScore = useMemo(() => {
+    if (!myInterests.length || !profile.interests?.length) return 0;
+    const common = profile.interests.filter(i => myInterests.includes(i));
+    return Math.round((common.length / Math.max(myInterests.length, profile.interests.length)) * 100);
+  }, [myInterests, profile.interests]);
+
+  const commonInterests = useMemo(() => {
+    if (!myInterests.length) return [];
+    return profile.interests?.filter(i => myInterests.includes(i)) || [];
+  }, [myInterests, profile.interests]);
 
   const handleLike = () => {
     setLiked(!liked);
     setLikeCount(prev => liked ? prev - 1 : prev + 1);
     onLike(profile.id);
   };
+
+  const hasMultiplePhotos = profile.photos.length > 1;
+
+  const goToPhoto = useCallback((idx: number) => {
+    setDirection(idx > currentPhotoIndex ? 1 : -1);
+    setCurrentPhotoIndex(idx);
+  }, [currentPhotoIndex]);
+
+  const handlePhotoTap = useCallback((e: React.MouseEvent) => {
+    if (!hasMultiplePhotos) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width * 0.3) {
+      goToPhoto(Math.max(0, currentPhotoIndex - 1));
+    } else if (x > rect.width * 0.7) {
+      goToPhoto(Math.min(profile.photos.length - 1, currentPhotoIndex + 1));
+    } else {
+      onProfileClick(profile);
+    }
+  }, [hasMultiplePhotos, currentPhotoIndex, profile, goToPhoto, onProfileClick]);
 
   return (
     <motion.div
@@ -63,27 +123,82 @@ const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium 
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-          <MoreHorizontal className="w-5 h-5" />
-        </Button>
+
+        {/* Compatibility Score */}
+        {compatibilityScore > 0 && (
+          <div className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold",
+            compatibilityScore >= 60 ? "bg-green-500/15 text-green-500" :
+            compatibilityScore >= 30 ? "bg-amber-500/15 text-amber-500" :
+            "bg-muted text-muted-foreground"
+          )}>
+            <Target className="w-3 h-3" />
+            {compatibilityScore}%
+          </div>
+        )}
       </div>
 
-      {/* Post Image */}
+      {/* Photo Carousel */}
       <div 
         className="relative aspect-[4/5] w-full overflow-hidden bg-muted cursor-pointer"
-        onClick={() => onProfileClick(profile)}
+        onClick={handlePhotoTap}
       >
-        <img 
-          src={profile.photos[0]} 
-          alt={profile.name}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-        
-        {/* Subtle overlay for name/age if scrolling over image */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent text-white opacity-0 hover:opacity-100 transition-opacity">
-          <p className="text-xs italic line-clamp-2">{profile.bio || "Pas de bio pour le moment."}</p>
-        </div>
+        {/* Photo Indicators */}
+        {hasMultiplePhotos && (
+          <div className="absolute top-2 left-0 right-0 z-10 flex justify-center gap-1 px-4">
+            {profile.photos.map((_, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "h-[3px] rounded-full flex-1 max-w-16 transition-all duration-300",
+                  idx === currentPhotoIndex ? "bg-white" : "bg-white/40"
+                )}
+              />
+            ))}
+          </div>
+        )}
+
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+          <motion.img
+            key={currentPhotoIndex}
+            src={profile.photos[currentPhotoIndex]}
+            alt={profile.name}
+            className="w-full h-full object-cover absolute inset-0"
+            loading="lazy"
+            custom={direction}
+            initial={{ x: direction > 0 ? "100%" : "-100%", opacity: 0.5 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: direction > 0 ? "-100%" : "100%", opacity: 0.5 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+          />
+        </AnimatePresence>
+
+        {/* Looking For Badges */}
+        {profile.lookingFor && profile.lookingFor.length > 0 && (
+          <div className="absolute bottom-3 left-3 z-10 flex flex-wrap gap-1.5">
+            {profile.lookingFor.slice(0, 2).map((item) => {
+              const info = getLookingForInfo(item);
+              return (
+                <span
+                  key={item}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-white text-[10px] font-semibold backdrop-blur-md shadow-lg",
+                    info.color
+                  )}
+                >
+                  {info.emoji} {info.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Photo counter */}
+        {hasMultiplePhotos && (
+          <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+            {currentPhotoIndex + 1}/{profile.photos.length}
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -130,11 +245,23 @@ const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium 
           <span className="text-muted-foreground">{profile.bio || "Hello ! Je viens de rejoindre Zembo."}</span>
         </div>
         
-        {/* Interests as Hashtags */}
+        {/* Interests — highlight common ones */}
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {profile.interests?.slice(0, 3).map(interest => (
-            <span key={interest} className="text-[10px] text-primary font-medium">#{interest.replace(/\s+/g, '')}</span>
-          ))}
+          {profile.interests?.slice(0, 5).map(interest => {
+            const isCommon = commonInterests.includes(interest);
+            return (
+              <span
+                key={interest}
+                className={cn(
+                  "text-[10px] font-medium",
+                  isCommon ? "text-primary font-bold" : "text-muted-foreground"
+                )}
+              >
+                #{interest.replace(/\s+/g, '')}
+                {isCommon && " ✨"}
+              </span>
+            );
+          })}
         </div>
       </div>
     </motion.div>
