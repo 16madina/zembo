@@ -23,7 +23,7 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. Fonctionnalités IA et partage de données",
-        content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle, Flash Connect), nous partageons certaines données avec des fournisseurs d'intelligence artificielle tiers. Avant d'utiliser ces fonctionnalités, vous devez donner votre consentement explicite via un modal dédié qui détaille précisément les données partagées.",
+        content: "Pour les fonctionnalités IA (Test de Compatibilité, Zembo Oracle, Flash Connect), nous partageons certaines données avec des fournisseurs d'intelligence artificielle tiers (Google et OpenAI). Avant d'utiliser ces fonctionnalités, vous devez donner votre consentement explicite via un modal dédié qui détaille précisément les données partagées et les finalités du traitement.",
       },
       {
         icon: AlertCircle,
@@ -33,7 +33,7 @@ const privacyContent = {
       {
         icon: Server,
         title: "3.2 Fournisseurs IA et sécurité",
-        content: "Nos fournisseurs IA sont : Google LLC (via l'API Google Gemini, basé aux États-Unis) et OpenAI Inc. (via l'API GPT, basé aux États-Unis). Ces entreprises respectent les standards SOC 2 et ISO 27001. Les données sont chiffrées en transit (TLS 1.3) et ne sont pas conservées de manière permanente par ces fournisseurs après le traitement de votre requête.",
+        content: "Nos fournisseurs IA sont : Google LLC (API Google Gemini) et OpenAI Inc. (API GPT), tous deux basés aux États-Unis. Ces entreprises respectent les standards de sécurité les plus stricts (SOC 2, ISO 27001). Nous avons conclu des accords de traitement de données (DPA) avec eux, garantissant que vos données bénéficient d'un niveau de protection équivalent à celui exigé par le RGPD.",
       },
       {
         icon: Server,
@@ -81,7 +81,7 @@ const privacyContent = {
       {
         icon: Brain,
         title: "3. AI Features and Data Sharing",
-        content: "For AI features (Compatibility Test, Zembo Oracle, Flash Connect), we share certain data with third-party artificial intelligence providers. Before using these features, you must give your explicit consent via a dedicated modal that details exactly what data is shared.",
+        content: "For AI features (Compatibility Test, Zembo Oracle, Flash Connect), we share certain data with third-party artificial intelligence providers (Google and OpenAI). Before using these features, you must give your explicit consent via a dedicated modal that details exactly what data is shared and the purposes of the processing.",
       },
       {
         icon: AlertCircle,
@@ -91,7 +91,7 @@ const privacyContent = {
       {
         icon: Server,
         title: "3.2 AI Providers and Security",
-        content: "Our AI providers are: Google LLC (via Google Gemini API, based in the United States) and OpenAI Inc. (via GPT API, based in the United States). These companies comply with SOC 2 and ISO 27001 standards. Data is encrypted in transit (TLS 1.3) and is not permanently retained by these providers after processing your request.",
+        content: "Our AI providers are: Google LLC (Google Gemini API) and OpenAI Inc. (GPT API), both based in the United States. These companies comply with the strictest security standards (SOC 2, ISO 27001). We have data processing agreements (DPA) with them, ensuring that your data receives a level of protection equivalent to that required by GDPR.",
       },
       {
         icon: Server,

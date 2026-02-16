@@ -25,9 +25,9 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
     fr: {
       title: "Consentement – Partage de données IA",
       subtitle: "Votre autorisation est requise AVANT tout envoi de données",
-      warningTitle: "⚠️ IMPORTANT : Vos données seront partagées avec des services tiers",
-      warningText: "En acceptant, certaines de vos données personnelles seront envoyées à des services d'intelligence artificielle tiers situés aux États-Unis. Aucune donnée ne sera partagée tant que vous n'aurez pas donné votre consentement explicite ci-dessous.",
-      introText: "Zembo souhaite utiliser un service d'IA externe pour :",
+      warningTitle: "⚠️ PROTECTION DES DONNÉES : Consentement requis pour l'IA",
+      warningText: "Conformément aux directives de sécurité, nous devons obtenir votre permission explicite avant de partager des données avec nos partenaires d'intelligence artificielle (Google et OpenAI). Sans votre accord, ces fonctionnalités resteront désactivées.",
+      introText: "Pour vous offrir une expérience personnalisée, nous utilisons l'IA pour :",
       aiPurposes: [
         "Analyser la compatibilité entre utilisateurs",
         "Générer des prédictions personnalisées (Zembo Oracle)",
@@ -78,9 +78,9 @@ const AIConsentModal = ({ isOpen, onClose, onConsent }: AIConsentModalProps) => 
     en: {
       title: "Consent – AI Data Sharing",
       subtitle: "Your authorization is required BEFORE any data is sent",
-      warningTitle: "⚠️ IMPORTANT: Your data will be shared with third parties",
-      warningText: "By accepting, some of your personal data will be sent to third-party artificial intelligence services located in the United States. No data will be shared until you give your explicit consent below.",
-      introText: "Zembo would like to use an external AI service to:",
+      warningTitle: "⚠️ DATA PROTECTION: AI Consent Required",
+      warningText: "In accordance with security guidelines, we must obtain your explicit permission before sharing data with our artificial intelligence partners (Google and OpenAI). Without your agreement, these features will remain disabled.",
+      introText: "To provide you with a personalized experience, we use AI to:",
       aiPurposes: [
         "Analyze compatibility between users",
         "Generate personalized predictions (Zembo Oracle)",
