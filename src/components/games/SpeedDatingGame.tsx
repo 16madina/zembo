@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Zap, Users, Clock, Heart, X, Mic, MicOff, 
-  Video, VideoOff, PhoneOff, Sparkles, Crown, SkipForward, AlertTriangle
+  Video, VideoOff, PhoneOff, Sparkles, Crown, SkipForward, AlertTriangle,
+  Search, User, Phone, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useSpeedDating, SpeedDatingStatus } from "@/hooks/useSpeedDating";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import speedDatingBg from "@/assets/speed-dating-bg.jpeg";
 
@@ -85,14 +89,9 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
             <IdleScreenWithPreference onStart={joinSession} />
           )}
 
-          {/* Searching State */}
-          {status === "searching" && (
-            <SearchingScreen />
-          )}
-
-          {/* Waiting Room */}
-          {status === "waiting_room" && (
-            <WaitingRoomScreen participants={participants} />
+          {/* Lobby State */}
+          {(status === "searching" || status === "waiting_room") && (
+            <FlashLobby participants={participants} onCancel={handleClose} />
           )}
 
           {/* Countdown */}
@@ -326,34 +325,6 @@ const IdleScreenWithPreference = ({ onStart }: { onStart: (lookingFor: string) =
   );
 };
 
-// Searching Screen
-const SearchingScreen = () => (
-  <motion.div
-    key="searching"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="flex-1 flex flex-col items-center justify-center p-6 relative"
-  >
-    {/* Background gradient */}
-    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
-    
-    {/* Golden Sparkles */}
-    <div className="absolute inset-0 pointer-events-none">
-      <GoldenSparkles />
-    </div>
-    
-    <div className="relative z-10 flex flex-col items-center">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full mb-6 shadow-[0_0_20px_rgba(214,178,107,0.4)]"
-      />
-      <p className="text-foreground font-medium text-lg">Recherche d'une session...</p>
-    </div>
-  </motion.div>
-);
-
 // Floating Hearts Animation for Waiting Room
 const FloatingHearts = () => {
   const hearts = Array.from({ length: 8 }, (_, i) => ({
@@ -390,112 +361,90 @@ const FloatingHearts = () => {
   );
 };
 
-// Waiting Room Screen
-const WaitingRoomScreen = ({ participants }: { participants: Array<{ user_id: string; display_name: string; avatar_url: string | null }> }) => (
-  <motion.div
-    key="waiting"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
-  >
-    {/* Background gradient */}
-    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
-    
-    {/* Golden Sparkles */}
-    <div className="absolute inset-0 pointer-events-none">
+// Flash Connect Lobby - Replaces Waiting Room for Guideline 1.2
+const FlashLobby = ({ participants, onCancel }: { participants: any[], onCancel: () => void }) => {
+  const { language } = useLanguage();
+  
+  return (
+    <motion.div
+      key="lobby"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
       <GoldenSparkles />
-    </div>
-    
-    {/* Floating Hearts */}
-    <FloatingHearts />
-    
-    {/* Pulsing radar circles */}
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      {[1, 2, 3].map((i) => (
+      
+      <div className="relative z-10 flex flex-col items-center w-full max-w-sm gap-6">
+        <div className="bg-background/70 backdrop-blur-md border border-primary/30 rounded-3xl p-6 shadow-xl w-full">
+          <div className="flex items-center gap-2 mb-4 justify-center">
+            <Users className="w-8 h-8 text-primary" />
+            <h3 className="text-xl font-bold text-foreground">
+              {language === "fr" ? "Lobby Flash Connect" : "Flash Connect Lobby"}
+            </h3>
+          </div>
+          
+          <p className="text-xs text-center text-muted-foreground mb-6">
+            {language === "fr" 
+              ? "Rejoignez une session de groupe. Les rounds commencent dès que 4+ personnes sont prêtes." 
+              : "Join a group session. Rounds start as soon as 4+ people are ready."}
+          </p>
+
+          <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+            <span className="text-2xl font-bold text-primary">{participants.length + 1}</span>
+            <span className="text-muted-foreground">/4 prêts</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {participants.map((p, index) => (
+              <motion.div
+                key={p.user_id}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="flex flex-col items-center gap-2 bg-muted/30 p-3 rounded-2xl border border-border/50"
+              >
+                <div className="relative">
+                  <Avatar className="w-14 h-14 border-2 border-primary/40">
+                    <AvatarImage src={p.avatar_url || undefined} />
+                    <AvatarFallback><User /></AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                </div>
+                <span className="text-xs font-bold truncate w-full text-center">{p.display_name}</span>
+                <Badge variant="outline" className="text-[8px] py-0 h-4 border-primary/20 text-primary">PRÊT(E)</Badge>
+              </motion.div>
+            ))}
+            
+            {/* Self Placeholder */}
+            <div className="flex flex-col items-center gap-2 bg-primary/5 p-3 rounded-2xl border border-primary/20">
+              <Avatar className="w-14 h-14 border-2 border-primary">
+                <AvatarFallback><User /></AvatarFallback>
+              </Avatar>
+              <span className="text-xs font-bold text-primary">Moi</span>
+              <Badge className="text-[8px] py-0 h-4 bg-primary text-primary-foreground">VOUS</Badge>
+            </div>
+          </div>
+        </div>
+
         <motion.div
-          key={i}
-          className="absolute w-40 h-40 rounded-full border border-primary/20"
-          animate={{
-            scale: [1, 2.5],
-            opacity: [0.4, 0],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            delay: i * 1,
-            ease: "easeOut",
-          }}
-        />
-      ))}
-    </div>
-    
-    <div className="relative z-10 flex flex-col items-center">
-      {/* Glassmorphism card */}
-      <motion.div 
-        className="bg-background/70 backdrop-blur-md border border-primary/30 rounded-3xl p-6 shadow-[0_0_40px_rgba(214,178,107,0.2)]"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="flex items-center gap-2 mb-4 justify-center">
-          <Users className="w-8 h-8 text-primary" />
-          <h3 className="text-xl font-bold text-foreground">Salle d'attente</h3>
-        </div>
-        
-        <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-          <span className="text-2xl font-bold text-primary">{participants.length + 1}</span>
-          <span className="text-muted-foreground">/4 minimum</span>
-        </div>
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="flex flex-col items-center gap-2 text-sm text-muted-foreground"
+        >
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary animate-pulse" />
+            {language === "fr" ? "En attente de participants..." : "Waiting for participants..."}
+          </div>
+        </motion.div>
 
-        <div className="flex flex-wrap justify-center gap-4 mb-6">
-          {participants.map((p, index) => (
-            <motion.div
-              key={p.user_id}
-              initial={{ scale: 0, rotate: -10 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: index * 0.1, type: "spring" }}
-              className="flex flex-col items-center"
-            >
-              <div className="relative">
-                <Avatar className="w-16 h-16 border-2 border-primary shadow-[0_0_15px_rgba(214,178,107,0.4)]">
-                  <AvatarImage src={p.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary font-bold">{p.display_name[0]}</AvatarFallback>
-                </Avatar>
-                <motion.div
-                  className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-              </div>
-              <span className="text-xs mt-2 text-foreground font-medium">{p.display_name}</span>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Waiting message */}
-      <motion.div
-        animate={{ opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="mt-6 flex flex-col items-center gap-2 text-sm text-muted-foreground"
-      >
-        <div className="flex items-center gap-2">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-          >
-            <Zap className="w-4 h-4 text-primary" />
-          </motion.div>
-          En attente de participants compatibles...
-        </div>
-        <span className="text-xs text-center max-w-[280px]">
-          Le Flash Connect commencera dès que 4+ personnes avec des préférences compatibles seront présentes.
-        </span>
-      </motion.div>
-    </div>
-  </motion.div>
-);
+        <Button variant="ghost" onClick={onCancel} className="text-muted-foreground hover:text-foreground">
+          {language === "fr" ? "Annuler et quitter" : "Cancel and leave"}
+        </Button>
+      </div>
+    </motion.div>
+  );
+};
 
 // Countdown Screen
 const CountdownScreen = ({ timeRemaining }: { timeRemaining: number }) => (

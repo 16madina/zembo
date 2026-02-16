@@ -1,24 +1,25 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal, SearchX, Loader2, MapPin, Coins, Undo2, Crown, Heart } from "lucide-react";
+import { SlidersHorizontal, SearchX, Loader2, Heart, List } from "lucide-react";
 import ShopButton from "@/components/shop/ShopButton";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
-import ProfileCard from "@/components/ProfileCard";
 import ProfileModal from "@/components/ProfileModal";
 import MatchModal from "@/components/MatchModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
-import NearbyMap from "@/components/NearbyMap";
+import FeedItem from "@/components/FeedItem";
 import ZFlammeExplosion from "@/components/ZFlammeExplosion";
 import FlameTrail from "@/components/FlameTrail";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import RoseMessageModal from "@/components/RoseMessageModal";
 import RoseReceivedModal from "@/components/RoseReceivedModal";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useProfilesWithDistance, ProfileWithDistance } from "@/hooks/useProfilesWithDistance";
+import { useProfilesWithDistance } from "@/hooks/useProfilesWithDistance";
 import { useGifts } from "@/hooks/useGifts";
 import { useCoins } from "@/hooks/useCoins";
 import { useRoseReceived } from "@/hooks/useRoseReceived";
@@ -29,7 +30,6 @@ import { useCoinPurchaseSuccess } from "@/hooks/useCoinPurchaseSuccess";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { GenderType } from "@/data/mockProfiles";
 
-// Profile interface matching database structure (kept for compatibility)
 export interface Profile {
   id: string;
   name: string;
@@ -52,51 +52,24 @@ const Home = () => {
   const { gifts, sendGift } = useGifts();
   const { balance } = useCoins();
   const { isPremium } = useSubscription();
-  const { 
-    canLike, 
-    likesRemaining, 
-    maxDailyLikes, 
-    isPremium: hasPremiumLikes,
-    incrementLikesUsed,
-    decrementLikesUsed 
-  } = useDailyLikes();
-  const { 
-    roseReceived, 
-    isModalOpen: isRoseReceivedModalOpen, 
-    closeModal: closeRoseReceivedModal 
-  } = useRoseReceived();
-  
-  // Sound effects
+  const { canLike, incrementLikesUsed, decrementLikesUsed } = useDailyLikes();
+  const { roseReceived, isModalOpen: isRoseReceivedModalOpen, closeModal: closeRoseReceivedModal } = useRoseReceived();
   const { playFlameSound } = useSoundEffects();
-  
-  // Handle coin purchase success from Stripe redirect
   useCoinPurchaseSuccess();
   
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"discover" | "nearby">("discover");
-  const [userCountry, setUserCountry] = useState<string | null>(null);
-  
-  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
-  const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
+  const [pendingLikesCount, setPendingLikesCount] = useState(0);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
-  const [pendingLikesCount, setPendingLikesCount] = useState(0);
+  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
+  const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const [showSuperLikeExplosion, setShowSuperLikeExplosion] = useState(false);
   const [showFlameTrail, setShowFlameTrail] = useState(false);
   const [showRosePetals, setShowRosePetals] = useState(false);
   const [isRoseModalOpen, setIsRoseModalOpen] = useState(false);
   const [roseTargetProfile, setRoseTargetProfile] = useState<Profile | null>(null);
   const [isSendingRose, setIsSendingRose] = useState(false);
-  
-  // Undo functionality - store last swipe
-  const [lastSwipe, setLastSwipe] = useState<{
-    profile: Profile;
-    direction: "left" | "right" | "up";
-    index: number;
-  } | null>(null);
-  
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({
     ageMin: 18,
@@ -105,15 +78,7 @@ const Home = () => {
     genders: ["all"],
   });
 
-  // Use the new hook with distance calculation
-  const {
-    profiles: profilesWithDistance,
-    isLoading: isLoadingProfiles,
-    isLoadingMore,
-    hasMore,
-    loadMore,
-    userLocation,
-  } = useProfilesWithDistance({
+  const { profiles: profilesWithDistance, isLoading: isLoadingProfiles, isLoadingMore, hasMore, loadMore } = useProfilesWithDistance({
     pageSize: 10,
     maxDistance: filters.distance,
     ageMin: filters.ageMin,
@@ -121,7 +86,6 @@ const Home = () => {
     genders: filters.genders,
   });
 
-  // Transform profiles for compatibility with existing components
   const profiles: Profile[] = useMemo(() => 
     profilesWithDistance.map(p => ({
       id: p.id,
@@ -138,678 +102,156 @@ const Home = () => {
     }))
   , [profilesWithDistance]);
 
-  // Fetch user's country and received likes from database
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchLikes = async () => {
       if (!user) return;
+      const { data: likesReceived } = await supabase.from("likes").select("liker_id").eq("liked_id", user.id);
+      const { data: likesSent } = await supabase.from("likes").select("liked_id").eq("liker_id", user.id);
       
-      // Fetch user's country
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("location")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const sentSet = new Set(likesSent?.map(l => l.liked_id) || []);
+      setLikedProfiles(sentSet);
       
-      if (profileData?.location) {
-        setUserCountry(profileData.location);
-      }
-      
-      // Fetch likes received by this user (people who liked me)
-      const { data: likesData } = await supabase
-        .from("likes")
-        .select("liker_id")
-        .eq("liked_id", user.id);
-      
-      // Fetch likes already sent by this user
-      const { data: sentLikesData } = await supabase
-        .from("likes")
-        .select("liked_id")
-        .eq("liker_id", user.id);
-      
-      const myLikedIds = new Set(sentLikesData?.map(l => l.liked_id) || []);
-      
-      if (likesData) {
-        setReceivedLikes(new Set(likesData.map(l => l.liker_id)));
-        // Count pending likes (users who liked me but I haven't liked back)
-        const pendingCount = likesData.filter(l => !myLikedIds.has(l.liker_id)).length;
-        setPendingLikesCount(pendingCount);
-      }
-      
-      if (sentLikesData) {
-        setLikedProfiles(myLikedIds);
+      if (likesReceived) {
+        setReceivedLikes(new Set(likesReceived.map(l => l.liker_id)));
+        setPendingLikesCount(likesReceived.filter(l => !sentSet.has(l.liker_id)).length);
       }
     };
-    
-    fetchUserData();
+    fetchLikes();
   }, [user]);
 
-  // Load more profiles when nearing the end of the stack
-  useEffect(() => {
-    if (currentIndex >= profiles.length - 3 && hasMore && !isLoadingMore) {
-      loadMore();
-    }
-  }, [currentIndex, profiles.length, hasMore, isLoadingMore, loadMore]);
-
-  // Check if filters are modified from default
-  const hasActiveFilters = 
-    filters.ageMin !== 18 || 
-    filters.ageMax !== 50 || 
-    filters.distance !== 50 || 
-    (filters.genders.length !== 1 || !filters.genders.includes("all"));
-
-  // Reset currentIndex when profiles change significantly
-  useEffect(() => {
-    if (profiles.length > 0 && currentIndex >= profiles.length) {
-      console.log("[Home] Resetting currentIndex from", currentIndex, "to 0 (profiles.length:", profiles.length, ")");
-      setCurrentIndex(0);
-    }
-  }, [profiles.length, currentIndex]);
-
-  const currentProfile = profiles.length > 0 && currentIndex < profiles.length
-    ? profiles[currentIndex] 
-    : null;
-
-  // Check for match using real database data
-  const checkForMatch = (profileId: string) => {
-    // A match occurs if the other person already liked us
-    return receivedLikes.has(profileId);
-  };
-
-  const handleSwipe = async (direction: "left" | "right" | "up") => {
-    const swipedProfile = currentProfile;
-    if (!swipedProfile || !user) return;
-    
-    // Check if user can like (for right and up swipes)
-    if ((direction === "right" || direction === "up") && !canLike) {
-      toast({
-        title: "Limite atteinte 💔",
-        description: "Vous avez utilisé tous vos likes aujourd'hui. Passez à Gold pour des likes illimités !",
-        variant: "destructive",
-      });
+  const handleLike = async (profileId?: string) => {
+    const targetId = profileId || selectedProfile?.id;
+    if (!targetId || !user) return;
+    if (!canLike) {
+      toast({ title: t.limitReached, description: "Passez à Gold pour plus de likes !", variant: "destructive" });
       return;
     }
-    
-    // Store for undo
-    setLastSwipe({
-      profile: swipedProfile,
-      direction,
-      index: currentIndex
-    });
-    
-    if (direction === "right" || direction === "up") {
-      const isSuperLike = direction === "up";
-      
-      // Increment likes counter (for free users)
-      incrementLikesUsed();
-      
-      // Trigger super like explosion animation and sound
-      if (isSuperLike) {
-        setShowSuperLikeExplosion(true);
-        playFlameSound();
+    incrementLikesUsed();
+    try {
+      const { error } = await supabase.from("likes").upsert({ liker_id: user.id, liked_id: targetId, is_super_like: false }, { onConflict: 'liker_id,liked_id' });
+      if (error) throw error;
+      setLikedProfiles(prev => new Set([...prev, targetId]));
+      if (receivedLikes.has(targetId)) {
+        const profile = profiles.find(p => p.id === targetId);
+        if (profile) { setMatchedProfile(profile); setIsMatchModalOpen(true); }
       }
-      // Save like to database
-      try {
-        const { error: likeError } = await supabase
-          .from("likes")
-          .upsert({
-            liker_id: user.id,
-            liked_id: swipedProfile.id,
-            is_super_like: isSuperLike,
-          }, { onConflict: 'liker_id,liked_id' });
-        
-        if (likeError) {
-          console.error("Error saving like:", likeError);
-          decrementLikesUsed(); // Revert on error
-        } else {
-          setLikedProfiles((prev) => new Set([...prev, swipedProfile.id]));
-          
-          // Send like notification
-          await supabase.functions.invoke("notify-like", {
-            body: {
-              liker_id: user.id,
-              liked_id: swipedProfile.id,
-              is_super_like: isSuperLike,
-            },
-          });
-          
-          // Check for match - the database trigger will create the match automatically
-          if (checkForMatch(swipedProfile.id)) {
-            setMatchedProfile(swipedProfile);
-            setIsMatchModalOpen(true);
-          }
-        }
-      } catch (err) {
-        console.error("Error processing like:", err);
-        decrementLikesUsed(); // Revert on error
-      }
-    }
-
-    if (currentIndex < profiles.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-    } else {
-      // Try to load more if available
-      if (hasMore) {
-        loadMore();
-      }
-      setCurrentIndex(0);
-    }
-  };
-
-  // Undo last swipe - Premium only
-  const handleUndo = async () => {
-    if (!lastSwipe || !user) return;
-    
-    // Revert to previous profile
-    setCurrentIndex(lastSwipe.index);
-    
-    // If it was a like/super like, remove from database and decrement counter
-    if (lastSwipe.direction === "right" || lastSwipe.direction === "up") {
+    } catch (err) {
+      console.error(err);
       decrementLikesUsed();
-      
-      try {
-        await supabase
-          .from("likes")
-          .delete()
-          .eq("liker_id", user.id)
-          .eq("liked_id", lastSwipe.profile.id);
-        
-        // Remove from liked profiles set
-        setLikedProfiles((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(lastSwipe.profile.id);
-          return newSet;
-        });
-        
-        toast({
-          title: "Annulé ↩️",
-          description: `Swipe sur ${lastSwipe.profile.name} annulé`,
-        });
-      } catch (err) {
-        console.error("Error undoing like:", err);
-        incrementLikesUsed(); // Re-increment if undo fails
-        toast({
-          title: "Erreur",
-          description: "Impossible d'annuler le swipe",
-          variant: "destructive",
-        });
-      }
-    } else {
-      toast({
-        title: "Annulé ↩️",
-        description: `Retour à ${lastSwipe.profile.name}`,
-      });
     }
-    
-    // Clear last swipe
-    setLastSwipe(null);
   };
 
-  const handlePass = () => handleSwipe("left");
-  
-  const handleLike = () => {
-    if (isModalOpen) setIsModalOpen(false);
-    handleSwipe("right");
-  };
-  
-  const handleSuperLike = () => {
-    if (isModalOpen) setIsModalOpen(false);
-    handleSwipe("up");
+  const handleSuperLike = async () => {
+    if (!selectedProfile || !user) return;
+    setShowSuperLikeExplosion(true);
+    playFlameSound();
+    handleLike(selectedProfile.id);
   };
 
-  const handleSuperLikeExplosionComplete = useCallback(() => {
-    setShowSuperLikeExplosion(false);
-    // Trigger flame trail after explosion
-    setShowFlameTrail(true);
-  }, []);
-
-  const handleFlameTrailComplete = useCallback(() => {
-    setShowFlameTrail(false);
-  }, []);
-
-  const handleRosePetalsComplete = useCallback(() => {
-    setShowRosePetals(false);
-  }, []);
-
-  const handleInfoClick = () => {
-    setSelectedProfile(currentProfile);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedProfile(null);
-  };
-
-  const handleCloseMatchModal = () => {
-    setIsMatchModalOpen(false);
-    setMatchedProfile(null);
-  };
-
-  const handleStartChat = () => {
-    setIsMatchModalOpen(false);
-    navigate("/messages");
-  };
-
-  // Open rose modal for selected profile (from ProfileModal)
   const handleOpenRoseModal = () => {
     if (!selectedProfile || !user) return;
-    
-    const roseGift = gifts.find(g => g.name === "Rose");
-    if (!roseGift) {
-      toast({
-        title: "Cadeau indisponible",
-        description: "La rose n'est pas disponible pour le moment",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (balance < roseGift.price_coins) {
-      toast({
-        title: "Solde insuffisant",
-        description: `Vous avez besoin de ${roseGift.price_coins} coins pour envoyer une rose`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setRoseTargetProfile(selectedProfile);
     setIsModalOpen(false);
     setIsRoseModalOpen(true);
   };
 
-  // Open rose modal for current card profile
-  const handleOpenRoseModalFromCard = () => {
-    if (!currentProfile || !user) return;
-    
-    const roseGift = gifts.find(g => g.name === "Rose");
-    if (!roseGift) {
-      toast({
-        title: "Cadeau indisponible",
-        description: "La rose n'est pas disponible pour le moment",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (balance < roseGift.price_coins) {
-      toast({
-        title: "Solde insuffisant",
-        description: `Vous avez besoin de ${roseGift.price_coins} coins pour envoyer une rose`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setRoseTargetProfile(currentProfile);
-    setIsRoseModalOpen(true);
-  };
-
-  // Send rose with custom message
   const handleSendRoseWithMessage = async (message: string) => {
     if (!roseTargetProfile || !user) return;
-    
     setIsSendingRose(true);
-    
     const roseGift = gifts.find(g => g.name === "Rose");
-    if (!roseGift) {
-      setIsSendingRose(false);
-      return;
-    }
-    
-    const result = await sendGift(roseGift, roseTargetProfile.id, message, { 
-      createLike: true, 
-      sendNotification: true 
-    });
-    
+    if (!roseGift) { setIsSendingRose(false); return; }
+    const result = await sendGift(roseGift, roseTargetProfile.id, message, { createLike: true, sendNotification: true });
     setIsSendingRose(false);
     setIsRoseModalOpen(false);
-    
-    if (result.success) {
-      setShowRosePetals(true);
-      toast({
-        title: "Rose envoyée ! 🌹",
-        description: `${roseTargetProfile.name} a reçu votre rose et votre message`,
-      });
-      setRoseTargetProfile(null);
-    } else {
-      toast({
-        title: "Erreur",
-        description: result.error || "Impossible d'envoyer la rose",
-        variant: "destructive",
-      });
-    }
+    if (result.success) { setShowRosePetals(true); setRoseTargetProfile(null); }
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]">
-      {/* Header */}
-      <motion.header 
-        className="flex items-center justify-between px-3 py-1.5 flex-shrink-0"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="flex items-center gap-1.5">
+    <div className="fixed inset-0 flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))] bg-background">
+      <motion.header className="flex items-center justify-between px-4 py-3 flex-shrink-0 border-b border-border/40" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center gap-3">
           <ZemboLogo size="sm" />
-          <ShopButton variant="compact" className="ml-0.5 scale-90" />
+          <div className="h-6 w-px bg-border/60 mx-1" />
+          <ShopButton variant="compact" className="scale-90" />
         </div>
         <div className="flex items-center gap-2">
-          {/* Likes received button */}
-          <motion.button 
-            onClick={() => navigate("/likes")}
-            className="relative p-2 rounded-lg tap-highlight glass"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Heart className="w-4 h-4 text-destructive fill-destructive" />
-            {pendingLikesCount > 0 && (
-              <motion.span 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full border-2 border-background"
-              >
-                {pendingLikesCount > 99 ? "99+" : pendingLikesCount}
-              </motion.span>
-            )}
+          <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate("/likes")} className="relative p-2 rounded-full hover:bg-muted/50 transition-colors">
+            <Heart className="w-6 h-6 text-foreground" />
+            {pendingLikesCount > 0 && <span className="absolute top-1 right-1 w-4 h-4 bg-primary text-[10px] font-bold text-primary-foreground rounded-full flex items-center justify-center">{pendingLikesCount}</span>}
           </motion.button>
-          
-          {/* Filters button */}
-          <motion.button 
-            onClick={() => setIsFilterOpen(true)}
-            className={`relative p-2 rounded-lg tap-highlight ${hasActiveFilters ? 'bg-primary/20 border border-primary/30' : 'glass'}`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <SlidersHorizontal className={`w-4 h-4 ${hasActiveFilters ? 'text-primary' : 'text-muted-foreground'}`} />
-            {hasActiveFilters && (
-              <motion.span 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background"
-              />
-            )}
-          </motion.button>
+          <Button variant="ghost" size="icon" onClick={() => setIsFilterOpen(true)} className="rounded-full h-10 w-10"><SlidersHorizontal className="w-6 h-6" /></Button>
         </div>
       </motion.header>
 
-      {/* Navigation Tabs */}
-      <motion.div 
-        className="flex justify-center items-center gap-2 px-4 mb-1.5 flex-shrink-0"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        {[
-          { key: "discover", label: t.discover },
-          { key: "nearby", label: t.nearby }
-        ].map((tab) => (
-          <motion.button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as "discover" | "nearby")}
-            className={`relative px-4 py-1.5 rounded-full font-medium text-sm transition-colors duration-200 ${
-              activeTab === tab.key
-                ? "text-primary-foreground"
-                : "text-muted-foreground hover:text-secondary-foreground"
-            }`}
-            whileTap={{ scale: 0.95 }}
-          >
-            {activeTab === tab.key && (
-              <motion.div
-                layoutId="activeTabBg"
-                className="absolute inset-0 btn-gold rounded-full"
-                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-              />
-            )}
-            {activeTab !== tab.key && (
-              <div className="absolute inset-0 glass rounded-full" />
-            )}
-            <span className="relative z-10">{tab.label}</span>
-          </motion.button>
-        ))}
-        
-        {/* GPS indicator next to nearby tab */}
-        {userLocation.latitude && userLocation.longitude && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 border border-green-500/30"
-          >
-            <MapPin className="w-3 h-3 text-green-500" />
-            <span className="text-xs text-green-500 font-medium">GPS</span>
-          </motion.div>
-        )}
-        
-        {/* Likes remaining indicator for free users */}
-        {!hasPremiumLikes && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
-              likesRemaining <= 3 
-                ? 'bg-red-500/20 border-red-500/30' 
-                : 'bg-primary/20 border-primary/30'
-            }`}
-          >
-            <Heart className={`w-3 h-3 ${likesRemaining <= 3 ? 'text-red-500' : 'text-primary'}`} />
-            <span className={`text-xs font-medium ${likesRemaining <= 3 ? 'text-red-500' : 'text-primary'}`}>
-              {likesRemaining}/{maxDailyLikes}
-            </span>
-          </motion.div>
-        )}
-      </motion.div>
-
-      {/* Card Stack or Map */}
-      <div className="flex-1 px-2 max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto w-full flex flex-col min-h-0">
-        <AnimatePresence mode="wait">
-          {activeTab === "discover" ? (
-            <motion.div 
-              key="discover"
-              className="relative flex-1 min-h-0"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* Background cards (stack effect) */}
-              {profiles.slice(currentIndex + 1, currentIndex + 3).map((profile, index) => (
-                <motion.div
-                  key={profile.id}
-                  className="absolute w-full h-full rounded-3xl overflow-hidden"
-                  initial={false}
-                  animate={{
-                    scale: 1 - (index + 1) * 0.05,
-                    y: (index + 1) * 8,
-                    opacity: 1 - (index + 1) * 0.3,
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                  style={{ zIndex: -index - 1 }}
-                >
-                  <div className="w-full h-full glass-strong rounded-3xl overflow-hidden">
-                    <img
-                      src={profile.photos[0]}
-                      alt={profile.name}
-                      className="w-full h-full object-cover opacity-80"
-                      draggable={false}
-                    />
-                    <div className="absolute inset-0 bg-background/20" />
-                  </div>
-                </motion.div>
+      <div className="flex-1 overflow-hidden relative">
+        {isLoadingProfiles && profiles.length === 0 ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4"><Loader2 className="w-10 h-10 text-primary animate-spin" /><p className="text-sm text-muted-foreground">{t.loading}</p></div>
+        ) : profiles.length > 0 ? (
+          <ScrollArea className="h-full w-full">
+            <div className="flex flex-col pt-2 pb-20">
+              {profiles.map(p => (
+                <FeedItem key={p.id} profile={p} onLike={() => handleLike(p.id)} onChat={() => navigate("/messages")} onProfileClick={p => { setSelectedProfile(p); setIsModalOpen(true); }} isLiked={likedProfiles.has(p.id)} isPremium={isPremium} />
               ))}
-
-              {/* Active card or empty/loading state */}
-              <AnimatePresence mode="popLayout">
-                {isLoadingProfiles ? (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="absolute inset-0 flex flex-col items-center justify-center glass-strong rounded-3xl p-6 text-center"
-                  >
-                    <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                      Chargement des profils...
-                    </h3>
-                  </motion.div>
-                ) : currentProfile ? (
-                  <>
-                    {/* Undo Button - Premium only, positioned at top left of card */}
-                    {isPremium && lastSwipe && (
-                      <motion.button
-                        onClick={handleUndo}
-                        initial={{ opacity: 0, scale: 0, x: -20 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0, x: -20 }}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        className="absolute top-2 left-2 z-20 p-2.5 glass rounded-full text-amber-500 border border-amber-500/30 shadow-lg"
-                      >
-                        <Undo2 className="w-5 h-5" />
-                        <Crown className="absolute -top-1 -right-1 w-3 h-3 text-amber-500" fill="currentColor" />
-                      </motion.button>
-                    )}
-                    <ProfileCard
-                      key={currentProfile.id}
-                      profile={currentProfile}
-                      onSwipe={handleSwipe}
-                      onInfoClick={handleInfoClick}
-                      onLike={handleLike}
-                      onPass={handlePass}
-                      onSuperLike={handleSuperLike}
-                      onSendRose={handleOpenRoseModalFromCard}
-                    />
-                  </>
-                ) : (
-                  <motion.div
-                    key="empty"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="absolute inset-0 flex flex-col items-center justify-center glass-strong rounded-3xl p-6 text-center"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                      <SearchX className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                       {profiles.length === 0 ? t.noProfileAvailable : t.noProfilesFound}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                       {profiles.length === 0 ? t.beFirstInRegion : t.modifyFilters}
-                    </p>
-                    {profiles.length > 0 && (
-                      <div className="flex gap-2">
-                        <motion.button
-                          onClick={() => {
-                            setFilters({
-                              ageMin: 18,
-                              ageMax: 50,
-                              distance: 50,
-                              genders: ["all"],
-                            });
-                            setCurrentIndex(0);
-                          }}
-                          whileTap={{ scale: 0.95 }}
-                          className="px-4 py-2 glass rounded-xl text-sm font-medium text-foreground"
-                        >
-                          {t.reset}
-                        </motion.button>
-                        <motion.button
-                          onClick={() => setIsFilterOpen(true)}
-                          whileTap={{ scale: 0.95 }}
-                          className="px-4 py-2 btn-gold rounded-xl text-sm font-medium"
-                        >
-                          {t.modify}
-                        </motion.button>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="nearby"
-              className="relative flex-1 min-h-0"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <NearbyMap 
-                profiles={profiles} 
-                userCountry={userCountry}
-                onProfileClick={(profile) => {
-                  setSelectedProfile(profile);
-                  setIsModalOpen(true);
-                }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {hasMore && <div className="py-10 flex justify-center"><Button variant="ghost" onClick={loadMore} disabled={isLoadingMore}>{isLoadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Voir plus"}</Button></div>}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center"><SearchX className="w-16 h-16 text-muted-foreground mb-4" /><h2 className="text-xl font-bold mb-2">{t.noProfilesFound}</h2><Button onClick={() => setIsFilterOpen(true)} className="btn-gold px-8 py-6 rounded-2xl font-bold">{t.modify}</Button></div>
+        )}
       </div>
 
-      <ProfileModal
-        profile={selectedProfile}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onLike={handleLike}
-        onSuperLike={handleSuperLike}
-        onSendRose={handleOpenRoseModal}
+      <ProfileModal profile={selectedProfile} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onLike={() => handleLike()} onSuperLike={handleSuperLike} onSendRose={handleOpenRoseModal} />
+      <MatchModal profile={matchedProfile} isOpen={isMatchModalOpen} onClose={() => setIsMatchModalOpen(false)} onStartChat={() => navigate("/messages")} />
+      <FilterSheet 
+        isOpen={isFilterOpen} 
+        onClose={() => setIsFilterOpen(false)} 
+        onApply={v => { setFilters(v); setIsFilterOpen(false); }} 
+        filters={filters} 
       />
-
-      <MatchModal
-        profile={matchedProfile}
-        isOpen={isMatchModalOpen}
-        onClose={handleCloseMatchModal}
-        onStartChat={handleStartChat}
+      
+      <RoseMessageModal 
+        isOpen={isRoseModalOpen} 
+        onClose={() => setIsRoseModalOpen(false)} 
+        onSend={handleSendRoseWithMessage} 
+        isLoading={isSendingRose} 
+        recipientName={roseTargetProfile?.name || ""} 
       />
-
-      <FilterSheet
-        isOpen={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        filters={filters}
-        onApply={setFilters}
-      />
-
-      <ZFlammeExplosion 
-        isVisible={showSuperLikeExplosion} 
-        onComplete={handleSuperLikeExplosionComplete} 
-      />
-
-      <FlameTrail 
-        isVisible={showFlameTrail} 
-        onComplete={handleFlameTrailComplete}
-        duration={2500}
-      />
-
-      <RosePetalsAnimation 
-        isVisible={showRosePetals} 
-        onComplete={handleRosePetalsComplete} 
-      />
-
-      <RoseMessageModal
-        isOpen={isRoseModalOpen}
-        onClose={() => {
-          setIsRoseModalOpen(false);
-          setRoseTargetProfile(null);
-        }}
-        onSend={handleSendRoseWithMessage}
-        recipientName={roseTargetProfile?.name || ""}
-        isLoading={isSendingRose}
-      />
-
-      <RoseReceivedModal
-        isOpen={isRoseReceivedModalOpen}
-        onClose={closeRoseReceivedModal}
+      
+      <RoseReceivedModal 
+        isOpen={isRoseReceivedModalOpen} 
+        onClose={closeRoseReceivedModal} 
         onViewProfile={() => {
+          if (roseReceived) {
+            const profile = profiles.find(p => p.id === roseReceived.id);
+            if (profile) {
+              setSelectedProfile(profile);
+              setIsModalOpen(true);
+            }
+          }
           closeRoseReceivedModal();
-          navigate("/messages");
         }}
         senderName={roseReceived?.name || ""}
         senderPhoto={roseReceived?.photo || ""}
         message={roseReceived?.message || ""}
-        senderId={roseReceived?.id}
       />
-
+      
+      <AnimatePresence>
+        {showSuperLikeExplosion && (
+          <ZFlammeExplosion isVisible={showSuperLikeExplosion} onComplete={() => setShowSuperLikeExplosion(false)} />
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {showFlameTrail && (
+          <FlameTrail isVisible={showFlameTrail} onComplete={() => setShowFlameTrail(false)} />
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {showRosePetals && (
+          <RosePetalsAnimation isVisible={showRosePetals} onComplete={() => setShowRosePetals(false)} />
+        )}
+      </AnimatePresence>
       <BottomNavigation />
     </div>
   );
