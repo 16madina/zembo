@@ -17,6 +17,7 @@ export interface ProfileWithDistance {
   isOnline: boolean;
   isVerified: boolean;
   interests: string[];
+  lookingFor: string[];
   latitude?: number | null;
   longitude?: number | null;
 }
@@ -263,6 +264,7 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
             isOnline: p.is_online || false,
             isVerified: p.is_verified || false,
             interests: p.interests || [],
+            lookingFor: p.looking_for || [],
             latitude: p.latitude,
             longitude: p.longitude,
           };

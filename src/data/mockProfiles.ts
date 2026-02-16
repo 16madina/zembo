@@ -13,6 +13,7 @@ export interface Profile {
   isOnline: boolean;
   isVerified: boolean;
   interests: string[];
+  lookingFor?: string[];
 }
 
 export const mockProfiles: Profile[] = [
