@@ -132,11 +132,11 @@ export const translations = {
     noBlocking: "Aucun blocage",
     privacySettingsSaved: "Paramètres de confidentialité sauvegardés",
     
-    // Match Modal
-    itsAMatch: "C'est un vibe !",
-    youAndMatch: "Vous et {name} avez vibé ensemble",
+    // Connection Modal
+    itsAMatch: "Nouvelle connexion !",
+    youAndMatch: "Vous et {name} êtes désormais connecté(e)s",
     sendMessage: "Envoyer un message",
-    keepSwiping: "Continuer à swiper",
+    keepSwiping: "Continuer la découverte",
     
     // Profile Modal
     bio: "Bio",
@@ -208,7 +208,7 @@ export const translations = {
     readyToPlay: "Es-tu prêt(e) à jouer ? 🎮",
     aiConsentRequired: "Tu dois accepter le consentement IA ci-dessus pour accéder à ce jeu.",
      zconnectDesc: "Appel vocal avec un(e) inconnu(e)",
-     speedDatingDesc: "Connexions rapides en vidéo",
+     speedDatingDesc: "Flash Live — sessions vidéo networking",
      oracleDesc: "Découvre ton Oracle par l'IA",
      compatibility: "Compatibilité",
      compatibilityDesc: "Test de compatibilité avec tous",
@@ -703,11 +703,11 @@ export const translations = {
     noBlocking: "No blocking",
     privacySettingsSaved: "Privacy settings saved",
     
-    // Match Modal
-    itsAMatch: "It's a vibe!",
-    youAndMatch: "You and {name} vibed together",
+    // Connection Modal
+    itsAMatch: "New connection!",
+    youAndMatch: "You and {name} are now connected",
     sendMessage: "Send a message",
-    keepSwiping: "Keep swiping",
+    keepSwiping: "Keep exploring",
     
     // Profile Modal
     bio: "Bio",
@@ -779,7 +779,7 @@ export const translations = {
     readyToPlay: "Are you ready to play? 🎮",
     aiConsentRequired: "You must accept the AI consent above to access this game.",
      zconnectDesc: "Random voice call with a stranger",
-     speedDatingDesc: "Fast video connections",
+     speedDatingDesc: "Flash Live — video networking sessions",
      oracleDesc: "Discover your Oracle by AI",
      compatibility: "Compatibility",
      compatibilityDesc: "Compatibility test with everyone",

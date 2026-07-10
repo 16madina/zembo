@@ -77,7 +77,7 @@ const HelpButtonWrapper = () => {
   const { user } = useAuth();
   
   // Show help button only on main app pages when logged in
-  const showHelpButton = user && ["/", "/discover", "/messages", "/live", "/profile"].includes(location.pathname);
+  const showHelpButton = user && ["/", "/discover", "/random", "/messages", "/live", "/profile"].includes(location.pathname);
   
   if (!showHelpButton) return null;
   return <HelpButton />;
@@ -93,8 +93,9 @@ const AppRoutes = () => (
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/discover" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/random" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
       <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />

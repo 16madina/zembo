@@ -167,7 +167,7 @@ export const useProfilesWithDistance = (options: UseProfilesWithDistanceOptions 
       
       // Exclude already swiped/matched profiles
       if (excludeIds.length > 0) {
-        query = query.not("user_id", "in", `(${excludeIds.join(",")})`);
+        query = (query as any).not("user_id", "in", `(${excludeIds.join(",")})`);
       }
       
       // Apply age filters

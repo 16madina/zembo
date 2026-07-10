@@ -232,7 +232,7 @@ const Profile = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ [field]: value })
+        .update({ [field]: value } as never)
         .eq("user_id", user.id);
 
       if (error) throw error;

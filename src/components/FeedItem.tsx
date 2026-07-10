@@ -1,13 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle, Share2, MoreHorizontal, MapPin, User, Sparkles, ChevronLeft, ChevronRight, Target } from "lucide-react";
+import { Heart, MessageCircle, Share2, MapPin, User, Sparkles } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Profile } from "@/pages/Home";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 
 interface FeedItemProps {
   profile: Profile;
@@ -18,47 +16,11 @@ interface FeedItemProps {
   isPremium: boolean;
 }
 
-const lookingForLabels: Record<string, { label: string; emoji: string; color: string }> = {
-  "relation_serieuse": { label: "Relation sérieuse", emoji: "💍", color: "bg-pink-500/90" },
-  "amitie": { label: "Amitié", emoji: "🤝", color: "bg-blue-500/90" },
-  "soiree": { label: "Soirée", emoji: "🎉", color: "bg-purple-500/90" },
-  "discussion": { label: "Discussion", emoji: "💬", color: "bg-emerald-500/90" },
-  "casual": { label: "Pas prise de tête", emoji: "😎", color: "bg-amber-500/90" },
-  "relation": { label: "Relation", emoji: "❤️", color: "bg-pink-500/90" },
-  "networking": { label: "Networking", emoji: "🔗", color: "bg-cyan-500/90" },
-};
-
-const getLookingForInfo = (value: string) => {
-  const lower = value.toLowerCase().replace(/\s+/g, '_');
-  return lookingForLabels[lower] || { label: value, emoji: "✨", color: "bg-muted" };
-};
-
 const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium }: FeedItemProps) => {
   const [liked, setLiked] = useState(isLiked);
   const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 50) + 5);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-  const { user } = useAuth();
-  const [myInterests, setMyInterests] = useState<string[]>([]);
-
-  // Fetch current user interests once
-  useMemo(() => {
-    if (!user) return;
-    supabase.from("profiles").select("interests").eq("user_id", user.id).single().then(({ data }) => {
-      if (data?.interests) setMyInterests(data.interests);
-    });
-  }, [user]);
-
-  const compatibilityScore = useMemo(() => {
-    if (!myInterests.length || !profile.interests?.length) return 0;
-    const common = profile.interests.filter(i => myInterests.includes(i));
-    return Math.round((common.length / Math.max(myInterests.length, profile.interests.length)) * 100);
-  }, [myInterests, profile.interests]);
-
-  const commonInterests = useMemo(() => {
-    if (!myInterests.length) return [];
-    return profile.interests?.filter(i => myInterests.includes(i)) || [];
-  }, [myInterests, profile.interests]);
 
   const handleLike = () => {
     setLiked(!liked);
@@ -95,8 +57,8 @@ const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium 
     >
       {/* Post Header */}
       <div className="flex items-center justify-between px-4 py-3">
-        <div 
-          className="flex items-center gap-3 cursor-pointer" 
+        <div
+          className="flex items-center gap-3 cursor-pointer"
           onClick={() => onProfileClick(profile)}
         >
           <div className="relative">
@@ -123,23 +85,10 @@ const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium 
             </div>
           </div>
         </div>
-
-        {/* Compatibility Score */}
-        {compatibilityScore > 0 && (
-          <div className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold",
-            compatibilityScore >= 60 ? "bg-green-500/15 text-green-500" :
-            compatibilityScore >= 30 ? "bg-amber-500/15 text-amber-500" :
-            "bg-muted text-muted-foreground"
-          )}>
-            <Target className="w-3 h-3" />
-            {compatibilityScore}%
-          </div>
-        )}
       </div>
 
       {/* Photo Carousel */}
-      <div 
+      <div
         className="relative aspect-[4/5] w-full overflow-hidden bg-muted cursor-pointer"
         onClick={handlePhotoTap}
       >
@@ -173,26 +122,6 @@ const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium 
           />
         </AnimatePresence>
 
-        {/* Looking For Badges */}
-        {profile.lookingFor && profile.lookingFor.length > 0 && (
-          <div className="absolute bottom-3 left-3 z-10 flex flex-wrap gap-1.5">
-            {profile.lookingFor.slice(0, 2).map((item) => {
-              const info = getLookingForInfo(item);
-              return (
-                <span
-                  key={item}
-                  className={cn(
-                    "px-2.5 py-1 rounded-full text-white text-[10px] font-semibold backdrop-blur-md shadow-lg",
-                    info.color
-                  )}
-                >
-                  {info.emoji} {info.label}
-                </span>
-              );
-            })}
-          </div>
-        )}
-
         {/* Photo counter */}
         {hasMultiplePhotos && (
           <div className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
@@ -204,17 +133,17 @@ const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium 
       {/* Action Buttons */}
       <div className="flex items-center justify-between px-2 pt-2">
         <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleLike}
-            className={cn("h-10 w-10 hover:bg-transparent", liked && "text-red-500")}
+            className={cn("h-10 w-10 hover:bg-transparent", liked && "text-primary")}
           >
             <Heart className={cn("w-6 h-6", liked && "fill-current")} />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onChat(profile.id)}
             className="h-10 w-10 hover:bg-transparent"
           >
@@ -224,44 +153,24 @@ const FeedItem = ({ profile, onLike, onChat, onProfileClick, isLiked, isPremium 
             <Share2 className="w-6 h-6" />
           </Button>
         </div>
-        
-        {isPremium && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-primary gap-1.5 hover:bg-primary/5 h-9"
-          >
-            <Sparkles className="w-4 h-4 fill-current" />
-            <span className="text-xs font-bold uppercase tracking-tighter">Z Flamme</span>
-          </Button>
-        )}
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleLike}
+          className="text-primary gap-1.5 hover:bg-primary/5 h-9"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span className="text-xs font-bold uppercase tracking-tighter">Se connecter</span>
+        </Button>
       </div>
 
-      {/* Like Count & Bio */}
+      {/* Bio */}
       <div className="px-4 py-1 space-y-1">
-        <p className="text-xs font-bold text-foreground">{likeCount} likes</p>
+        <p className="text-xs font-bold text-foreground">{likeCount} connexions</p>
         <div className="text-xs leading-relaxed">
           <span className="font-bold mr-2 text-foreground">{profile.name}</span>
           <span className="text-muted-foreground">{profile.bio || "Hello ! Je viens de rejoindre Zembo."}</span>
-        </div>
-        
-        {/* Interests — highlight common ones */}
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {profile.interests?.slice(0, 5).map(interest => {
-            const isCommon = commonInterests.includes(interest);
-            return (
-              <span
-                key={interest}
-                className={cn(
-                  "text-[10px] font-medium",
-                  isCommon ? "text-primary font-bold" : "text-muted-foreground"
-                )}
-              >
-                #{interest.replace(/\s+/g, '')}
-                {isCommon && " ✨"}
-              </span>
-            );
-          })}
         </div>
       </div>
     </motion.div>
