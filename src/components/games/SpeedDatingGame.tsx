@@ -76,7 +76,7 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
-          <span className="font-bold text-lg">Flash Connect</span>
+          <span className="font-bold text-lg">Flash Live</span>
         </div>
         <Button variant="ghost" size="icon" onClick={handleClose}>
           <X className="w-5 h-5" />
