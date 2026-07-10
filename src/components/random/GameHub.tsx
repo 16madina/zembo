@@ -29,7 +29,7 @@ const GameHub = ({ onSelectGame }: GameHubProps) => {
      },
     {
       id: "speedDating" as const,
-      name: "Flash Connect",
+      name: "Flash Live",
        description: t.speedDatingDesc,
        icon: Zap,
        emoji: "⚡",
