@@ -8,14 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-interface MatchModalProps {
+interface ConnectionModalProps {
   profile: Profile | null;
   isOpen: boolean;
   onClose: () => void;
   onStartChat: () => void;
 }
 
-const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) => {
+const ConnectionModal = ({ profile, isOpen, onClose, onStartChat }: ConnectionModalProps) => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [currentUserPhoto, setCurrentUserPhoto] = useState<string | null>(null);
@@ -298,4 +298,4 @@ const MatchModal = ({ profile, isOpen, onClose, onStartChat }: MatchModalProps) 
   return createPortal(modalContent, document.body);
 };
 
-export default MatchModal;
+export default ConnectionModal;
