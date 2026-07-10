@@ -711,246 +711,134 @@ const InCallScreen = ({
   );
 };
 
-// Voting Screen
-interface VotingScreenProps {
+// Connect Screen (replaces old voting + results phases)
+interface ConnectScreenProps {
   participants: Array<{ user_id: string; display_name: string; avatar_url: string | null }>;
-  votes: string[];
-  onVote: (userId: string) => void;
-  onConfirmVotes: () => void;
-  isConfirmingVotes: boolean;
-}
-
-const VotingScreen = ({ participants, votes, onVote, onConfirmVotes, isConfirmingVotes }: VotingScreenProps) => (
-  <motion.div
-    key="voting"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    className="flex-1 flex flex-col p-6 relative overflow-hidden"
-  >
-    {/* Background gradient */}
-    <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
-    
-    {/* Golden Sparkles */}
-    <div className="absolute inset-0 pointer-events-none">
-      <GoldenSparkles />
-    </div>
-    
-    {/* Floating Hearts */}
-    <FloatingHearts />
-    
-    <div className="relative z-10 flex flex-col h-full">
-      {/* Header */}
-      <motion.div 
-        className="text-center mb-6"
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-      >
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 border border-primary/30 mb-3 shadow-[0_0_25px_rgba(214,178,107,0.4)]">
-          <motion.div
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <Heart className="w-8 h-8 text-primary" fill="currentColor" />
-          </motion.div>
-        </div>
-        <h2 className="text-2xl font-bold text-foreground">Qui vous a plu ?</h2>
-        <p className="text-muted-foreground">Votez pour vos coups de cœur</p>
-      </motion.div>
-
-      {/* Participants grid */}
-      <div className="flex-1 grid grid-cols-2 gap-4 overflow-y-auto">
-        {participants.map((p, index) => {
-          const isVoted = votes.includes(p.user_id);
-          return (
-            <motion.button
-              key={p.user_id}
-              onClick={() => onVote(p.user_id)}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: index * 0.1 }}
-              className={cn(
-                "relative flex flex-col items-center p-4 rounded-2xl border-2 transition-all backdrop-blur-sm",
-                isVoted 
-                  ? "border-primary bg-primary/20 shadow-[0_0_20px_rgba(214,178,107,0.4)]" 
-                  : "border-border/50 bg-background/60 hover:border-primary/50 hover:bg-primary/10"
-              )}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className="relative">
-                <Avatar className={cn(
-                  "w-20 h-20 mb-2 border-2 transition-all",
-                  isVoted ? "border-primary shadow-[0_0_15px_rgba(214,178,107,0.5)]" : "border-transparent"
-                )}>
-                  <AvatarImage src={p.avatar_url || undefined} />
-                  <AvatarFallback className="text-xl bg-primary/20 text-primary">{p.display_name[0]}</AvatarFallback>
-                </Avatar>
-                
-                {isVoted && (
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(214,178,107,0.6)]"
-                  >
-                    <Heart className="w-4 h-4 text-primary-foreground fill-current" />
-                  </motion.div>
-                )}
-              </div>
-              <span className="font-medium text-foreground">{p.display_name}</span>
-            </motion.button>
-          );
-        })}
-      </div>
-
-      {/* Footer with vote count and confirm button */}
-      <motion.div 
-        className="mt-4 space-y-3"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-background/70 backdrop-blur-md border border-primary/20 mx-auto w-fit">
-          <Heart className="w-4 h-4 text-primary" />
-          <span className="text-sm text-foreground font-medium">
-            {votes.length} vote{votes.length > 1 ? "s" : ""}
-          </span>
-          <span className="text-muted-foreground">•</span>
-          <span className="text-sm text-muted-foreground">Sélectionnez vos coups de cœur</span>
-        </div>
-        
-        <Button 
-          onClick={onConfirmVotes}
-          disabled={isConfirmingVotes}
-          className="w-full bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_25px_rgba(214,178,107,0.4)] py-6 text-base font-semibold disabled:opacity-50"
-          size="lg"
-        >
-          {isConfirmingVotes ? (
-            <>
-              <motion.div 
-                className="w-5 h-5 mr-2 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              Révélation en cours...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5 mr-2" />
-              Révéler les matchs
-            </>
-          )}
-        </Button>
-      </motion.div>
-    </div>
-  </motion.div>
-);
-
-// Results Screen
-interface ResultsScreenProps {
-  results: Array<{ user_id: string; display_name: string; avatar_url: string | null; is_mutual: boolean }>;
   onClose: () => void;
 }
 
-const ResultsScreen = ({ results, onClose }: ResultsScreenProps) => {
-  const mutualMatches = results.filter(r => r.is_mutual);
+const ConnectScreen = ({ participants, onClose }: ConnectScreenProps) => {
+  const { user } = useAuth();
+  const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set());
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  const handleConnect = async (targetId: string) => {
+    if (!user || connectedIds.has(targetId)) return;
+    setPendingId(targetId);
+    try {
+      const { error } = await supabase
+        .from("likes")
+        .upsert(
+          { liker_id: user.id, liked_id: targetId, is_super_like: false },
+          { onConflict: "liker_id,liked_id" }
+        );
+      if (error) throw error;
+      setConnectedIds((prev) => new Set([...prev, targetId]));
+      toast.success("Demande de connexion envoyée !");
+      // Fire and forget notification
+      supabase.functions
+        .invoke("notify-like", {
+          body: { liker_id: user.id, liked_id: targetId, is_super_like: false },
+        })
+        .catch(() => {});
+    } catch (err) {
+      console.error("[flash-live] connect error", err);
+      toast.error("Impossible d'envoyer la demande");
+    } finally {
+      setPendingId(null);
+    }
+  };
 
   return (
     <motion.div
-      key="results"
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
+      key="connect"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
       className="flex-1 flex flex-col p-6 relative overflow-hidden"
     >
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-background to-background" />
-      
-      {/* Golden Sparkles */}
       <div className="absolute inset-0 pointer-events-none">
         <GoldenSparkles />
       </div>
-      
+
       <div className="relative z-10 flex flex-col h-full">
-        {/* Celebration header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-6"
-          initial={{ y: -30, opacity: 0 }}
+          initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
         >
-          {mutualMatches.length > 0 ? (
-            <>
-              <motion.div
-                animate={{ rotate: [0, -10, 10, -10, 10, 0], scale: [1, 1.1, 1] }}
-                transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
-                className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/20 border border-primary/30 mb-4 shadow-[0_0_40px_rgba(214,178,107,0.5)]"
-              >
-                <Sparkles className="w-10 h-10 text-primary" />
-              </motion.div>
-              <h2 className="text-3xl font-bold text-foreground">
-                {mutualMatches.length} Match{mutualMatches.length > 1 ? "s" : ""} !
-              </h2>
-              <p className="text-muted-foreground mt-1">Vous pouvez maintenant discuter</p>
-            </>
-          ) : (
-            <>
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50 border border-border mb-4">
-                <Heart className="w-10 h-10 text-muted-foreground" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground">Pas de match cette fois</h2>
-              <p className="text-muted-foreground mt-1">Retentez votre chance !</p>
-            </>
-          )}
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 border border-primary/30 mb-3 shadow-[0_0_25px_rgba(214,178,107,0.4)]">
+            <Sparkles className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">Reste en contact</h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            Envoie une demande de connexion aux personnes rencontrées
+          </p>
         </motion.div>
 
-        {/* Results list */}
         <div className="flex-1 space-y-3 overflow-y-auto">
-          {results.map((result, index) => (
-            <motion.div
-              key={result.user_id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={cn(
-                "flex items-center gap-3 p-4 rounded-2xl backdrop-blur-sm",
-                result.is_mutual 
-                  ? "bg-primary/20 border border-primary/40 shadow-[0_0_20px_rgba(214,178,107,0.3)]" 
-                  : "bg-background/60 border border-border/50"
-              )}
-            >
-              <Avatar className={cn(
-                "w-14 h-14 border-2",
-                result.is_mutual ? "border-primary shadow-[0_0_10px_rgba(214,178,107,0.4)]" : "border-transparent"
-              )}>
-                <AvatarImage src={result.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/20 text-primary">{result.display_name[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <span className="font-semibold text-foreground">{result.display_name}</span>
-              </div>
-              {result.is_mutual && (
-                <motion.div 
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-[0_0_15px_rgba(214,178,107,0.5)]"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
+          {participants.map((p, index) => {
+            const isConnected = connectedIds.has(p.user_id);
+            const isPending = pendingId === p.user_id;
+            return (
+              <motion.div
+                key={p.user_id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.08 }}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-background/60 border border-border/50 backdrop-blur-sm"
+              >
+                <Avatar className="w-12 h-12 border border-primary/20">
+                  <AvatarImage src={p.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary">
+                    {p.display_name[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground truncate">{p.display_name}</p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleConnect(p.user_id)}
+                  disabled={isConnected || isPending}
+                  className={cn(
+                    "min-w-[130px]",
+                    isConnected
+                      ? "bg-primary/20 text-primary border border-primary/40 hover:bg-primary/20"
+                      : "bg-gradient-to-r from-primary to-amber-600 text-primary-foreground"
+                  )}
                 >
-                  <Crown className="w-4 h-4" />
-                  <span>Match</span>
-                </motion.div>
-              )}
-            </motion.div>
-          ))}
+                  {isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isConnected ? (
+                    <>
+                      <Check className="w-4 h-4 mr-1" /> Envoyée
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-1" /> Se connecter
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            );
+          })}
+          {participants.length === 0 && (
+            <div className="text-center text-muted-foreground text-sm py-12">
+              Aucun participant rencontré durant cette session.
+            </div>
+          )}
         </div>
 
-        {/* Close button */}
         <motion.div
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <Button 
-            onClick={onClose} 
-            className="w-full mt-6 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_25px_rgba(214,178,107,0.4)] py-6 text-base font-semibold" 
+          <Button
+            onClick={onClose}
+            className="w-full mt-6 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 text-primary-foreground shadow-[0_0_25px_rgba(214,178,107,0.4)] py-6 text-base font-semibold"
             size="lg"
           >
             <Sparkles className="w-5 h-5 mr-2" />
@@ -962,4 +850,4 @@ const ResultsScreen = ({ results, onClose }: ResultsScreenProps) => {
   );
 };
 
-export default SpeedDatingGame;
+
