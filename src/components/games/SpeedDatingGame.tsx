@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Zap, Users, Clock, Heart, X, Mic, MicOff, 
   Video, VideoOff, PhoneOff, Sparkles, Crown, SkipForward, AlertTriangle,
-  Search, User, Phone, Loader2
+  Search, User, Phone, Loader2, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useSpeedDating, SpeedDatingStatus } from "@/hooks/useSpeedDating";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import speedDatingBg from "@/assets/speed-dating-bg.jpeg";
