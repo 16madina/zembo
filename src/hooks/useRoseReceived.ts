@@ -135,7 +135,7 @@ export function useRoseReceived() {
     if (!user) return;
 
     const roseChannel = supabase
-      .channel("realtime-roses-received")
+      .channel(`realtime-roses-received-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
