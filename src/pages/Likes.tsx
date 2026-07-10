@@ -8,7 +8,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
 import ProfileModal from "@/components/ProfileModal";
-import MatchModal from "@/components/MatchModal";
+import ConnectionModal from "@/components/ConnectionModal";
 import RoseRevealModal from "@/components/RoseRevealModal";
 import SubscriptionBadge from "@/components/SubscriptionBadge";
 import { useUserSubscription } from "@/hooks/useUserSubscription";
@@ -241,8 +241,8 @@ const Likes = () => {
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-destructive fill-destructive" />
-            <h1 className="text-lg font-semibold">{t.whoLikedMe}</h1>
+            <Heart className="w-5 h-5 text-primary fill-primary" />
+            <h1 className="text-lg font-semibold">Mes connexions</h1>
           </div>
           <div className="w-9" /> {/* Spacer */}
         </div>
@@ -257,7 +257,7 @@ const Likes = () => {
               className="flex items-center gap-1.5 data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive"
             >
               <Heart className="w-4 h-4" />
-              <span className="hidden sm:inline">Like</span>
+              <span className="hidden sm:inline">Connexion</span>
               {counts.all > 0 && (
                 <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-destructive/20 text-destructive font-medium">
                   {counts.all}
@@ -441,7 +441,7 @@ const Likes = () => {
 
       {/* Match Modal */}
       {matchedProfile && (
-        <MatchModal
+        <ConnectionModal
           isOpen={isMatchModalOpen}
           onClose={handleCloseMatchModal}
           profile={{

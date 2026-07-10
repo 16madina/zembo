@@ -317,8 +317,8 @@ const Messages = () => {
               setNotification({ type: 'match', name });
               
               toast({
-                title: "🎉 Nouveau Match !",
-                description: `Vous avez matché avec ${name} !`,
+                title: "🎉 Nouvelle connexion mutuelle !",
+                description: `Vous êtes désormais connecté(e) avec ${name} !`,
               });
               
               setTimeout(() => setNotification(null), 3000);
@@ -525,7 +525,7 @@ const Messages = () => {
                   >
                     <Sparkles className="w-6 h-6 text-white" />
                   </motion.div>
-                  <span className="text-white font-bold text-lg">Match avec {notification.name} !</span>
+                  <span className="text-white font-bold text-lg">Nouvelle connexion avec {notification.name} !</span>
                   <motion.div
                     animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.2, 1] }}
                     transition={{ duration: 0.5, repeat: 2 }}
@@ -587,7 +587,7 @@ const Messages = () => {
       >
         <div>
           <h1 className="text-2xl font-bold text-foreground">Messages</h1>
-          <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} vibes</p>
+          <p className="text-sm text-muted-foreground">{conversations.length + newMatches.length} connexions</p>
         </div>
       </motion.div>
 

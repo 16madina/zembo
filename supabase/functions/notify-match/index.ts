@@ -81,8 +81,8 @@ serve(async (req) => {
         user1Devices,
         {
           notification: {
-            title: "💕 Nouveau Match !",
-            body: `${user2Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
+            title: "✨ Nouvelle connexion mutuelle !",
+            body: `${user2Profile?.display_name || "Quelqu'un"} et toi êtes désormais connecté(e)s ! Commence la conversation.`,
           },
           apns: {
             payload: {
@@ -120,8 +120,8 @@ serve(async (req) => {
         user2Devices,
         {
           notification: {
-            title: "💕 Nouveau Match !",
-            body: `${user1Profile?.display_name || "Quelqu'un"} et toi avez matché ! Commence la conversation.`,
+            title: "✨ Nouvelle connexion mutuelle !",
+            body: `${user1Profile?.display_name || "Quelqu'un"} et toi êtes désormais connecté(e)s ! Commence la conversation.`,
           },
           apns: {
             payload: {

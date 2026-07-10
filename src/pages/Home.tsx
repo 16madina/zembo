@@ -1,16 +1,14 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { SlidersHorizontal, SearchX, Loader2, Heart, List } from "lucide-react";
+import { SlidersHorizontal, SearchX, Loader2, Heart } from "lucide-react";
 import ShopButton from "@/components/shop/ShopButton";
 import { useNavigate } from "react-router-dom";
 import ZemboLogo from "@/components/ZemboLogo";
 import BottomNavigation from "@/components/BottomNavigation";
 import ProfileModal from "@/components/ProfileModal";
-import MatchModal from "@/components/MatchModal";
+import ConnectionModal from "@/components/ConnectionModal";
 import FilterSheet, { FilterValues } from "@/components/FilterSheet";
-import FeedItem from "@/components/FeedItem";
-import ZFlammeExplosion from "@/components/ZFlammeExplosion";
-import FlameTrail from "@/components/FlameTrail";
+import ProfileGridCard from "@/components/ProfileGridCard";
 import RosePetalsAnimation from "@/components/RosePetalsAnimation";
 import RoseMessageModal from "@/components/RoseMessageModal";
 import RoseReceivedModal from "@/components/RoseReceivedModal";
@@ -27,7 +25,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useDailyLikes } from "@/hooks/useDailyLikes";
 import { useCoinPurchaseSuccess } from "@/hooks/useCoinPurchaseSuccess";
-import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { GenderType } from "@/data/mockProfiles";
 
 export interface Profile {
@@ -55,18 +52,15 @@ const Home = () => {
   const { isPremium } = useSubscription();
   const { canLike, incrementLikesUsed, decrementLikesUsed } = useDailyLikes();
   const { roseReceived, isModalOpen: isRoseReceivedModalOpen, closeModal: closeRoseReceivedModal } = useRoseReceived();
-  const { playFlameSound } = useSoundEffects();
   useCoinPurchaseSuccess();
-  
+
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingLikesCount, setPendingLikesCount] = useState(0);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [receivedLikes, setReceivedLikes] = useState<Set<string>>(new Set());
-  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
-  const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
-  const [showSuperLikeExplosion, setShowSuperLikeExplosion] = useState(false);
-  const [showFlameTrail, setShowFlameTrail] = useState(false);
+  const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
+  const [connectedProfile, setConnectedProfile] = useState<Profile | null>(null);
   const [showRosePetals, setShowRosePetals] = useState(false);
   const [isRoseModalOpen, setIsRoseModalOpen] = useState(false);
   const [roseTargetProfile, setRoseTargetProfile] = useState<Profile | null>(null);
@@ -80,14 +74,14 @@ const Home = () => {
   });
 
   const { profiles: profilesWithDistance, isLoading: isLoadingProfiles, isLoadingMore, hasMore, loadMore } = useProfilesWithDistance({
-    pageSize: 10,
+    pageSize: 20,
     maxDistance: filters.distance,
     ageMin: filters.ageMin,
     ageMax: filters.ageMax,
     genders: filters.genders,
   });
 
-  const profiles: Profile[] = useMemo(() => 
+  const profiles: Profile[] = useMemo(() =>
     profilesWithDistance.map(p => ({
       id: p.id,
       name: p.name,
@@ -109,10 +103,10 @@ const Home = () => {
       if (!user) return;
       const { data: likesReceived } = await supabase.from("likes").select("liker_id").eq("liked_id", user.id);
       const { data: likesSent } = await supabase.from("likes").select("liked_id").eq("liker_id", user.id);
-      
+
       const sentSet = new Set(likesSent?.map(l => l.liked_id) || []);
       setLikedProfiles(sentSet);
-      
+
       if (likesReceived) {
         setReceivedLikes(new Set(likesReceived.map(l => l.liker_id)));
         setPendingLikesCount(likesReceived.filter(l => !sentSet.has(l.liker_id)).length);
@@ -125,7 +119,7 @@ const Home = () => {
     const targetId = profileId || selectedProfile?.id;
     if (!targetId || !user) return;
     if (!canLike) {
-      toast({ title: t.limitReached, description: "Passez à Gold pour plus de likes !", variant: "destructive" });
+      toast({ title: t.limitReached, description: "Passez à Gold pour plus de vibes !", variant: "destructive" });
       return;
     }
     incrementLikesUsed();
@@ -135,19 +129,12 @@ const Home = () => {
       setLikedProfiles(prev => new Set([...prev, targetId]));
       if (receivedLikes.has(targetId)) {
         const profile = profiles.find(p => p.id === targetId);
-        if (profile) { setMatchedProfile(profile); setIsMatchModalOpen(true); }
+        if (profile) { setConnectedProfile(profile); setIsConnectionModalOpen(true); }
       }
     } catch (err) {
       console.error(err);
       decrementLikesUsed();
     }
-  };
-
-  const handleSuperLike = async () => {
-    if (!selectedProfile || !user) return;
-    setShowSuperLikeExplosion(true);
-    playFlameSound();
-    handleLike(selectedProfile.id);
   };
 
   const handleOpenRoseModal = () => {
@@ -190,11 +177,24 @@ const Home = () => {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4"><Loader2 className="w-10 h-10 text-primary animate-spin" /><p className="text-sm text-muted-foreground">{t.loading}</p></div>
         ) : profiles.length > 0 ? (
           <ScrollArea className="h-full w-full">
-            <div className="flex flex-col pt-2 pb-20">
-              {profiles.map(p => (
-                <FeedItem key={p.id} profile={p} onLike={() => handleLike(p.id)} onChat={() => navigate("/messages")} onProfileClick={p => { setSelectedProfile(p); setIsModalOpen(true); }} isLiked={likedProfiles.has(p.id)} isPremium={isPremium} />
-              ))}
-              {hasMore && <div className="py-10 flex justify-center"><Button variant="ghost" onClick={loadMore} disabled={isLoadingMore}>{isLoadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Voir plus"}</Button></div>}
+            <div className="px-3 pt-3 pb-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {profiles.map((p, i) => (
+                  <ProfileGridCard
+                    key={p.id}
+                    profile={p}
+                    index={i}
+                    onClick={(profile) => { setSelectedProfile(profile); setIsModalOpen(true); }}
+                  />
+                ))}
+              </div>
+              {hasMore && (
+                <div className="py-8 flex justify-center">
+                  <Button variant="ghost" onClick={loadMore} disabled={isLoadingMore}>
+                    {isLoadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : "Voir plus"}
+                  </Button>
+                </div>
+              )}
             </div>
           </ScrollArea>
         ) : (
@@ -202,26 +202,26 @@ const Home = () => {
         )}
       </div>
 
-      <ProfileModal profile={selectedProfile} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onLike={() => handleLike()} onSuperLike={handleSuperLike} onSendRose={handleOpenRoseModal} />
-      <MatchModal profile={matchedProfile} isOpen={isMatchModalOpen} onClose={() => setIsMatchModalOpen(false)} onStartChat={() => navigate("/messages")} />
-      <FilterSheet 
-        isOpen={isFilterOpen} 
-        onClose={() => setIsFilterOpen(false)} 
-        onApply={v => { setFilters(v); setIsFilterOpen(false); }} 
-        filters={filters} 
+      <ProfileModal profile={selectedProfile} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onLike={() => handleLike()} onSuperLike={() => handleLike()} onSendRose={handleOpenRoseModal} />
+      <ConnectionModal profile={connectedProfile} isOpen={isConnectionModalOpen} onClose={() => setIsConnectionModalOpen(false)} onStartChat={() => navigate("/messages")} />
+      <FilterSheet
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={v => { setFilters(v); setIsFilterOpen(false); }}
+        filters={filters}
       />
-      
-      <RoseMessageModal 
-        isOpen={isRoseModalOpen} 
-        onClose={() => setIsRoseModalOpen(false)} 
-        onSend={handleSendRoseWithMessage} 
-        isLoading={isSendingRose} 
-        recipientName={roseTargetProfile?.name || ""} 
+
+      <RoseMessageModal
+        isOpen={isRoseModalOpen}
+        onClose={() => setIsRoseModalOpen(false)}
+        onSend={handleSendRoseWithMessage}
+        isLoading={isSendingRose}
+        recipientName={roseTargetProfile?.name || ""}
       />
-      
-      <RoseReceivedModal 
-        isOpen={isRoseReceivedModalOpen} 
-        onClose={closeRoseReceivedModal} 
+
+      <RoseReceivedModal
+        isOpen={isRoseReceivedModalOpen}
+        onClose={closeRoseReceivedModal}
         onViewProfile={() => {
           if (roseReceived) {
             const profile = profiles.find(p => p.id === roseReceived.id);
@@ -236,19 +236,7 @@ const Home = () => {
         senderPhoto={roseReceived?.photo || ""}
         message={roseReceived?.message || ""}
       />
-      
-      <AnimatePresence>
-        {showSuperLikeExplosion && (
-          <ZFlammeExplosion isVisible={showSuperLikeExplosion} onComplete={() => setShowSuperLikeExplosion(false)} />
-        )}
-      </AnimatePresence>
-      
-      <AnimatePresence>
-        {showFlameTrail && (
-          <FlameTrail isVisible={showFlameTrail} onComplete={() => setShowFlameTrail(false)} />
-        )}
-      </AnimatePresence>
-      
+
       <AnimatePresence>
         {showRosePetals && (
           <RosePetalsAnimation isVisible={showRosePetals} onComplete={() => setShowRosePetals(false)} />

@@ -241,9 +241,9 @@ export const translations = {
     
     // Messages
     conversations: "Conversations",
-    newMatches: "Nouveaux vibes",
+    newMatches: "Nouvelles connexions",
     noConversations: "Aucune conversation",
-    startSwiping: "Commencez à swiper pour matcher !",
+    startSwiping: "Explore les profils pour te connecter !",
     typing: "écrit...",
     online: "En ligne",
     offline: "Hors ligne",
@@ -257,16 +257,16 @@ export const translations = {
     outgoingCall: "Appel sortant",
     
     // Likes page
-    whoLikedMe: "Qui m'a liké",
-    noLikesYet: "Aucun like pour le moment",
+    whoLikedMe: "Mes connexions",
+    noLikesYet: "Aucune demande de connexion",
     noSuperLikesYet: "Aucune ZFlamme pour le moment",
     noRosesYet: "Aucune rose pour le moment",
-    keepSwipingForLikes: "Continue à swiper pour attirer l'attention et recevoir tes premiers likes !",
+    keepSwipingForLikes: "Continue à explorer pour attirer l'attention et recevoir tes premières demandes de connexion !",
     superLikesShowInterest: "Les ZFlammes 🔥 montrent un intérêt particulier. Continue à explorer !",
     rosesArePremium: "Les roses sont des cadeaux premium. Tu en recevras bientôt !",
     discoverProfiles: "Découvrir des profils",
-    unlockWhoLikedYou: "Débloque qui t'a liké ! ✨",
-    peopleLikedYou: "personne(s) t'ont liké. Passe à Gold pour voir leurs photos et matcher instantanément !",
+    unlockWhoLikedYou: "Débloque qui souhaite se connecter avec toi ! ✨",
+    peopleLikedYou: "personne(s) souhaitent se connecter. Passe à Gold pour voir leurs photos et te connecter instantanément !",
     becomeGold: "Devenir Gold",
     
     // Profile card
@@ -295,9 +295,9 @@ export const translations = {
     perMonth: "par mois",
     unlimited: "Illimités",
     blurred: "Flouté",
-    likesPerDay: "Likes par jour",
-    superLikes: "Super Likes",
-    seeWhoLikedYou: "Voir qui vous a liké",
+    likesPerDay: "Vibes par jour",
+    superLikes: "ZFlammes",
+    seeWhoLikedYou: "Voir qui souhaite se connecter",
     freeBoosts: "Boosts gratuits",
     rewind: "Retour en arrière",
     noAds: "Sans publicités",
@@ -338,7 +338,7 @@ export const translations = {
     
      // Z Connect game
     zConnect: "Z Connect",
-    readyToMeet: "Es-tu prêt(e) à rencontrer quelqu'un ?",
+    readyToMeet: "Es-tu prêt(e) à te connecter ?",
     noProfileJustVoice: "Connecte-toi par la voix.",
     connectedByInterests: "Tu seras connecté(e) avec quelqu'un qui partage tes intérêts.",
     start: "Commencer",
@@ -812,9 +812,9 @@ export const translations = {
     
     // Messages
     conversations: "Conversations",
-    newMatches: "New vibes",
+    newMatches: "New connections",
     noConversations: "No conversations",
-    startSwiping: "Start swiping to vibe!",
+    startSwiping: "Explore profiles to connect!",
     typing: "typing...",
     online: "Online",
     offline: "Offline",
@@ -828,16 +828,16 @@ export const translations = {
     outgoingCall: "Outgoing call",
     
     // Likes page
-    whoLikedMe: "Who liked me",
-    noLikesYet: "No likes yet",
+    whoLikedMe: "My connections",
+    noLikesYet: "No connection requests yet",
     noSuperLikesYet: "No ZFlammes yet",
     noRosesYet: "No roses yet",
-    keepSwipingForLikes: "Keep swiping to get noticed and receive your first likes!",
+    keepSwipingForLikes: "Keep exploring to get noticed and receive your first connection requests!",
     superLikesShowInterest: "ZFlammes 🔥 show special interest. Keep exploring!",
     rosesArePremium: "Roses are premium gifts. You'll receive some soon!",
     discoverProfiles: "Discover profiles",
-    unlockWhoLikedYou: "Unlock who liked you! ✨",
-    peopleLikedYou: "people liked you. Go Gold to see their photos and vibe instantly!",
+    unlockWhoLikedYou: "Unlock who wants to connect with you! ✨",
+    peopleLikedYou: "people want to connect. Go Gold to see their photos and connect instantly!",
     becomeGold: "Become Gold",
     
     // Profile card
@@ -866,9 +866,9 @@ export const translations = {
     perMonth: "per month",
     unlimited: "Unlimited",
     blurred: "Blurred",
-    likesPerDay: "Likes per day",
-    superLikes: "Super Likes",
-    seeWhoLikedYou: "See who liked you",
+    likesPerDay: "Vibes per day",
+    superLikes: "ZFlammes",
+    seeWhoLikedYou: "See who wants to connect",
     freeBoosts: "Free boosts",
     rewind: "Rewind",
     noAds: "No ads",
