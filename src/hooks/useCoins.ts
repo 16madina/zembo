@@ -115,7 +115,7 @@ export const useCoins = () => {
      if (!user) return;
  
      const channel = supabase
-       .channel(`user_coins_${user.id}`)
+       .channel(`user_coins_${user.id}_${Math.random().toString(36).slice(2)}`)
        .on(
          "postgres_changes",
          {
