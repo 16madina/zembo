@@ -354,13 +354,14 @@ async function advanceToNextRound(supabase: any, sessionId: string) {
   const nextRound = currentRound + 1;
 
   if (nextRound > session.total_rounds) {
-    // All rounds completed, move to voting
+    // All rounds completed. Skip voting phase entirely (Flash Live no longer
+    // creates matches from votes — users manually send connection requests).
     await supabase
       .from("speed_dating_sessions")
-      .update({ status: "voting" })
+      .update({ status: "completed", ended_at: new Date().toISOString() })
       .eq("id", sessionId);
 
-    return { status: "voting", message: "All rounds completed" };
+    return { status: "completed", message: "All rounds completed" };
   }
 
   // Idempotency: if next round already exists (another client already advanced), don't create duplicates.
