@@ -375,7 +375,7 @@ const FlashLobby = ({ participants, onCancel }: { participants: any[], onCancel:
           <div className="flex items-center gap-2 mb-4 justify-center">
             <Users className="w-8 h-8 text-primary" />
             <h3 className="text-xl font-bold text-foreground">
-              {language === "fr" ? "Lobby Flash Connect" : "Flash Connect Lobby"}
+              {language === "fr" ? "Lobby Flash Live" : "Flash Live Lobby"}
             </h3>
           </div>
           
