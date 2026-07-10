@@ -851,3 +851,4 @@ const ConnectScreen = ({ participants, onClose }: ConnectScreenProps) => {
 };
 
 
+export default SpeedDatingGame;
