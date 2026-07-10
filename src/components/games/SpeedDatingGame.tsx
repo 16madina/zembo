@@ -228,8 +228,8 @@ const IdleScreenWithPreference = ({ onStart }: { onStart: (lookingFor: string) =
           <span className="text-foreground font-semibold text-base">3 rounds × 60s</span>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-          <Heart className="w-5 h-5 text-primary" />
-          <span className="text-foreground font-semibold text-base">Match mutuel</span>
+          <Sparkles className="w-5 h-5 text-primary" />
+          <span className="text-foreground font-semibold text-base">Connexions en direct</span>
         </div>
       </motion.div>
 
