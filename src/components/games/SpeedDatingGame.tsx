@@ -125,20 +125,12 @@ const SpeedDatingGame = ({ onClose }: SpeedDatingGameProps) => {
             />
           )}
 
-          {/* Voting */}
-          {status === "voting" && (
-            <VotingScreen
+          {/* Connect list (replaces old voting/results phase) */}
+          {(status === "voting" || status === "results") && (
+            <ConnectScreen
               participants={participants}
-              votes={votes}
-              onVote={submitVote}
-              onConfirmVotes={confirmVotes}
-              isConfirmingVotes={isConfirmingVotes}
+              onClose={handleClose}
             />
-          )}
-
-          {/* Results */}
-          {status === "results" && (
-            <ResultsScreen results={results} onClose={handleClose} />
           )}
         </AnimatePresence>
       </div>
