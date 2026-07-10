@@ -196,13 +196,13 @@ Deno.serve(async (req) => {
     }
 
     if (action === "end_voting" && session_id) {
-      // Transition to voting phase
+      // Voting/match-from-vote flow is disabled — mark session completed instead.
       await supabase
         .from("speed_dating_sessions")
-        .update({ status: "voting" })
+        .update({ status: "completed", ended_at: new Date().toISOString() })
         .eq("id", session_id);
 
-      return new Response(JSON.stringify({ success: true, status: "voting" }), {
+      return new Response(JSON.stringify({ success: true, status: "completed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
