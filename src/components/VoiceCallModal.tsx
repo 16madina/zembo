@@ -355,14 +355,7 @@ const VoiceCallModal = ({
               <AudioStatusIndicator />
               
               {/* Real-time audio level meter */}
-              {isInCall && (
-                <div className="mt-6 w-full max-w-xs">
-                  <AudioLevelMeter 
-                    level={remoteAudioActive ? remoteAudioLevel : localAudioLevel} 
-                    isActive={remoteAudioActive || localAudioActive} 
-                  />
-                </div>
-              )}
+              {/* Audio level meter removed */}
             </div>
           </>
         )}
