@@ -70,6 +70,7 @@ const Admin = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingContentReports, setPendingContentReports] = useState(0);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
