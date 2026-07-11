@@ -63,7 +63,7 @@ export const useRooms = () => {
     const hostMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p]));
 
     const participantUserIds = [
-      ...new Set((participantsRes.data || []).map((p: any) => p.user_id)),
+      ...new Set(((participantsRes.data || []) as any[]).map((p) => p.user_id as string)),
     ];
     const partProfilesRes = participantUserIds.length
       ? await supabase
