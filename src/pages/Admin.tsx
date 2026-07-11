@@ -188,6 +188,15 @@ const Admin = () => {
               <AlertTriangle className="w-4 h-4" />
                <span className="hidden sm:inline">{t.reports}</span>
             </TabsTrigger>
+            <TabsTrigger value="content-reports" className="flex items-center gap-2 relative">
+              <Flag className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.reports}+</span>
+              {pendingContentReports > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center px-1.5 text-xs font-bold bg-red-500 text-white rounded-full">
+                  {pendingContentReports}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="identity" className="flex items-center gap-2 relative">
               <UserCheck className="w-4 h-4" />
                <span className="hidden sm:inline">{t.identities}</span>
