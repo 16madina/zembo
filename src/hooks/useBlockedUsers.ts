@@ -67,6 +67,14 @@ export const useBlockedUsers = () => {
       // Update local state immediately
       setBlockedUserIds(prev => new Set([...prev, blockedId]));
       
+      // Auto-create a content report so admins can review
+      await (supabase as any).from("content_reports").insert({
+        reporter_id: user.id,
+        reported_user_id: blockedId,
+        content_type: "block",
+        reason: reason || "blocked_by_user",
+      }).then(() => null).catch((e: unknown) => console.warn("content_report insert failed", e));
+
       // Notify admin about the block
       await notifyAdminAboutBlock(blockedId, reason);
 
