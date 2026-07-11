@@ -240,6 +240,11 @@ const Admin = () => {
             <AdminReportsTab reports={reports} setReports={setReports} />
           </TabsContent>
 
+          <TabsContent value="content-reports">
+            <AdminContentReportsTab onPendingCountChange={setPendingContentReports} />
+          </TabsContent>
+
+
           <TabsContent value="identity">
             <AdminIdentityTab />
           </TabsContent>
