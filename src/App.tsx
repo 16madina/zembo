@@ -96,7 +96,8 @@ const AppRoutes = () => (
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/discover" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-      <Route path="/random" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
+      <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+      <Route path="/rooms/:id" element={<ProtectedRoute><RoomView /></ProtectedRoute>} />
       <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
