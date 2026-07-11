@@ -217,10 +217,6 @@ const Admin = () => {
               <Mail className="w-4 h-4" />
                <span className="hidden sm:inline">{t.emails}</span>
             </TabsTrigger>
-            <TabsTrigger value="maintenance" className="flex items-center gap-2">
-              <Wrench className="w-4 h-4" />
-               <span className="hidden sm:inline">{t.maintenance}</span>
-            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
                <span className="hidden sm:inline">{t.settingsAdmin}</span>
@@ -259,9 +255,6 @@ const Admin = () => {
             <AdminEmailPreviewTab />
           </TabsContent>
 
-          <TabsContent value="maintenance">
-            <AdminMaintenanceTab />
-          </TabsContent>
 
           <TabsContent value="settings">
             <AdminSettingsTab />
