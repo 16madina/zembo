@@ -162,7 +162,7 @@ Action requise: Vérifier si des mesures supplémentaires sont nécessaires.`,
     if (!user?.id) return;
 
     const channel = supabase
-      .channel(`blocked-users-${user.id}`)
+      .channel(`blocked-users-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
