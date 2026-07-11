@@ -4,8 +4,8 @@ import { Phone, PhoneOff, Mic, MicOff, Video, Volume2, VolumeX, Wifi, MoreVertic
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useZemboRingtone } from "@/hooks/useZemboRingtone";
 import { useAudioLevel } from "@/hooks/useAudioLevel";
-import AudioLevelMeter from "@/components/zconnect/AudioLevelMeter";
-import ReportModal from "@/components/zconnect/ReportModal";
+// AudioLevelMeter removed with random-call cleanup
+import ReportModal from "@/components/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import {
   DropdownMenu,
@@ -355,14 +355,7 @@ const VoiceCallModal = ({
               <AudioStatusIndicator />
               
               {/* Real-time audio level meter */}
-              {isInCall && (
-                <div className="mt-6 w-full max-w-xs">
-                  <AudioLevelMeter 
-                    level={remoteAudioActive ? remoteAudioLevel : localAudioLevel} 
-                    isActive={remoteAudioActive || localAudioActive} 
-                  />
-                </div>
-              )}
+              {/* Audio level meter removed */}
             </div>
           </>
         )}

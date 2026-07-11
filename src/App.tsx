@@ -16,7 +16,8 @@ import { VoiceCallProvider } from "@/contexts/VoiceCallContext";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
 import LiveRoom from "./pages/LiveRoom";
-import Connect from "./pages/Connect";
+import Rooms from "./pages/Rooms";
+import RoomView from "./pages/RoomView";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -77,7 +78,7 @@ const HelpButtonWrapper = () => {
   const { user } = useAuth();
   
   // Show help button only on main app pages when logged in
-  const showHelpButton = user && ["/", "/discover", "/random", "/messages", "/live", "/profile"].includes(location.pathname);
+  const showHelpButton = user && ["/", "/discover", "/rooms", "/messages", "/live", "/profile"].includes(location.pathname);
   
   if (!showHelpButton) return null;
   return <HelpButton />;
@@ -95,7 +96,8 @@ const AppRoutes = () => (
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/discover" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-      <Route path="/random" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
+      <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+      <Route path="/rooms/:id" element={<ProtectedRoute><RoomView /></ProtectedRoute>} />
       <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
       <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />

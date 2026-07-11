@@ -31,7 +31,7 @@ import AdminSettingsTab from "@/components/admin/AdminSettingsTab";
 import AdminEmailPreviewTab from "@/components/admin/AdminEmailPreviewTab";
 import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
 import AdminNotificationsTab from "@/components/admin/AdminNotificationsTab";
-import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
+// AdminMaintenanceTab removed (random calls deprecated)
 import AdminTruthOrDareTab from "@/components/admin/AdminTruthOrDareTab";
  import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -114,23 +114,21 @@ const Admin = () => {
 
         setReports(reportsWithProfiles);
 
-        const [sessionsRes, matchesRes, usersRes, bansRes, identityRes] = await Promise.all([
-          supabase.from("random_call_sessions").select("status"),
+        const [matchesRes, usersRes, bansRes, identityRes] = await Promise.all([
           supabase.from("matches").select("id", { count: "exact" }),
           supabase.from("profiles").select("id", { count: "exact" }),
           supabase.from("banned_users").select("id", { count: "exact" }).eq("is_active", true),
           supabase.from("identity_verifications").select("id", { count: "exact" }).eq("status", "pending"),
         ]);
 
-        const sessions = sessionsRes.data || [];
         const pendingReportsCount = (reportsData || []).filter(
           (r) => r.status === "pending"
         ).length;
 
         setStats({
-          totalSessions: sessions.length,
-          activeSessions: sessions.filter((s) => s.status === "active").length,
-          completedSessions: sessions.filter((s) => s.status === "completed").length,
+          totalSessions: 0,
+          activeSessions: 0,
+          completedSessions: 0,
           totalMatches: matchesRes.count || 0,
           pendingReports: pendingReportsCount,
           totalReports: (reportsData || []).length,
@@ -219,10 +217,6 @@ const Admin = () => {
               <Mail className="w-4 h-4" />
                <span className="hidden sm:inline">{t.emails}</span>
             </TabsTrigger>
-            <TabsTrigger value="maintenance" className="flex items-center gap-2">
-              <Wrench className="w-4 h-4" />
-               <span className="hidden sm:inline">{t.maintenance}</span>
-            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
                <span className="hidden sm:inline">{t.settingsAdmin}</span>
@@ -261,9 +255,6 @@ const Admin = () => {
             <AdminEmailPreviewTab />
           </TabsContent>
 
-          <TabsContent value="maintenance">
-            <AdminMaintenanceTab />
-          </TabsContent>
 
           <TabsContent value="settings">
             <AdminSettingsTab />

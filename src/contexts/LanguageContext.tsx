@@ -207,7 +207,7 @@ export const translations = {
     welcomeTo: "Bienvenue sur",
     readyToPlay: "Es-tu prêt(e) à jouer ? 🎮",
     aiConsentRequired: "Tu dois accepter le consentement IA ci-dessus pour accéder à ce jeu.",
-     zconnectDesc: "Appel vocal avec un(e) inconnu(e)",
+     roomsDesc: "Rejoins un salon de groupe par thème",
      speedDatingDesc: "Flash Live — sessions vidéo networking",
      oracleDesc: "Découvre ton Oracle par l'IA",
      compatibility: "Compatibilité",
@@ -336,8 +336,8 @@ export const translations = {
     yes: "Oui",
     no: "Non",
     
-     // Z Connect game
-    zConnect: "Z Connect",
+     // Rooms
+    rooms: "Salons",
     readyToMeet: "Es-tu prêt(e) à te connecter ?",
     noProfileJustVoice: "Connecte-toi par la voix.",
     connectedByInterests: "Tu seras connecté(e) avec quelqu'un qui partage tes intérêts.",
@@ -410,7 +410,7 @@ export const translations = {
      all: "Tous",
      noVerificationsToDisplay: "Aucune vérification à afficher",
      submittedOn: "Soumis le",
-     unknownUser: "Utilisateur inconnu",
+     unknownUser: "Membre",
      examine: "Examiner",
      rejectionReasonLabel: "Raison du refus",
      identityVerification: "Vérification d'identité",
@@ -514,7 +514,7 @@ export const translations = {
      errorLoadingSettings: "Erreur lors du chargement des paramètres",
      
      // Admin Maintenance
-     maintenanceTools: "Outils de maintenance Z Connect",
+     maintenanceTools: "Outils de maintenance",
      maintenanceDesc: "Nettoyer les sessions bloquées et la file d'attente pour débloquer le système",
      queueWaiting: "Queue - En attente",
      queueMatched: "Queue - En vibe",
@@ -778,7 +778,7 @@ export const translations = {
     welcomeTo: "Welcome to",
     readyToPlay: "Are you ready to play? 🎮",
     aiConsentRequired: "You must accept the AI consent above to access this game.",
-     zconnectDesc: "Random voice call with a stranger",
+     roomsDesc: "Join a group room by theme",
      speedDatingDesc: "Flash Live — video networking sessions",
      oracleDesc: "Discover your Oracle by AI",
      compatibility: "Compatibility",
@@ -907,8 +907,8 @@ export const translations = {
     yes: "Yes",
     no: "No",
     
-    // Z Connect game
-    zConnect: "Z Connect",
+    // Rooms
+    rooms: "Salons",
     readyToMeet: "Are you ready to meet someone?",
     noProfileJustVoice: "Connect by voice.",
     connectedByInterests: "You'll be matched with someone who shares your interests.",
@@ -1085,7 +1085,7 @@ export const translations = {
      errorLoadingSettings: "Error loading settings",
      
      // Admin Maintenance
-     maintenanceTools: "Z Connect maintenance tools",
+     maintenanceTools: "Maintenance tools",
      maintenanceDesc: "Clean blocked sessions and queue to unblock the system",
      queueWaiting: "Queue - Waiting",
      queueMatched: "Queue - Matched",

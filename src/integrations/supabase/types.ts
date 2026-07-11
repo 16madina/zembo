@@ -346,30 +346,42 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_random_calls: {
+      content_reports: {
         Row: {
-          call_count: number
-          call_date: string
+          content_id: string | null
+          content_type: string
           created_at: string
+          details: string | null
           id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          status: string
           updated_at: string
-          user_id: string
         }
         Insert: {
-          call_count?: number
-          call_date?: string
+          content_id?: string | null
+          content_type: string
           created_at?: string
+          details?: string | null
           id?: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          status?: string
           updated_at?: string
-          user_id: string
         }
         Update: {
-          call_count?: number
-          call_date?: string
+          content_id?: string | null
+          content_type?: string
           created_at?: string
+          details?: string | null
           id?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+          status?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -988,75 +1000,83 @@ export type Database = {
         }
         Relationships: []
       }
-      random_call_queue: {
+      room_participants: {
         Row: {
-          created_at: string
-          gender: string
           id: string
-          last_heartbeat: string | null
-          looking_for: string
-          room_name: string | null
-          status: string
+          is_active: boolean
+          joined_at: string
+          left_at: string | null
+          role: string
+          room_id: string
           user_id: string
         }
         Insert: {
-          created_at?: string
-          gender: string
           id?: string
-          last_heartbeat?: string | null
-          looking_for: string
-          room_name?: string | null
-          status?: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
+          role?: string
+          room_id: string
           user_id: string
         }
         Update: {
-          created_at?: string
-          gender?: string
           id?: string
-          last_heartbeat?: string | null
-          looking_for?: string
-          room_name?: string | null
-          status?: string
+          is_active?: boolean
+          joined_at?: string
+          left_at?: string | null
+          role?: string
+          room_id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "room_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      random_call_sessions: {
+      rooms: {
         Row: {
           created_at: string
-          ends_at: string
+          ended_at: string | null
+          host_id: string
           id: string
-          room_name: string | null
-          started_at: string
-          status: string
-          user1_decision: string | null
-          user1_id: string
-          user2_decision: string | null
-          user2_id: string
+          is_active: boolean
+          livekit_room: string
+          mode: string
+          participant_count: number
+          theme: string
+          title: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          ends_at?: string
+          ended_at?: string | null
+          host_id: string
           id?: string
-          room_name?: string | null
-          started_at?: string
-          status?: string
-          user1_decision?: string | null
-          user1_id: string
-          user2_decision?: string | null
-          user2_id: string
+          is_active?: boolean
+          livekit_room: string
+          mode?: string
+          participant_count?: number
+          theme: string
+          title: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          ends_at?: string
+          ended_at?: string | null
+          host_id?: string
           id?: string
-          room_name?: string | null
-          started_at?: string
-          status?: string
-          user1_decision?: string | null
-          user1_id?: string
-          user2_decision?: string | null
-          user2_id?: string
+          is_active?: boolean
+          livekit_room?: string
+          mode?: string
+          participant_count?: number
+          theme?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1480,15 +1500,7 @@ export type Database = {
           session_id?: string | null
           status?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_reports_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "random_call_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -1611,15 +1623,7 @@ export type Database = {
           signal_data?: Json
           signal_type?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "webrtc_signals_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "random_call_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -1637,14 +1641,6 @@ export type Database = {
       }
       can_go_live: { Args: { p_user_id: string }; Returns: boolean }
       can_user_interact: { Args: { p_user_id: string }; Returns: boolean }
-      find_random_call_match: {
-        Args: {
-          p_looking_for: string
-          p_user_gender: string
-          p_user_id: string
-        }
-        Returns: string
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1661,28 +1657,6 @@ export type Database = {
         Returns: boolean
       }
       is_user_banned: { Args: { p_user_id: string }; Returns: boolean }
-      random_call_cancel: { Args: { p_user_id: string }; Returns: Json }
-      random_call_find_or_create_match: {
-        Args: {
-          p_looking_for: string
-          p_user_gender: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
-      random_call_heartbeat: { Args: { p_user_id: string }; Returns: Json }
-      submit_random_call_decision: {
-        Args: { p_decision: string; p_session_id: string; p_user_id: string }
-        Returns: Json
-      }
-      zconnect_find_interest_match: {
-        Args: {
-          p_looking_for: string
-          p_user_gender: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

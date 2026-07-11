@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import ReportModal from "@/components/zconnect/ReportModal";
+import ReportModal from "@/components/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
@@ -1382,7 +1382,7 @@ const LiveRoom = () => {
             </Avatar>
             <div>
               <p className="font-semibold text-foreground text-sm">
-                {live.streamer?.display_name || "Anonyme"}
+                {live.streamer?.display_name || "Membre"}
               </p>
               <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -1611,7 +1611,7 @@ const LiveRoom = () => {
                   </Avatar>
                   <div className="flex items-baseline gap-1.5 flex-wrap">
                     <span className="text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                      {msg.profile?.display_name || "Anonyme"}
+                      {msg.profile?.display_name || "Membre"}
                     </span>
                     <span className="text-sm text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
                       {msg.content}

@@ -1,130 +1,82 @@
-# Restructuration ZEMBO — Live Social & Communauté
+# Mise en conformité Apple Guideline 1.2 — Salons + Modération
 
-Objectif : repositionner l'app comme plateforme de **live social / networking** pour lever la Guideline 4.3 d'Apple. Retrait complet des signaux "dating app".
+Refonte majeure pour retirer tout appairage aléatoire 1‑à‑1 (interdit par Apple) et le remplacer par des **Salons** de groupe thématiques, plus un système de signalement/blocage universel.
 
----
+## 1. Suppression du matching aléatoire 1‑à‑1
 
-## 1. Navigation & écran d'accueil
+**Retirer de l'app :**
+- Onglet "Random" de la bottom bar + page `src/pages/Connect.tsx`
+- Composants Z‑Connect (matching aléatoire audio/vidéo) : dossier `src/components/zconnect/*`, `src/components/random/*`, hooks `useRandomCall`, `useZConnectLiveKit`, `useDailyRandomCalls`
+- Hub des jeux (`GameHub`) : retirer Z‑Connect, Oracle (AI match finder), et l'ancien Speed Dating
+- Route `/random` supprimée
+- Edge functions `cleanup-random-calls` (schedule off) et tables `random_call_*` → migration qui **supprime** ces tables (elles ne peuvent plus être utilisées)
 
-**Bottom bar (`src/components/BottomNavigation.tsx`)** — nouvel ordre :
-```
-Live (E) | Découvrir (M) | Random (Z) | Messages (B) | Profil (O)
-```
-- Route par défaut `/` → composant `Live` (au lieu de `Connect`).
-- `App.tsx` : réassigner les routes (`/` = Live, `/random` = Connect/ZGames, `/discover` = Home).
-- Redirections : anciens liens `/` restent valides mais pointent Live.
-- Bouton "Go Live" doré déjà présent, on le met encore plus en avant (taille + glow).
+**Flash Live :** l'ancien "Speed Dating" est fusionné dans les Salons — pas de round 1‑à‑1 aléatoire, c'est une room de groupe classique.
 
----
+## 2. Nouveaux "Salons" de groupe (remplace Random)
 
-## 2. Suppression des mécaniques Tinder résiduelles
+**Concept :** salons audio/vidéo publics par thème (Musique, Business, Débats, Chill, Culture, Sport, Autre), style Clubhouse / Paltalk. L'utilisateur voit la liste et choisit — **jamais** d'appairage automatique.
 
-Recherche + suppression dans :
-- `src/components/ProfileCard.tsx`, `ActionButtons.tsx` (boutons X / Flamme / Cœur / Undo) → **supprimer** ou ne plus importer.
-- Toute logique de swipe restante dans `Home.tsx` ou composants liés (drag gestures, overlays LIKE/NOPE).
-- `MatchModal.tsx` → renommer en `ConnectionModal.tsx`, texte "C'est un match !" → "Nouvelle connexion !".
-- Page `Likes.tsx` renommée UI en **"Mes connexions"** (garder la route pour compat).
+**Nouvelles tables Supabase :**
+- `rooms(id, host_id, title, theme, mode 'audio'|'video', livekit_room, is_active, participant_count, created_at)`
+- `room_participants(id, room_id, user_id, role 'host'|'moderator'|'participant', joined_at, is_active)`
 
----
+RLS + GRANTS + policies (host peut expulser, tout le monde peut voir salons actifs et non‑bloqués).
 
-## 3. Découverte = grille de profils
+**Nouvelles pages / composants :**
+- `src/pages/Rooms.tsx` — grille de salons actifs (titre, thème, avatars hôte + participants, count), filtres par thème, bouton "Créer un salon"
+- `src/components/rooms/CreateRoomModal.tsx` — titre + thème + mode audio/vidéo
+- `src/components/rooms/RoomCard.tsx` — carte de salon
+- `src/pages/RoomView.tsx` — vue salon LiveKit (réutilise `useLiveKit`), liste participants, contrôles hôte (kick), bouton Signaler + Quitter
+- Hook `useRooms.ts` pour list/create/join/leave
 
-Nouvelle page `Discover` (remplace / complète le feed Zvibes actuel) :
-- Grille **2 colonnes mobile** / 3-4 desktop.
-- Carte compacte : photo carrée arrondie, prénom + âge, badge "● En ligne" (vert), petite ligne localisation avec pin.
-- Tap → ouvre `ProfileModal` complet (existant, allégé du CTA "Like").
-- CTA dans le profil : **"Se connecter"** (au lieu de Like) → crée une entrée `likes` (renommé sémantiquement en "connection request"), notif "Nouvelle connexion !" si mutuel.
+**Bottom bar mise à jour :** Live / Découvrir / **Salons** / Messages / Profil (`BottomNavigation.tsx` : remplacer l'entrée `/random` par `/rooms`, garder l'icône Z dorée).
 
-Le carrousel multi-photos est conservé **dans la vue profil détaillée**, pas dans la grille.
+## 3. Signaler + Bloquer partout
 
----
+**Tables :**
+- `reports(id, reporter_id, reported_user_id, content_type 'profile'|'live'|'room'|'message', content_id, reason, details, status 'pending'|'reviewed'|'actioned', created_at)`
+- `blocks(id, blocker_id, blocked_id, created_at)` — remplace/complète `blocked_users` existant (on garde la table existante `blocked_users` pour compat, on branche seulement la nouvelle logique dessus)
 
-## 4. Nettoyage feed Zvibes (`FeedItem.tsx`)
+**Composants réutilisables :**
+- `src/components/moderation/ReportModal.tsx` — motifs (Contenu inapproprié, Harcèlement, Spam, Autre) + champ libre
+- `src/components/moderation/BlockButton.tsx`
+- `src/components/moderation/ModerationMenu.tsx` — menu 3‑points (`createPortal`, `z-[10000]`) branché partout : `ProfileModal`, `LiveRoom`, `RoomView`, chaque bulle de message dans `ChatView`
 
-- **Retirer** : badge "Je recherche...", indicateur compatibilité %, hashtags d'intérêts communs avec ✨.
-- **Conserver** : carrousel multi-photos, photo, prénom, bio courte, bouton "Se connecter" + "Message".
-- Le feed devient plus éditorial / social, moins "profil dating".
+**Filtrage bloqués (immédiat) :**
+- `useProfilesWithDistance` : exclure `blockedUserIds`
+- `useChatMessages` / listing conversations : exclure messages d'utilisateurs bloqués
+- Listing lives et salons : exclure ceux hébergés par un bloqué, masquer participants bloqués
+- **Blocage crée automatiquement un `report` avec reason `blocked_by_user`**
 
----
+**Admin :** ajouter onglet "Signalements" dans `Admin.tsx` (table simple : reporter, cible, type, motif, action mark as reviewed).
 
-## 5. Flash Live (ex-Speed Dating / Flash Connect)
+## 4. Aucun chat anonyme
 
-Fichiers : `SpeedDatingGame.tsx`, `useSpeedDating.ts`, `speed-dating-orchestrator` edge function, `GameHub.tsx`.
+- Vérifier tous les points d'entrée (messages, salons, lives) : afficher prénom + photo obligatoires
+- L'onboarding est déjà obligatoire avant tout accès (routes `ProtectedRoute`) — vérifier qu'aucun mode invité n'existe dans salons/lives et forcer profil complet (display_name + au moins 1 photo) avant `create/join`
 
-- Rename UI partout : **"Flash Live"** — "Sessions vidéo de groupe courtes pour rencontrer la communauté".
-- Retirer l'écran de **votes** en fin de round + création de matchs mutuels.
-- Remplacer par un simple bouton **"Se connecter"** pendant / après le round → envoie une demande de connexion (réutilise le flux `likes`).
-- Tables DB conservées (`speed_dating_*`) — on ne renomme pas les tables (invisible côté UI), on adapte juste les labels et on désactive la logique de vote côté client.
+## 5. Nettoyage vocabulaire + métadonnées
 
----
+- Retirer "Random", "aléatoire", "roulette", "anonyme", "strangers", "stranger" de :
+  - `LanguageContext.tsx` (FR + EN)
+  - `index.html` (title, meta description, og:title, og:description)
+  - Onboarding, tooltips, notifications, edge functions user‑facing
+- Nouveau title/desc : "ZEMBO — Live, découvre et connecte‑toi avec ta communauté"
+- Traductions ajoutées : `rooms`, `createRoom`, `joinRoom`, `reportUser`, `blockUser`, `roomTheme*`, etc.
 
-## 6. Vocabulaire — remplacements globaux
+## Détails techniques
 
-| Avant | Après |
-|---|---|
-| Match / Matchs | Connexion / Connexions |
-| Super Like / ZFlamme (dans contexte dating) | (retiré) |
-| Speed Dating / Flash Connect | Flash Live |
-| Rencontre / Dating | Communauté / Networking |
-| "C'est un match !" | "Nouvelle connexion !" |
-| "Mes matchs" | "Mes connexions" |
-| "Likes reçus" | "Demandes de connexion" |
+- **LiveKit :** salons réutilisent `livekit-token` edge function et `useLiveKit` hook. Nom de room `room_<uuid>`.
+- **Kick :** `useRooms.kickParticipant()` met `is_active=false` dans `room_participants` + émet un signal LiveKit `participant_kicked` que le client cible écoute pour se déconnecter.
+- **Realtime :** `rooms` + `room_participants` ajoutés à `supabase_realtime` publication pour list/count live.
+- **Migration :** DROP des tables `random_call_queue`, `random_call_sessions`, `daily_random_calls` et de leurs fonctions (`random_call_*`, `zconnect_find_interest_match`, `find_random_call_match`) après suppression du code qui les utilise.
+- **Config :** retirer le schedule de `cleanup-random-calls` dans `supabase/config.toml`, supprimer l'edge function.
+- **Speed dating :** on garde les tables `speed_dating_*` pour ne pas casser mais on retire l'accès UI ; migration ultérieure possible.
 
-Fichiers impactés (non-exhaustif) : `LanguageContext.tsx` (FR + EN), `MatchModal`, `Likes.tsx`, `Messages.tsx`, `Subscriptions.tsx`, notifications edge functions (`notify-like` → texte "demande de connexion", `notify-match` → "nouvelle connexion").
+## Ce qui reste inchangé
 
----
-
-## 7. Positionnement & branding
-
-- Slogan : **"ZEMBO — Live, découvre et connecte-toi avec ta communauté"**
-- `SplashScreen.tsx`, `WelcomeScreen.tsx`, `index.html` (title + meta description), `Subscriptions.tsx` header.
-- Garder : fond sombre dégradé, logo couronne dorée, accent doré (aucun changement design system).
-
----
-
-## Section technique (détails d'impl)
-
-**Routes** (`src/App.tsx`) :
-- `/` → `<Live />`
-- `/discover` → nouvelle `<Discover />` grille (extraite de `Home`)
-- `/random` → `<Connect />` (ex-`/`)
-- `/messages`, `/profile`, `/live/:id` inchangés
-
-**BottomNavigation** : réordonner `navItems`, path `/` = Live (icône E), `/discover` = M, `/random` = Z, etc. Garder les icônes E-M-Z-B-O (le mapping visuel Z-E-M-B-O est abandonné pour prioriser l'UX Live-first).
-
-**Discover grid** : nouveau composant `ProfileGridCard.tsx`, réutilise `useProfilesWithDistance`. `Home.tsx` devient un simple wrapper qui rend `Discover` OU on remplace directement Home par la grille et on garde l'ancien feed en option "Zvibes" sous un toggle (à confirmer si nécessaire — par défaut, **on remplace** le feed par la grille pour coller à la demande "découverte via grille").
-
-**FeedItem.tsx** : supprimer imports `Target`, `Sparkles` (pour compatibilité), le `useMemo` `compatibilityScore`, `commonInterests`, le state `myInterests`, la section `lookingForLabels` + rendu badges, le rendu hashtags communs.
-
-**Flash Live** :
-- `SpeedDatingGame.tsx` : renommer titre "Flash Live", retirer étape de vote (`VoteScreen` si existe), remplacer par bouton "Se connecter" qui appelle `supabase.from('likes').insert(...)`.
-- `GameHub.tsx` : carte "Speed Dating" → titre "Flash Live", description "Sessions vidéo networking".
-- Edge function `speed-dating-orchestrator` : ne pas toucher à la logique d'appairage; supprimer/désactiver la phase de création de `matches` à partir des votes.
-
-**Notifications** (edge functions) :
-- `notify-like/index.ts` : body "vous a envoyé une demande de connexion".
-- `notify-match/index.ts` : body "Nouvelle connexion mutuelle !".
-
-**MatchModal → ConnectionModal** : renommer fichier + tous les imports, textes FR/EN mis à jour.
-
-**LanguageContext** : ajouter/modifier clés `connections`, `newConnection`, `connectRequest`, `flashLive`, retirer/masquer `match`, `superLike`, `speedDating`.
-
-**Aucune migration DB requise** — on garde les tables (`likes`, `matches`, `speed_dating_*`) telles quelles, seule l'UI change. Les colonnes `looking_for` et `interests` restent en base (utilisables dans le profil détaillé) mais ne sont plus affichées comme signaux "dating" dans le feed.
-
-**Hypothèses** :
-- On garde la messagerie débloquée sur match mutuel (déjà le cas via table `matches`).
-- Le bouton "Se connecter" réutilise la logique `likes` existante (pas de nouvelle table).
-- On ne renomme pas les tables DB (risque cassure + invisible utilisateur).
-- Le carrousel multi-photos reste dans `FeedItem` (feed conservé en secondaire) + dans `ProfileModal`.
-
----
-
-## Ordre d'exécution proposé
-
-1. Routes + BottomNavigation (Live devient home)
-2. Nouvelle grille Discover + retrait ActionButtons/swipe résiduels
-3. Nettoyage FeedItem (badges dating)
-4. Rename MatchModal → ConnectionModal + vocabulaire global (LanguageContext)
-5. Flash Live (SpeedDatingGame + GameHub)
-6. Notifs edge functions
-7. Splash / Welcome / meta slogan
+- Design (fond sombre, logo couronne dorée, primary gold)
+- Lives 1‑à‑N (streamer → viewers) : autorisés car pas d'appairage aléatoire
+- Messagerie 1‑à‑1 après connexion mutuelle (like/like)
+- Découvrir en grille, jeux non‑matchmaking (Compatibilité solo)
