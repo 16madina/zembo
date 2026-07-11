@@ -15,6 +15,8 @@ import {
   Bell,
   Wrench,
   Gamepad2,
+  Flag,
+
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -33,6 +35,7 @@ import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
 import AdminNotificationsTab from "@/components/admin/AdminNotificationsTab";
 // AdminMaintenanceTab removed (random calls deprecated)
 import AdminTruthOrDareTab from "@/components/admin/AdminTruthOrDareTab";
+import AdminContentReportsTab from "@/components/admin/AdminContentReportsTab";
  import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Report {
@@ -67,6 +70,7 @@ const Admin = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingContentReports, setPendingContentReports] = useState(0);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -179,10 +183,19 @@ const Admin = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-10 mb-4">
+          <TabsList className="grid w-full grid-cols-11 mb-4">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
                <span className="hidden sm:inline">{t.reports}</span>
+            </TabsTrigger>
+            <TabsTrigger value="content-reports" className="flex items-center gap-2 relative">
+              <Flag className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.reports}+</span>
+              {pendingContentReports > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center px-1.5 text-xs font-bold bg-red-500 text-white rounded-full">
+                  {pendingContentReports}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="identity" className="flex items-center gap-2 relative">
               <UserCheck className="w-4 h-4" />
@@ -226,6 +239,11 @@ const Admin = () => {
           <TabsContent value="reports">
             <AdminReportsTab reports={reports} setReports={setReports} />
           </TabsContent>
+
+          <TabsContent value="content-reports">
+            <AdminContentReportsTab onPendingCountChange={setPendingContentReports} />
+          </TabsContent>
+
 
           <TabsContent value="identity">
             <AdminIdentityTab />
