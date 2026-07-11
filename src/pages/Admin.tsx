@@ -31,7 +31,7 @@ import AdminSettingsTab from "@/components/admin/AdminSettingsTab";
 import AdminEmailPreviewTab from "@/components/admin/AdminEmailPreviewTab";
 import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
 import AdminNotificationsTab from "@/components/admin/AdminNotificationsTab";
-import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
+// AdminMaintenanceTab removed (random calls deprecated)
 import AdminTruthOrDareTab from "@/components/admin/AdminTruthOrDareTab";
  import { useLanguage } from "@/contexts/LanguageContext";
 
