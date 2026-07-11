@@ -183,7 +183,7 @@ const Admin = () => {
         <AdminStatsCards stats={stats} />
 
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-10 mb-4">
+          <TabsList className="grid w-full grid-cols-11 mb-4">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
                <span className="hidden sm:inline">{t.reports}</span>
