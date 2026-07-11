@@ -114,23 +114,21 @@ const Admin = () => {
 
         setReports(reportsWithProfiles);
 
-        const [sessionsRes, matchesRes, usersRes, bansRes, identityRes] = await Promise.all([
-          supabase.from("random_call_sessions").select("status"),
+        const [matchesRes, usersRes, bansRes, identityRes] = await Promise.all([
           supabase.from("matches").select("id", { count: "exact" }),
           supabase.from("profiles").select("id", { count: "exact" }),
           supabase.from("banned_users").select("id", { count: "exact" }).eq("is_active", true),
           supabase.from("identity_verifications").select("id", { count: "exact" }).eq("status", "pending"),
         ]);
 
-        const sessions = sessionsRes.data || [];
         const pendingReportsCount = (reportsData || []).filter(
           (r) => r.status === "pending"
         ).length;
 
         setStats({
-          totalSessions: sessions.length,
-          activeSessions: sessions.filter((s) => s.status === "active").length,
-          completedSessions: sessions.filter((s) => s.status === "completed").length,
+          totalSessions: 0,
+          activeSessions: 0,
+          completedSessions: 0,
           totalMatches: matchesRes.count || 0,
           pendingReports: pendingReportsCount,
           totalReports: (reportsData || []).length,
