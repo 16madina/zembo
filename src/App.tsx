@@ -78,7 +78,7 @@ const HelpButtonWrapper = () => {
   const { user } = useAuth();
   
   // Show help button only on main app pages when logged in
-  const showHelpButton = user && ["/", "/discover", "/random", "/messages", "/live", "/profile"].includes(location.pathname);
+  const showHelpButton = user && ["/", "/discover", "/rooms", "/messages", "/live", "/profile"].includes(location.pathname);
   
   if (!showHelpButton) return null;
   return <HelpButton />;
