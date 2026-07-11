@@ -66,7 +66,7 @@ const HelpButton = () => {
       steps: [
         {
           icon: <Video className="w-5 h-5 text-primary" />,
-          title: t.zConnect,
+          title: t.rooms || "Salons",
           description: language === "en" ? "Meet new people in audio calls with their profile" : "Rencontrez de nouvelles personnes en appel audio avec leur profil"
         },
         {
