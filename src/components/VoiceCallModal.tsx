@@ -5,7 +5,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { useZemboRingtone } from "@/hooks/useZemboRingtone";
 import { useAudioLevel } from "@/hooks/useAudioLevel";
 import AudioLevelMeter from "@/components/zconnect/AudioLevelMeter";
-import ReportModal from "@/components/zconnect/ReportModal";
+import ReportModal from "@/components/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import {
   DropdownMenu,

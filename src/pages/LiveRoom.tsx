@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import ReportModal from "@/components/zconnect/ReportModal";
+import ReportModal from "@/components/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import GiftPanel from "@/components/live/GiftPanel";
 import GiftAnimation from "@/components/live/GiftAnimation";
