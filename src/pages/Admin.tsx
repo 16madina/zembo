@@ -35,6 +35,7 @@ import AdminIdentityTab from "@/components/admin/AdminIdentityTab";
 import AdminNotificationsTab from "@/components/admin/AdminNotificationsTab";
 // AdminMaintenanceTab removed (random calls deprecated)
 import AdminTruthOrDareTab from "@/components/admin/AdminTruthOrDareTab";
+import AdminContentReportsTab from "@/components/admin/AdminContentReportsTab";
  import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Report {
