@@ -1,14 +1,33 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+
+
+// Live web shell (like KiDi+): UI/JS updates without a new Play build.
+// Local hot-reload: set NATIVE_APP_URL=http://YOUR_LAN_IP:5173 before cap sync.
+const nativeAppUrl = process.env.NATIVE_APP_URL || "https://zemboapp.com";
+
 const config: CapacitorConfig = {
   appId: 'com.zembo.app',
   appName: 'Zembo',
   webDir: 'dist',
-  // Pour le développement avec hot-reload, décommentez le bloc server ci-dessous
-  // server: {
-  //   url: 'https://6edefc5e-f7d2-465f-b971-263eccd91309.lovableproject.com?forceHideBadge=true',
-  //   cleartext: true
-  // },
+  server: {
+    url: nativeAppUrl,
+    cleartext: nativeAppUrl.startsWith("http://"),
+    androidScheme: "https",
+    allowNavigation: [
+      "zemboapp.com",
+      "www.zemboapp.com",
+      "zembo.app",
+      "www.zembo.app",
+      "zembo.lovable.app",
+      "*.lovable.app",
+      "*.lovableproject.com",
+      "*.stripe.com",
+      "*.livekit.cloud",
+    ],
+  },
+
+
   plugins: {
     SplashScreen: {
       launchShowDuration: 0,
