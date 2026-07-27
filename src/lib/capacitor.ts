@@ -161,12 +161,28 @@ export const pickImage = async () => {
   try {
     const plugins = await getCapacitorPlugins();
     if (!plugins) return null;
-    
+
+    // Android Photo Picker — no READ_MEDIA_* needed
+    if (typeof plugins.Camera.pickImages === "function") {
+      const result = await plugins.Camera.pickImages({ quality: 90, limit: 1 });
+      const photo = result.photos?.[0];
+      if (!photo?.webPath) return null;
+      const response = await fetch(photo.webPath);
+      const blob = await response.blob();
+      return await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    }
+
     const image = await plugins.Camera.getPhoto({
       quality: 90,
       allowEditing: false,
       resultType: plugins.CameraResultType.DataUrl,
-      source: plugins.CameraSource.Photos
+      source: plugins.CameraSource.Photos,
+      saveToGallery: false,
     });
     return image.dataUrl;
   } catch (error) {
