@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Zembo</string>
+    <string name="title_activity_main">Zembo</string>
+    <string name="package_name">com.zembo.app</string>
+    <string name="custom_url_scheme">com.zembo.app</string>
+</resources>
