@@ -12,6 +12,8 @@ import HelpButton from "@/components/HelpButton";
 import PushNotificationsBootstrap from "@/components/PushNotificationsBootstrap";
 import CallOverlay from "@/components/CallOverlay";
 import GlobalRoseHandler from "@/components/GlobalRoseHandler";
+import PageTransition from "@/components/navigation/PageTransition";
+import NativeBackHandler from "@/components/navigation/NativeBackHandler";
 import { VoiceCallProvider } from "@/contexts/VoiceCallContext";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
