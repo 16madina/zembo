@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 interface CreateLiveModalProps {
   isOpen: boolean;
@@ -138,6 +139,7 @@ const CreateLiveModal = ({
   };
 
   const handleSubmit = async () => {
+    tapHaptics.impact("MEDIUM");
     if (!title.trim()) return;
     
     let thumbnailUrl: string | undefined;

@@ -272,6 +272,7 @@ const Profile = () => {
 
       if (data.success) {
         const remaining = data.remainingEmails;
+        tapHaptics.notify("SUCCESS");
         toast.success("Email de vérification envoyé ! ✉️", {
           description: remaining > 0 
             ? `Il vous reste ${remaining} envoi${remaining > 1 ? 's' : ''} aujourd'hui.`
