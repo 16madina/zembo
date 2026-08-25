@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 const container = {
   hidden: { opacity: 0 },
@@ -36,6 +37,7 @@ const Live = () => {
   const [isCreatingLive, setIsCreatingLive] = useState(false);
 
   const handleGoLive = () => {
+    tapHaptics.impact("MEDIUM");
     if (!user) {
       toast.error(t.login);
       navigate("/auth");
@@ -149,7 +151,7 @@ const Live = () => {
           >
             {lives.map((live) => (
               <motion.div key={live.id} variants={item}>
-                <LiveCard live={live} onClick={() => handleJoinLive(live.id)} />
+                <LiveCard live={live} onClick={() => { tapHaptics.impact("MEDIUM"); handleJoinLive(live.id); }} />
               </motion.div>
             ))}
           </motion.div>

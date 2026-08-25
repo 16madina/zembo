@@ -23,6 +23,7 @@ import QuotedMessage from "@/components/chat/QuotedMessage";
 import ReportModal from "@/components/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import { isNative } from "@/lib/capacitor";
+import { tapHaptics } from "@/hooks/useHaptics";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -466,9 +467,11 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
 
   const handleSend = async () => {
     if ((!newMessage.trim() && !selectedFile) || isSending) return;
+    tapHaptics.impact("MEDIUM");
     
     // Check if user can interact
     if (!canInteract) {
+      tapHaptics.notify("ERROR");
       toast({
         title: "Accès limité",
         description: "Vous devez compléter la vérification d'identité pour envoyer des messages.",
@@ -491,8 +494,10 @@ const ChatView = ({ user, onBack }: ChatViewProps) => {
       setSelectedImage(null);
       setSelectedFile(null);
       setReplyToMessage(null);
+      tapHaptics.notify("SUCCESS");
     } catch (error) {
       console.error("Error sending message:", error);
+      tapHaptics.notify("ERROR");
       toast({
         title: "Erreur",
         description: "Impossible d'envoyer le message",

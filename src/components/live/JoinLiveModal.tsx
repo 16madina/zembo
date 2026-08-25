@@ -6,6 +6,7 @@ import { useCoins } from "@/hooks/useCoins";
 import { useGifts } from "@/hooks/useGifts";
 import { useLiveAccess, type JoinGift } from "@/hooks/useLiveAccess";
 import { toast } from "sonner";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 interface JoinLiveModalProps {
   isOpen: boolean;
@@ -72,6 +73,7 @@ const JoinLiveModal = ({
   };
 
   const handleSendGift = async () => {
+    tapHaptics.impact("MEDIUM");
     if (!selectedGift) return;
 
     if (balance < selectedGift.price_coins) {

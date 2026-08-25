@@ -6,6 +6,7 @@ import { useCoins } from "@/hooks/useCoins";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import CoinShopModal from "@/components/shop/CoinShopModal";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 interface GiftPanelProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ const GiftPanel = ({
   const handleGiftTap = async (gift: VirtualGift) => {
     // Check if can afford
     if (balance < gift.price_coins) {
+      tapHaptics.notify("ERROR");
       toast.error("Solde insuffisant");
       return;
     }
@@ -104,7 +106,7 @@ const GiftPanel = ({
                   <span className="font-semibold text-primary">{balance}</span>
                   <Plus className="w-3 h-3 text-primary" />
                 </button>
-                <button onClick={onClose}>
+                <button onClick={() => { tapHaptics.impact("LIGHT"); onClose(); }}>
                   <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>

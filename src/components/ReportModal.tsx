@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 export type ReportContentType = "profile" | "live" | "room" | "message";
 
@@ -39,6 +40,7 @@ const ReportModal = ({
 
   const close = () => {
     if (submitting) return;
+    tapHaptics.impact("LIGHT");
     setSelected(null);
     setDetails("");
     onClose();
@@ -46,6 +48,7 @@ const ReportModal = ({
 
   const submit = async () => {
     if (!selected || !user?.id) return;
+    tapHaptics.impact("MEDIUM");
     setSubmitting(true);
     try {
       const { error } = await (supabase as any).from("content_reports").insert({
@@ -57,12 +60,14 @@ const ReportModal = ({
         details: details || null,
       });
       if (error) throw error;
+      tapHaptics.notify("SUCCESS");
       toast.success("Signalement envoyé", {
         description: "Notre équipe va examiner votre signalement.",
       });
       close();
     } catch (e) {
       console.error(e);
+      tapHaptics.notify("ERROR");
       toast.error("Impossible d'envoyer le signalement");
     } finally {
       setSubmitting(false);
@@ -111,7 +116,7 @@ const ReportModal = ({
               {reasons.map((r) => (
                 <button
                   key={r.id}
-                  onClick={() => setSelected(r.id)}
+                  onClick={() => { tapHaptics.selection(); setSelected(r.id); }}
                   disabled={submitting}
                   className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
                     selected === r.id

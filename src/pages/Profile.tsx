@@ -39,6 +39,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useIdentityVerification } from "@/hooks/useIdentityVerification";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 type EditFieldType = "occupation" | "education" | "height" | "gender" | "age" | "display_name" | "bio" | "interests";
 
@@ -210,6 +211,7 @@ const Profile = () => {
   }, [userId, hasFetched]);
 
   const handleSignOut = async () => {
+    tapHaptics.impact("MEDIUM");
     await signOut();
   };
 
@@ -270,6 +272,7 @@ const Profile = () => {
 
       if (data.success) {
         const remaining = data.remainingEmails;
+        tapHaptics.notify("SUCCESS");
         toast.success("Email de vérification envoyé ! ✉️", {
           description: remaining > 0 
             ? `Il vous reste ${remaining} envoi${remaining > 1 ? 's' : ''} aujourd'hui.`
@@ -344,7 +347,7 @@ const Profile = () => {
                 className="p-3 bg-amber-500/80 backdrop-blur-sm rounded-full"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/admin")}
+                onClick={() => { tapHaptics.selection(); navigate("/admin"); }}
               >
                 <Shield className="w-5 h-5 text-white" />
               </motion.button>
@@ -398,7 +401,7 @@ const Profile = () => {
 
           {/* Name - Editable */}
           <button 
-            onClick={() => openEditModal("display_name")}
+            onClick={() => { tapHaptics.impact("LIGHT"); openEditModal("display_name"); }}
             className="mt-4 flex items-center gap-2 group"
           >
             <h2 className="text-2xl font-bold text-primary">{displayName}</h2>

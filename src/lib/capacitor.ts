@@ -37,6 +37,13 @@ export const initializeCapacitor = async (userId?: string) => {
   if (_capacitorInitialized) return;
   _capacitorInitialized = true;
 
+  // Flag the document so CSS can switch to the platform system font stack
+  try {
+    document.documentElement.classList.add('native-platform');
+  } catch (e) {
+    // ignore
+  }
+
   try {
     const plugins = await getCapacitorPlugins();
     if (!plugins) return;
@@ -55,7 +62,8 @@ export const initializeCapacitor = async (userId?: string) => {
 
     // Setup keyboard listeners and configuration
     try {
-      await Keyboard.setAccessoryBarVisible({ isVisible: true });
+      // Hide the iOS "Previous / Next / Done" accessory bar (feels like a web form)
+      await Keyboard.setAccessoryBarVisible({ isVisible: false });
       await Keyboard.setScroll({ isDisabled: false });
     } catch (e) {
       // Some methods might not be available on all platforms

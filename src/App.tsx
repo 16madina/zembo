@@ -12,6 +12,8 @@ import HelpButton from "@/components/HelpButton";
 import PushNotificationsBootstrap from "@/components/PushNotificationsBootstrap";
 import CallOverlay from "@/components/CallOverlay";
 import GlobalRoseHandler from "@/components/GlobalRoseHandler";
+import PageTransition from "@/components/navigation/PageTransition";
+import NativeBackHandler from "@/components/navigation/NativeBackHandler";
 import { VoiceCallProvider } from "@/contexts/VoiceCallContext";
 import Home from "./pages/Home";
 import Live from "./pages/Live";
@@ -85,32 +87,42 @@ const HelpButtonWrapper = () => {
 };
 
 // AppRoutes must be rendered INSIDE AuthProvider
-const AppRoutes = () => (
-  <>
-    <HelpButtonWrapper />
-    <Routes>
-      <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-      <Route path="/age-rating" element={<AgeRating />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/" element={<ProtectedRoute><Live /></ProtectedRoute>} />
-      <Route path="/discover" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-      <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
-      <Route path="/rooms/:id" element={<ProtectedRoute><RoomView /></ProtectedRoute>} />
-      <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
-      <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
-      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/support" element={<Support />} />
-      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-      <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
-      <Route path="/likes" element={<ProtectedRoute><Likes /></ProtectedRoute>} />
-      <Route path="/debug-notifications" element={<ProtectedRoute><DebugNotifications /></ProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  </>
-);
+const AppRoutes = () => {
+  const location = useLocation();
+
+  return (
+    <>
+      <HelpButtonWrapper />
+      <NativeBackHandler />
+      <div className="relative h-full w-full overflow-hidden">
+        <PageTransition>
+          <Routes location={location}>
+            <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+            <Route path="/age-rating" element={<AgeRating />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/" element={<ProtectedRoute><Live /></ProtectedRoute>} />
+            <Route path="/discover" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="/rooms" element={<ProtectedRoute><Rooms /></ProtectedRoute>} />
+            <Route path="/rooms/:id" element={<ProtectedRoute><RoomView /></ProtectedRoute>} />
+            <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
+            <Route path="/live/:id" element={<ProtectedRoute><LiveRoom /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+            <Route path="/likes" element={<ProtectedRoute><Likes /></ProtectedRoute>} />
+            <Route path="/debug-notifications" element={<ProtectedRoute><DebugNotifications /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </PageTransition>
+      </div>
+    </>
+  );
+};
+
 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
