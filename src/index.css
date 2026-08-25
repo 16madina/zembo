@@ -36,13 +36,19 @@
     --input: 225 15% 18%;
     --ring: 43 74% 49%;
 
-    --radius: 1.25rem;
+    /* Radius scale by role (iOS-like) */
+    --radius-sm: 0.625rem;  /* 10px - controls, inputs, chips */
+    --radius-md: 0.75rem;   /* 12px - buttons */
+    --radius-lg: 1rem;      /* 16px - cards, grouped lists */
+    --radius-xl: 1.25rem;   /* 20px - modal sheets (top only) */
+    --radius: 1rem;
 
-    /* Glassmorphism */
+    /* Surfaces */
     --glass-bg: hsla(225, 25%, 12%, 0.6);
-    --glass-border: hsla(0, 0%, 100%, 0.08);
+    --glass-border: hsla(0, 0%, 100%, 0.06);
     --glass-highlight: hsla(0, 0%, 100%, 0.05);
-    
+    --hairline: hsla(0, 0%, 100%, 0.08);
+
     /* Gradients */
     --gradient-bg: linear-gradient(165deg, hsl(225 30% 6%) 0%, hsl(230 35% 10%) 50%, hsl(225 30% 6%) 100%);
     --gradient-card: linear-gradient(145deg, hsla(225, 20%, 15%, 0.8) 0%, hsla(225, 25%, 10%, 0.9) 100%);
@@ -50,14 +56,15 @@
     --gradient-overlay: linear-gradient(180deg, transparent 0%, hsla(225, 30%, 6%, 0.95) 100%);
     --gradient-shine: linear-gradient(135deg, hsla(0, 0%, 100%, 0.15) 0%, transparent 50%, hsla(0, 0%, 100%, 0.05) 100%);
 
-    /* Shadows */
-    --shadow-card: 0 8px 32px hsla(0, 0%, 0%, 0.3), 0 0 0 1px hsla(0, 0%, 100%, 0.05);
-    --shadow-elevated: 0 20px 50px hsla(0, 0%, 0%, 0.5);
-    --shadow-glow-gold: 0 0 30px hsla(43, 74%, 49%, 0.4), 0 0 60px hsla(43, 74%, 49%, 0.2);
-    --shadow-glow-blue: 0 0 25px hsla(210, 100%, 50%, 0.35);
-    --shadow-glow-red: 0 0 25px hsla(0, 72%, 51%, 0.35);
-    --shadow-glow-green: 0 0 20px hsla(152, 69%, 45%, 0.4);
-    --shadow-inner: inset 0 1px 0 hsla(0, 0%, 100%, 0.1);
+    /* Shadows — short and discreet */
+    --shadow-card: 0 1px 2px hsla(0, 0%, 0%, 0.2);
+    --shadow-elevated: 0 8px 24px hsla(0, 0%, 0%, 0.35);
+    /* Reserved for the 1-2 truly exceptional elements (Go Live, gift received) */
+    --shadow-glow-gold: 0 0 24px hsla(43, 74%, 49%, 0.28);
+    --shadow-glow-blue: none;
+    --shadow-glow-red: none;
+    --shadow-glow-green: none;
+    --shadow-inner: none;
 
     --sidebar-background: 225 25% 8%;
     --sidebar-foreground: 0 0% 98%;
@@ -120,9 +127,9 @@
     --glass-bg: hsla(0, 0%, 100%, 0.8);
     --glass-border: hsla(220, 13%, 91%, 0.8);
     --glass-highlight: hsla(0, 0%, 100%, 0.9);
-    --gradient-bg: linear-gradient(165deg, hsl(0 0% 100%) 0%, hsl(220 14% 96%) 50%, hsl(0 0% 100%) 100%);
+    --hairline: hsla(220, 13%, 82%, 0.9);
     --gradient-card: linear-gradient(145deg, hsla(0, 0%, 100%, 0.9) 0%, hsla(220, 14%, 98%, 0.95) 100%);
-    --shadow-card: 0 4px 16px hsla(220, 13%, 80%, 0.2), 0 0 0 1px hsla(220, 13%, 91%, 0.5);
+    --shadow-card: 0 1px 2px hsla(220, 13%, 60%, 0.18);
   }
 }
 
@@ -153,7 +160,9 @@
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
     font-feature-settings: "cv11", "ss01", "kern", "liga";
-    background: var(--gradient-bg);
+    background: hsl(var(--background));
+    font-size: 17px;
+    line-height: 1.35;
     height: 100%;
     height: 100dvh;
     overflow: hidden;
@@ -204,36 +213,110 @@
 }
 
 @layer components {
-  /* Glassmorphism Card */
+  /* Ordinary surfaces are opaque and calm — no blur, no glow. */
   .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: hsl(var(--card));
     border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow-inner);
+    box-shadow: none;
   }
 
   .glass-strong {
-    background: hsla(225, 25%, 12%, 0.85);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
+    background: hsl(var(--card));
     border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow-inner), var(--shadow-card);
+    box-shadow: var(--shadow-card);
   }
 
-  .card-gradient {
-    background: var(--gradient-card);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+  /* Real glass is reserved for floating bars (tab bar, sticky headers). */
+  .glass-bar {
+    background: hsla(225, 25%, 8%, 0.78);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+
+  .hairline-top {
+    box-shadow: inset 0 1px 0 var(--hairline);
+  }
+
+  .hairline-bottom {
+    box-shadow: inset 0 -1px 0 var(--hairline);
+  }
+
+  /* iOS type scale */
+  .text-large-title { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; }
+  .text-title-2 { font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; }
+  .text-body-ios { font-size: 17px; line-height: 1.35; font-weight: 400; }
+  .text-subhead { font-size: 15px; line-height: 1.35; }
+  .text-caption-ios { font-size: 13px; line-height: 1.3; }
+  .text-tab { font-size: 10px; line-height: 1.1; font-weight: 500; }
+
+  /* Grouped inset list (iOS) */
+  .list-group {
+    background: hsl(var(--card));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0.625rem 1rem;
+    width: 100%;
+    text-align: left;
+    position: relative;
+    transition: background-color 100ms ease, transform 100ms ease;
+  }
+
+  .list-row:active {
+    background: hsla(0, 0%, 100%, 0.04);
+  }
+
+  /* Separator inset so it starts after the leading icon/avatar */
+  .list-row + .list-row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 3.25rem;
+    right: 0;
+    height: 1px;
+    background: var(--hairline);
+  }
+
+  .list-row-flush + .list-row-flush::before {
+    left: 1rem;
+  }
+
+  /* Minimum 44x44 tap area without growing the visual */
+  .touch-target {
+    position: relative;
+  }
+
+  .touch-target::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    min-width: 100%;
+    min-height: 100%;
+    transform: translate(-50%, -50%);
   }
 
   /* Gold Button */
   .btn-gold {
     background: var(--gradient-gold);
-    box-shadow: var(--shadow-glow-gold);
     position: relative;
     overflow: hidden;
   }
+
+  /* The only element allowed to keep the golden halo */
+  .btn-gold-hero {
+    box-shadow: var(--shadow-glow-gold);
+  }
+
 
   .btn-gold::before {
     content: '';
@@ -326,7 +409,7 @@
 
   /* Native-like touch feedback */
   .tap-highlight {
-    @apply transition-all duration-150 active:scale-95 active:opacity-80;
+    @apply transition-transform duration-100 active:scale-[0.97];
   }
 
   /* Smooth scroll */

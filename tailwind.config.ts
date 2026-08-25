@@ -65,10 +65,23 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      fontSize: {
+        "large-title": ["34px", { lineHeight: "1.1", fontWeight: "700", letterSpacing: "-0.03em" }],
+        "title-2": ["22px", { lineHeight: "1.2", fontWeight: "600", letterSpacing: "-0.02em" }],
+        "body-ios": ["17px", { lineHeight: "1.35" }],
+        subhead: ["15px", { lineHeight: "1.35" }],
+        "caption-ios": ["13px", { lineHeight: "1.3" }],
+        tab: ["10px", { lineHeight: "1.1" }],
+      },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        xl: "var(--radius-xl)",
+        lg: "var(--radius-lg)",
+        md: "var(--radius-md)",
+        sm: "var(--radius-sm)",
+      },
+      boxShadow: {
+        card: "var(--shadow-card)",
+        elevated: "var(--shadow-elevated)",
       },
       keyframes: {
         "accordion-down": {
