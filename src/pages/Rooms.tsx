@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useRooms, type RoomTheme } from "@/hooks/useRooms";
 import RoomCard from "@/components/rooms/RoomCard";
 import CreateRoomModal from "@/components/rooms/CreateRoomModal";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 const THEMES: { id: "all" | RoomTheme; label: string; emoji: string }[] = [
   { id: "all", label: "Tous", emoji: "🌟" },
@@ -37,6 +38,7 @@ const Rooms = () => {
   };
 
   const handleOpen = async (roomId: string) => {
+    tapHaptics.impact("MEDIUM");
     await joinRoom(roomId);
     navigate(`/rooms/${roomId}`);
   };
@@ -49,7 +51,7 @@ const Rooms = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         <ZemboLogo size="sm" animate={false} />
-        <Button size="sm" onClick={() => setShowCreate(true)} className="gap-2">
+        <Button size="sm" onClick={() => { tapHaptics.impact("LIGHT"); setShowCreate(true); }} className="gap-2">
           <Plus className="w-4 h-4" />
           Créer
         </Button>
@@ -69,7 +71,7 @@ const Rooms = () => {
           {THEMES.map((t) => (
             <button
               key={t.id}
-              onClick={() => setFilter(t.id)}
+              onClick={() => { tapHaptics.selection(); setFilter(t.id); }}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition ${
                 filter === t.id
                   ? "bg-primary text-primary-foreground"
@@ -90,7 +92,7 @@ const Rooms = () => {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <p className="mb-4">Aucun salon actif dans ce thème.</p>
-            <Button onClick={() => setShowCreate(true)} variant="outline" className="gap-2">
+            <Button onClick={() => { tapHaptics.impact("LIGHT"); setShowCreate(true); }} variant="outline" className="gap-2">
               <Plus className="w-4 h-4" />
               Créer le premier salon
             </Button>

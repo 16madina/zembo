@@ -4,6 +4,7 @@ import { Ban, X, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useBlockedUsers } from "@/hooks/useBlockedUsers";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 interface BlockUserModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ const BlockUserModal = ({ isOpen, onClose, userId, userName }: BlockUserModalPro
 
   const handleSubmit = async () => {
     if (!selectedReason) return;
+    tapHaptics.impact("MEDIUM");
     
     setIsSubmitting(true);
     
@@ -35,6 +37,7 @@ const BlockUserModal = ({ isOpen, onClose, userId, userName }: BlockUserModalPro
     const success = await blockUser(userId, reason);
     
     if (success) {
+      tapHaptics.notify("SUCCESS");
       onClose();
       setSelectedReason(null);
       setAdditionalInfo("");
@@ -45,6 +48,7 @@ const BlockUserModal = ({ isOpen, onClose, userId, userName }: BlockUserModalPro
 
   const handleClose = () => {
     if (!isSubmitting) {
+      tapHaptics.impact("LIGHT");
       onClose();
       setSelectedReason(null);
       setAdditionalInfo("");
@@ -117,7 +121,7 @@ const BlockUserModal = ({ isOpen, onClose, userId, userName }: BlockUserModalPro
                 {blockReasons.map((reason) => (
                   <button
                     key={reason.id}
-                    onClick={() => setSelectedReason(reason.id)}
+                    onClick={() => { tapHaptics.selection(); setSelectedReason(reason.id); }}
                     className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
                       selectedReason === reason.id
                         ? "bg-destructive/20 border-2 border-destructive"

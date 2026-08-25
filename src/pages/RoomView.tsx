@@ -39,6 +39,7 @@ import { useBlockedUsers } from "@/hooks/useBlockedUsers";
 import ReportModal from "@/components/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import { toast } from "sonner";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 interface RoomData {
   id: string;
@@ -285,6 +286,7 @@ const RoomView = () => {
   };
 
   const handleLeave = async () => {
+    tapHaptics.impact("MEDIUM");
     if (isHost && id) {
       await endRoom(id);
     } else if (id) {
@@ -386,7 +388,7 @@ const RoomView = () => {
         <Button
           size="icon"
           variant={micOn ? "default" : "destructive"}
-          onClick={toggleMic}
+          onClick={() => { tapHaptics.impact("LIGHT"); toggleMic(); }}
           className="w-14 h-14 rounded-full"
         >
           {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
@@ -395,7 +397,7 @@ const RoomView = () => {
           <Button
             size="icon"
             variant={cameraOn ? "default" : "outline"}
-            onClick={toggleCamera}
+            onClick={() => { tapHaptics.impact("LIGHT"); toggleCamera(); }}
             className="w-14 h-14 rounded-full"
           >
             {cameraOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}

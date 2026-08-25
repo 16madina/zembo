@@ -7,6 +7,7 @@ import confetti from "canvas-confetti";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { tapHaptics } from "@/hooks/useHaptics";
 
 interface ConnectionModalProps {
   profile: Profile | null;
@@ -272,7 +273,7 @@ const ConnectionModal = ({ profile, isOpen, onClose, onStartChat }: ConnectionMo
               className="flex flex-col gap-3 w-full max-w-xs"
             >
               <motion.button
-                onClick={onStartChat}
+                onClick={() => { tapHaptics.impact("MEDIUM"); onStartChat(); }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-4 btn-gold rounded-2xl font-semibold flex items-center justify-center gap-3"
