@@ -23,8 +23,8 @@ import QuotedMessage from "@/components/chat/QuotedMessage";
 import ReportModal from "@/components/ReportModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import { isNative } from "@/lib/capacitor";
-import {
 import { tapHaptics } from "@/hooks/useHaptics";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
