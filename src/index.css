@@ -36,13 +36,19 @@
     --input: 225 15% 18%;
     --ring: 43 74% 49%;
 
-    --radius: 1.25rem;
+    /* Radius scale by role (iOS-like) */
+    --radius-sm: 0.625rem;  /* 10px - controls, inputs, chips */
+    --radius-md: 0.75rem;   /* 12px - buttons */
+    --radius-lg: 1rem;      /* 16px - cards, grouped lists */
+    --radius-xl: 1.25rem;   /* 20px - modal sheets (top only) */
+    --radius: 1rem;
 
-    /* Glassmorphism */
+    /* Surfaces */
     --glass-bg: hsla(225, 25%, 12%, 0.6);
-    --glass-border: hsla(0, 0%, 100%, 0.08);
+    --glass-border: hsla(0, 0%, 100%, 0.06);
     --glass-highlight: hsla(0, 0%, 100%, 0.05);
-    
+    --hairline: hsla(0, 0%, 100%, 0.08);
+
     /* Gradients */
     --gradient-bg: linear-gradient(165deg, hsl(225 30% 6%) 0%, hsl(230 35% 10%) 50%, hsl(225 30% 6%) 100%);
     --gradient-card: linear-gradient(145deg, hsla(225, 20%, 15%, 0.8) 0%, hsla(225, 25%, 10%, 0.9) 100%);
@@ -50,14 +56,15 @@
     --gradient-overlay: linear-gradient(180deg, transparent 0%, hsla(225, 30%, 6%, 0.95) 100%);
     --gradient-shine: linear-gradient(135deg, hsla(0, 0%, 100%, 0.15) 0%, transparent 50%, hsla(0, 0%, 100%, 0.05) 100%);
 
-    /* Shadows */
-    --shadow-card: 0 8px 32px hsla(0, 0%, 0%, 0.3), 0 0 0 1px hsla(0, 0%, 100%, 0.05);
-    --shadow-elevated: 0 20px 50px hsla(0, 0%, 0%, 0.5);
-    --shadow-glow-gold: 0 0 30px hsla(43, 74%, 49%, 0.4), 0 0 60px hsla(43, 74%, 49%, 0.2);
-    --shadow-glow-blue: 0 0 25px hsla(210, 100%, 50%, 0.35);
-    --shadow-glow-red: 0 0 25px hsla(0, 72%, 51%, 0.35);
-    --shadow-glow-green: 0 0 20px hsla(152, 69%, 45%, 0.4);
-    --shadow-inner: inset 0 1px 0 hsla(0, 0%, 100%, 0.1);
+    /* Shadows — short and discreet */
+    --shadow-card: 0 1px 2px hsla(0, 0%, 0%, 0.2);
+    --shadow-elevated: 0 8px 24px hsla(0, 0%, 0%, 0.35);
+    /* Reserved for the 1-2 truly exceptional elements (Go Live, gift received) */
+    --shadow-glow-gold: 0 0 24px hsla(43, 74%, 49%, 0.28);
+    --shadow-glow-blue: none;
+    --shadow-glow-red: none;
+    --shadow-glow-green: none;
+    --shadow-inner: none;
 
     --sidebar-background: 225 25% 8%;
     --sidebar-foreground: 0 0% 98%;
