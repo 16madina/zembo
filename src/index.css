@@ -409,7 +409,7 @@
 
   /* Native-like touch feedback */
   .tap-highlight {
-    @apply transition-all duration-150 active:scale-95 active:opacity-80;
+    @apply transition-transform duration-100 active:scale-[0.97];
   }
 
   /* Smooth scroll */
